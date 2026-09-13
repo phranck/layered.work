@@ -86,7 +86,23 @@ It restarts in a loop from there. The deployment reports success throughout, bec
 
 That bites hardest with `PORT`, because Zerops holds that key itself and refuses the whole file when it appears under `envVariables`, so the obvious place is closed too. The answer is to set the port where the application is configured. For the website that is `server.port` in `astro.config.mjs`, which the standalone server reads with no environment variable involved, and it has to match the port declared under `ports` in `zerops.yml`.
 
-**Give every application service a health check.** Zerops asks for it before sending traffic to a new container, so a deployment that fails to start never replaces the one that is running. Without it, a broken start takes the site down, which is exactly what happened above. Liveness only: a check that reaches a database reports a slow dependency as a dead process.
+## The two checks, and which question each one asks
+
+Zerops has both, they are configured in different sections, and giving one the other's job takes the site down.
+
+| | `run.healthCheck` | `deploy.readinessCheck` |
+| --- | --- | --- |
+| When it runs | continuously, for the life of the container | only whilst a deployment is rolling out |
+| What it decides | whether a running container stays in service | whether a new container may take over |
+| What it may touch | the process alone | whatever the container needs to serve |
+
+The [zerops.yml specification](https://docs.zerops.io/zerops-yaml/specification#readinesscheck-) says so directly: a health check runs continuously, and a readiness check runs only during a deployment, to decide when the application is ready for traffic.
+
+**The health check must not reach the database.** It runs forever, and a failure takes the container out of service, so a dependency that is briefly slow would be reported as a dead process and every container would go with it. `/health` on both Node services answers from the process and touches nothing.
+
+**The readiness check is where the real question belongs.** The backend's `/health/ready` asks whether the expected tables exist, whether the connected role may actually read and write them, and whether the applied migrations reach the one this build shipped. It answers 200 when all three hold and 503 naming the one that does not. A container that would answer every request and fail the ones that matter therefore never replaces the one already running.
+
+All three services have one, which is the part that is easy to get wrong: the health check watches what is already running, so a service without a readiness check puts a new container into rotation as soon as it starts. The website asks for its own `/health`, and the dashboard asks for its index page, because nginx serves an empty document root perfectly happily and a build that produced nothing would otherwise replace a working dashboard.
 
 ## The local database
 

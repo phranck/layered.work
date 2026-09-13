@@ -14,8 +14,12 @@ import { connectOnce, databaseUrl } from "./connect.js";
  * refused instead succeeds, quietly, against tables it does not own.
  */
 
-/** Where the generated migrations live, relative to this file rather than to wherever it is run from. */
-const MIGRATIONS = fileURLToPath(new URL("../../drizzle/", import.meta.url));
+/**
+ * Where the generated migrations live, relative to this file rather than to
+ * wherever it is run from. The readiness check reads the journal out of the
+ * same folder, so the location is stated once.
+ */
+export const MIGRATIONS = new URL("../../drizzle/", import.meta.url);
 
 /**
  * The role the migration is expected to run as.
@@ -73,7 +77,7 @@ export async function runMigrations(): Promise<string> {
   try {
     const session = await whoAmI(sql);
     refuseWrongRole(session);
-    await migrate(drizzle(sql), { migrationsFolder: MIGRATIONS });
+    await migrate(drizzle(sql), { migrationsFolder: fileURLToPath(MIGRATIONS) });
     return session.role;
   } finally {
     await sql.end({ timeout: 5 });

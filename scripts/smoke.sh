@@ -36,7 +36,7 @@ header() { # host, header name
 echo "Reachability"
 check "site home"            200 "$SITE_URL/"
 check "api liveness"         200 "$API_URL/health"
-check "api readiness"        200 "$API_URL/health/db"
+check "api readiness"        200 "$API_URL/health/ready"
 check "dashboard shell"      200 "$DASHBOARD_URL/"
 check "robots.txt"           200 "$SITE_URL/robots.txt"
 check "sitemap.xml"          200 "$SITE_URL/sitemap.xml"
