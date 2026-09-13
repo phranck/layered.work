@@ -39,6 +39,12 @@ export const SCENE_SCRIPT = `
   // depth of 900 and 150 nodes, the spacing came to about 415 units against a
   // reach of 190, and the web drew 30 lines a frame. Tightening the box and
   // widening the reach is what turns it into a web.
+  //
+  // A second copy of the cloud lives in tools/og.html, which draws one still
+  // frame of it for the sharing image. It is apart because it runs offline in a
+  // headless browser against a page this server never serves. Change the shape
+  // of the web here and re-render there, or the picture people see before they
+  // arrive stops being the page they arrive at.
   var SPREAD = 1.22;        // how far past the window the cloud reaches
   var DEPTH = 620;          // half the depth of the box, in the same units as x and y
   var FOCAL = 1500;         // perspective: larger is a flatter, calmer projection
@@ -334,6 +340,21 @@ export const SCENE_SCRIPT = `
 
   // --- The frame ------------------------------------------------------------
 
+  /*
+   * Holds a value to 0 to 1.
+   *
+   * The cloud is built inside a box of a known depth, and a node's place in that
+   * box is what decides how bright and how large it is drawn. Turning the box
+   * moves part of its width into its depth, so a node can end up further away
+   * than the box is deep, and the figure that is meant to run from 0 to 1 runs
+   * past both ends. At the far end it goes negative, and a negative brightness
+   * only dims whilst a negative radius is an error the canvas throws: that
+   * exception left the rest of the frame's nodes undrawn.
+   */
+  function clamp01(value) {
+    return value < 0 ? 0 : value > 1 ? 1 : value;
+  }
+
   var last = 0;
   var due = 0;
   var cardLast = 0;
@@ -382,9 +403,15 @@ export const SCENE_SCRIPT = `
       ry = y * cosX - rz * sinX;
       rz = y * sinX + rz * cosX;
 
-      // Perspective. A node behind the focal plane never divides by zero
-      // because DEPTH is well inside FOCAL.
-      scale = FOCAL / (FOCAL + rz);
+      // Perspective, with the divisor held above zero.
+      //
+      // The depth of the box is well inside the focal length, so this looks
+      // safe, and it is not: turning the box swings its width into its depth,
+      // and the width follows the window. On a 2560 pixel display a node can
+      // reach about 1900 units in front of the middle against a focal length of
+      // 1500, and past that point the divisor changes sign, which turns the
+      // scene inside out. The floor caps how large a near node is drawn instead.
+      scale = FOCAL / Math.max(FOCAL * 0.3, FOCAL + rz);
       px[i] = width / 2 + rx * scale;
       py[i] = height / 2 + ry * scale;
       pz[i] = rz;
@@ -433,7 +460,7 @@ export const SCENE_SCRIPT = `
         near = 1 - Math.sqrt(d2) / LINK;
         // The pair's own depth, from behind to in front, as 0 to 1. This is
         // what makes the far side of the web darker than the near side.
-        depth = 1 - ((pz[i] + pz[j]) * 0.5 + DEPTH) / (2 * DEPTH);
+        depth = clamp01(1 - ((pz[i] + pz[j]) * 0.5 + DEPTH) / (2 * DEPTH));
         alpha = near * near * (0.05 + depth * 0.30);
         if (alpha < 0.006) continue;
 
@@ -464,7 +491,7 @@ export const SCENE_SCRIPT = `
 
     var radius;
     for (i = 0; i < nodes.length; i += 1) {
-      depth = 1 - (pz[i] + DEPTH) / (2 * DEPTH);
+      depth = clamp01(1 - (pz[i] + DEPTH) / (2 * DEPTH));
       radius = (0.7 + depth * 1.5) * ps[i];
       alpha = 0.10 + depth * 0.52;
       ctx.fillStyle = "rgba(186, 212, 246, " + alpha.toFixed(3) + ")";
