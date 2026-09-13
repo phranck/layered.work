@@ -39,9 +39,17 @@ Until DNS points at the project, everything is reached through the Zerops subdom
 
 | Service | Address |
 | --- | --- |
-| `website` | `https://website-2444.prg1.zerops.app` |
+| `website` | `https://website-2444-3000.prg1.zerops.app` |
 | `dashboard` | `https://dashboard-2444.prg1.zerops.app` |
-| `backend` | `https://backend-2444.prg1.zerops.app` |
+| `backend` | `https://backend-2444-3000.prg1.zerops.app` |
+
+**The port is part of the name, and the subdomain has to be enabled after the first deploy.** `enableSubdomainAccess: true` in the import file runs before any service declares a port, and what it produces is a subdomain that resolves and routes nowhere: every request answers 502 with "Check if your application is running on a correct port", whilst the process log says it is listening. Running it again once the port exists fixes it.
+
+```bash
+zcli service enable-subdomain --projectId <project> --serviceId <service>
+```
+
+This cost an hour on 13 September 2026. The process was healthy the whole time and every layer looked right.
 
 The real hosts are `layered.work`, `dashboard.layered.work` and `api.layered.work`. Zerops manages domains and certificates outside the import file, so they are attached in the Zerops interface once the DNS records are in place at world4you. The exact records go here when they are known.
 

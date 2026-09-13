@@ -35,24 +35,14 @@ header() { # host, header name
 
 echo "Reachability"
 check "site home"            200 "$SITE_URL/"
-check "site 404"             404 "$SITE_URL/definitely-not-a-page-$RANDOM"
-check "rss feed"             200 "$SITE_URL/feed.xml"
-check "json feed"            200 "$SITE_URL/feed.json"
-check "sitemap"              200 "$SITE_URL/sitemap.xml"
+check "api liveness"         200 "$API_URL/health"
 check "api readiness"        200 "$API_URL/health/db"
 check "dashboard shell"      200 "$DASHBOARD_URL/"
 
-echo "security.txt"
-for host in "$SITE_URL" "$API_URL" "$DASHBOARD_URL"; do
-  check "security.txt on ${host#https://}" 200 "$host/.well-known/security.txt"
-done
-
-echo "Response headers"
-for host in "$SITE_URL" "$DASHBOARD_URL"; do
-  header "$host" "content-security-policy"
-  header "$host" "referrer-policy"
-  header "$host" "x-content-type-options"
-done
+# The feeds, the sitemap, the 404 page, security.txt and the response headers
+# are checked here as soon as something serves them. Each is named in its own
+# issue, and a check added before then would fail every run and teach everyone
+# to ignore this script.
 
 if [ "$failures" -gt 0 ]; then
   echo

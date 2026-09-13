@@ -159,6 +159,6 @@ jobs:
       # cutover, which is a deliberate moment and deserves a pull request.
       - run: bash scripts/smoke.sh
         env:
-          SITE_URL: https://website-2444.prg1.zerops.app
-          API_URL: https://backend-2444.prg1.zerops.app
+          SITE_URL: https://website-2444-3000.prg1.zerops.app
+          API_URL: https://backend-2444-3000.prg1.zerops.app
           DASHBOARD_URL: https://dashboard-2444.prg1.zerops.app
