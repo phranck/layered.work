@@ -1,4 +1,6 @@
+import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import * as schema from "./schema/index.js";
 
 /**
  * Opening a connection, with the one rule that has cost a sibling project a
@@ -42,4 +44,45 @@ export function databaseUrl(): string {
  */
 export function connectOnce(url: string = databaseUrl()) {
   return postgres(url, { max: 1, idle_timeout: 5, connect_timeout: 10, onnotice: () => {} });
+}
+
+/**
+ * How many connections the service holds open.
+ *
+ * One container, one author, and a database that counts its connections as a
+ * resource. Ten is far more than this site will use at once and far less than
+ * anything a plan limits, so the number is here to be a number rather than a
+ * default somebody has to go and look up.
+ */
+const POOL_SIZE = 10;
+
+/** The pool, opened when it is first wanted rather than when this module loads. */
+let pool: ReturnType<typeof postgres> | undefined;
+
+/**
+ * The connection the server uses for requests.
+ *
+ * Lazily opened, because importing this module must not open a socket: the
+ * suite imports the schema and the helpers around it without ever touching a
+ * database, and a connection attempted at import time would make every one of
+ * those tests wait for a timeout.
+ */
+export function database() {
+  pool ??= postgres(databaseUrl(), {
+    max: POOL_SIZE,
+    idle_timeout: 30,
+    connect_timeout: 10,
+    onnotice: () => {},
+  });
+  return drizzle(pool, { schema });
+}
+
+/**
+ * Closes the pool, for a process that is shutting down.
+ *
+ * @param timeoutSeconds - How long to let a query in flight finish.
+ */
+export async function closeDatabase(timeoutSeconds = 5): Promise<void> {
+  await pool?.end({ timeout: timeoutSeconds });
+  pool = undefined;
 }

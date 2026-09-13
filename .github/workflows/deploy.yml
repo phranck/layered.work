@@ -35,23 +35,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Lint, types, tests and a build of everything, in one job. Two jobs would mean
-  # a second runner and a second install of the dependencies, which is the
-  # expensive part, for gates that take nothing from each other.
+  # The same gate the pull request ran, against the merged tree. It is called
+  # rather than written out again, so the two cannot come to check different
+  # things.
   gate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
+    uses: ./.github/workflows/gate.yml
 
   # Which services a change can actually reach, decided from the workspace graph
   # rather than from a guess. Anything shared by all three, and anything not
@@ -79,6 +67,7 @@ jobs:
               - '.nvmrc'
               - 'zerops.yml'
               - '.github/workflows/deploy.yml'
+              - '.github/workflows/gate.yml'
               - 'scripts/**'
               - 'packages/schemas/**'
               - 'packages/content/**'
