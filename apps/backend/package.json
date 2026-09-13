@@ -10,7 +10,7 @@
     "dev": "node --watch --env-file-if-exists=../../.env.local --experimental-strip-types src/index.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=../../.env.local ./node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate": "pnpm build && node --env-file-if-exists=../../.env.local dist/db/migrate.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
