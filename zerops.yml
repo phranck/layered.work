@@ -24,6 +24,21 @@ zerops:
         - node_modules
         - package.json
       cache: node_modules
+    deploy:
+      # Whether this new container may take over, asked only whilst a deployment
+      # is rolling out. It reaches the database and says which of three things
+      # is wrong: the tables are absent, the role cannot write to them, or the
+      # schema is older than the code. A container in any of those states
+      # answers every request and fails the ones that matter, so it never
+      # replaces the one already running.
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /health/ready
+        # The migrations run in initCommands before this is first asked, so the
+        # only thing being waited for is the process opening its port.
+        retryPeriod: 5
+        failureTimeout: 60
     run:
       base: nodejs@22
       ports:
@@ -55,9 +70,11 @@ zerops:
       initCommands:
         - node apps/backend/dist/db/migrate.js
       start: node apps/backend/dist/index.js
-      # Liveness, not readiness. A database that is down should produce a
-      # readable 503 from /health/db rather than an opaque 502 from the gateway,
-      # which is what happens when the platform check itself fails.
+      # Liveness, and liveness only. This one runs continuously and takes a
+      # container out of service when it fails, so it must not reach the
+      # database: a dependency that is briefly slow would be reported as a dead
+      # process and every container would go with it. Readiness is the check
+      # above, which asks the harder question and asks it only during a rollout.
       healthCheck:
         httpGet:
           port: 3000
@@ -82,6 +99,17 @@ zerops:
         - node_modules
         - package.json
       cache: node_modules
+    deploy:
+      # The site has no dependency to be ready for, so this asks the same thing
+      # the health check does. It is here because it is what actually holds a
+      # new container back until it answers: the health check watches what is
+      # already running.
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /health
+        retryPeriod: 5
+        failureTimeout: 60
     run:
       base: nodejs@22
       ports:
@@ -104,10 +132,9 @@ zerops:
       # answers 502. The port is set in astro.config.mjs instead, where it has to
       # match the one declared above.
       start: node apps/website/dist/server/entry.mjs
-      # Asked before any traffic reaches a new container, so a deployment that
-      # fails to start never replaces the one that is running. Liveness only: it
-      # says the server is answering and touches nothing else, because a slow
-      # dependency reported as a dead process takes the site down for no reason.
+      # Watches what is running, continuously, and takes a container out of
+      # service when it stops answering. Liveness only: it says the server is
+      # answering and touches nothing else.
       healthCheck:
         httpGet:
           port: 3000
@@ -127,6 +154,17 @@ zerops:
       deployFiles:
         - apps/dashboard/dist
       cache: node_modules
+    deploy:
+      # nginx starts whatever is in the document root, including nothing, so a
+      # build that produced no index.html would otherwise replace a working
+      # dashboard with a directory listing or a 404. Asking for the page itself
+      # is the whole check this service needs.
+      readinessCheck:
+        httpGet:
+          port: 80
+          path: /
+        retryPeriod: 5
+        failureTimeout: 60
     run:
       base: nginx@1.22
       ports:
