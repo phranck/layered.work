@@ -41,6 +41,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    setupFiles: ["src/test-support/setup.ts"],
     // The database tests empty the tables between cases, so two files running
     // at once would clear each other's rows. They are few and fast.
     fileParallelism: false,
