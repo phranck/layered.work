@@ -183,4 +183,16 @@ There are no repository variables, as in every sibling project. What the smoke t
 | `DASHBOARD_ORIGIN` | `zerops.yml`, as `https://dashboard.layered.work` | The same, for the dashboard |
 | `SESSION_SECRET` | The service's own secret variables, in the Zerops interface | It signs the session cookie, so its strength is its length. At least 32 characters, and never in this repository |
 
-A `SESSION_SECRET` of ten characters was found in this project on 13 September 2026 and replaced. Ten characters of any alphabet is around sixty bits, which is searchable; the value Zerops generates for `<@generateRandomString(<32>)>` in an import file is the right shape.
+The value Zerops generates for `<@generateRandomString(<32>)>` in an import file is the right shape for the last of those.
+
+**A secret's length cannot be read out of `zcli project env`.** That command prints every value wrapped in quotes, and for a secret it prints a fixed-width placeholder rather than the value. Every secret on a service therefore looks the same length:
+
+```
+backend_S3_SECRET_ACCESS_KEY shape: "AAAAAAAA"
+backend_SESSION_SECRET       shape: "AAAAAAAA"
+backend_SMTP2GO_API_KEY      shape: "AAAAAAAA"
+```
+
+That is after replacing every alphanumeric with `A`. `SESSION_SECRET` is over 32 characters, which is why the service starts at all, and it still prints as eight.
+
+On 13 September 2026 that placeholder was read as a measurement and reported as a figure: "ten characters, around sixty bits". The secret really was too short, but the evidence for that was the application refusing to boot with `SESSION_SECRET: Too small`, which is the real value being read by the thing that uses it. Ask the application, not the listing.
