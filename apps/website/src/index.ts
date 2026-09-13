@@ -16,27 +16,19 @@ import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { COUNTDOWN_SCRIPT } from "./countdown.js";
 import { SCENE_SCRIPT } from "./scene.js";
+import {
+  COPY,
+  DESCRIPTION,
+  LAUNCH,
+  SHARE_IMAGE,
+  SHARE_IMAGE_HEIGHT,
+  SHARE_IMAGE_WIDTH,
+  SITE_ORIGIN,
+  TAGLINE,
+} from "./site.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? "0.0.0.0";
-
-/**
- * When the site opens.
- *
- * Written with its offset rather than as a bare local time, because a countdown
- * whose target depends on the reader's own clock counts to a different moment
- * for every reader. Bregenz is UTC+2 in September.
- */
-const LAUNCH = "2026-09-20T20:20:00+02:00";
-
-/**
- * Where this site answers.
- *
- * Stated once and used for the canonical link, every sharing tag, the robots
- * file and the sitemap, so all the absolute addresses the page publishes are
- * the same address.
- */
-const SITE_ORIGIN = "https://layered.work";
 
 /**
  * The page colour, in the two forms the page needs.
@@ -73,41 +65,6 @@ const ASSETS: Record<string, { type: string; maxAge: number }> = {
   ".svg": { type: "image/svg+xml", maxAge: ONE_DAY_SECONDS },
   ".png": { type: "image/png", maxAge: ONE_DAY_SECONDS },
 };
-
-/**
- * What the site is about, in one phrase.
- *
- * It opens the first line on the page, it follows the name in the title, and it
- * opens the sharing text, so it is written here once rather than three times.
- */
-const TAGLINE = "Enclosures, circuit boards and software";
-
-const COPY = {
-  eyebrow: "Bregenz, Austria",
-  lead: "The new site arrives on",
-  date: "20 September 2026, 20:20",
-  tagline: TAGLINE,
-  body: [`${TAGLINE}, made layer by layer.`, "The posts and projects are moving into a new home."],
-  units: ["Days", "Hours", "Minutes", "Seconds"],
-  open: "It is time.",
-  contact: "Until then, I'm reachable at",
-  logoLabel: "layered.work",
-  author: "phranck",
-  shareAlt: "The layered.work wordmark over a dark field of fine lines.",
-} as const;
-
-/**
- * The sentence given to a search engine and to anything that unfurls a link.
- *
- * Built from the same lines the page shows, so what a reader finds in a result
- * list is what they then read on the page.
- */
-const DESCRIPTION = `${COPY.body[0]} ${COPY.lead} ${COPY.date}.`;
-
-/** The name of the sharing image, wanted by the tags and by the file that makes it. */
-const SHARE_IMAGE = "/og.png";
-const SHARE_IMAGE_WIDTH = 1200;
-const SHARE_IMAGE_HEIGHT = 630;
 
 /**
  * Escapes a value going into a double-quoted HTML attribute.
