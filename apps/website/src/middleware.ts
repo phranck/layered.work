@@ -7,9 +7,13 @@ import { hasOpened, isPreviewHost, websiteMode } from "./site.js";
  *
  * The sharing image, the wordmark and the typefaces are all files under
  * `public/`, which are recognised by having an extension rather than by being
- * listed. These two are routes, so they have to be named.
+ * listed. These three are routes, so they have to be named.
+ *
+ * `/health` matters most of the three. Zerops asks for it before it sends
+ * traffic to a new container, so holding it back would keep every deployment
+ * out of service until the launch and then let them all in at once.
  */
-const OPEN_BEFORE_LAUNCH = new Set(["/robots.txt", "/sitemap.xml"]);
+const OPEN_BEFORE_LAUNCH = new Set(["/health", "/robots.txt", "/sitemap.xml"]);
 
 /** The document changes every second, so it is barely worth keeping. */
 const COUNTDOWN_MAX_AGE_SECONDS = 300;

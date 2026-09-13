@@ -90,6 +90,14 @@ zerops:
       # the requests, is 3000. The two numbers are a pair and are kept in sight
       # of each other for that reason.
       start: PORT=3000 node apps/website/dist/server/entry.mjs
+      # Asked before any traffic reaches a new container, so a deployment that
+      # fails to start never replaces the one that is running. Liveness only: it
+      # says the server is answering and touches nothing else, because a slow
+      # dependency reported as a dead process takes the site down for no reason.
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /health
 
   # --- The dashboard --------------------------------------------------------
   # Built to static files and served by nginx, which is why it is the one
