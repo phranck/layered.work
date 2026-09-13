@@ -4,7 +4,7 @@
 #
 # Both come from files already in the repository: the sharing image from
 # tools/og.html, and the icon from the wordmark itself. Run this after either of
-# those changes, and commit what it writes.
+# those changes, or after the launch date moves, and commit what it writes.
 #
 #   apps/website/tools/make-og.sh
 #
@@ -16,18 +16,37 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 public="$here/../public"
-source="$here/../src/index.ts"
+module="$here/../dist/site.js"
 
-# The size is read from the page rather than stated again here. It is published
-# in og:image:width and og:image:height, and a preview is often laid out from
-# those two numbers before the picture itself arrives, so a file that disagrees
-# with them arrives into a hole of the wrong shape.
-width="$(sed -n 's/^const SHARE_IMAGE_WIDTH = \([0-9]*\);$/\1/p' "$source")"
-height="$(sed -n 's/^const SHARE_IMAGE_HEIGHT = \([0-9]*\);$/\1/p' "$source")"
-if [ -z "$width" ] || [ -z "$height" ]; then
-  echo "Could not read SHARE_IMAGE_WIDTH and SHARE_IMAGE_HEIGHT from $source" >&2
+# Built first, because everything below is read out of the build. Running the
+# two steps by hand in the wrong order would put yesterday's date in the
+# picture and nothing would say so.
+(cd "$here/.." && npm run --silent build >/dev/null)
+
+if [ ! -f "$module" ]; then
+  echo "Expected $module after the build. Has src/site.ts moved?" >&2
   exit 1
 fi
+
+# The size and the two lines of text come from the page's own module rather
+# than being stated again here. The size is published in og:image:width and
+# og:image:height, and a preview is often laid out from those two numbers
+# before the picture arrives, so a file of another shape lands in a hole of the
+# wrong one. The date is worse than that: a wrong one in a picture is read as
+# fact and corrected nowhere.
+size="$(node --input-type=module -e "
+  import { SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT } from '$module';
+  process.stdout.write(SHARE_IMAGE_WIDTH + ' ' + SHARE_IMAGE_HEIGHT);
+")"
+width="${size% *}"
+height="${size#* }"
+
+# Handed to the page as a query string, which is what keeps a line carrying
+# spaces, commas or quotation marks intact on its way through the shell.
+query="$(node --input-type=module -e "
+  import { COPY } from '$module';
+  process.stdout.write(new URLSearchParams({ lead: COPY.lead, date: COPY.date }).toString());
+")"
 
 shell="$(find "$HOME/Library/Caches/ms-playwright" -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)"
 if [ -z "$shell" ]; then
@@ -49,7 +68,7 @@ trap 'rm -rf "$work"' EXIT
   --window-size="$width,$height" \
   --virtual-time-budget=4000 \
   --screenshot="$work/og-2x.png" \
-  "file://$here/og.html" >/dev/null 2>&1
+  "file://$here/og.html?$query" >/dev/null 2>&1
 
 # Rendered at twice the published size and brought down to it. The card's border
 # and the wordmark are hairlines, and the downscale is what keeps them off the
