@@ -26,6 +26,9 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.9.1
         version: 0.9.1(hono@4.13.7)(zod@4.6.2)
+      '@layered/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@layered/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
@@ -58,13 +61,20 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@22.20.2)(lightningcss@1.33.0)(tsx@4.23.13)(yaml@2.9.1)
 
-  apps/dashboard: {}
+  apps/dashboard:
+    dependencies:
+      '@layered/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
 
   apps/website:
     dependencies:
       '@astrojs/node':
         specifier: ^11.1.5
         version: 11.1.5(astro@7.3.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@22.20.2)(tsx@4.23.13)(yaml@2.9.1))
+      '@layered/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       astro:
         specifier: ^7.3.2
         version: 7.3.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@22.20.2)(tsx@4.23.13)(yaml@2.9.1)
@@ -79,6 +89,8 @@ importers:
   packages/content: {}
 
   packages/mcp: {}
+
+  packages/policy: {}
 
   packages/schemas:
     dependencies:

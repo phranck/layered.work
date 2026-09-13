@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { MAX_BODY_BYTES } from "../config.js";
 import { logger } from "../logger.js";
+import { corsForInterfaces, safetyHeaders } from "./headers.js";
 import { health } from "./health.js";
 import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
@@ -22,6 +23,8 @@ import { auth } from "./routes/auth.js";
 export const app = new Hono();
 
 app.use("*", requestId);
+app.use("*", safetyHeaders);
+app.use("*", corsForInterfaces);
 app.use(
   "*",
   bodyLimit({

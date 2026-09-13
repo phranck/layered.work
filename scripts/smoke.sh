@@ -42,10 +42,20 @@ check "robots.txt"           200 "$SITE_URL/robots.txt"
 check "sitemap.xml"          200 "$SITE_URL/sitemap.xml"
 check "sharing image"        200 "$SITE_URL/og.png"
 
-# The feeds, the 404 page, security.txt and the response headers are checked
-# here as soon as something serves them. Each is named in its own issue, and a
-# check added before then would fail every run and teach everyone to ignore this
-# script.
+echo
+echo "Response headers"
+# Read back from the deployed hosts rather than from the configuration, because
+# three different things set them and only one of the three is this repository's
+# code running in a way a test could reach.
+for host in "$SITE_URL/" "$DASHBOARD_URL/" "$API_URL/health"; do
+  for name in Content-Security-Policy Referrer-Policy X-Content-Type-Options X-Frame-Options; do
+    header "$host" "$name"
+  done
+done
+
+# The feeds, the 404 page and security.txt are checked here as soon as something
+# serves them. Each is named in its own issue, and a check added before then
+# would fail every run and teach everyone to ignore this script.
 
 if [ "$failures" -gt 0 ]; then
   echo
