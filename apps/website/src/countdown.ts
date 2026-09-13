@@ -146,6 +146,46 @@ export const COUNTDOWN_SCRIPT = `
   var shown = -1;
   var ticker = 0;
 
+  /*
+   * How long to wait before asking for the page again, by attempt.
+   *
+   * The first one is short enough that a reader who watched the count reach
+   * zero sees the site a moment later, and long enough that they read the
+   * notice first. The rest back off, because the alternative is a reader whose
+   * browser arrives before the new site is deployed fetching this same page
+   * again as fast as it can load, for as long as they leave it open.
+   */
+  var RETURN_DELAYS = [3000, 15000, 30000, 60000];
+
+  var returning = false;
+
+  /*
+   * Fetches the page again once the count has run out, because what belongs
+   * here then is the site rather than a notice saying it has arrived.
+   *
+   * The attempt is counted in the tab rather than in the page, since the page
+   * is the thing being replaced. A reload asks the server rather than the
+   * cache, so a copy of this page kept from before the launch is not what
+   * comes back.
+   */
+  function comeBackForTheSite() {
+    if (returning) return;
+    returning = true;
+
+    var attempts = 0;
+    try {
+      attempts = Number(sessionStorage.getItem("awaiting-launch")) || 0;
+      sessionStorage.setItem("awaiting-launch", String(attempts + 1));
+    } catch (error) {
+      // Storage can be refused outright, in which case every visit is the first
+      // one and the wait stays short. One reload is still better than none.
+    }
+
+    setTimeout(function () {
+      window.location.reload();
+    }, RETURN_DELAYS[Math.min(attempts, RETURN_DELAYS.length - 1)]);
+  }
+
   /** Puts the time on the cards, and puts the notice up when it runs out. */
   function render() {
     var left = target - Date.now();
@@ -154,6 +194,7 @@ export const COUNTDOWN_SCRIPT = `
       root.hidden = true;
       if (opened) opened.hidden = false;
       clearInterval(ticker);
+      comeBackForTheSite();
       return;
     }
 
