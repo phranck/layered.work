@@ -8,6 +8,13 @@
       "when": 1789300350261,
       "tag": "0000_entries_translations_paths_topics",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789303643944,
+      "tag": "0001_users_sessions_tokens_audit",
+      "breakpoints": true
     }
   ]
 }
