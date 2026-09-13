@@ -25,7 +25,7 @@ const ONE = { email: "one@layered.test", password: "the-first-password" };
 const OTHER = { email: "other@layered.test", password: "the-second-password" };
 
 /** One attempt, with a wrong password, from a named address. */
-function attempt(email: string, address = "203.0.113.10") {
+function attempt(email: string, address = "203.0.113.10, 10.0.0.9") {
   return app.request("/auth/sign-in", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": address },
@@ -186,15 +186,32 @@ describe("what a refusal is written down as", () => {
     expect(JSON.stringify(refusal?.fields.chain)).not.toContain("198.51.100.1");
   });
 
-  it("holds the address the trusted proxy appended, not the one the caller prepended", async () => {
+  it("holds the address the infrastructure appended, not the one the caller prepended", async () => {
+    // The shape production actually produces: what the caller sent, then the
+    // address Zerops saw, then one Zerops hop of its own. Measured against the
+    // deployed service rather than assumed.
     const spoofed = "1.2.3.4";
     const real = "203.0.113.55";
+    const zerops = "10.0.0.9";
     for (let tries = 0; tries <= SIGN_IN_PER_ACCOUNT.limit; tries += 1) {
-      await attempt("someone@layered.test", `${spoofed}, ${real}`);
+      await attempt("someone@layered.test", `${spoofed}, ${real}, ${zerops}`);
     }
 
     const refusal = written.find((line) => line.fields.deviation === true);
     expect(refusal?.fields.source).toBe(sourceFingerprint(real));
     expect(refusal?.fields.source).not.toBe(sourceFingerprint(spoofed));
+    expect(refusal?.fields.source).not.toBe(sourceFingerprint(zerops));
+  });
+
+  it("counts two callers behind the same Zerops hop separately", async () => {
+    // The failure this replaced: reading the last entry made that hop the key,
+    // so everybody shared one bucket and the per-source limit was a global one.
+    const zerops = "10.0.0.9";
+    for (let tries = 0; tries <= SIGN_IN_PER_ACCOUNT.limit; tries += 1) {
+      await attempt("someone@layered.test", `198.51.100.1, ${zerops}`);
+    }
+
+    const refusals = written.filter((line) => line.fields.deviation === true);
+    expect(refusals[0]?.fields.source).toBe(sourceFingerprint("198.51.100.1"));
   });
 });
