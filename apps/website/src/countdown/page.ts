@@ -113,19 +113,22 @@ const unit = (label: string): string =>
         </div>`;
 
 /**
- * The page.
+ * The whole document, as a string.
  *
  * The styles and the scripts are inline: this is one document, and a second
  * request for something decorative is a request the reader waits on. The
  * typefaces and the wordmark are the exceptions, because both are files.
- */
-/**
- * The whole document, as a string.
  *
+ * Inline therefore means every one of them carries the nonce, because the
+ * content policy permits inline by nonce rather than by `unsafe-inline`. One
+ * element written without it simply does not run, and the browser says which.
+ *
+ * @param nonce - Issued for this one response by the middleware that sets the
+ *   policy, so the two cannot disagree about what it is.
  * @returns The countdown page, complete from the doctype down, ready to be the
  *   body of a response.
  */
-export function countdownPage(): string {
+export function countdownPage(nonce: string): string {
   const copy = COPY;
 
   return `<!doctype html>
@@ -183,7 +186,7 @@ export function countdownPage(): string {
       data-website-id="${UMAMI_WEBSITE_ID}"
       data-performance="true"
     ></script>
-    <style>
+    <style nonce="${nonce}">
       :root {
         --page: ${PAGE_COLOR};
         --raised: oklch(0.262 0.008 250);
@@ -589,8 +592,8 @@ export function countdownPage(): string {
       </main>
     </div>
 
-    <script>${SCENE_SCRIPT}</script>
-    <script>${COUNTDOWN_SCRIPT}</script>
+    <script nonce="${nonce}">${SCENE_SCRIPT}</script>
+    <script nonce="${nonce}">${COUNTDOWN_SCRIPT}</script>
   </body>
 </html>
 `;

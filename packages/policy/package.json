@@ -1,0 +1,23 @@
+{
+  "name": "@layered/policy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The response headers each of the three hosts sends",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  }
+}

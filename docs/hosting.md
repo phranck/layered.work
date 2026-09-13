@@ -86,6 +86,35 @@ It restarts in a loop from there. The deployment reports success throughout, bec
 
 That bites hardest with `PORT`, because Zerops holds that key itself and refuses the whole file when it appears under `envVariables`, so the obvious place is closed too. The answer is to set the port where the application is configured. For the website that is `server.port` in `astro.config.mjs`, which the standalone server reads with no environment variable involved, and it has to match the port declared under `ports` in `zerops.yml`.
 
+## What each host puts on a response
+
+Three hosts, three different things serving them, so the headers are set three times and the values come from one place. `packages/policy` holds them; the backend and the site import it, and the dashboard's build generates its nginx configuration from it, because a configuration file looks like data and is therefore copied more readily than code.
+
+| Host | What sets the headers |
+| --- | --- |
+| `layered.work` | Astro middleware, in `apps/website/src/middleware.ts` |
+| `dashboard.layered.work` | nginx, through `siteConfigPath` pointing at a file the build wrote |
+| the API | Hono middleware, in `apps/backend/src/http/headers.ts` |
+
+All three send `Content-Security-Policy`, `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options` and `Permissions-Policy`, and all three deny framing.
+
+**The Zerops edge already adds two of them.** Measured on 13 September 2026: every host answered with `X-Content-Type-Options: nosniff` and `Strict-Transport-Security: max-age=31536000; preload` before any of this existed. They are set by the application regardless, because a control that holds only because something upstream happens to do it is a control nobody wrote down.
+
+**The site's policy permits inline by nonce, not by `unsafe-inline`.** The countdown carries its styles and two of its scripts inline, so each carries a nonce issued for that one response. Anything injected into the document afterwards has no nonce and does not run.
+
+Styling is split, because a `<style>` element and `element.style.setProperty(…)` are the same directive to CSP and not the same risk. `style-src-elem` takes the nonce; `style-src-attr` permits attributes, which only a script can reach and no script runs without the nonce; `style-src` stays as the fallback for a browser that knows neither, carrying no nonce so that `'unsafe-inline'` still applies there.
+
+**The policy is not sent in development.** The dev server injects its own scripts and styles without nonces, so any policy loose enough for those has stopped saying anything, and one tight enough fills the console with violations about Vite. It is checked against the built output instead:
+
+```bash
+pnpm --filter "@layered/website..." build
+WEBSITE_MODE=countdown PORT=4321 node apps/website/dist/server/entry.mjs
+```
+
+Loaded in a browser on 13 September 2026 that produced no violations, with the style block applied, both inline scripts run, the canvas sized and `--groove-drawn` set to `1px`.
+
+**CORS on the API is the two interface origins, explicitly.** `SITE_ORIGIN` and `DASHBOARD_ORIGIN`, read from configuration and never from the request, with credentials permitted because the dashboard sends a cookie. That is why the list cannot be a wildcard, and why reflecting the request's own origin, which is the shortcut a wildcard tempts somebody into, would be the same as allowing everybody.
+
 ## A workspace package needs three paths in deployFiles
 
 A service that imports one of this repository's own packages reaches it through a symlink in its own `node_modules`, pointing at `packages/<name>`. That path is not deployed unless it is named, and naming only part of it fails in a different way each time:
