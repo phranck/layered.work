@@ -18,4 +18,11 @@ export default defineConfig({
   casing: "snake_case",
   strict: true,
   verbose: true,
+  dbCredentials: {
+    // Whatever is in the environment, and nothing if it is empty. A missing
+    // address is an error rather than a reason to reach for a hosted database,
+    // which `data-safety.md` states and which has cost a sibling project a
+    // confusing afternoon.
+    url: process.env.DATABASE_URL ?? "",
+  },
 });
