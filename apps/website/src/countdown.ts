@@ -79,50 +79,70 @@ export const COUNTDOWN_SCRIPT = `
     }, 560);
   }
 
-  // What the cards last read. The loop below runs on every frame whilst the
-  // figures change once a second, so this is what keeps the other fifty-nine
-  // frames down to a single comparison.
+  // What the cards last read. Both drivers below ask for the time far more
+  // often than the figures change, so this is what keeps all but one of those
+  // readings down to a single comparison.
   var shown = -1;
+  var ticker = 0;
 
-  function tick() {
+  /** Puts the time on the cards, and puts the notice up when it runs out. */
+  function render() {
     var left = target - Date.now();
 
     if (left <= 0) {
       root.hidden = true;
       if (opened) opened.hidden = false;
+      clearInterval(ticker);
       return;
     }
 
     var seconds = Math.floor(left / 1000);
+    if (seconds === shown) return;
+    shown = seconds;
 
-    if (seconds !== shown) {
-      shown = seconds;
+    var parts = [
+      Math.floor(seconds / 86400),
+      Math.floor(seconds / 3600) % 24,
+      Math.floor(seconds / 60) % 60,
+      seconds % 60,
+    ];
 
-      var parts = [
-        Math.floor(seconds / 86400),
-        Math.floor(seconds / 3600) % 24,
-        Math.floor(seconds / 60) % 60,
-        seconds % 60,
-      ];
-
-      for (var i = 0; i < parts.length; i += 1) {
-        var text = String(parts[i]);
-        while (text.length < 2) text = "0" + text;
-        // Two cards per unit, tens then units.
-        write(digits[i * 2], text.charAt(text.length - 2));
-        write(digits[i * 2 + 1], text.charAt(text.length - 1));
-      }
+    for (var i = 0; i < parts.length; i += 1) {
+      var text = String(parts[i]);
+      while (text.length < 2) text = "0" + text;
+      // Two cards per unit, tens then units.
+      write(digits[i * 2], text.charAt(text.length - 2));
+      write(digits[i * 2 + 1], text.charAt(text.length - 1));
     }
-
-    // The clock is read on every frame rather than once a second, because a
-    // chain of timers is not a clock. Measured on this page, about one wake-up
-    // in twelve arrived a full second late whilst the frame loop itself never
-    // stalled, which moved the count on by two and read as a skipped second.
-    // Asking the clock what time it is costs a subtraction and a comparison per
-    // frame and cannot skip.
-    requestAnimationFrame(tick);
   }
 
-  requestAnimationFrame(tick);
+  function frame() {
+    render();
+    if (!root.hidden) requestAnimationFrame(frame);
+  }
+
+  /*
+   * Two drivers, because neither is a clock on its own.
+   *
+   * The frame loop is exact whilst the window is in front, and a browser
+   * throttles it hard when the window is behind another one. Measured on this
+   * page with the tab still on screen but not focused: frames arrived in bursts
+   * of two or three, seventeen milliseconds apart, with two seconds of nothing
+   * between the bursts. A clock driven by that alone steps two at a time.
+   *
+   * Timers keep their pace in that state, and they are the ones that are late:
+   * about one wake-up in twelve arrived a full second behind, which is what
+   * made an earlier version of this skip a second. Reading the clock four times
+   * a second rather than once means being late by a second no longer costs a
+   * figure, because the reading names the time rather than counting on having
+   * been woken at the right moment.
+   *
+   * Whichever arrives first writes, and the other finds nothing to do. Coming
+   * back to a tab that was hidden altogether is the third case, and that is
+   * what the last line catches.
+   */
+  ticker = setInterval(render, 250);
+  requestAnimationFrame(frame);
+  document.addEventListener("visibilitychange", render);
 })();
 `;
