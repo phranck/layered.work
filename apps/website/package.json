@@ -4,10 +4,19 @@
   "private": true,
   "type": "module",
   "description": "The public site on layered.work",
-  "main": "./src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "node --watch --experimental-strip-types src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.5",
+    "astro": "^7.3.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^5.9.3"
   }
 }

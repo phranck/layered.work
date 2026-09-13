@@ -16,17 +16,17 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 public="$here/../public"
-module="$here/../dist/site.js"
+module="$here/../src/site.ts"
 
-# Built first, because everything below is read out of the build. Running the
-# two steps by hand in the wrong order would put yesterday's date in the
-# picture and nothing would say so.
-(cd "$here/.." && npm run --silent build >/dev/null)
-
+# Read straight out of the source, with Node stripping the types as it loads it.
+# The build used to be the way in, and Astro's bundles the module into chunks
+# with no stable name, so there is nothing there to point at any more. Reading
+# the source also means there is no build to forget to run first.
 if [ ! -f "$module" ]; then
-  echo "Expected $module after the build. Has src/site.ts moved?" >&2
+  echo "Cannot find $module. Has it moved?" >&2
   exit 1
 fi
+read_facts() { node --experimental-strip-types --input-type=module -e "$1" 2>/dev/null; }
 
 # The size and the two lines of text come from the page's own module rather
 # than being stated again here. The size is published in og:image:width and
@@ -34,7 +34,7 @@ fi
 # before the picture arrives, so a file of another shape lands in a hole of the
 # wrong one. The date is worse than that: a wrong one in a picture is read as
 # fact and corrected nowhere.
-size="$(node --input-type=module -e "
+size="$(read_facts "
   import { SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT } from '$module';
   process.stdout.write(SHARE_IMAGE_WIDTH + ' ' + SHARE_IMAGE_HEIGHT);
 ")"
@@ -43,7 +43,7 @@ height="${size#* }"
 
 # Handed to the page as a query string, which is what keeps a line carrying
 # spaces, commas or quotation marks intact on its way through the shell.
-query="$(node --input-type=module -e "
+query="$(read_facts "
   import { COPY } from '$module';
   process.stdout.write(new URLSearchParams({ lead: COPY.lead, date: COPY.date }).toString());
 ")"
