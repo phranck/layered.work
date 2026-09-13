@@ -115,7 +115,11 @@ zerops:
         - corepack enable
         - corepack prepare pnpm@11.13.0 --activate
         - pnpm install --frozen-lockfile
-        - pnpm --filter @layered/website build
+        # The trailing `...` builds the workspace packages this one depends
+        # on, in order. Every service uses this form: there is no case where a
+        # build should leave a dependency unbuilt, and the one that did not
+        # failed on `Rolldown failed to resolve import "@layered/policy"`.
+        - pnpm --filter "@layered/website..." build
       deployFiles:
         # Astro's build puts the server under dist/server and everything served
         # as a file, public/ included, under dist/client. The wordmark, the
