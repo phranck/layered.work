@@ -99,19 +99,12 @@ jobs:
   deploy-backend:
     needs: [gate, changes]
     if: >-
-      always() && needs.gate.result == 'success' && vars.DEPLOY_ENABLED == 'true' &&
+      always() && needs.gate.result == 'success' &&
       ((github.event_name == 'push' && needs.changes.outputs.backend == 'true') ||
        (github.event_name == 'workflow_dispatch' && inputs.backend))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Add security.txt
-        uses: phranck/security-txt-action@v1
-        with:
-          host: api.layered.work
-          output: apps/backend/public/.well-known
-          signing-key: ${{ secrets.SECURITY_TXT_SIGNING_KEY }}
-          signing-passphrase: ${{ secrets.SECURITY_TXT_SIGNING_PASSPHRASE }}
       - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
         with:
           access-token: ${{ secrets.ZEROPS_TOKEN }}
@@ -120,19 +113,12 @@ jobs:
   deploy-website:
     needs: [gate, changes]
     if: >-
-      always() && needs.gate.result == 'success' && vars.DEPLOY_ENABLED == 'true' &&
+      always() && needs.gate.result == 'success' &&
       ((github.event_name == 'push' && needs.changes.outputs.website == 'true') ||
        (github.event_name == 'workflow_dispatch' && inputs.website))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Add security.txt
-        uses: phranck/security-txt-action@v1
-        with:
-          host: layered.work
-          output: apps/website/public/.well-known
-          signing-key: ${{ secrets.SECURITY_TXT_SIGNING_KEY }}
-          signing-passphrase: ${{ secrets.SECURITY_TXT_SIGNING_PASSPHRASE }}
       - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
         with:
           access-token: ${{ secrets.ZEROPS_TOKEN }}
@@ -141,19 +127,12 @@ jobs:
   deploy-dashboard:
     needs: [gate, changes]
     if: >-
-      always() && needs.gate.result == 'success' && vars.DEPLOY_ENABLED == 'true' &&
+      always() && needs.gate.result == 'success' &&
       ((github.event_name == 'push' && needs.changes.outputs.dashboard == 'true') ||
        (github.event_name == 'workflow_dispatch' && inputs.dashboard))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Add security.txt
-        uses: phranck/security-txt-action@v1
-        with:
-          host: dashboard.layered.work
-          output: apps/dashboard/public/.well-known
-          signing-key: ${{ secrets.SECURITY_TXT_SIGNING_KEY }}
-          signing-passphrase: ${{ secrets.SECURITY_TXT_SIGNING_PASSPHRASE }}
       - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
         with:
           access-token: ${{ secrets.ZEROPS_TOKEN }}
@@ -175,8 +154,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # The Zerops subdomains until DNS points at the project. They change to
+      # layered.work, api.layered.work and dashboard.layered.work at the
+      # cutover, which is a deliberate moment and deserves a pull request.
       - run: bash scripts/smoke.sh
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
-          API_URL: ${{ vars.API_URL }}
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+          SITE_URL: https://website-2444.prg1.zerops.app
+          API_URL: https://backend-2444.prg1.zerops.app
+          DASHBOARD_URL: https://dashboard-2444.prg1.zerops.app

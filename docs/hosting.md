@@ -74,8 +74,8 @@ Repository secrets and variables the deploy workflow reads.
 | `ZEROPS_BACKEND_SERVICE_ID` | secret | The service id from the table above |
 | `ZEROPS_WEBSITE_SERVICE_ID` | secret | " |
 | `ZEROPS_DASHBOARD_SERVICE_ID` | secret | " |
-| `ZEROPS_TOKEN` | secret | A Zerops personal access token. **Not set yet.** |
-| `SECURITY_TXT_SIGNING_KEY` | secret | The signing subkey. **Not set yet.** |
-| `SECURITY_TXT_SIGNING_PASSPHRASE` | secret | **Not set yet.** |
-| `SITE_URL`, `API_URL`, `DASHBOARD_URL` | variables | What the smoke test checks. The Zerops subdomains for now. |
-| `DEPLOY_ENABLED` | variable | **Not set.** While it is absent no deploy job runs, so the workflow is complete and inert. |
+| `ZEROPS_TOKEN` | secret | A Zerops personal access token. **Not set yet**, and the deploy fails visibly until it is, which is better than not deploying quietly. |
+
+There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. Those three addresses are the Zerops subdomains until the cutover changes them.
+
+`security.txt` is deferred. Its two signing secrets are not set and the deploy workflow does not generate the file, so nothing depends on them. Its own issue puts both back when it is worked.
