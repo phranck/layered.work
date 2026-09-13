@@ -15,6 +15,10 @@ zerops:
         - pnpm --filter @layered/backend build
       deployFiles:
         - apps/backend/dist
+        # The generated migrations and their journal. Without them the runner
+        # starts, finds no journal and stops the deployment, which is what
+        # happened the first time this ran.
+        - apps/backend/drizzle
         - apps/backend/node_modules
         - apps/backend/package.json
         - node_modules

@@ -42,3 +42,27 @@ export const language = pgEnum("language", ["en", "de"]);
  * and may want a different one.
  */
 export const readingWidth = pgEnum("reading_width", ["narrow", "normal", "wide", "full"]);
+
+/**
+ * What an account may do.
+ *
+ * Two values, which is the fewest that makes the column mean anything. There is
+ * one account today and it is the `owner`, the one the seed creates. `editor`
+ * exists so that adding a second person is a row rather than a migration.
+ */
+export const userRole = pgEnum("user_role", ["owner", "editor"]);
+
+/**
+ * What an access token may do.
+ *
+ * Few and explicit, and publishing is deliberately not part of writing: a token
+ * given to an agent can draft all day without being able to put anything in
+ * front of a reader. A token carries the scopes it was issued with and nothing
+ * widens them afterwards.
+ */
+export const tokenScope = pgEnum("token_scope", [
+  "content:read",
+  "content:write",
+  "content:publish",
+  "media:write",
+]);
