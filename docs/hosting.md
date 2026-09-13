@@ -72,6 +72,22 @@ Adding a name to a project makes Zerops re-issue that certificate, and for a min
 
 Lower the time to live before the next such change. It stood at 3125 seconds, so a mistake took the better part of an hour to undo.
 
+## What the start command may contain
+
+**Nothing but the command.** Zerops hands the `start` line in `zerops.yml` to `exec`, not to a shell, so an environment assignment in front of the program is read as the name of the program:
+
+```
+━━━━  🙏 exec PORT=3000 node apps/website/dist/server/entry.mjs  ━━━━
+i: line 1: exec: PORT=3000: not found
+━━━━  ❌ exec … => 127 (exited with 127) ━━━━
+```
+
+It restarts in a loop from there. The deployment reports success throughout, because the code did reach the container; only the gateway has nothing to reach, and the site answers 502. Found on 13 September, six minutes of the site being down.
+
+That bites hardest with `PORT`, because Zerops holds that key itself and refuses the whole file when it appears under `envVariables`, so the obvious place is closed too. The answer is to set the port where the application is configured. For the website that is `server.port` in `astro.config.mjs`, which the standalone server reads with no environment variable involved, and it has to match the port declared under `ports` in `zerops.yml`.
+
+**Give every application service a health check.** Zerops asks for it before sending traffic to a new container, so a deployment that fails to start never replaces the one that is running. Without it, a broken start takes the site down, which is exactly what happened above. Liveness only: a check that reaches a database reports a slow dependency as a dead process.
+
 ## How another service reaches the database and the bucket
 
 Zerops exposes a service's own variables to its siblings, prefixed by the hostname. Nothing is written down; `zerops.yml` references them.
@@ -101,8 +117,8 @@ Repository secrets and variables the deploy workflow reads.
 | `ZEROPS_BACKEND_SERVICE_ID` | secret | The service id from the table above |
 | `ZEROPS_WEBSITE_SERVICE_ID` | secret | " |
 | `ZEROPS_DASHBOARD_SERVICE_ID` | secret | " |
-| `ZEROPS_TOKEN` | secret | A Zerops personal access token. **Not set yet**, and the deploy fails visibly until it is, which is better than not deploying quietly. |
+| `ZEROPS_TOKEN` | secret | A Zerops personal access token. Set, and deploying since 13 September 2026. |
 
-There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. Those three addresses are the Zerops subdomains until the cutover changes them.
+There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet.
 
 `security.txt` is deferred. Its two signing secrets are not set and the deploy workflow does not generate the file, so nothing depends on them. Its own issue puts both back when it is worked.
