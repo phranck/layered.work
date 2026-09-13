@@ -88,6 +88,24 @@ That bites hardest with `PORT`, because Zerops holds that key itself and refuses
 
 **Give every application service a health check.** Zerops asks for it before sending traffic to a new container, so a deployment that fails to start never replaces the one that is running. Without it, a broken start takes the site down, which is exactly what happened above. Liveness only: a check that reaches a database reports a slow dependency as a dead process.
 
+## The local database
+
+`docker compose up -d` from the repository root, and that is the whole setup. `compose.yml` declares it and `scripts/local-database/` creates the roles when the volume is first made.
+
+| | |
+| --- | --- |
+| Image | `postgres:18-alpine`, the version production runs |
+| Address | `127.0.0.1:5434`, the loopback alone, because 5432 and 5433 belong to the sibling projects |
+| Database | `layered` |
+| Application role | `layered_app`, deliberately not a superuser, and the owner of the database, the schema, every table and every type |
+| Administrative role | `layered`, for creating roles and looking around, and used by nothing that runs |
+
+Copy `.env.example` to `.env.local`. The services read it themselves through Node's `--env-file-if-exists`, so nothing has to be exported into a shell before `grat start` works. Neither password is a secret: the database listens on one laptop's loopback address and holds nothing that is not reproducible from the Publii export.
+
+**The volume mounts `/var/lib/postgresql`, not the `data` directory inside it.** From version 18 the image puts its cluster in a version-named subdirectory so a later `pg_upgrade --link` does not cross a mount boundary, and it refuses to start when it finds a mount one level too deep.
+
+Until 13 September 2026 the container on this machine came from a compose file in `/Users/phranck/Sites/layered.work`, which is the old project and no longer exists. The database could not be recreated from anything checked in, and it carried two abandoned schemas from earlier attempts. Both were dumped and dropped.
+
 ## How another service reaches the database and the bucket
 
 Zerops exposes a service's own variables to its siblings, prefixed by the hostname. Nothing is written down; `zerops.yml` references them.

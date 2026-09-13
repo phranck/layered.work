@@ -24,12 +24,25 @@ export default defineConfig({
   },
   server: {
     host: true,
+    // Note for anyone testing the switch locally: the development server
+    // refuses a request whose Host header it does not recognise, so asking it
+    // as `layered.work` answers 403 rather than the countdown. That is Vite
+    // guarding against DNS rebinding and it is worth keeping. Set
+    // WEBSITE_MODE=countdown to see the countdown instead. The built server has
+    // no such check, and the host rule works there.
     // The port Zerops sends requests to, declared in zerops.yml beside the
     // service. It is set here because the start command there is handed to
     // `exec` rather than to a shell, so it cannot carry an assignment, and
     // because Zerops holds the key `PORT` itself and refuses the file when it
     // appears among the environment variables. Astro's own default is 4321,
     // which answers nothing that anybody asks for.
-    port: 3000,
+    //
+    // The environment wins where it says anything, which is how the same
+    // configuration serves both ends. Locally grat starts this with PORT set,
+    // because 3000 belongs to lmaa.space on that machine; in production nothing
+    // sets it and the number below is what is used. Checked both ways: a built
+    // server with 3000 compiled in and PORT=3311 in its environment listens on
+    // 3311.
+    port: Number(process.env.PORT ?? 3000),
   },
 });
