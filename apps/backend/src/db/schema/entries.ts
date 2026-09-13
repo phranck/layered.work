@@ -11,7 +11,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { identifier, instant } from "./columns.js";
 import { entryKind, language, publicationState, readingWidth } from "./enums.js";
+import { media } from "./media.js";
 
 /**
  * Everything an author writes, and the addresses it answers at.
@@ -21,15 +23,7 @@ import { entryKind, language, publicationState, readingWidth } from "./enums.js"
  * each other only through a link somebody typed into the body. Here an entry is
  * the work itself and a translation is one language of it, so the pair is a row
  * rather than a habit.
- *
- * Keys are `uuidv7`, which Postgres 18 generates itself. Time-ordered, so rows
- * written together sit together in the index, and carrying 74 random bits,
- * which is far past guessing for anything that is reached by its identifier
- * rather than by its path.
  */
-
-/** The generator, written once because every table below uses it. */
-const identifier = () => uuid().primaryKey().default(sql`uuidv7()`);
 
 /**
  * A piece of work, in whichever languages it exists.
@@ -55,8 +49,8 @@ export const entries = pgTable("entries", {
    */
   onHomePage: boolean("on_home_page").notNull().default(true),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  modifiedAt: timestamp("modified_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: instant("created_at"),
+  modifiedAt: instant("modified_at"),
 });
 
 /**
@@ -89,6 +83,17 @@ export const entryTranslations = pgTable(
 
     /** The hash of the password a protected entry asks for. Never the password. */
     passwordHash: text("password_hash"),
+
+    /**
+     * The picture that stands for this translation: on its card, at the top of
+     * the page, and on a social card.
+     *
+     * Per translation rather than per entry, for the same reason the reading
+     * width is. A screenshot showing an interface in German belongs to the
+     * German article, and the migration writes the same file to both where
+     * Publii had one.
+     */
+    featuredMediaId: uuid("featured_media_id").references(() => media.id, { onDelete: "restrict" }),
   },
   (table) => [
     unique("entry_translations_one_per_language").on(table.entryId, table.language),
@@ -134,7 +139,7 @@ export const paths = pgTable(
 
     isCurrent: boolean("is_current").notNull().default(true),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: instant("created_at"),
   },
   (table) => [
     /** One address belongs to one translation, current or not. */
@@ -157,7 +162,7 @@ export const paths = pgTable(
  */
 export const topics = pgTable("topics", {
   id: identifier(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: instant("created_at"),
 });
 
 /**
@@ -183,6 +188,41 @@ export const topicTranslations = pgTable(
   (table) => [
     unique("topic_translations_one_per_language").on(table.topicId, table.language),
     unique("topic_translations_slug_per_language").on(table.language, table.slug),
+  ],
+);
+
+/**
+ * Which files a translation's body names.
+ *
+ * Rebuilt from the body every time it is saved, so it always describes what is
+ * written now rather than what was written at some point. It is here rather
+ * than beside the media tables because it is a fact about a translation, and
+ * because it is the save of a translation that produces it.
+ *
+ * It answers two questions that nothing else can. The database refuses to
+ * delete a file an entry names, because the reference is a foreign key rather
+ * than a convention, and the dashboard turns that refusal into the list of
+ * entries to edit first. A file no row points at is one that nothing uses,
+ * which is what makes clearing out the library possible at all.
+ *
+ * The same file named twice in one body is one row. The question being asked is
+ * whether it is used, and twice is not more used than once.
+ */
+export const mediaReferences = pgTable(
+  "media_references",
+  {
+    translationId: uuid("translation_id")
+      .notNull()
+      .references(() => entryTranslations.id, { onDelete: "cascade" }),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.translationId, table.mediaId] }),
+
+    /** Asked from the media side by the library, which lists what uses a file. */
+    index("media_references_by_media").on(table.mediaId),
   ],
 );
 
