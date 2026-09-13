@@ -1,26 +1,27 @@
 /**
- * The public site.
+ * The countdown, as one complete document.
  *
- * Until the site itself is built, what stands here is a countdown to the day it
- * opens. It is the real front of layered.work, so it is made from the project's
- * own design: its wordmark, its typefaces, its colours, and a web of nodes
- * behind it that turns slowly and answers the pointer.
+ * It is the front of layered.work until the site opens, so it is made from the
+ * project's own design: the wordmark, the typefaces, the colours, and a web of
+ * nodes behind it that turns slowly and answers the pointer.
  *
- * English only. The finished site is bilingual, and this page is not the place
- * to start that: one notice in two languages is two things to keep in step for
- * the few days it stands.
+ * A document rather than a page in the site, because it is not part of the
+ * site. It answers at every address until the launch and at none afterwards,
+ * which is `src/middleware.ts`, and on the day after the launch this whole
+ * directory is deleted. Building it into the site's own layouts and components
+ * would be building something to throw away.
+ *
+ * English only. The finished site is bilingual, and this is not the place to
+ * start that: one notice in two languages is two things to keep in step for the
+ * few days it stands.
  */
-import { readFile } from "node:fs/promises";
-import { createServer, type ServerResponse } from "node:http";
-import { extname, join, normalize, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { COUNTDOWN_SCRIPT } from "./countdown.js";
-import { SCENE_SCRIPT } from "./scene.js";
 import {
   COPY,
   DESCRIPTION,
   FEDIVERSE_CREATOR,
   LAUNCH,
+  PAGE_COLOR,
+  PAGE_COLOR_SRGB,
   SHARE_IMAGE,
   SHARE_IMAGE_HEIGHT,
   SHARE_IMAGE_WIDTH,
@@ -28,46 +29,9 @@ import {
   TAGLINE,
   UMAMI_SCRIPT,
   UMAMI_WEBSITE_ID,
-} from "./site.js";
-
-const PORT = Number(process.env.PORT ?? 3000);
-const HOST = process.env.HOST ?? "0.0.0.0";
-
-/**
- * The page colour, in the two forms the page needs.
- *
- * The stylesheet takes the oklch, which is how this palette is written. The
- * browser chrome takes `theme-color`, which reads sRGB only, so the hex beside
- * it is that same colour read back off a painted pixel. Change one and change
- * the other.
- */
-const PAGE_COLOR = "oklch(0.205 0.008 250)";
-const PAGE_COLOR_SRGB = "#14171b";
-
-const ONE_HOUR_SECONDS = 3_600;
-const ONE_DAY_SECONDS = 86_400;
-const ONE_YEAR_SECONDS = 31_536_000;
-
-/** The countdown changes every second, so the document itself is barely worth keeping. */
-const PAGE_MAX_AGE_SECONDS = 300;
-
-const PUBLIC_DIR = resolve(fileURLToPath(new URL("../public/", import.meta.url)));
-
-/**
- * What may be served out of `public/`, and how long a reader may keep it.
- *
- * The extension is the whole allow-list, so a file that lands in the directory
- * without a type named here is a 404 rather than a public document. The ages
- * differ because the files do: a typeface under a given name never changes its
- * outlines, whilst the wordmark and the sharing image are replaced in place and
- * have to reach a reader who has been here before.
- */
-const ASSETS: Record<string, { type: string; maxAge: number }> = {
-  ".woff2": { type: "font/woff2", maxAge: ONE_YEAR_SECONDS },
-  ".css": { type: "text/css; charset=utf-8", maxAge: ONE_DAY_SECONDS },
-  ".svg": { type: "image/svg+xml", maxAge: ONE_DAY_SECONDS },
-  ".png": { type: "image/png", maxAge: ONE_DAY_SECONDS },
-};
+} from "../site.js";
+import { COUNTDOWN_SCRIPT } from "./clock.js";
+import { SCENE_SCRIPT } from "./scene.js";
 
 /**
  * Escapes a value going into a double-quoted HTML attribute.
@@ -155,7 +119,13 @@ const unit = (label: string): string =>
  * request for something decorative is a request the reader waits on. The
  * typefaces and the wordmark are the exceptions, because both are files.
  */
-function page(): string {
+/**
+ * The whole document, as a string.
+ *
+ * @returns The countdown page, complete from the doctype down, ready to be the
+ *   body of a response.
+ */
+export function countdownPage(): string {
   const copy = COPY;
 
   return `<!doctype html>
@@ -625,120 +595,3 @@ function page(): string {
 </html>
 `;
 }
-
-/**
- * Serves a file from public/, refusing anything that leaves it.
- *
- * @param path - The request path, taken as written by the caller.
- * @returns The file with the type and the age its extension earns, or null when
- *   the extension is not one this site publishes, when the path climbs out of
- *   the directory, or when there is no such file.
- */
-async function servePublic(path: string): Promise<{ body: Buffer; type: string; maxAge: number } | null> {
-  const asset = ASSETS[extname(path)];
-  if (!asset) return null;
-  // Resolve first, then check containment. A path is only safe once it has been
-  // through the resolver, because that is where dot segments are removed.
-  const target = resolve(join(PUBLIC_DIR, normalize(path)));
-  if (!target.startsWith(PUBLIC_DIR)) return null;
-  try {
-    return { body: await readFile(target), type: asset.type, maxAge: asset.maxAge };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * What a crawler is told before it reads anything else.
- *
- * The sitemap is named with its full address, which the specification asks for
- * and several crawlers insist on.
- */
-function robots(): string {
-  return ["User-agent: *", "Allow: /", "", `Sitemap: ${SITE_ORIGIN}/sitemap.xml`, ""].join("\n");
-}
-
-/**
- * The one address this site has whilst it is counting down.
- *
- * It carries no `lastmod`. The honest value would change on every deployment
- * and mean nothing, and a date that does not match the document is worse than
- * no date at all.
- */
-function sitemap(): string {
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    "  <url>",
-    `    <loc>${SITE_ORIGIN}/</loc>`,
-    "  </url>",
-    "</urlset>",
-    "",
-  ].join("\n");
-}
-
-/**
- * Writes one response, with the headers every response on this site carries.
- *
- * Every route wants the same three: a type, an age, and a refusal to let the
- * browser guess the type itself. Having one place that writes them is what
- * stops a new route from being the one that quietly omits the last of them.
- *
- * @param response - The response being written.
- * @param status - The status code.
- * @param body - What to send.
- * @param type - The full content type, including a charset where text.
- * @param maxAge - How many seconds a reader may keep it.
- */
-function send(
-  response: ServerResponse,
-  status: number,
-  body: string | Buffer,
-  type: string,
-  maxAge: number,
-): void {
-  // Something a reader may keep for a year is something that will never differ
-  // under that name, and that is what `immutable` says: do not come back and
-  // ask. It follows from the age rather than being stated beside it, so the two
-  // cannot end up disagreeing.
-  const forever = maxAge >= ONE_YEAR_SECONDS ? ", immutable" : "";
-
-  response.writeHead(status, {
-    "content-type": type,
-    "cache-control": `public, max-age=${maxAge}${forever}`,
-    "x-content-type-options": "nosniff",
-    "referrer-policy": "strict-origin-when-cross-origin",
-  });
-  response.end(body);
-}
-
-const server = createServer((request, response) => {
-  const path = (request.url ?? "/").split("?")[0] ?? "/";
-
-  if (path === "/") {
-    send(response, 200, page(), "text/html; charset=utf-8", PAGE_MAX_AGE_SECONDS);
-    return;
-  }
-
-  if (path === "/robots.txt") {
-    send(response, 200, robots(), "text/plain; charset=utf-8", ONE_HOUR_SECONDS);
-    return;
-  }
-
-  if (path === "/sitemap.xml") {
-    send(response, 200, sitemap(), "application/xml; charset=utf-8", ONE_HOUR_SECONDS);
-    return;
-  }
-
-  void servePublic(path).then((file) => {
-    if (!file) {
-      send(response, 404, "Not found", "text/plain; charset=utf-8", 0);
-      return;
-    }
-    send(response, 200, file.body, file.type, file.maxAge);
-  });
-});
-
-server.listen(PORT, HOST, () => {
-  console.log(JSON.stringify({ message: "website listening", host: HOST, port: PORT }));
-});

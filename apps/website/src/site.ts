@@ -65,6 +65,83 @@ export const LAUNCH_TEXT = ((): string => {
 export const SITE_ORIGIN = "https://layered.work";
 
 /**
+ * The page colour, in the two forms the site needs.
+ *
+ * The stylesheet takes the oklch, which is how this palette is written. The
+ * browser chrome takes `theme-color`, which reads sRGB only, so the hex beside
+ * it is that same colour read back off a painted pixel. Change one and change
+ * the other.
+ */
+export const PAGE_COLOR = "oklch(0.205 0.008 250)";
+export const PAGE_COLOR_SRGB = "#14171b";
+
+/**
+ * Hosts on which the finished site answers before the launch.
+ *
+ * Everything not named here is held back until the moment, which is the way
+ * round that fails safely: a host nobody anticipated shows the countdown rather
+ * than an unfinished site. The public domain is deliberately absent.
+ *
+ * Matched on the name alone, so a port does not have to be listed. The entries
+ * are suffixes, so every Zerops subdomain of the project is covered by one
+ * line, and a host is only a match when the character before the suffix is a
+ * dot or there is nothing before it at all. Without that, `notlayered.work`
+ * would match a suffix of `layered.work`.
+ */
+export const PREVIEW_HOSTS = [".zerops.app", "localhost", "127.0.0.1"];
+
+/**
+ * Whether a host is one of those the finished site answers on before the
+ * launch.
+ *
+ * @param host - The `Host` header as it arrived, with its port if it had one.
+ * @returns True when the site may be shown there ahead of the moment.
+ */
+export function isPreviewHost(host: string | null): boolean {
+  if (!host) return false;
+  const name = host.split(":")[0]?.toLowerCase() ?? "";
+  return PREVIEW_HOSTS.some(
+    (suffix) => name === suffix || name.endsWith(suffix.startsWith(".") ? suffix : `.${suffix}`),
+  );
+}
+
+/**
+ * What to serve, when the clock is not to decide it.
+ *
+ * `auto`, which is the default and what production runs, asks the clock and the
+ * host. The other two settle it outright: `countdown` is the way back if the
+ * site goes live and something is badly wrong, without moving the date and
+ * without a deployment, and `site` is how the finished site is worked on
+ * locally whilst the launch is still ahead.
+ */
+export type WebsiteMode = "auto" | "site" | "countdown";
+
+/**
+ * Reads that setting.
+ *
+ * Anything unrecognised is `auto` rather than an error, because a typo in an
+ * environment variable should not take the site down.
+ */
+export function websiteMode(): WebsiteMode {
+  const given = process.env.WEBSITE_MODE;
+  return given === "site" || given === "countdown" ? given : "auto";
+}
+
+/**
+ * Whether the site has opened.
+ *
+ * Asked on every request, never once at start-up. A container that began before
+ * the launch would otherwise go on serving the countdown for the rest of its
+ * life, which is the one way this arrangement fails completely and silently.
+ *
+ * @param now - The moment to judge, which the caller passes so a test can name
+ *   one rather than wait for it.
+ */
+export function hasOpened(now: number = Date.now()): boolean {
+  return now >= Date.parse(LAUNCH);
+}
+
+/**
  * What the site is about, in one phrase.
  *
  * It opens the first line on the page, it follows the name in the title, and it
