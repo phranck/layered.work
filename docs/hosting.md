@@ -118,6 +118,23 @@ The [zerops.yml specification](https://docs.zerops.io/zerops-yaml/specification#
 
 All three services have one, which is the part that is easy to get wrong: the health check watches what is already running, so a service without a readiness check puts a new container into rotation as soon as it starts. The website asks for its own `/health`, and the dashboard asks for its index page, because nginx serves an empty document root perfectly happily and a build that produced nothing would otherwise replace a working dashboard.
 
+## What the forwarded chain looks like
+
+Measured against the deployed backend on 13 September 2026, by sending a request with a header of its own and reading the chain back out of a rate-limit log line, hashed:
+
+| What the caller sends | What the service receives |
+| --- | --- |
+| nothing | `[<the caller>, <a Zerops hop>]` |
+| `X-Forwarded-For: 1.2.3.4` | `[1.2.3.4, <the caller>, <a Zerops hop>]` |
+
+Zerops appends the address it saw the connection come from, and then one more internal hop appends its own. **The caller is therefore two from the end, never the last and never the first.**
+
+The last entry is the same Zerops hop for everybody, so reading it puts every caller into one bucket and turns a per-source limit into a global one. That is what the first version of the rate limiter did, and the chain it logs on every refusal is what made it visible within a minute of deploying.
+
+The first entry is whatever the caller typed, so reading that is no limit at all.
+
+A CDN in front would add one more entry and make the caller three from the end. The rate limiter logs the whole chain, hashed, on every refusal, so that change shows up rather than passing silently.
+
 ## The local database
 
 `docker compose up -d` from the repository root, and that is the whole setup. `compose.yml` declares it and `scripts/local-database/` creates the roles when the volume is first made.
