@@ -377,8 +377,13 @@ function page(): string {
         --flap: oklch(0.168 0.006 250);
         /* How thick the gap between the two flaps reads. Fixed rather than
            scaled with the card, because it stands for a physical edge and an
-           edge does not get thicker on a wider screen. */
+           edge does not get thicker on a wider screen.
+
+           What is actually drawn is --groove-drawn, which the script replaces
+           with the nearest whole number of the display's own pixels. Without a
+           script the authored value is used as it stands. */
         --groove: 1px;
+        --groove-drawn: var(--groove);
 
         position: relative;
         display: block;
@@ -409,9 +414,15 @@ function page(): string {
         /* Stated once and halved to place it, so the line stays on the middle
            of the card whatever it is set to. The two were matched by hand and
            the width has been changed often enough for that to be a question of
-           when rather than whether. */
-        top: calc(50% - var(--groove) / 2);
-        height: var(--groove);
+           when rather than whether.
+
+           The nudge is the fraction of a display pixel between where the middle
+           of the card falls and the nearest edge of a pixel. The script
+           measures it and puts it here; a line that straddles two rows of
+           pixels is drawn at half strength in both and reads as a grey smear
+           instead of a gap. */
+        top: calc(50% - var(--groove-drawn) / 2 + var(--groove-nudge, 0px));
+        height: var(--groove-drawn);
         content: "";
         background: linear-gradient(
           90deg,
