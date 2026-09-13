@@ -171,15 +171,19 @@ describe("what a refusal is written down as", () => {
     expect(refusal?.message).toBe("refused by a rate limit");
   });
 
-  it("records how many proxies the request came through, rather than through whom", async () => {
-    // The number is what says whether the assumption about the topology still
-    // holds. A chain of one is one proxy in front, which is the deployment.
+  it("records every hop as a hash, rather than through whom it came", async () => {
+    // Which position the client is in is what decides whether a per-source
+    // limit is per source at all, and the length alone does not say.
     for (let tries = 0; tries <= SIGN_IN_PER_ACCOUNT.limit; tries += 1) {
       await attempt("someone@layered.test", "198.51.100.1, 203.0.113.7");
     }
 
     const refusal = written.find((line) => line.fields.deviation === true);
-    expect(refusal?.fields.hops).toBe(2);
+    expect(refusal?.fields.chain).toEqual([
+      sourceFingerprint("198.51.100.1"),
+      sourceFingerprint("203.0.113.7"),
+    ]);
+    expect(JSON.stringify(refusal?.fields.chain)).not.toContain("198.51.100.1");
   });
 
   it("holds the address the trusted proxy appended, not the one the caller prepended", async () => {
