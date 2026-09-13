@@ -1,0 +1,77 @@
+name: Gate
+
+# Lint, types, tests and a build of everything, in one job. Two jobs would mean
+# a second runner and a second install of the dependencies, which is the
+# expensive part, for gates that take nothing from each other.
+#
+# Called rather than triggered, by the pull request workflow and by the deploy
+# workflow, so that the two cannot drift into checking different things. A gate
+# written out twice is a gate that is eventually only half applied, and the half
+# that is missing is invisible.
+#
+# Nothing here interpolates anything a stranger can write. Every `run` is a
+# fixed command over fixed values.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+
+    # The tests that matter are the ones a mock cannot have: a session whose row
+    # was deleted, an expiry that has passed, a constraint refusing a row. They
+    # need a database, and without one here they would skip, which is a suite
+    # that quietly shrinks as more of it becomes worth running.
+    #
+    # The same version production runs. The roles and the test database are
+    # created below by the same scripts `docker compose up -d` uses locally, so
+    # there is one description of that shape rather than two.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: layered
+          POSTGRES_PASSWORD: layered_local
+          POSTGRES_DB: layered
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U layered -d layered"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Create the roles and the test database
+        env:
+          ADMIN_URL: postgres://layered:layered_local@127.0.0.1:5432/postgres
+        run: |
+          for script in scripts/local-database/*.sql; do
+            psql "$ADMIN_URL" --quiet --set ON_ERROR_STOP=1 --file "$script"
+          done
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+        env:
+          # Named here rather than left to a file, so a run that cannot reach a
+          # database fails on the connection instead of skipping twenty tests.
+          DATABASE_URL_TEST: postgres://layered_app:layered_local@127.0.0.1:5432/layered_test
+      - run: pnpm build
+
+      # Which workspaces actually carry a suite, printed rather than assumed. A
+      # job named `gate` that silently covers one workspace of four is the
+      # failure this line exists to make visible.
+      - name: Say which workspaces carry tests
+        run: pnpm -r exec node -e "const p=require('./package.json'); if (p.scripts?.test) console.log(p.name)"
