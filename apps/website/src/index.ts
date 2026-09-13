@@ -11,7 +11,7 @@
  * the few days it stands.
  */
 import { readFile } from "node:fs/promises";
-import { createServer } from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { COUNTDOWN_SCRIPT } from "./countdown.js";
@@ -29,27 +29,142 @@ const HOST = process.env.HOST ?? "0.0.0.0";
  */
 const LAUNCH = "2026-09-20T20:20:00+02:00";
 
+/**
+ * Where this site answers.
+ *
+ * Stated once and used for the canonical link, every sharing tag, the robots
+ * file and the sitemap, so all the absolute addresses the page publishes are
+ * the same address.
+ */
+const SITE_ORIGIN = "https://layered.work";
+
+/**
+ * The page colour, in the two forms the page needs.
+ *
+ * The stylesheet takes the oklch, which is how this palette is written. The
+ * browser chrome takes `theme-color`, which reads sRGB only, so the hex beside
+ * it is that same colour read back off a painted pixel. Change one and change
+ * the other.
+ */
+const PAGE_COLOR = "oklch(0.205 0.008 250)";
+const PAGE_COLOR_SRGB = "#14171b";
+
+const ONE_HOUR_SECONDS = 3_600;
+const ONE_DAY_SECONDS = 86_400;
+const ONE_YEAR_SECONDS = 31_536_000;
+
+/** The countdown changes every second, so the document itself is barely worth keeping. */
+const PAGE_MAX_AGE_SECONDS = 300;
+
 const PUBLIC_DIR = resolve(fileURLToPath(new URL("../public/", import.meta.url)));
 
-const CONTENT_TYPES: Record<string, string> = {
-  ".woff2": "font/woff2",
-  ".css": "text/css; charset=utf-8",
-  ".svg": "image/svg+xml",
+/**
+ * What may be served out of `public/`, and how long a reader may keep it.
+ *
+ * The extension is the whole allow-list, so a file that lands in the directory
+ * without a type named here is a 404 rather than a public document. The ages
+ * differ because the files do: a typeface under a given name never changes its
+ * outlines, whilst the wordmark and the sharing image are replaced in place and
+ * have to reach a reader who has been here before.
+ */
+const ASSETS: Record<string, { type: string; maxAge: number }> = {
+  ".woff2": { type: "font/woff2", maxAge: ONE_YEAR_SECONDS },
+  ".css": { type: "text/css; charset=utf-8", maxAge: ONE_DAY_SECONDS },
+  ".svg": { type: "image/svg+xml", maxAge: ONE_DAY_SECONDS },
+  ".png": { type: "image/png", maxAge: ONE_DAY_SECONDS },
 };
+
+/**
+ * What the site is about, in one phrase.
+ *
+ * It opens the first line on the page, it follows the name in the title, and it
+ * opens the sharing text, so it is written here once rather than three times.
+ */
+const TAGLINE = "Enclosures, circuit boards and software";
 
 const COPY = {
   eyebrow: "Bregenz, Austria",
   lead: "The new site arrives on",
   date: "20 September 2026, 20:20",
-  body: [
-    "Enclosures, circuit boards and software, made layer by layer.",
-    "The posts and projects are moving into a new home.",
-  ],
+  tagline: TAGLINE,
+  body: [`${TAGLINE}, made layer by layer.`, "The posts and projects are moving into a new home."],
   units: ["Days", "Hours", "Minutes", "Seconds"],
   open: "It is time.",
   contact: "Until then, I'm reachable at",
   logoLabel: "layered.work",
+  author: "phranck",
+  shareAlt: "The layered.work wordmark over a dark field of fine lines.",
 } as const;
+
+/**
+ * The sentence given to a search engine and to anything that unfurls a link.
+ *
+ * Built from the same lines the page shows, so what a reader finds in a result
+ * list is what they then read on the page.
+ */
+const DESCRIPTION = `${COPY.body[0]} ${COPY.lead} ${COPY.date}.`;
+
+/** The name of the sharing image, wanted by the tags and by the file that makes it. */
+const SHARE_IMAGE = "/og.png";
+const SHARE_IMAGE_WIDTH = 1200;
+const SHARE_IMAGE_HEIGHT = 630;
+
+/**
+ * Escapes a value going into a double-quoted HTML attribute.
+ *
+ * Every sharing tag on this page carries prose, and prose acquires ampersands
+ * and quotation marks as it is edited. Neither shows as a fault in the browser:
+ * the tag simply carries the wrong text, or ends early, and the first place it
+ * appears is in somebody else's link preview.
+ *
+ * @param value - The text to place inside the attribute.
+ * @returns The same text with the four characters that end an attribute or
+ *   start an entity replaced by their references.
+ */
+function attribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/**
+ * What the site tells a crawler about itself.
+ *
+ * A `Person` rather than an `Organization`, because the page speaks in the
+ * first person and one reader is meant to find one author. The address is there
+ * so a search for the trade and the place has something to match.
+ *
+ * `<` is written as its escape so the result cannot end the script element that
+ * carries it, whatever the copy grows into.
+ */
+function structuredData(): string {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_ORIGIN}/#website`,
+        url: `${SITE_ORIGIN}/`,
+        name: COPY.logoLabel,
+        description: DESCRIPTION,
+        inLanguage: "en",
+        publisher: { "@id": `${SITE_ORIGIN}/#person` },
+      },
+      {
+        "@type": "Person",
+        "@id": `${SITE_ORIGIN}/#person`,
+        name: COPY.author,
+        url: `${SITE_ORIGIN}/`,
+        email: "mailto:hello@layered.work",
+        knowsAbout: [TAGLINE],
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Bregenz",
+          addressRegion: "Vorarlberg",
+          addressCountry: "AT",
+        },
+      },
+    ],
+  }).replace(/</g, "\\u003c");
+}
 
 /**
  * One digit of the countdown, as the four faces the fold needs.
@@ -89,18 +204,44 @@ function page(): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <title>layered.work</title>
-    <meta name="description" content="${copy.lead} ${copy.date}." />
-    <meta property="og:title" content="layered.work" />
-    <meta property="og:description" content="${copy.lead} ${copy.date}." />
+    <meta name="theme-color" content="${PAGE_COLOR_SRGB}" />
+
+    <title>${attribute(`${copy.logoLabel} | ${copy.tagline}`)}</title>
+    <meta name="description" content="${attribute(DESCRIPTION)}" />
+    <meta name="author" content="${attribute(copy.author)}" />
+    <link rel="canonical" href="${SITE_ORIGIN}/" />
+    <!-- The default is to index and follow. It is written out because the rest
+         of the line is not the default: a countdown is a thin page, and without
+         it the preview offered beside a result is a thumbnail. -->
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <meta property="og:site_name" content="${attribute(copy.logoLabel)}" />
+    <meta property="og:title" content="${attribute(`${copy.logoLabel} | ${copy.tagline}`)}" />
+    <meta property="og:description" content="${attribute(DESCRIPTION)}" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://layered.work/" />
+    <meta property="og:url" content="${SITE_ORIGIN}/" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content="${SITE_ORIGIN}${SHARE_IMAGE}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="${SHARE_IMAGE_WIDTH}" />
+    <meta property="og:image:height" content="${SHARE_IMAGE_HEIGHT}" />
+    <meta property="og:image:alt" content="${attribute(copy.shareAlt)}" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${attribute(`${copy.logoLabel} | ${copy.tagline}`)}" />
+    <meta name="twitter:description" content="${attribute(DESCRIPTION)}" />
+    <meta name="twitter:image" content="${SITE_ORIGIN}${SHARE_IMAGE}" />
+    <meta name="twitter:image:alt" content="${attribute(copy.shareAlt)}" />
+
+    <script type="application/ld+json">${structuredData()}</script>
+
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preload" href="/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css" />
     <style>
       :root {
-        --page: oklch(0.205 0.008 250);
+        --page: ${PAGE_COLOR};
         --raised: oklch(0.262 0.008 250);
         --sunken: oklch(0.232 0.008 250);
         --edge: rgb(255 255 255 / 7%);
@@ -464,7 +605,10 @@ function page(): string {
            turns with it, which is the one thing a real shadow never does. -->
       <div class="shadow" id="shadow" aria-hidden="true"></div>
       <main>
-      <img class="mark" src="/logo.svg" alt="${copy.logoLabel}" width="900" height="450" />
+      <!-- The wordmark is the heading. A page whose only title is a picture has
+           no heading at all as far as a crawler is concerned, and the mark
+           already carries the name as its alternative text. -->
+      <h1><img class="mark" src="/logo.svg" alt="${attribute(copy.logoLabel)}" width="900" height="450" /></h1>
       <p class="eyebrow">${copy.eyebrow}</p>
 
       <p class="lead">${copy.lead}</p>
@@ -489,48 +633,117 @@ function page(): string {
 `;
 }
 
-/** Serves a file from public/, refusing anything that leaves it. */
-async function servePublic(path: string): Promise<{ body: Buffer; type: string } | null> {
-  const type = CONTENT_TYPES[extname(path)];
-  if (!type) return null;
+/**
+ * Serves a file from public/, refusing anything that leaves it.
+ *
+ * @param path - The request path, taken as written by the caller.
+ * @returns The file with the type and the age its extension earns, or null when
+ *   the extension is not one this site publishes, when the path climbs out of
+ *   the directory, or when there is no such file.
+ */
+async function servePublic(path: string): Promise<{ body: Buffer; type: string; maxAge: number } | null> {
+  const asset = ASSETS[extname(path)];
+  if (!asset) return null;
   // Resolve first, then check containment. A path is only safe once it has been
   // through the resolver, because that is where dot segments are removed.
   const target = resolve(join(PUBLIC_DIR, normalize(path)));
   if (!target.startsWith(PUBLIC_DIR)) return null;
   try {
-    return { body: await readFile(target), type };
+    return { body: await readFile(target), type: asset.type, maxAge: asset.maxAge };
   } catch {
     return null;
   }
 }
 
-const server = createServer((request, response) => {
-  const path = (request.url ?? "/").split("?")[0] ?? "/";
+/**
+ * What a crawler is told before it reads anything else.
+ *
+ * The sitemap is named with its full address, which the specification asks for
+ * and several crawlers insist on.
+ */
+function robots(): string {
+  return ["User-agent: *", "Allow: /", "", `Sitemap: ${SITE_ORIGIN}/sitemap.xml`, ""].join("\n");
+}
 
-  if (path !== "/") {
-    void servePublic(path).then((file) => {
-      if (!file) {
-        response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-        response.end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": file.type,
-        "cache-control": "public, max-age=31536000, immutable",
-        "x-content-type-options": "nosniff",
-      });
-      response.end(file.body);
-    });
-    return;
-  }
+/**
+ * The one address this site has whilst it is counting down.
+ *
+ * It carries no `lastmod`. The honest value would change on every deployment
+ * and mean nothing, and a date that does not match the document is worse than
+ * no date at all.
+ */
+function sitemap(): string {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    "  <url>",
+    `    <loc>${SITE_ORIGIN}/</loc>`,
+    "  </url>",
+    "</urlset>",
+    "",
+  ].join("\n");
+}
 
-  response.writeHead(200, {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "public, max-age=300",
+/**
+ * Writes one response, with the headers every response on this site carries.
+ *
+ * Every route wants the same three: a type, an age, and a refusal to let the
+ * browser guess the type itself. Having one place that writes them is what
+ * stops a new route from being the one that quietly omits the last of them.
+ *
+ * @param response - The response being written.
+ * @param status - The status code.
+ * @param body - What to send.
+ * @param type - The full content type, including a charset where text.
+ * @param maxAge - How many seconds a reader may keep it.
+ */
+function send(
+  response: ServerResponse,
+  status: number,
+  body: string | Buffer,
+  type: string,
+  maxAge: number,
+): void {
+  // Something a reader may keep for a year is something that will never differ
+  // under that name, and that is what `immutable` says: do not come back and
+  // ask. It follows from the age rather than being stated beside it, so the two
+  // cannot end up disagreeing.
+  const forever = maxAge >= ONE_YEAR_SECONDS ? ", immutable" : "";
+
+  response.writeHead(status, {
+    "content-type": type,
+    "cache-control": `public, max-age=${maxAge}${forever}`,
     "x-content-type-options": "nosniff",
     "referrer-policy": "strict-origin-when-cross-origin",
   });
-  response.end(page());
+  response.end(body);
+}
+
+const server = createServer((request, response) => {
+  const path = (request.url ?? "/").split("?")[0] ?? "/";
+
+  if (path === "/") {
+    send(response, 200, page(), "text/html; charset=utf-8", PAGE_MAX_AGE_SECONDS);
+    return;
+  }
+
+  if (path === "/robots.txt") {
+    send(response, 200, robots(), "text/plain; charset=utf-8", ONE_HOUR_SECONDS);
+    return;
+  }
+
+  if (path === "/sitemap.xml") {
+    send(response, 200, sitemap(), "application/xml; charset=utf-8", ONE_HOUR_SECONDS);
+    return;
+  }
+
+  void servePublic(path).then((file) => {
+    if (!file) {
+      send(response, 404, "Not found", "text/plain; charset=utf-8", 0);
+      return;
+    }
+    send(response, 200, file.body, file.type, file.maxAge);
+  });
 });
 
 server.listen(PORT, HOST, () => {
