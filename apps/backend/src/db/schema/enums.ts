@@ -84,3 +84,28 @@ export const mediaKind = pgEnum("media_kind", ["image", "video", "document", "mo
  * has transparency, so both have to exist here.
  */
 export const imageFormat = pgEnum("image_format", ["avif", "webp", "jpeg", "png"]);
+
+/**
+ * Where a navigation appears.
+ *
+ * The header holds one. The footer holds several, stacked, each with its own
+ * heading, which is the arrangement phranck asked for and the reason a
+ * navigation is a row rather than a setting.
+ */
+export const navigationPlacement = pgEnum("navigation_placement", ["main", "footer"]);
+
+/**
+ * The kinds of block the home page is assembled from.
+ *
+ * Every value needs a component to render it and a declaration saying what it
+ * can be set to, so adding one is a code change whatever this column is. An
+ * enum therefore costs nothing and keeps a block that nothing can render out of
+ * the table.
+ */
+export const homeBlockType = pgEnum("home_block_type", [
+  "hero",
+  "featured_entry",
+  "project_grid",
+  "post_grid",
+  "topic_bar",
+]);
