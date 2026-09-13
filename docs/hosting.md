@@ -51,7 +51,24 @@ zcli service enable-subdomain --projectId <project> --serviceId <service>
 
 This cost an hour on 13 September 2026. The process was healthy the whole time and every layer looked right.
 
-The real hosts are `layered.work`, `dashboard.layered.work` and `api.layered.work`. Zerops manages domains and certificates outside the import file, so they are attached in the Zerops interface once the DNS records are in place at world4you. The exact records go here when they are known.
+## The domain
+
+`layered.work` is attached to the `website` service and live since 13 September 2026. DNS is at world4you, and the zone holds exactly these two records for it:
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `layered.work` | A | `93.185.106.128` |
+| `layered.work` | AAAA | `2a00:1ed0:1100:0:0:160:0:2444` |
+
+The A record is Zerops' shared IPv4, which lmaa.space and musiccloud.io answer on as well, so routing is by host name rather than by address. That is what `sharedIpv4: true` in the import file buys, against $3 per 30 days for a dedicated address.
+
+Zerops issued the certificate through Let's Encrypt, valid to 12 December 2026, covering `layered.work` alone. HTTP answers 301 to HTTPS.
+
+`dashboard.layered.work` and `api.layered.work` have no records yet and are reached through their Zerops subdomains.
+
+**A domain with a record pointing at something dead cannot get a certificate.** On 13 September the old host's A and AAAA records were still published alongside the new ones. Let's Encrypt validates over HTTP against whichever address it picks, so it kept hitting a host that answered 502 and 404, and no certificate was issued whilst the site was already down. Removing the two old records fixed it within minutes. The lesson for the remaining two hosts: one name points at one place, and the old record goes at the same moment the new one arrives, not before and not after.
+
+Lower the time to live before the next such change. It stood at 3125 seconds, so a mistake took the better part of an hour to undo.
 
 ## How another service reaches the database and the bucket
 
