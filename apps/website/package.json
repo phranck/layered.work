@@ -1,0 +1,13 @@
+{
+  "name": "@layered/website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The public site on layered.work",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

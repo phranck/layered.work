@@ -25,6 +25,11 @@ project:
   description: Website, dashboard and API for layered.work
   corePackage: LIGHT
   location: eu-central
+  # Both AAAA records and an A record pointing at Zerops' shared IPv4 address.
+  # A dedicated IPv4 costs $3 per 30 days and buys nothing this project needs,
+  # whilst leaving this off means no A record at all and a visitor on an
+  # IPv6-less connection cannot reach the site.
+  sharedIpv4: true
   tags:
     - layered
 
@@ -43,12 +48,15 @@ services:
     type: object-storage
     objectStorageSize: 5
     objectStoragePolicy: public-read
+    # The schema states this is only meaningful for object storage, which is
+    # exactly where it belongs: the pictures are what benefits from an edge.
+    enableCdn: true
     priority: 10
 
   # --- Applications ----------------------------------------------------------
 
   - hostname: backend
-    type: alpine/nodejs@24
+    type: alpine/nodejs@22
     startWithoutCode: true
     enableSubdomainAccess: true
     minContainers: 1
@@ -62,10 +70,9 @@ services:
     priority: 5
 
   - hostname: website
-    type: alpine/nodejs@24
+    type: alpine/nodejs@22
     startWithoutCode: true
     enableSubdomainAccess: true
-    enableCdn: true
     minContainers: 1
     maxContainers: 1
     priority: 1

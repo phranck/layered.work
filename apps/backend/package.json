@@ -1,0 +1,16 @@
+{
+  "name": "@layered/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The API on api.layered.work",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "postgres": "^3.4.5"
+  }
+}
