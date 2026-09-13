@@ -7,8 +7,10 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "node --watch --experimental-strip-types src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "dev": "node --watch --env-file-if-exists=../../.env.local --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=../../.env.local ./node_modules/drizzle-kit/bin.cjs migrate"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
