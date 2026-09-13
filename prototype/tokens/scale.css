@@ -1,0 +1,182 @@
+/*
+ * Layer 1 of the token system: the scales.
+ *
+ * Every stepped series the design uses, and not one colour. This file knows
+ * nothing about palettes, which is what lets a palette be swapped without any of
+ * these numbers moving.
+ *
+ * Only the values here and in palettes.css are chosen. Everything in
+ * semantic.css follows from them, so a change to the design is a change to one
+ * of these two files.
+ */
+
+:root {
+  /* --- Neutral lightness --------------------------------------------------
+     Thirteen steps of the neutral ramp, as lightness alone. A palette supplies
+     the chroma and hue, so every palette is guaranteed this exact spacing and
+     differs in colour only.
+
+     OKLCH, because its lightness is perceptually even: steps that are equal here
+     look equal, which sRGB does not manage in the dark end where most of these
+     sit.
+
+     The five low steps are the surfaces the design stacks, and the gaps between
+     them are the whole idea: close enough to read as one material, far enough
+     that one lying on another can be told apart.
+
+     The four steps text uses are 100, 300, 400 and 500, spaced about 0.1 apart
+     so the four weights of text stay distinguishable. The lowest sits where it
+     does because below it the faintest text stops clearing 4.5:1 on a card.
+     Measured: 0.588 gave 3.7:1, 0.655 gives 4.8:1. */
+  --l-990: 0.205;
+  --l-950: 0.232;
+  --l-900: 0.262;
+  --l-850: 0.295;
+  --l-800: 0.335;
+  --l-750: 0.38;
+  --l-700: 0.43;
+  --l-600: 0.5;
+  --l-500: 0.655;
+  --l-400: 0.745;
+  --l-300: 0.845;
+  --l-200: 0.905;
+  --l-100: 0.963;
+
+  /* --- Type --------------------------------------------------------------- */
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", ui-sans-serif, system-ui, sans-serif;
+  /* Fira Code, with its ligatures on. The ligatures are the reason for the
+     choice: an arrow or an inequality drawn as one mark is read as the operator
+     it is rather than as two characters that happen to touch.
+
+     Google Fonts serves Fira Code but not the Nerd Font patch, which adds the
+     icon glyphs. Where those are needed the family has to be self-hosted from
+     nerdfonts.com; the name below already asks for it first, so a self-hosted
+     copy takes over without this file changing. */
+  --font-mono: "FiraCode Nerd Font", "Fira Code", ui-monospace, monospace;
+
+  /* The body size is the reference the rest of the scale is measured against. */
+  --text-body: 1.0625rem;
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.1875rem;
+  --text-xl: clamp(1.375rem, 0.4vw + 1.25rem, 1.625rem);
+  --text-2xl: clamp(1.75rem, 1vw + 1.4rem, 2.25rem);
+  --text-3xl: clamp(2.25rem, 2vw + 1.6rem, 3.25rem);
+  --text-4xl: clamp(2.75rem, 3.4vw + 1.7rem, 4.5rem);
+
+  /* Code keeps its own size. A reading scale that grows must not carry code with
+     it, because code is read at the size it is written at. */
+  --text-code: 0.875rem;
+
+  /* A key cap is the same size on every surface, because a key does not grow
+     with the text around it. */
+  --text-shortcut: 0.8125rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  --leading-tight: 1.08;
+  --leading-snug: 1.28;
+  --leading-normal: 1.65;
+
+  --tracking-tight: -0.022em;
+
+  /* A mixed-case label in a box hangs low when its capitals are centred, because
+     most of its ink is lowercase and the lowercase mass sits lower. The label is
+     lifted by a quarter of the distance between the cap height and the x-height,
+     measured on Barlow: 0.74em against 0.54em. Applied as an offset of the
+     vertical padding, so the box keeps its height. */
+  --label-lift: 0.06em;
+
+  /* The condensed face runs narrower at the same size, so the tracking that
+     stops the upright face looking loose would make this one look cramped. */
+  --tracking-display: -0.008em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-caps: 0.1em;
+
+  /* --- Space -------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 136px;
+
+  --gap-tight: var(--space-3);
+  --gap: var(--space-5);
+  --gap-loose: var(--space-7);
+  --section-gap: clamp(var(--space-8), 7vw, var(--space-10));
+
+  /* --- Page measure -------------------------------------------------------
+     Header, content and footer share this one width, so the page reads as one
+     column rather than as three stacked on top of each other. */
+  --page-width: 1180px;
+  --page-gutter: clamp(20px, 4.5vw, 44px);
+  --reading-measure: 68ch;
+
+  /* --- Card geometry ------------------------------------------------------
+     Two numbers are chosen. Everything derived from them is in semantic.css,
+     beside the values that reference it, because a custom property containing
+     var() resolves on the element where it is declared. */
+  --card-radius: 24px;
+  --card-padding: 14px;
+
+  /* Media sits closer to the edge than the content does, so it derives from its
+     own inset rather than from the padding it does not use. */
+  --card-media-inset: var(--space-1);
+
+  /* A control is not nested inside a card, so it carries a radius of its own
+     rather than being coupled to a padding it has nothing to do with. */
+  --radius-control: 12px;
+  --radius-chip: 8px;
+  --radius-pill: 999px;
+
+  /* --- Wordmark -----------------------------------------------------------
+     The logo file is used unchanged, so the empty margin inside it is accounted
+     for here. Measured on the rendered file: the mark occupies 48.9% of the
+     height, centred, and 82.4% of the width. Only the optical height is chosen,
+     and the element height follows, so asking for a 30px mark produces one. */
+  --logo-ink-ratio: 0.489;
+  --logo-ink-height: 30px;
+
+  /* --- Motion -------------------------------------------------------------
+     One easing carries the whole design. It decelerates hard, which is what
+     makes a movement read as settling rather than as stopping. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --duration-instant: 90ms;
+  --duration-fast: 160ms;
+  --duration: 260ms;
+  --duration-slow: 460ms;
+  --duration-reveal: 720ms;
+
+  /* How far anything travels when it arrives. Stated once, because two elements
+     arriving from different heights read as two systems. */
+  --travel: 14px;
+  --travel-far: 28px;
+}
+
+/*
+ * Reduced motion removes the travel and shortens what remains. Durations are not
+ * set to zero, because an instant colour change reads as a glitch rather than as
+ * a response.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-slow: var(--duration-fast);
+    --duration-reveal: var(--duration-fast);
+    --travel: 0px;
+    --travel-far: 0px;
+  }
+}

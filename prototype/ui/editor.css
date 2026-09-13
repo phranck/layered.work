@@ -1,0 +1,124 @@
+/*
+ * The editor.
+ *
+ * Two columns: the thing being worked on, and its properties beside it. The
+ * panel column has a fixed width, because a column of fields does not improve by
+ * being wider, and the main column takes everything else.
+ *
+ * The syntax colours of the writing surface are the one place a component reads
+ * a token that is not semantic. They are declared with the workbench scope, and
+ * the reason they follow no palette is written there.
+ */
+
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.editor__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* The panel stays in view whilst the main side scrolls. Offset by the same step
+   the workbench pads its main area with, so it stops where the content starts. */
+.editor__panel {
+  position: sticky;
+  top: var(--space-6);
+}
+
+/* --- Toolbar --------------------------------------------------------------- */
+
+.editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  padding: var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.editor__divider {
+  width: 1px;
+  height: 18px;
+  margin-inline: var(--space-2);
+  background: var(--edge-hairline);
+}
+
+/* A tool is square at the control height, so a row of them reads as a keyboard
+   rather than as a row of buttons of assorted widths. */
+.editor__tool {
+  display: grid;
+  place-items: center;
+  min-width: var(--control-height);
+  height: var(--control-height);
+  /* Two pixels above and none below: the lettering is set in Fira Code, whose
+     ascent outweighs its descent, and a line box centred on the em box hangs
+     the caps a pixel high. Measured at 0.9px on 15px. */
+  padding-block: 2px 0;
+  padding-inline: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-chip);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.editor__tool:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+}
+
+/* Lettering wider than a glyph gets more air at its sides, or the word touches
+   the edge of its own hover shape. */
+.editor__tool--text {
+  padding-inline: var(--space-3);
+}
+
+/* --- Surface ---------------------------------------------------------------- */
+
+.editor__surface {
+  min-height: 340px;
+  padding: var(--space-5);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-feature-settings: var(--mono-ligatures);
+  font-size: var(--text-code);
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.editor__surface .md { color: var(--md-heading); }
+.editor__surface .sc { color: var(--md-shortcode-brace); }
+.editor__surface .sc-name { color: var(--md-shortcode-token); }
+.editor__surface .sc-attr { color: var(--md-shortcode-attribute); }
+.editor__surface .sc-str { color: var(--md-shortcode-string); }
+
+/* --- Narrow viewports ------------------------------------------------------
+   The panel goes under the main side, and stops sticking, because a sticky
+   panel under the content would cover what it belongs to. */
+
+@media (width < 1100px) {
+  .editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor__panel {
+    position: static;
+  }
+}

@@ -1,0 +1,111 @@
+# layered.work — Zerops deployment configuration
+zerops:
+  - setup: backend
+    build:
+      base: nodejs@24
+      buildCommands:
+        - pnpm --version | grep -q '^11\.2\.2$' || npm install -g pnpm@11.2.2 --force
+        - pnpm install --frozen-lockfile
+        - pnpm --filter @layered/backend build
+        - rm -rf node_modules/sharp node_modules/@img node_modules/detect-libc node_modules/semver
+        - cp -R -L node_modules/.pnpm/sharp@*/node_modules/. node_modules/
+      deployFiles:
+        - apps/backend/dist
+        - apps/backend/drizzle
+        - node_modules/sharp
+        - node_modules/@img
+        - node_modules/detect-libc
+        - node_modules/semver
+      cache: node_modules
+    run:
+      base: nodejs@24
+      ports:
+        - port: 3000
+          httpSupport: true
+      envVariables:
+        HOST: "::"
+        PORT: "3000"
+        NODE_ENV: production
+        DATABASE_URL: ${postgres_connectionString}
+        DB_MIGRATION_ROLE: "db"
+        CORS_ORIGIN: "https://new.layered.work,https://dashboard.layered.work"
+        S3_ENDPOINT: ${assets_apiUrl}
+        S3_BUCKET: ${assets_bucketName}
+        S3_ACCESS_KEY_ID: ${assets_accessKeyId}
+        S3_SECRET_ACCESS_KEY: ${assets_secretAccessKey}
+      initCommands:
+        - node apps/backend/dist/db/migrate.js
+      start: node apps/backend/dist/index.js
+
+  - setup: frontend
+    build:
+      base: nodejs@24
+      buildCommands:
+        - pnpm --version | grep -q '^11\.2\.2$' || npm install -g pnpm@11.2.2 --force
+        - pnpm install --frozen-lockfile
+        - VITE_API_URL=https://api.layered.work pnpm --filter @layered/frontend build
+        - rm -rf node_modules/react node_modules/react-dom node_modules/scheduler node_modules/@google node_modules/@lit node_modules/@lit-labs node_modules/@monogrid node_modules/@types/trusted-types node_modules/lit node_modules/lit-element node_modules/lit-html node_modules/promise-worker-transferable node_modules/three
+        - mkdir -p node_modules/@google node_modules/@lit node_modules/@lit-labs node_modules/@monogrid node_modules/@types
+        - cp -R -L node_modules/.pnpm/react@*/node_modules/react node_modules/react
+        - cp -R -L node_modules/.pnpm/react-dom@*/node_modules/react-dom node_modules/react-dom
+        - cp -R -L node_modules/.pnpm/scheduler@*/node_modules/scheduler node_modules/scheduler
+        - cp -R -L node_modules/.pnpm/@google+model-viewer@*/node_modules/@google/model-viewer node_modules/@google/model-viewer
+        - cp -R -L node_modules/.pnpm/@lit+reactive-element@*/node_modules/@lit/reactive-element node_modules/@lit/reactive-element
+        - cp -R -L node_modules/.pnpm/@lit-labs+ssr-dom-shim@*/node_modules/@lit-labs/ssr-dom-shim node_modules/@lit-labs/ssr-dom-shim
+        - cp -R -L node_modules/.pnpm/@monogrid+gainmap-js@*/node_modules/@monogrid/gainmap-js node_modules/@monogrid/gainmap-js
+        - cp -R -L node_modules/.pnpm/@types+trusted-types@*/node_modules/@types/trusted-types node_modules/@types/trusted-types
+        - cp -R -L node_modules/.pnpm/lit@*/node_modules/lit node_modules/lit
+        - cp -R -L node_modules/.pnpm/lit-element@*/node_modules/lit-element node_modules/lit-element
+        - cp -R -L node_modules/.pnpm/lit-html@*/node_modules/lit-html node_modules/lit-html
+        - cp -R -L node_modules/.pnpm/promise-worker-transferable@*/node_modules/promise-worker-transferable node_modules/promise-worker-transferable
+        - cp -R -L node_modules/.pnpm/three@*/node_modules/three node_modules/three
+      deployFiles:
+        - apps/frontend/dist
+        - node_modules/react
+        - node_modules/react-dom
+        - node_modules/scheduler
+        - node_modules/@google
+        - node_modules/@lit
+        - node_modules/@lit-labs
+        - node_modules/@monogrid
+        - node_modules/@types/trusted-types
+        - node_modules/lit
+        - node_modules/lit-element
+        - node_modules/lit-html
+        - node_modules/promise-worker-transferable
+        - node_modules/three
+      cache: node_modules
+    run:
+      base: nodejs@24
+      ports:
+        - port: 3000
+          httpSupport: true
+      envVariables:
+        HOST: "::"
+        PORT: "3000"
+        NODE_ENV: production
+      start: node apps/frontend/dist/server/entry.mjs
+
+  - setup: dashboard
+    build:
+      base: nodejs@24
+      buildCommands:
+        - pnpm --version | grep -q '^11\.2\.2$' || npm install -g pnpm@11.2.2 --force
+        - pnpm install --frozen-lockfile
+        - VITE_API_URL=https://api.layered.work VITE_FRONTEND_URL=https://new.layered.work pnpm --filter @layered/dashboard build
+        - cp -r apps/dashboard/dist/. .
+        - cp apps/dashboard/nginx.tmpl .
+      deployFiles:
+        - index.html
+        - .well-known
+        - assets
+        - layered-logo.svg
+        - nginx.tmpl
+      cache: node_modules
+    run:
+      base: nginx@1.22
+      ports:
+        - port: 80
+          httpSupport: true
+      documentRoot: .
+      siteConfigPath: nginx.tmpl

@@ -1,0 +1,355 @@
+/*
+ * The dashboard's own rules.
+ *
+ * Its tokens are in tokens/workbench.css, scoped to `.workbench`, and its
+ * building blocks are the shared components in ui/. This file holds only what
+ * neither of those owns: how the workbench is framed, and the few screens that
+ * have a shape of their own.
+ */
+
+.workbench {
+  display: grid;
+  flex: 1; /* fills the column in #app, so no gap opens below it */
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100dvh;
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
+}
+
+/* --- Frame ---------------------------------------------------------------- */
+
+.workbench__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  min-width: 0;
+}
+
+/*
+ * The way back out of the editor. It stands in the eyebrow's place, so the
+ * heading under it does not move when the editor opens, and it takes the
+ * eyebrow's lettering from the element around it. A button resets the inherited
+ * case and letter-spacing, so both are asked for again.
+ */
+.workbench-back {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.workbench-back:hover {
+  color: var(--text-accent);
+}
+
+/* --- Statistics ----------------------------------------------------------- */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+/*
+ * A stat card is a figure with a label above and a note below, and the figure is
+ * compared against the one in the next card. That comparison is what right
+ * alignment is for, and the label and note follow the figure so the card reads
+ * as one block rather than as a figure with text pinned to the other side.
+ */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--card-padding);
+  text-align: right;
+}
+
+.stat__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.stat__value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__note {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* --- Search ----------------------------------------------------------------
+   A search field with its shortcut on it. The badge is the same one the site
+   header carries, because Cmd+K means the same thing in both places and a reader
+   should not have to discover that twice. */
+
+.search-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: 260px;
+  height: var(--input-height);
+  padding-inline: var(--space-3);
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.search-field:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+/* The field itself brings no chrome: the wrapper carries the frame, so the icon,
+   the input and the badge sit on one surface rather than three. */
+.search-field .input {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.search-field .input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* --- Table ----------------------------------------------------------------
+   A fixed layout, decided once here rather than per table. An automatic layout
+   is sized by its contents and reports that width upwards, so one long title
+   pushes the table past the page and no truncation ever applies. */
+
+.data-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  padding: var(--space-3) var(--space-5);
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: left;
+  background: var(--surface-sunken);
+  border-block-end: 1px solid var(--edge-hairline);
+}
+
+.data-table td {
+  padding: var(--space-3) var(--space-5);
+  overflow: hidden;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-block-end: 1px solid var(--edge-hairline);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-block-end: 0;
+}
+
+/* A row opens the entry, so the whole row is the target and says so. */
+.data-table tbody tr {
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.data-table tbody tr:hover,
+.data-table tbody tr:focus-visible {
+  background: var(--hover-tint);
+  outline: none;
+}
+
+.data-table tbody tr:focus-visible {
+  box-shadow: inset 2px 0 0 0 var(--text-accent);
+}
+
+/*
+ * Under a fixed layout the declared widths hold and what is left goes to the
+ * column that declares none, so a column that must show its content whole needs
+ * a width wide enough for it. Nothing will make room for it afterwards.
+ *
+ * These are measured against the widest cell each column actually holds, with a
+ * little air: the status badge needs 148px, the date 129px, the language tag
+ * 85px. The title column declares nothing, takes the remainder and shortens
+ * with an ellipsis.
+ */
+.col-title { width: auto; }
+.col-status { width: 160px; }
+.col-language { width: 92px; }
+.col-date { width: 140px; }
+.col-actions { width: 80px; }
+
+/* A count or a date is compared by size, so it is right aligned together with
+   its heading, in a tabular face so the digits line up rather than only the
+   edge. */
+.align-end {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Block settings ----------------------------------------------------------
+   The one control the landing page builder has that no other screen needs. */
+
+.media-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.media-field img {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-chip);
+}
+
+.media-field__name {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chip that removes a block is quieter than the ones that describe one, so
+   a list of blocks does not read as a list of things about to be deleted. */
+.chip--quiet {
+  color: var(--text-faint);
+}
+
+/* --- Account ----------------------------------------------------------------
+   The portrait on the left with its control beneath it, and everything else in
+   a column beside it. The portrait is the subject here, so it is the largest
+   thing on the card and its button sits centred under the thing it changes
+   rather than in a row of fields. */
+
+.account {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.account__portrait {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.account__avatar {
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-pill);
+}
+
+.account__fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+/* The role is a badge standing in for a control. A field stretches its control
+   to the full width, which is right for an input and wrong for a pill. */
+.account__fields .badge {
+  align-self: flex-start;
+}
+
+/* --- Footer navigation manager --------------------------------------------
+   Each navigation is a bordered group: a row naming it, and the entries it
+   holds beneath. A group rather than a row, because the entries are content of
+   their own and not a second line under a title. */
+
+.nav-manager {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nav-manager__group {
+  padding: var(--space-3);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-inner-radius);
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+
+.nav-manager__group:hover {
+  background: var(--hover-tint);
+}
+
+.nav-manager__group[data-active] {
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+}
+
+.nav-manager__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin-block-start: var(--space-3);
+  margin-inline-start: var(--space-6);
+  list-style: none;
+}
+
+.nav-manager__items li {
+  padding: 3px 8px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+}
+
+/* --- Narrow viewports ----------------------------------------------------- */
+
+@media (width < 1100px) {
+  .workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workbench .sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--edge-hairline);
+  }
+}

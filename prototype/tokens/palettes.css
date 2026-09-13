@@ -1,0 +1,40 @@
+/*
+ * Layer 2 of the token system: the palette.
+ *
+ * The palette supplies four things and nothing else: the chroma and hue of the
+ * neutral ramp, the five accent steps, the colour of text sitting on the accent,
+ * and the four status colours. The lightness steps of the neutral ramp are in
+ * scale.css, so this file holds colour and no spacing.
+ *
+ * Should a second palette ever be wanted, it goes in a block of its own keyed by
+ * `data-palette` on the root, and this one keeps the bare `:root` as the default.
+ * Nothing else in the project names a colour, so that is the whole change.
+ */
+
+:root {
+  /* Neutral graphite with barely any colour in it, so the photographs and the
+     accent carry all the colour on screen. */
+  --neutral-c: 0.008;
+  --neutral-h: 250;
+
+  /* Built around #0d70d3 by holding its hue and saturation and moving lightness
+     only, so the five steps read as one colour at five strengths rather than as
+     five blues. The 500 step carries white at 4.9:1, which is what lets a filled
+     control sit there rather than a step further down. */
+  --accent-700: #08417b;
+  --accent-600: #0a55a1;
+  --accent-500: #0d70d3;
+  --accent-400: #278cf2;
+  --accent-300: #65adf6;
+
+  --text-on-accent: #ffffff;
+
+  /* Info is violet rather than blue. The accent is blue, and a status colour
+     that shares its hue reads as the accent wherever the two meet: a hidden
+     entry beside a protected one showed two blues. Set to oklch(0.66 0.14 300),
+     which sits at the lightness of the other three. */
+  --state-success: #4fa87a;
+  --state-info: #a07cdb;
+  --state-warning: #d1a13e;
+  --state-danger: #d4584f;
+}
