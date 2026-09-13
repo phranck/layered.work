@@ -1,0 +1,143 @@
+/*
+ * Layer 3 of the token system: the semantic tokens.
+ *
+ * Nothing here is chosen. Every value follows from scale.css or palettes.css, so
+ * this file never has to be edited to change the design, only to add a new kind
+ * of thing the design needs a name for.
+ *
+ * This is the layer components read. A component names `--surface-raised`, never
+ * `--ink-900` and never a colour, which is what lets a palette swap work and what
+ * keeps a component from having an opinion about how high it sits.
+ *
+ * Every derivation lives on `:root` beside the values that reference it, because
+ * a custom property containing var() resolves on the element where it is
+ * declared, and one declared elsewhere resolves to nothing at all.
+ */
+
+:root {
+  /* --- The neutral ramp ---------------------------------------------------
+     Lightness from scale.css, chroma and hue from the palette. */
+  --ink-990: oklch(var(--l-990) var(--neutral-c) var(--neutral-h));
+  --ink-950: oklch(var(--l-950) var(--neutral-c) var(--neutral-h));
+  --ink-900: oklch(var(--l-900) var(--neutral-c) var(--neutral-h));
+  --ink-850: oklch(var(--l-850) var(--neutral-c) var(--neutral-h));
+  --ink-800: oklch(var(--l-800) var(--neutral-c) var(--neutral-h));
+  --ink-750: oklch(var(--l-750) var(--neutral-c) var(--neutral-h));
+  --ink-700: oklch(var(--l-700) var(--neutral-c) var(--neutral-h));
+  --ink-600: oklch(var(--l-600) var(--neutral-c) var(--neutral-h));
+  --ink-500: oklch(var(--l-500) var(--neutral-c) var(--neutral-h));
+  --ink-400: oklch(var(--l-400) var(--neutral-c) var(--neutral-h));
+  --ink-300: oklch(var(--l-300) var(--neutral-c) var(--neutral-h));
+  --ink-200: oklch(var(--l-200) var(--neutral-c) var(--neutral-h));
+  --ink-100: oklch(var(--l-100) var(--neutral-c) var(--neutral-h));
+
+  /* --- Surfaces -----------------------------------------------------------
+     Five heights. A component picks the height it sits at and takes all three
+     properties of that height together: the fill, the lit edge and the shadow.
+     A surface that declares only one of the three reads as a coloured rectangle
+     rather than as material. */
+  --surface-page: var(--ink-990);
+  --surface-sunken: var(--ink-950);
+  --surface-raised: var(--ink-900);
+  --surface-floating: var(--ink-850);
+  --surface-overlay: var(--ink-800);
+
+  --edge-hairline: rgb(255 255 255 / 7%);
+  --edge-strong: rgb(255 255 255 / 12%);
+  --edge-lit: rgb(255 255 255 / 9%);
+
+  /* --- Text --------------------------------------------------------------- */
+  --text-primary: var(--ink-100);
+  --text-secondary: var(--ink-300);
+  --text-muted: var(--ink-400);
+  --text-faint: var(--ink-500);
+  --text-accent: var(--accent-400);
+
+  /* --- Accent at low strength ---------------------------------------------
+     A tint behind a current item, so state never rests on colour alone and a
+     reader is not asked to compare two similar greys. */
+  --accent-tint: color-mix(in oklab, var(--accent-500) 14%, transparent);
+  --accent-tint-strong: color-mix(in oklab, var(--accent-500) 22%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent-500) 60%, transparent);
+
+  /* The two places light appears to come off the accent: the glow beneath a
+     filled control and the wash behind the page. */
+  --accent-glow: color-mix(in oklab, var(--accent-500) 68%, transparent);
+  --wash-primary: color-mix(in oklab, var(--accent-500) 11%, transparent);
+  --wash-secondary: color-mix(in oklab, var(--ink-600) 30%, transparent);
+
+  --hover-tint: rgb(255 255 255 / 4%);
+  --press-tint: rgb(0 0 0 / 18%);
+
+  /* --- Scrims -------------------------------------------------------------
+     The page's own colour at three strengths, for anything lying over content: a
+     scrim under text on a photograph, a frosted bar, an overlay backdrop.
+     Derived from the surface rather than written as a colour, so they follow the
+     palette instead of staying behind when it changes. */
+  --scrim-soft: color-mix(in srgb, var(--surface-page) 72%, transparent);
+  --scrim: color-mix(in srgb, var(--surface-page) 80%, transparent);
+  --scrim-strong: color-mix(in srgb, var(--surface-page) 90%, transparent);
+
+  /* --- Sheen --------------------------------------------------------------
+     Light falls from above, so anything standing off the page is brighter along
+     its top edge. Stated once and laid over whatever fill a control has, rather
+     than written as a gradient between two named colours, which would have to be
+     restated for every fill and every palette.
+
+     The strength is a variable, so a control can lean into it on hover without a
+     second gradient existing anywhere. An element that changes the strength has
+     to restate the gradient too, for the resolution reason at the top of this
+     file. */
+  --sheen-strength: 7%;
+  --control-sheen: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--sheen-strength)),
+    rgb(255 255 255 / 0%) 68%
+  );
+
+  /* --- Emboss -------------------------------------------------------------
+     The pressed-in lettering of the early iPhone. CSS has no inner shadow for
+     text, and the effect never needed one: a single dark line along the upper
+     edge reads as the letter sitting just below the surface, because the light
+     comes from above and a recess is shaded at its top.
+
+     The shade is a variable, because what counts as darker depends on what the
+     text stands on. The default suits a page or card surface; a filled control
+     overrides it with a darker step of its own fill, which deepens the surface
+     instead of dirtying it, and restates the derivation with it. */
+  --emboss-shade: rgb(0 0 0 / 42%);
+  --text-emboss: 0 -1px 0 var(--emboss-shade);
+
+  /* --- Card geometry ------------------------------------------------------
+     A nested radius is the outer radius less the distance to that element, never
+     less whatever the page's cards happen to use, so media and content derive
+     from their own insets. Clamped at zero, because an element further in than
+     the radius sits past the curve entirely and is square. */
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+  --card-media-radius: max(calc(var(--card-radius) - var(--card-media-inset)), 0px);
+
+  /* Half the radius, for text that meets a curve with no padding in between. A
+     card's own padding already holds text away from the curve, so text inside a
+     padded card does not take this as well. */
+  --card-text-inset: calc(var(--card-radius) / 2);
+
+  /* Ligatures are off by default in most browsers for monospace, so they are
+     asked for explicitly. Stated once here and applied by whatever sets the
+     monospace family, rather than repeated at every code block. */
+  --mono-ligatures: "calt" 1, "liga" 1;
+
+  /* --- Wordmark ----------------------------------------------------------- */
+  --logo-height: calc(var(--logo-ink-height) / var(--logo-ink-ratio));
+
+  /* --- Elevation ----------------------------------------------------------
+     The lit edge and the shadow always travel together: they are two halves of
+     one statement about how high a surface sits. */
+  --lift-1:
+    inset 0 1px 0 0 var(--edge-lit), 0 1px 2px -1px rgb(0 0 0 / 55%), 0 4px 10px -6px rgb(0 0 0 / 50%);
+  --lift-2:
+    inset 0 1px 0 0 var(--edge-lit), 0 2px 4px -2px rgb(0 0 0 / 55%), 0 12px 24px -12px rgb(0 0 0 / 60%);
+  --lift-3:
+    inset 0 1px 0 0 var(--edge-strong), 0 4px 8px -4px rgb(0 0 0 / 55%), 0 24px 48px -20px rgb(0 0 0 / 70%);
+  --lift-4:
+    inset 0 1px 0 0 var(--edge-strong), 0 8px 16px -8px rgb(0 0 0 / 60%), 0 40px 80px -28px rgb(0 0 0 / 80%);
+}
