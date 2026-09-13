@@ -86,6 +86,18 @@ It restarts in a loop from there. The deployment reports success throughout, bec
 
 That bites hardest with `PORT`, because Zerops holds that key itself and refuses the whole file when it appears under `envVariables`, so the obvious place is closed too. The answer is to set the port where the application is configured. For the website that is `server.port` in `astro.config.mjs`, which the standalone server reads with no environment variable involved, and it has to match the port declared under `ports` in `zerops.yml`.
 
+## A workspace package needs three paths in deployFiles
+
+A service that imports one of this repository's own packages reaches it through a symlink in its own `node_modules`, pointing at `packages/<name>`. That path is not deployed unless it is named, and naming only part of it fails in a different way each time:
+
+| What is missing | What happens |
+| --- | --- |
+| `packages/<name>/dist` | It was never built, unless the build command carries the trailing `...` that builds workspace dependencies as well |
+| `packages/<name>/package.json` | Node cannot work out the entry point |
+| `packages/<name>/node_modules` | The package's own dependencies are absent, because a package resolves those from beside itself rather than from whoever imported it |
+
+The third cost a deployment on 13 September 2026. The container started and exited immediately with `Cannot find package 'zod' imported from /var/www/packages/schemas/dist/errors.js`. Nothing went down, because the readiness check kept it out of rotation, which is what the section below is for.
+
 ## The two checks, and which question each one asks
 
 Zerops has both, they are configured in different sections, and giving one the other's job takes the site down.
