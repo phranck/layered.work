@@ -79,6 +79,67 @@ export const COUNTDOWN_SCRIPT = `
     }, 560);
   }
 
+  /*
+   * Puts the groove on whole pixels of the display.
+   *
+   * A card's height follows the window, so the middle of it lands wherever that
+   * happens to fall, and a line drawn across a fraction of a pixel is spread
+   * over two rows at half strength each. That reads as a grey smear rather than
+   * as a gap between two flaps, which is the one thing the line is there to be.
+   *
+   * Two things are snapped. The thickness, because a display at one and a half
+   * pixels to the CSS pixel turns a hairline into one and a half rows and no
+   * amount of moving it helps. And the position, by the fraction of a pixel
+   * between where the line falls and the nearest pixel edge, which is at most
+   * half a pixel of movement and is not visible.
+   *
+   * Both are written as custom properties the stylesheet reads, so a reader
+   * without a script gets the authored values rather than nothing.
+   */
+  function sharpenGrooves() {
+    var ratio = window.devicePixelRatio || 1;
+
+    for (var i = 0; i < digits.length; i += 1) {
+      var element = digits[i].element;
+      var authored = parseFloat(getComputedStyle(element).getPropertyValue("--groove"));
+      if (!authored) continue;
+
+      // At least one pixel of the display, and a whole number of them.
+      var thickness = Math.max(1, Math.round(authored * ratio)) / ratio;
+
+      // Where the top edge of the line falls now, counted in the display's own
+      // pixels from the top of the window.
+      var box = element.getBoundingClientRect();
+      var edge = (box.top + box.height / 2 - thickness / 2) * ratio;
+
+      element.style.setProperty("--groove-drawn", thickness + "px");
+      element.style.setProperty("--groove-nudge", (Math.round(edge) - edge) / ratio + "px");
+    }
+  }
+
+  /*
+   * Run again whenever what was measured could have changed.
+   *
+   * The window resizing changes the card's height, the typefaces arriving
+   * changes it again, and moving the window to a screen of another density
+   * changes the grid the line is being snapped to. A media query is what
+   * reports that last one, and it has to be asked again each time because it
+   * is written for the density that held when it was made.
+   */
+  function watchDensity() {
+    window
+      .matchMedia("(resolution: " + (window.devicePixelRatio || 1) + "dppx)")
+      .addEventListener("change", function () {
+        sharpenGrooves();
+        watchDensity();
+      }, { once: true });
+  }
+
+  sharpenGrooves();
+  watchDensity();
+  window.addEventListener("resize", sharpenGrooves);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sharpenGrooves);
+
   // What the cards last read. Both drivers below ask for the time far more
   // often than the figures change, so this is what keeps all but one of those
   // readings down to a single comparison.
