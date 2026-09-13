@@ -1,0 +1,98 @@
+# How each service is built and run on Zerops.
+#
+# The hostnames here match the services in zerops-project-import.yml exactly,
+# and `setup` is what `zcli push --setup` and the deploy workflow select.
+
+zerops:
+  # --- The API --------------------------------------------------------------
+  - setup: backend
+    build:
+      base: nodejs@22
+      buildCommands:
+        - corepack enable
+        - corepack prepare pnpm@11.13.0 --activate
+        - pnpm install --frozen-lockfile
+        - pnpm --filter @layered/backend build
+      deployFiles:
+        - apps/backend/dist
+        - apps/backend/node_modules
+        - apps/backend/package.json
+        - node_modules
+        - package.json
+      cache: node_modules
+    run:
+      base: nodejs@22
+      ports:
+        - port: 3000
+          httpSupport: true
+      envVariables:
+        # Dual stack. Zerops service discovery can return an IPv6 upstream, and
+        # binding to IPv4 alone has produced intermittent gateway errors in the
+        # sibling projects.
+        HOST: 0.0.0.0
+        # No PORT here. Zerops holds that key and rejects the whole file when it
+        # appears, so the number lives under `ports` and the process falls back
+        # to the same one itself.
+        NODE_ENV: production
+        DATABASE_URL: ${postgres_connectionString}/${postgres_dbName}
+        S3_ENDPOINT: ${assets_apiUrl}
+        S3_BUCKET: ${assets_bucketName}
+        S3_ACCESS_KEY_ID: ${assets_accessKeyId}
+        S3_SECRET_ACCESS_KEY: ${assets_secretAccessKey}
+      start: node apps/backend/dist/index.js
+      # Liveness, not readiness. A database that is down should produce a
+      # readable 503 from /health/db rather than an opaque 502 from the gateway,
+      # which is what happens when the platform check itself fails.
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /health
+
+  # --- The public site ------------------------------------------------------
+  - setup: website
+    build:
+      base: nodejs@22
+      buildCommands:
+        - corepack enable
+        - corepack prepare pnpm@11.13.0 --activate
+        - pnpm install --frozen-lockfile
+        - pnpm --filter @layered/website build
+      deployFiles:
+        - apps/website/dist
+        - apps/website/package.json
+        - node_modules
+        - package.json
+      cache: node_modules
+    run:
+      base: nodejs@22
+      ports:
+        - port: 3000
+          httpSupport: true
+      envVariables:
+        HOST: 0.0.0.0
+        NODE_ENV: production
+        # Over the internal network rather than the public address, so a page
+        # render does not leave the project and come back.
+        API_URL: http://backend:3000
+      start: node apps/website/dist/index.js
+
+  # --- The dashboard --------------------------------------------------------
+  # Built to static files and served by nginx, which is why it is the one
+  # service that runs no Node process.
+  - setup: dashboard
+    build:
+      base: nodejs@22
+      buildCommands:
+        - corepack enable
+        - corepack prepare pnpm@11.13.0 --activate
+        - pnpm install --frozen-lockfile
+        - pnpm --filter @layered/dashboard build
+      deployFiles:
+        - apps/dashboard/dist
+      cache: node_modules
+    run:
+      base: nginx@1.22
+      ports:
+        - port: 80
+          httpSupport: true
+      documentRoot: apps/dashboard/dist
