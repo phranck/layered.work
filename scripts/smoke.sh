@@ -38,11 +38,14 @@ check "site home"            200 "$SITE_URL/"
 check "api liveness"         200 "$API_URL/health"
 check "api readiness"        200 "$API_URL/health/db"
 check "dashboard shell"      200 "$DASHBOARD_URL/"
+check "robots.txt"           200 "$SITE_URL/robots.txt"
+check "sitemap.xml"          200 "$SITE_URL/sitemap.xml"
+check "sharing image"        200 "$SITE_URL/og.png"
 
-# The feeds, the sitemap, the 404 page, security.txt and the response headers
-# are checked here as soon as something serves them. Each is named in its own
-# issue, and a check added before then would fail every run and teach everyone
-# to ignore this script.
+# The feeds, the 404 page, security.txt and the response headers are checked
+# here as soon as something serves them. Each is named in its own issue, and a
+# check added before then would fail every run and teach everyone to ignore this
+# script.
 
 if [ "$failures" -gt 0 ]; then
   echo

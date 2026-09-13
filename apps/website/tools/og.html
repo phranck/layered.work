@@ -1,0 +1,235 @@
+<!doctype html>
+<!--
+  The source of public/og.png, which is what appears when a link to this site is
+  posted anywhere.
+
+  It carries the wordmark and nothing else. Every unfurler shows the title and
+  the description beside the picture, so words inside it would be the same words
+  twice, and they would be a second copy of the page's own copy: the launch date
+  moved five times whilst this page was being built, and a date baked into a
+  picture is the copy nobody remembers to change. A mark on its own background
+  is true before the launch and after it.
+
+  Render it with tools/make-og.sh. That script takes the size from the page's
+  own og:image tags and opens a window of exactly that shape, so the 1200 by 630
+  written into the stylesheet below has to match: anything else is letterboxed
+  or clipped, which the very next render shows.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../public/fonts.css" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      * { margin: 0; }
+
+      html, body { width: 1200px; height: 630px; overflow: hidden; }
+
+      body {
+        display: grid;
+        place-items: center;
+        background: oklch(0.205 0.008 250);
+      }
+
+      /* The same two washes the page carries, so a preview and the site it
+         leads to are lit from the same side. */
+      body::before {
+        position: fixed;
+        z-index: 1;
+        inset: 0;
+        content: "";
+        background:
+          radial-gradient(75vw 55vh at 14% -6%, color-mix(in oklab, #0d70d3 9%, transparent), transparent 60%),
+          radial-gradient(65vw 45vh at 90% 6%, color-mix(in oklab, oklch(0.5 0.008 250) 22%, transparent), transparent 56%);
+      }
+
+      #sky { position: fixed; z-index: 0; inset: 0; display: block; }
+
+      .stage { position: relative; z-index: 2; width: 860px; }
+
+      /* The card is a little transparent, so what lies behind it is seen through
+         it, and here that is the shadow. A blurred shape fades across its own
+         edge, so a shadow the size of the card is thinner along the card's rim
+         than in its middle, and that gradient shows through as a second
+         rectangle drawn inside the first. Reaching past the card on every side
+         puts the whole of the fade outside it, where a shadow belongs. */
+      .shadow {
+        position: absolute;
+        z-index: -1;
+        inset: -54px;
+        border-radius: 72px;
+        background: #000000;
+        opacity: 0.38;
+        filter: blur(46px);
+        transform: translate3d(0, 24px, 0);
+      }
+
+      main {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 380px;
+        background: color-mix(in oklab, oklch(0.262 0.008 250) 72%, transparent);
+        border: 1px solid rgb(255 255 255 / 7%);
+        border-radius: 32px;
+        box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 9%);
+        backdrop-filter: blur(14px);
+      }
+
+      /* The file carries empty margin above and below the mark, which is 48.9
+         per cent of its height, so the element is sized from the optical height
+         wanted rather than the file being edited. */
+      .mark { display: block; width: auto; height: calc(132px / 0.489); }
+    </style>
+  </head>
+  <body>
+    <canvas id="sky" width="1200" height="630"></canvas>
+
+    <div class="stage">
+      <div class="shadow"></div>
+      <main><img class="mark" src="../public/logo.svg" alt="" /></main>
+    </div>
+
+    <script>
+      /*
+       * One still frame of the web that turns behind the live page.
+       *
+       * Every constant and every formula below is the one in src/scene.ts, so
+       * this is that web stopped rather than something that resembles it. Two
+       * things are left out, both because they are motion: the slow wander each
+       * node carries, and the pull of the pointer. What remains is the cloud at
+       * one angle, named by MOMENT.
+       *
+       * The positions come from a seeded generator rather than Math.random, so
+       * rendering this file twice gives the same picture and a regenerated
+       * og.png differs only when something else has changed.
+       */
+      (() => {
+        const WIDTH = 1200;
+        const HEIGHT = 630;
+
+        const SPREAD = 1.22;
+        const DEPTH = 620;
+        const FOCAL = 1500;
+        const LINK = 330;
+        const BANDS = 7;
+
+        // Which instant of the turn to draw. The cloud takes days to come round,
+        // so any value is as good as any other; this one puts the denser side of
+        // the web to the left of the mark.
+        const MOMENT = 41000;
+
+        // The live page puts one node in every 7000 square pixels. A sharing
+        // image is 630 pixels tall against a window's 900 or more, and at that
+        // height the same density arrives as scattered dots rather than as a
+        // web, because a node needs neighbours within reach to be joined to
+        // anything. Closer together, it is the web that is on the site.
+        const AREA_PER_NODE = 4200;
+
+        let seed = 20260920;
+        const random = () => {
+          // Lehmer generator. No state beyond the seed, and the only quality
+          // wanted here is that it gives the same numbers every time.
+          seed = (seed * 48271) % 2147483647;
+          return seed / 2147483647;
+        };
+
+        // Turning the box swings its width into its depth, so a node can end up
+        // further away than the box is deep and this figure leaves 0 to 1 at
+        // both ends. A negative one asks the canvas for a negative radius, which
+        // it refuses by throwing.
+        const clamp01 = (value) => (value < 0 ? 0 : value > 1 ? 1 : value);
+
+        const canvas = document.getElementById("sky");
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.round(WIDTH * ratio);
+        canvas.height = Math.round(HEIGHT * ratio);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+        const count = Math.max(70, Math.min(260, Math.round((WIDTH * HEIGHT) / AREA_PER_NODE)));
+        const nodes = [];
+        for (let index = 0; index < count; index += 1) {
+          nodes.push({
+            hx: (random() - 0.5) * WIDTH * SPREAD,
+            hy: (random() - 0.5) * HEIGHT * SPREAD,
+            hz: (random() - 0.5) * 2 * DEPTH,
+          });
+        }
+
+        const yaw = MOMENT * 0.0000175;
+        const tilt = Math.sin(MOMENT * 0.000011) * 0.22;
+        const cosY = Math.cos(yaw);
+        const sinY = Math.sin(yaw);
+        const cosX = Math.cos(tilt);
+        const sinX = Math.sin(tilt);
+
+        const px = [];
+        const py = [];
+        const pz = [];
+        const ps = [];
+        for (let index = 0; index < count; index += 1) {
+          const node = nodes[index];
+          const rx = node.hx * cosY - node.hz * sinY;
+          const turned = node.hx * sinY + node.hz * cosY;
+          const ry = node.hy * cosX - turned * sinX;
+          const rz = node.hy * sinX + turned * cosX;
+
+          const scale = FOCAL / Math.max(FOCAL * 0.3, FOCAL + rz);
+          px[index] = WIDTH / 2 + rx * scale;
+          py[index] = HEIGHT / 2 + ry * scale;
+          pz[index] = rz;
+          ps[index] = scale;
+        }
+
+        // The lines, gathered by brightness and drawn a band at a time, which is
+        // what lets one path carry hundreds of segments.
+        const bands = [];
+        for (let band = 0; band < BANDS; band += 1) bands.push([]);
+
+        const linkSquared = LINK * LINK;
+        for (let a = 0; a < count; a += 1) {
+          for (let b = a + 1; b < count; b += 1) {
+            const lx = px[a] - px[b];
+            const ly = py[a] - py[b];
+            const lz = (pz[a] - pz[b]) * 0.5;
+            const squared = lx * lx + ly * ly + lz * lz;
+            if (squared > linkSquared) continue;
+
+            const near = 1 - Math.sqrt(squared) / LINK;
+            const pairDepth = clamp01(1 - ((pz[a] + pz[b]) * 0.5 + DEPTH) / (2 * DEPTH));
+            const alpha = near * near * (0.05 + pairDepth * 0.3);
+            if (alpha < 0.006) continue;
+
+            bands[Math.min(BANDS - 1, Math.floor((alpha / 0.35) * BANDS))].push([
+              px[a],
+              py[a],
+              px[b],
+              py[b],
+            ]);
+          }
+        }
+
+        ctx.lineWidth = 0.6;
+        for (let band = 0; band < BANDS; band += 1) {
+          if (!bands[band].length) continue;
+          ctx.strokeStyle = `rgba(150, 185, 235, ${(((band + 0.5) / BANDS) * 0.35).toFixed(3)})`;
+          ctx.beginPath();
+          for (const [x1, y1, x2, y2] of bands[band]) {
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+          }
+          ctx.stroke();
+        }
+
+        for (let index = 0; index < count; index += 1) {
+          const depth = clamp01(1 - (pz[index] + DEPTH) / (2 * DEPTH));
+          ctx.fillStyle = `rgba(186, 212, 246, ${(0.1 + depth * 0.52).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(px[index], py[index], (0.7 + depth * 1.5) * ps[index], 0, 6.283);
+          ctx.fill();
+        }
+      })();
+    </script>
+  </body>
+</html>
