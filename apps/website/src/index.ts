@@ -19,6 +19,7 @@ import { SCENE_SCRIPT } from "./scene.js";
 import {
   COPY,
   DESCRIPTION,
+  FEDIVERSE_CREATOR,
   LAUNCH,
   SHARE_IMAGE,
   SHARE_IMAGE_HEIGHT,
@@ -191,6 +192,8 @@ function page(): string {
     <meta name="twitter:description" content="${attribute(DESCRIPTION)}" />
     <meta name="twitter:image" content="${SITE_ORIGIN}${SHARE_IMAGE}" />
     <meta name="twitter:image:alt" content="${attribute(copy.shareAlt)}" />
+
+    <meta name="fediverse:creator" content="${attribute(FEDIVERSE_CREATOR)}" />
 
     <script type="application/ld+json">${structuredData()}</script>
 

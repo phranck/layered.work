@@ -105,6 +105,16 @@ export const COPY = {
 export const DESCRIPTION = `${COPY.body[0]} ${COPY.lead} ${COPY.date}.`;
 
 /**
+ * Who gets the byline when a link to this site is shared on Mastodon.
+ *
+ * One handle, not two. The old build carried this twice, for the author and
+ * for the site's own account, and a reader of the tag takes the first and
+ * ignores the rest. This page speaks in the first person and its structured
+ * data names the same author, so it is the person rather than the account.
+ */
+export const FEDIVERSE_CREATOR = "@phranck@oldbytes.space";
+
+/**
  * Where the visitor count goes.
  *
  * The instance is the one running beside this project on Zerops, never the
