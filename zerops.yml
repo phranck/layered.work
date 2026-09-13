@@ -12,7 +12,11 @@ zerops:
         - corepack enable
         - corepack prepare pnpm@11.13.0 --activate
         - pnpm install --frozen-lockfile
-        - pnpm --filter @layered/backend build
+        # The trailing `...` is what builds the workspace packages the backend
+        # depends on, in order, rather than only the backend itself. Without it
+        # `packages/schemas/dist` is never produced and the deployed service
+        # cannot import it.
+        - pnpm --filter "@layered/backend..." build
       deployFiles:
         - apps/backend/dist
         # The generated migrations and their journal. Without them the runner
@@ -21,6 +25,12 @@ zerops:
         - apps/backend/drizzle
         - apps/backend/node_modules
         - apps/backend/package.json
+        # The shared schemas, which the backend reaches through a symlink in
+        # its own node_modules. The link points at this path, so the path has
+        # to be deployed or the link resolves to nothing and the service fails
+        # to import at boot.
+        - packages/schemas/dist
+        - packages/schemas/package.json
         - node_modules
         - package.json
       cache: node_modules
