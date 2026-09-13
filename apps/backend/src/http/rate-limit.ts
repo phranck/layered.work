@@ -116,9 +116,12 @@ export function rateLimit(limits: Limits): MiddlewareHandler {
         // Hashed, because a log of addresses is a record of who tried what, and
         // the only question here is whether one source is doing this repeatedly.
         source: sourceFingerprint(address),
-        // The length of the chain rather than its contents, which is what says
-        // whether the assumption about how many proxies are in front still holds.
-        hops: forwardedChain(c).length,
+        // Every hop, hashed. The length alone says how many proxies are in
+        // front; it does not say which position the client is in, and reading
+        // the wrong one puts every caller in the same bucket, which turns a
+        // per-source limit into a global one. Hashed, so this answers that
+        // question without becoming a record of who connected from where.
+        chain: forwardedChain(c).map(sourceFingerprint),
         retryAfterSeconds: seconds,
       });
 
