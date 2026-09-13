@@ -154,11 +154,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      # The Zerops subdomains until DNS points at the project. They change to
-      # layered.work, api.layered.work and dashboard.layered.work at the
-      # cutover, which is a deliberate moment and deserves a pull request.
+      # The site and the dashboard answer on their own names; the API has no
+      # record yet and is reached through its Zerops subdomain until it does.
       - run: bash scripts/smoke.sh
         env:
-          SITE_URL: https://website-2444-3000.prg1.zerops.app
+          SITE_URL: https://layered.work
           API_URL: https://backend-2444-3000.prg1.zerops.app
-          DASHBOARD_URL: https://dashboard-2444.prg1.zerops.app
+          DASHBOARD_URL: https://dashboard.layered.work
