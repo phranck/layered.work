@@ -39,6 +39,14 @@ zerops:
         S3_BUCKET: ${assets_bucketName}
         S3_ACCESS_KEY_ID: ${assets_accessKeyId}
         S3_SECRET_ACCESS_KEY: ${assets_secretAccessKey}
+      # Every migration that has not run, before the service starts answering.
+      # It refuses to run as a superuser and stops the deployment when it does,
+      # so a schema is never created by a role that bypasses every grant. The
+      # role Zerops connects as is not named here, because it is not known yet;
+      # until DATABASE_EXPECTED_ROLE is set, the privilege is checked and the
+      # name is not, which is the half of the guard that holds everywhere.
+      initCommands:
+        - node apps/backend/dist/db/migrate.js
       start: node apps/backend/dist/index.js
       # Liveness, not readiness. A database that is down should produce a
       # readable 503 from /health/db rather than an opaque 502 from the gateway,
