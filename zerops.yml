@@ -59,6 +59,9 @@ zerops:
         - pnpm --filter @layered/website build
       deployFiles:
         - apps/website/dist
+        # The wordmark and the typefaces, which the page serves from this host
+        # rather than from a third party.
+        - apps/website/public
         - apps/website/package.json
         - node_modules
         - package.json
