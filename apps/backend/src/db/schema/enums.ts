@@ -66,3 +66,21 @@ export const tokenScope = pgEnum("token_scope", [
   "content:publish",
   "media:write",
 ]);
+
+/**
+ * What kind of file a media row holds.
+ *
+ * Coarse on purpose. It decides which component renders the thing and which
+ * processing it goes through, and both of those answers are the same for every
+ * JPEG and every PNG. The exact type is in the mime type beside it.
+ */
+export const mediaKind = pgEnum("media_kind", ["image", "video", "document", "model"]);
+
+/**
+ * The formats an image is derived into.
+ *
+ * `avif` and `webp` are what a modern browser is offered. `jpeg` and `png` are
+ * what it falls back to, and which of the two depends on whether the original
+ * has transparency, so both have to exist here.
+ */
+export const imageFormat = pgEnum("image_format", ["avif", "webp", "jpeg", "png"]);

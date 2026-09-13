@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { identifier, instant } from "./columns.js";
 import { language, tokenScope, userRole } from "./enums.js";
+import { media } from "./media.js";
 
 /**
  * Who may sign in, what is currently signed in, and what an agent may do
@@ -26,9 +28,6 @@ import { language, tokenScope, userRole } from "./enums.js";
  * slow hash, and it gets one from the code that writes it.
  */
 
-/** The generator, the same one the entry tables use. */
-const identifier = () => uuid().primaryKey().default(sql`uuidv7()`);
-
 /**
  * An account.
  *
@@ -52,17 +51,21 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
 
   /**
-   * The picture beside the name. No foreign key yet, because the media table
-   * arrives with its own issue; the constraint lands in that migration.
+   * The picture beside the name.
+   *
+   * Deleting it in the library is refused whilst somebody wears it, which is
+   * the same rule every other reference to a file follows: a file that is in
+   * use is removed from where it is used first, and the library says where
+   * that is.
    */
-  avatarMediaId: uuid("avatar_media_id"),
+  avatarMediaId: uuid("avatar_media_id").references(() => media.id, { onDelete: "restrict" }),
 
   /** Which language the dashboard speaks to this person in. */
   interfaceLanguage: language("interface_language").notNull().default("en"),
 
   role: userRole().notNull().default("editor"),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: instant("created_at"),
 });
 
 /**
@@ -82,10 +85,10 @@ export const sessions = pgTable(
     /** SHA-256 of the value in the cookie, hex. Unique, so a hash names one session. */
     tokenHash: text("token_hash").notNull().unique(),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: instant("created_at"),
 
     /** Moved forward as the session is used, which is what an idle timeout reads. */
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: instant("last_seen_at"),
 
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 
@@ -121,7 +124,7 @@ export const accessTokens = pgTable(
     /** Everything this token may do. An empty array is a token that may do nothing. */
     scopes: tokenScope().array().notNull().default(sql`'{}'`),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: instant("created_at"),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
 
     /** Null means it does not expire on its own. */
@@ -173,7 +176,7 @@ export const auditLog = pgTable(
     /** Whatever else is worth keeping about this one act. */
     detail: jsonb(),
 
-    at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    at: instant("at"),
   },
   (table) => [
     index("audit_log_by_subject").on(table.subjectType, table.subjectId),
