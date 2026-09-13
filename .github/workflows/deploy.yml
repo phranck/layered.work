@@ -1,0 +1,164 @@
+name: Deploy
+
+# A deployment is always a merged pull request. A ruleset refuses anything else
+# reaching `main`, so a push here has passed the gate below by definition.
+#
+# Nothing in this file interpolates anything a stranger can write. The only
+# `run` steps are fixed commands, and the values they read are repository
+# variables and secrets, which only the owner sets.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Deploy the backend"
+        type: boolean
+        default: true
+      website:
+        description: "Deploy the website"
+        type: boolean
+        default: true
+      dashboard:
+        description: "Deploy the dashboard"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# A run on main deploys, and cancelling that half way would leave a service
+# mid-rollout. Two overlapping deployments also make the earlier run's smoke
+# test hit a host the later one is still replacing, so they queue.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Lint, types, tests and a build of everything, in one job. Two jobs would mean
+  # a second runner and a second install of the dependencies, which is the
+  # expensive part, for gates that take nothing from each other.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  # Which services a change can actually reach, decided from the workspace graph
+  # rather than from a guess. Anything shared by all three, and anything not
+  # attributable to a single service, deploys everything, because a service left
+  # on a stale build costs more than a redundant deployment.
+  changes:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      website: ${{ steps.filter.outputs.website }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            everything: &everything
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.base.json'
+              - 'biome.json'
+              - '.nvmrc'
+              - 'zerops.yml'
+              - '.github/workflows/deploy.yml'
+              - 'scripts/**'
+              - 'packages/schemas/**'
+              - 'packages/content/**'
+            surfaces: &surfaces
+              - *everything
+              - 'packages/tokens/**'
+              - 'packages/ui/**'
+            backend:
+              - *everything
+              - 'apps/backend/**'
+            website:
+              - *surfaces
+              - 'apps/website/**'
+            dashboard:
+              - *surfaces
+              - 'apps/dashboard/**'
+
+  deploy-backend:
+    needs: [gate, changes]
+    if: >-
+      always() && needs.gate.result == 'success' &&
+      ((github.event_name == 'push' && needs.changes.outputs.backend == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.backend))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
+        with:
+          access-token: ${{ secrets.ZEROPS_TOKEN }}
+          service-id: ${{ secrets.ZEROPS_BACKEND_SERVICE_ID }}
+
+  deploy-website:
+    needs: [gate, changes]
+    if: >-
+      always() && needs.gate.result == 'success' &&
+      ((github.event_name == 'push' && needs.changes.outputs.website == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.website))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
+        with:
+          access-token: ${{ secrets.ZEROPS_TOKEN }}
+          service-id: ${{ secrets.ZEROPS_WEBSITE_SERVICE_ID }}
+
+  deploy-dashboard:
+    needs: [gate, changes]
+    if: >-
+      always() && needs.gate.result == 'success' &&
+      ((github.event_name == 'push' && needs.changes.outputs.dashboard == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.dashboard))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: zeropsio/actions@79c2d03f7c82ac58d011be746da3332f2f93c680 # v1.0.1
+        with:
+          access-token: ${{ secrets.ZEROPS_TOKEN }}
+          service-id: ${{ secrets.ZEROPS_DASHBOARD_SERVICE_ID }}
+
+  # Runs when at least one service deployed and none failed. It checks the
+  # things that break silently, and it reports the figures rather than asserting
+  # that something is configured.
+  smoke:
+    needs: [deploy-backend, deploy-website, deploy-dashboard]
+    if: >-
+      always() &&
+      needs.deploy-backend.result != 'failure' &&
+      needs.deploy-website.result != 'failure' &&
+      needs.deploy-dashboard.result != 'failure' &&
+      (needs.deploy-backend.result == 'success' ||
+       needs.deploy-website.result == 'success' ||
+       needs.deploy-dashboard.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # The Zerops subdomains until DNS points at the project. They change to
+      # layered.work, api.layered.work and dashboard.layered.work at the
+      # cutover, which is a deliberate moment and deserves a pull request.
+      - run: bash scripts/smoke.sh
+        env:
+          SITE_URL: https://website-2444-3000.prg1.zerops.app
+          API_URL: https://backend-2444-3000.prg1.zerops.app
+          DASHBOARD_URL: https://dashboard-2444.prg1.zerops.app

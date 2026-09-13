@@ -1,0 +1,10 @@
+{
+  "name": "@layered/dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The editorial interface on dashboard.layered.work",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
