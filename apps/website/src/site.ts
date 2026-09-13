@@ -104,6 +104,32 @@ export const COPY = {
  */
 export const DESCRIPTION = `${COPY.body[0]} ${COPY.lead} ${COPY.date}.`;
 
+/**
+ * Who gets the byline when a link to this site is shared on Mastodon.
+ *
+ * One handle, not two. The old build carried this twice, for the author and
+ * for the site's own account, and a reader of the tag takes the first and
+ * ignores the rest. This page speaks in the first person and its structured
+ * data names the same author, so it is the person rather than the account.
+ */
+export const FEDIVERSE_CREATOR = "@phranck@oldbytes.space";
+
+/**
+ * Where the visitor count goes.
+ *
+ * The instance is the one running beside this project on Zerops, never the
+ * hosted service. The old site sent to both at once, which is two sets of
+ * numbers for one site, and only this one is kept.
+ *
+ * The identifier is the site's own, carried over from the old build, so the
+ * history either side of the rebuild is one line rather than two.
+ *
+ * Umami sets no cookie and stores nothing that identifies a reader, so nothing
+ * here waits on a consent banner.
+ */
+export const UMAMI_SCRIPT = "https://umami.layered.work/script.js";
+export const UMAMI_WEBSITE_ID = "3e266ac6-8103-4bef-bedb-7d127ed75cc4";
+
 /** The sharing image, wanted by the tags on the page and by the file that makes it. */
 export const SHARE_IMAGE = "/og.png";
 export const SHARE_IMAGE_WIDTH = 1200;
