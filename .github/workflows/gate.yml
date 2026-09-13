@@ -70,6 +70,15 @@ jobs:
           DATABASE_URL_TEST: postgres://layered_app:layered_local@127.0.0.1:5432/layered_test
       - run: pnpm build
 
+      # Anything a build generates and the repository keeps is checked here.
+      # `packages/tokens/src/generated/` is derived from the stylesheets and
+      # committed so that a type check needs no build; without this a stale
+      # copy is invisible, because nothing fails when it disagrees with its
+      # source, a component simply offers a value the stylesheet has no
+      # property for.
+      - name: Refuse a generated file that was not regenerated
+        run: git diff --exit-code
+
       # Which workspaces actually carry a suite, printed rather than assumed. A
       # job named `gate` that silently covers one workspace of four is the
       # failure this line exists to make visible.
