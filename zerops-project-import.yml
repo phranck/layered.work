@@ -1,0 +1,79 @@
+# Zerops project import for layered.work.
+#
+# Creates the project and its five services. Validated against
+# https://api.app-prg1.zerops.io/api/rest/public/settings/import-project-yml-json-schema.json
+#
+#   zcli project project-import zerops-project-import.yml --org-id a-zerops-organisation
+#
+# The three application services are created without code. `buildFromGit` is a
+# one-time clone at import and needs a public repository, and this one stays
+# private, so it is not used. The services are deployed by the workflow in
+# .github/workflows/deploy.yml, which runs inside GitHub Actions, checks the code
+# out there and pushes it to Zerops with an access token. Repository visibility
+# plays no part in that.
+#
+# That workflow triggers on a push to `main`, and a ruleset refuses anything
+# reaching `main` other than a merged pull request, so a deployment is always
+# something that passed the gate.
+#
+# Domains are not in this file. Zerops manages domains and certificates outside
+# the import, so `layered.work`, `dashboard.layered.work` and `api.layered.work`
+# are attached in the GUI once DNS points at the project.
+
+project:
+  name: layered.work
+  description: Website, dashboard and API for layered.work
+  corePackage: LIGHT
+  location: eu-central
+  tags:
+    - layered
+
+services:
+  # --- Data ------------------------------------------------------------------
+  # Created first, so the application services find them on their first boot.
+
+  - hostname: postgres
+    type: postgresql:single@18
+    priority: 10
+
+  # One bucket per service, so the media library gets its own. Public reading
+  # is what lets the site serve an image straight from the bucket; writing stays
+  # with the credentials, which only the backend holds.
+  - hostname: assets
+    type: object-storage
+    objectStorageSize: 5
+    objectStoragePolicy: public-read
+    priority: 10
+
+  # --- Applications ----------------------------------------------------------
+
+  - hostname: backend
+    type: alpine/nodejs@24
+    startWithoutCode: true
+    enableSubdomainAccess: true
+    minContainers: 1
+    maxContainers: 1
+    envSecrets:
+      # Signs the dashboard session cookie. Generated here so it never exists in
+      # a file anybody could commit.
+      SESSION_SECRET: <@generateRandomString(<64>)>
+      # Set by hand after the import, from the SMTP2GO account.
+      SMTP2GO_API_KEY: ""
+    priority: 5
+
+  - hostname: website
+    type: alpine/nodejs@24
+    startWithoutCode: true
+    enableSubdomainAccess: true
+    enableCdn: true
+    minContainers: 1
+    maxContainers: 1
+    priority: 1
+
+  - hostname: dashboard
+    type: alpine/nginx@1.22
+    startWithoutCode: true
+    enableSubdomainAccess: true
+    minContainers: 1
+    maxContainers: 1
+    priority: 1

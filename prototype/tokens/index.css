@@ -1,0 +1,33 @@
+/*
+ * The design token system for layered.work.
+ *
+ * This directory is self-contained and carries no dependency on the prototype
+ * around it, so it moves into the real project unchanged. Import this one file
+ * and the whole system is in force:
+ *
+ *   @import "@layered/ui/tokens";
+ *
+ * The four layers, in the order they build on each other:
+ *
+ *   scale.css      Every stepped series, and not one colour. Lightness steps,
+ *                  type, space, geometry, motion. Chosen values.
+ *   palettes.css   The colour worlds. Chroma and hue for the neutral ramp, the
+ *                  accent ramp, status colours. Chosen values.
+ *   semantic.css   What follows from the two above, and what components read.
+ *                  Derived values only.
+ *   workbench.css  The dashboard's density, scoped to `.workbench`.
+ *
+ * The rule that holds the whole thing together is that a component names a
+ * semantic token and never a colour, a step of a ramp, or a literal. That is
+ * what makes a palette swap a change to one attribute, and it is the only rule
+ * that has to be kept for the rest to keep working.
+ *
+ * Import order does not decide which palette wins. `:root[data-palette="x"]`
+ * outranks the bare `:root`, so the attribute decides regardless of where the
+ * blocks sit.
+ */
+
+@import url("scale.css");
+@import url("palettes.css");
+@import url("semantic.css");
+@import url("workbench.css");

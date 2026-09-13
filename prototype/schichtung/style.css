@@ -1,0 +1,1325 @@
+/*
+ * Schichtung.
+ *
+ * The components live in ui/, and the dashboard uses the same ones. This file
+ * holds what only the site has: its page layout, its hero, its article and the
+ * pieces that appear nowhere else.
+ */
+
+/* --- Reset ---------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * A still backdrop is a fixed layer behind the content, never a background with
+ * fixed attachment, which the browser repositions on every scroll frame.
+ */
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(80vw 60vh at 12% -8%, var(--wash-primary), transparent 62%),
+    radial-gradient(70vw 50vh at 92% 4%, var(--wash-secondary), transparent 58%);
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-400);
+  outline-offset: 3px;
+  border-radius: var(--radius-chip);
+}
+
+::selection {
+  color: var(--text-on-accent);
+  background: var(--accent-400);
+}
+
+/* --- Layout ---------------------------------------------------------------
+
+   The footer sits at the bottom of the window even when a view is shorter than
+   it, and directly under the content when it is longer. One column, and the main
+   region takes whatever height is left over. */
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+#app > main {
+  flex: 1;
+}
+
+/*
+ * One measure for the whole page. A band spans the window and carries the
+ * backdrop, the row inside it is held to the page width, so a frosted edge
+ * reaches both sides whilst the wordmark still begins where the text does.
+ */
+.page {
+  width: min(100%, var(--page-width));
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: var(--gap);
+}
+
+.grid--cards {
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+}
+
+.grid--halves {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* --- Typography ----------------------------------------------------------- */
+
+/*
+ * Headings are set in the condensed face. A condensed face fits more into a line
+ * at display size and is harder work at reading size, which is precisely the
+ * difference between a heading and a paragraph.
+ *
+ * It also runs narrower at the same size, so the tracking that keeps the upright
+ * face from looking loose would make this one look cramped. The condensed face
+ * therefore carries its own, nearer to zero.
+ */
+.title-hero,
+.title-page,
+.title-section,
+.title-card {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  text-shadow: var(--text-emboss);
+  text-wrap: balance;
+}
+
+.title-hero {
+  font-size: var(--text-4xl);
+}
+
+.title-page {
+  font-size: var(--text-3xl);
+}
+
+.title-card {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+.lede {
+  max-width: var(--reading-measure);
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.prose {
+  max-width: var(--reading-measure);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.prose p + p {
+  margin-block-start: var(--space-5);
+}
+
+.prose h2 {
+  margin-block: var(--space-8) var(--space-4);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.prose a {
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-line);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--duration-fast) var(--ease);
+}
+
+.prose a:hover {
+  text-decoration-color: var(--accent-400);
+}
+
+.prose code {
+  padding: 0.15em 0.42em;
+  font-family: var(--font-mono);
+  font-feature-settings: var(--mono-ligatures);
+  font-size: var(--text-code);
+  color: var(--accent-300);
+  background: rgb(255 255 255 / 5%);
+  border-radius: var(--radius-chip);
+}
+
+/*
+ * A label that introduces a block. Small, spaced capitals read as a signpost
+ * rather than as a heading, which keeps the heading level free for the content.
+ */
+.eyebrow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.eyebrow::after {
+  flex: 1;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, var(--edge-hairline), transparent);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.meta__dot {
+  width: 3px;
+  height: 3px;
+  background: currentcolor;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Chips, badges, tags -------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: calc(5px - var(--label-lift)) 10px calc(5px + var(--label-lift));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+
+a.chip:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+  border-color: var(--edge-strong);
+}
+
+.chip[data-current] {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+}
+
+.chip__count {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+/*
+ * The chip that closes a card. It is a target rather than a label, so it is
+ * square, larger than a text chip and carries a larger mark inside it.
+ */
+.chip--action {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 17px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-control);
+}
+
+.card--interactive:hover .chip--action {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+}
+
+/*
+ * Status is carried by a dot plus a word, never by colour alone, so the meaning
+ * survives a reader who cannot tell the two greens apart.
+ */
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  /* One pixel more above than below: at a line height of one the em box is
+     shorter than the glyph box, and the caps land a pixel above the centre.
+     Measured at 1.0px on 13px. */
+  padding: 5px 9px 3px 7px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-radius: var(--radius-chip);
+  color: var(--badge-colour, var(--text-muted));
+  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
+}
+
+.badge::before {
+  width: 5px;
+  height: 5px;
+  content: "";
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.badge[data-status="public"] { --badge-colour: var(--state-success); }
+.badge[data-status="draft"] { --badge-colour: var(--state-warning); }
+.badge[data-status="hidden"] { --badge-colour: var(--state-info); }
+.badge[data-status="secret"] { --badge-colour: var(--accent-400); }
+
+.lang-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border: 1px solid var(--edge-hairline);
+  border-radius: 5px;
+}
+
+.lang-tag[data-language="de"] {
+  color: var(--state-info);
+  border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
+}
+
+/* --- Site header ---------------------------------------------------------- */
+
+/*
+ * Two elements: a band that spans the window and carries the blur, and a row
+ * inside it held to the page measure.
+ */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: color-mix(in oklab, var(--surface-page) 78%, transparent);
+  border-block-end: 1px solid var(--edge-hairline);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.site-header__row {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  height: 68px;
+}
+
+/*
+ * The logo file carries a quarter of its height as empty margin above and below
+ * the mark, so the element is taller than the mark appears. The height comes
+ * from the derivation in tokens.css rather than from a number written here.
+ */
+
+.site-nav {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-inline-start: var(--space-4);
+}
+
+.site-nav a {
+  position: relative;
+  padding: 8px 13px;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  border-radius: var(--radius-chip);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.site-nav a:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+}
+
+/* The current item carries the accent and a tint of it, because colour alone
+   asks a reader to compare two greys. Hover must not replace that tint. */
+.site-nav a[data-current] {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+}
+
+.site-nav a[data-current]:hover {
+  background: var(--accent-tint-strong);
+}
+
+.header-tools {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+.search-trigger {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 8px 10px 8px 13px;
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+
+.search-trigger:hover {
+  color: var(--text-secondary);
+  border-color: var(--edge-strong);
+}
+
+.lang-switch {
+  display: flex;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.lang-switch button {
+  padding: 5px 10px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.lang-switch button[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 8%);
+}
+
+/*
+ * A language with no version of this entry. Saying so is more honest than a
+ * switch that silently lands somewhere else, and it is the reason the article
+ * itself needs no notice about translations.
+ */
+.lang-switch button[disabled] {
+  color: var(--ink-700);
+  cursor: not-allowed;
+}
+
+.lang-switch button[disabled]:hover {
+  background: transparent;
+}
+
+/* --- Search overlay ------------------------------------------------------- */
+
+.search-overlay {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding-block-start: 14vh;
+  visibility: hidden;
+  background: var(--scrim-strong);
+  opacity: 0;
+  backdrop-filter: blur(8px);
+  transition:
+    opacity var(--duration) var(--ease),
+    visibility 0s linear var(--duration);
+}
+
+.search-overlay[data-open] {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+.search-overlay__panel {
+  width: min(600px, calc(100vw - 2 * var(--page-gutter)));
+  padding: var(--space-3);
+  background: var(--surface-floating);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-4);
+  transform: translateY(calc(-1 * var(--travel-far))) scale(0.97);
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.search-overlay[data-open] .search-overlay__panel {
+  transform: translateY(0) scale(1);
+}
+
+.search-overlay__results {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-block-start: var(--space-3);
+}
+
+.search-result {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.search-result:hover {
+  background: var(--hover-tint);
+}
+
+.search-result__title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result__kind {
+  margin-inline-start: auto;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  flex: none;
+}
+
+/* --- Home ----------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  align-items: center;
+  padding-block: clamp(var(--space-8), 8vw, var(--space-10)) var(--section-gap);
+}
+
+.hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+  /* A heading above a card begins where the card's curve gives way to its
+     straight edge, rather than out at the page edge. */
+  padding-inline-start: var(--card-text-inset);
+}
+
+.hero__title em {
+  font-style: normal;
+  color: var(--accent-400);
+}
+
+/*
+ * The stack of physical layers. Each plate sits a little higher and a little
+ * further across than the one beneath it, which is the whole idea of the
+ * proposal shown once, large.
+ */
+.plate-stack {
+  position: relative;
+  aspect-ratio: 4 / 3.4;
+  perspective: 1400px;
+}
+
+.plate {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  transform-style: preserve-3d;
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.plate--back {
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+  transform: translate3d(-6%, -9%, 0) rotate(-2.4deg) scale(0.93);
+}
+
+.plate--middle {
+  background: var(--surface-floating);
+  box-shadow: var(--lift-2);
+  transform: translate3d(-2%, -4%, 0) rotate(-1.1deg) scale(0.965);
+}
+
+.plate--front {
+  background: var(--surface-overlay);
+  box-shadow: var(--lift-4);
+}
+
+.plate--front img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+.plate-stack:hover .plate--back {
+  transform: translate3d(-8.5%, -12%, 0) rotate(-3.4deg) scale(0.92);
+}
+
+.plate-stack:hover .plate--middle {
+  transform: translate3d(-3.5%, -6%, 0) rotate(-1.7deg) scale(0.958);
+}
+
+.plate-stack:hover .plate--front {
+  transform: translate3d(1%, 1.5%, 0) scale(1.012);
+}
+
+.plate__caption {
+  position: absolute;
+  inset-inline: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--scrim-soft);
+  border: 1px solid var(--edge-hairline);
+  border-radius: max(calc(var(--card-radius) - var(--space-4)), 0px);
+  backdrop-filter: blur(14px);
+}
+
+.plate__caption strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.plate__caption span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* The featured post gets a wide card whose media runs the full height beside
+   the text, so it reads as the one thing on the page that is not a list item. */
+/*
+ * The featured post: a card whose picture sits beside its text rather than above
+ * it. It is a layout inside the card, not a second kind of card, so it brings no
+ * surface, border or radius of its own.
+ */
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.feature__media {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  min-height: 320px;
+}
+
+.feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.feature:hover .feature__media img {
+  transform: scale(1.04);
+}
+
+.feature__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: center;
+
+  padding: var(--space-6);
+}
+
+.tag-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-inline-start: var(--card-text-inset);
+}
+
+/* --- Project view --------------------------------------------------------- */
+
+.project-hero {
+  position: relative;
+  overflow: hidden;
+  margin-block-start: var(--space-6);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-3);
+  aspect-ratio: 21 / 9;
+}
+
+.project-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 32%, var(--scrim-strong) 100%);
+}
+
+.project-hero__copy {
+  position: absolute;
+  inset-inline: var(--space-7);
+  bottom: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  background: var(--edge-hairline);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+}
+
+.spec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+}
+
+.spec__label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.spec__value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* The 3D model shortcode, which four of the existing posts already use. */
+.model-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 60% at 50% 40%, var(--wash-primary), transparent 70%),
+    var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  aspect-ratio: 16 / 9;
+}
+
+.model-frame__hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.model-frame__badge {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--scrim);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+  backdrop-filter: blur(10px);
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.gallery figure {
+  overflow: hidden;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  aspect-ratio: 4 / 3;
+}
+
+.gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.gallery figure:hover img {
+  transform: scale(1.06);
+}
+
+/* --- Post view ------------------------------------------------------------ */
+
+.article-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+  max-width: var(--reading-measure);
+  padding-block: var(--space-8) var(--space-6);
+}
+
+.article-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-block-end: var(--section-gap);
+}
+
+/*
+ * The translation notice. It is the visible half of the language model agreed
+ * for the site: a post exists in one language, and the other language says so
+ * rather than hiding it.
+ */
+.translation-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  max-width: var(--reading-measure);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-control);
+}
+
+.translation-note a {
+  color: var(--accent-300);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.code-block {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-feature-settings: var(--mono-ligatures);
+  font-size: var(--text-code);
+  line-height: 1.7;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+/* The gutter is a column beside the code, running the full height with no gap
+   above or below it, and darker than the code rather than lighter. */
+.code-block__gutter {
+  padding: var(--space-4) var(--space-3);
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+  color: var(--text-faint);
+  text-align: right;
+  user-select: none;
+  background: rgb(0 0 0 / 26%);
+  border-inline-end: 1px solid var(--edge-hairline);
+}
+
+.code-block__code {
+  padding: var(--space-4) var(--space-5);
+  line-height: inherit;
+  overflow-x: auto;
+  contain: inline-size;
+}
+
+.code-block__code .kw { color: var(--accent-300); }
+.code-block__code .str { color: var(--state-success); }
+.code-block__code .com { color: var(--text-faint); }
+
+.pull-quote {
+  max-width: var(--reading-measure);
+  padding-inline-start: var(--space-5);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  border-inline-start: 3px solid var(--accent-500);
+  text-wrap: pretty;
+}
+
+/* --- Token view ----------------------------------------------------------- */
+
+.token-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--space-3);
+}
+
+/*
+ * A swatch states a padding of its own, so it has to state the radius derived
+ * from that padding with it. Without this line its chip would keep the root's
+ * arithmetic, computed from a padding this element does not use.
+ */
+.swatch {
+  --card-padding: var(--space-2);
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-padding);
+}
+
+.swatch__chip {
+  height: 62px;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-inner-radius);
+  background: var(--swatch, var(--ink-500));
+}
+
+.swatch__name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swatch__value {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.scale-row {
+  display: flex;
+  gap: var(--space-5);
+  align-items: baseline;
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--edge-hairline);
+}
+
+.scale-row__name {
+  flex: none;
+  width: 108px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.scale-row__sample {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.space-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  padding-block: var(--space-2);
+}
+
+.space-row__bar {
+  height: 14px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent-400));
+  border-radius: 3px;
+}
+
+.geometry-demo {
+  display: grid;
+  place-items: center;
+  padding: var(--space-7);
+  background: var(--surface-sunken);
+  border-radius: var(--card-radius);
+}
+
+.geometry-demo__outer {
+  width: min(340px, 100%);
+  padding: var(--card-padding);
+  background: var(--surface-floating);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-2);
+}
+
+.geometry-demo__inner {
+  display: grid;
+  place-items: center;
+  height: 96px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background: var(--surface-overlay);
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--card-inner-radius);
+}
+
+/*
+ * This panel states a padding of its own, so it states the radius derived from
+ * that padding with it. Without the second line its contents would keep the
+ * root's arithmetic, computed from a padding this element does not use.
+ */
+.motion-demo {
+  --card-padding: var(--space-4);
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--card-padding);
+}
+
+.motion-demo__box {
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(180deg, var(--accent-400), var(--accent-600));
+  border-radius: var(--card-inner-radius);
+  box-shadow: var(--lift-2);
+  transition: transform var(--motion-duration, var(--duration)) var(--ease);
+}
+
+.motion-demo:hover .motion-demo__box {
+  transform: translateX(120px);
+}
+
+/* --- Footer --------------------------------------------------------------- */
+
+/*
+ * The footer closes the page, so its own surface has to reach the bottom edge of
+ * the document. The room the prototype bar needs is part of the footer's lower
+ * padding rather than padding on the body, which would leave a strip of page
+ * colour below the footer and make it look as though it had stopped early.
+ */
+.site-footer {
+  margin-block-start: var(--section-gap);
+  padding-block: var(--space-8) calc(var(--space-8) + var(--proto-bar-clearance, 0px));
+  background: var(--surface-sunken);
+  border-block-start: 1px solid var(--edge-hairline);
+}
+
+.site-footer__row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+/*
+ * Several navigations side by side, each stacked vertically. They are separate
+ * lists in the dashboard, so they are separate elements here rather than one row
+ * that has been visually grouped.
+ */
+.footer-navs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-6);
+}
+
+.footer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.footer-nav__title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.footer-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.footer-nav a {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.footer-nav a:hover {
+  color: var(--text-primary);
+}
+
+.site-footer__baseline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  border-block-start: 1px solid var(--edge-hairline);
+}
+
+.site-footer__note {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+
+.site-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-end;
+}
+
+/*
+ * Social accounts are icons in their own row, apart from the page navigation.
+ * They are managed in the dashboard, so the row is a rendering of that list
+ * rather than markup somebody keeps in step by hand.
+ */
+.social-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/*
+ * A brand mark, drawn as a mask so it inherits the colour it sits in. Sized from
+ * one token, because every mark has to be optically the same size whether its
+ * file is a circle, a square or a pair of strokes.
+ */
+.brand-mark {
+  display: block;
+  width: var(--brand-size, 18px);
+  height: var(--brand-size, 18px);
+  background: currentcolor;
+  mask: var(--brand) center / contain no-repeat;
+}
+
+.social-row__link {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.social-row__link:hover {
+  color: var(--accent-300);
+  background: var(--surface-floating);
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- Reveal --------------------------------------------------------------- */
+
+/*
+ * Arrival animation. Only opacity and transform move, and the stagger is a
+ * delay rather than a separate animation per element.
+ */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(var(--travel));
+  transition:
+    opacity var(--duration-reveal) var(--ease),
+    transform var(--duration-reveal) var(--ease);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+[data-reveal][data-revealed] {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- Narrow viewports ----------------------------------------------------- */
+
+@media (width < 1040px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+
+  .feature {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+}
+
+@media (width < 720px) {
+  .site-nav,
+  .search-trigger span {
+    display: none;
+  }
+
+  .feature__body {
+    padding: var(--space-5);
+  }
+
+  .project-hero {
+    aspect-ratio: 4 / 3;
+  }
+
+  .project-hero__copy {
+    inset-inline: var(--space-5);
+    bottom: var(--space-5);
+  }
+}

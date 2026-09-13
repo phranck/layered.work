@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.astro/
+.turbo/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local agent artefacts. These stay on the machine and never reach the remote.
+
+
+.serena/
+
+.graphify-out/
+
+# Editors and operating systems
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local media and migration scratch
+/media-local/
+/migration-out/
+
+# The seed that created the board. The issues are the plan from that moment on.
+.issues/

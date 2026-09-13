@@ -1,0 +1,165 @@
+/*
+ * The button, and the row of them at the foot of a block.
+ *
+ * A button is as wide as its label. There is no width prop, because a width
+ * decided at the call site is how a button becomes a banner. The one breakpoint
+ * that stretches it lives at the bottom of this file.
+ */
+
+.button {
+  /* The padding is stated as two inputs and derived below, so that the label
+     lift can be taken off the top and added to the bottom without a variant
+     having to repeat the arithmetic. */
+  --button-padding-block: 11px;
+  --button-padding-inline: 18px;
+
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  padding:
+    calc(var(--button-padding-block) - var(--label-lift))
+    var(--button-padding-inline)
+    calc(var(--button-padding-block) + var(--label-lift));
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-shadow: var(--text-emboss);
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  transition:
+    transform var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+/* --- Tones ------------------------------------------------------------------
+   Every button with a fill carries the sheen, laid over that fill. Hovering
+   raises the sheen rather than swapping the fill, so the face keeps the colour
+   it has and the contrast of the label cannot move with it. */
+
+.button--primary,
+.button--secondary {
+  background-image: var(--control-sheen);
+}
+
+.button--primary {
+  /* Restating the shade is not enough: --text-emboss resolves on :root, and what
+     lands here is the finished value rather than the formula. The derivation has
+     to be repeated on the element that changes one of its inputs. */
+  --emboss-shade: color-mix(in oklab, var(--accent-700) 72%, transparent);
+  --text-emboss: 0 -1px 0 var(--emboss-shade);
+
+  color: var(--text-on-accent);
+  background-color: var(--accent-500);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 22%),
+    0 6px 16px -8px var(--accent-glow);
+}
+
+.button--primary:hover {
+  --sheen-strength: 15%;
+
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 30%),
+    0 12px 26px -8px var(--accent-glow);
+}
+
+.button--secondary {
+  color: var(--text-primary);
+  background-color: var(--surface-floating);
+  border-color: var(--edge-hairline);
+  box-shadow: var(--lift-1);
+}
+
+.button--secondary:hover {
+  --sheen-strength: 13%;
+
+  background-color: var(--surface-overlay);
+  border-color: var(--edge-strong);
+}
+
+/* The unfilled style, for a button that is an icon alone. A word never takes
+   it: a word without a fill or an edge reads as a label, not as a button. */
+.button--ghost {
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.button--ghost:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+}
+
+.button--danger {
+  color: var(--state-danger);
+  background-color: color-mix(in oklab, var(--state-danger) 12%, transparent);
+  border-color: color-mix(in oklab, var(--state-danger) 30%, transparent);
+}
+
+.button--danger:hover {
+  --emboss-shade: color-mix(in oklab, var(--state-danger) 40%, #000000);
+  --text-emboss: 0 -1px 0 var(--emboss-shade);
+
+  color: #ffffff;
+  background-color: var(--state-danger);
+  background-image: var(--control-sheen);
+  border-color: var(--state-danger);
+}
+
+/* --- Sizes ------------------------------------------------------------------ */
+
+.button--small {
+  --button-padding-block: 7px;
+  --button-padding-inline: 12px;
+
+  font-size: var(--text-sm);
+  border-radius: var(--radius-chip);
+}
+
+/* A glyph has no lowercase mass, so an icon button takes no lift. */
+.button--icon {
+  padding: 9px;
+  border-radius: var(--radius-chip);
+}
+
+/* --- Actions ------------------------------------------------------------------
+   Every button belonging to a block sits at that block's right edge, with the
+   one that carries the block's purpose furthest right. */
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* A destructive action stands away from the others, so nobody reaches it whilst
+   aiming for the primary one. */
+.actions__aside {
+  margin-inline-end: auto;
+}
+
+/*
+ * The one place a button is full width. It is a rule about the phone breakpoint
+ * rather than a property of the button, so no call site can stretch one
+ * anywhere else.
+ */
+@media (width < 720px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions .button {
+    width: 100%;
+  }
+}
