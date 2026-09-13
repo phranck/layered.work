@@ -25,6 +25,8 @@ import {
   SHARE_IMAGE_WIDTH,
   SITE_ORIGIN,
   TAGLINE,
+  UMAMI_SCRIPT,
+  UMAMI_WEBSITE_ID,
 } from "./site.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -196,6 +198,18 @@ function page(): string {
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preload" href="/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css" />
+
+    <!-- Deferred, so counting a visit never delays showing the page to the
+         person being counted. The performance attribute is what makes the
+         tracker register the observers behind the web vitals columns, and
+         without it those columns stay empty. It is read by the script this
+         instance serves, which is where the name was taken from. -->
+    <script
+      defer
+      src="${UMAMI_SCRIPT}"
+      data-website-id="${UMAMI_WEBSITE_ID}"
+      data-performance="true"
+    ></script>
     <style>
       :root {
         --page: ${PAGE_COLOR};
