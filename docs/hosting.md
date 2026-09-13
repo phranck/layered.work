@@ -102,6 +102,8 @@ The [zerops.yml specification](https://docs.zerops.io/zerops-yaml/specification#
 
 **The readiness check is where the real question belongs.** The backend's `/health/ready` asks whether the expected tables exist, whether the connected role may actually read and write them, and whether the applied migrations reach the one this build shipped. It answers 200 when all three hold and 503 naming the one that does not. A container that would answer every request and fail the ones that matter therefore never replaces the one already running.
 
+**Neither check takes a `retryPeriod` or a `failureTimeout`.** The specification's own example gives both as plain integers, and so does the published JSON Schema, and zcli refuses the whole file: `cannot unmarshal !!int 60 into time.Duration`. The deployment fails before anything is replaced, so nothing goes down, but every service is rejected at once. Leave both out and take the defaults.
+
 All three services have one, which is the part that is easy to get wrong: the health check watches what is already running, so a service without a readiness check puts a new container into rotation as soon as it starts. The website asks for its own `/health`, and the dashboard asks for its index page, because nginx serves an empty document root perfectly happily and a build that produced nothing would otherwise replace a working dashboard.
 
 ## The local database

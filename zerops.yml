@@ -31,14 +31,16 @@ zerops:
       # schema is older than the code. A container in any of those states
       # answers every request and fails the ones that matter, so it never
       # replaces the one already running.
+      #
+      # No `retryPeriod` or `failureTimeout` here. Both the specification's own
+      # example and the published JSON Schema give them as plain integers, and
+      # zcli refuses the whole file with "cannot unmarshal !!int 60 into
+      # time.Duration". The defaults do the job, so the working configuration is
+      # the one with neither.
       readinessCheck:
         httpGet:
           port: 3000
           path: /health/ready
-        # The migrations run in initCommands before this is first asked, so the
-        # only thing being waited for is the process opening its port.
-        retryPeriod: 5
-        failureTimeout: 60
     run:
       base: nodejs@22
       ports:
@@ -108,8 +110,6 @@ zerops:
         httpGet:
           port: 3000
           path: /health
-        retryPeriod: 5
-        failureTimeout: 60
     run:
       base: nodejs@22
       ports:
@@ -163,8 +163,6 @@ zerops:
         httpGet:
           port: 80
           path: /
-        retryPeriod: 5
-        failureTimeout: 60
     run:
       base: nginx@1.22
       ports:
