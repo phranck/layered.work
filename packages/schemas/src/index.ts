@@ -15,5 +15,7 @@
  * import this package until somebody runs a build, and a type check becomes a
  * step that has to come after one.
  */
+
+export * from "./auth.js";
 export * from "./errors.js";
 export * from "./request.js";
