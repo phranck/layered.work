@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# esbuild installs its own platform binary from a lifecycle script, and neither
+# Astro nor Vite builds without it. Allowed one package at a time, because the
+# default here is to run nothing.
+allowBuilds:
+  esbuild: true
