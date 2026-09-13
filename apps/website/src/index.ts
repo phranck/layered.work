@@ -375,6 +375,10 @@ function page(): string {
         --h: clamp(46px, 11vw, 64px);
         --r: 7px;
         --flap: oklch(0.168 0.006 250);
+        /* How thick the gap between the two flaps reads. Fixed rather than
+           scaled with the card, because it stands for a physical edge and an
+           edge does not get thicker on a wider screen. */
+        --groove: 1px;
 
         position: relative;
         display: block;
@@ -402,8 +406,12 @@ function page(): string {
         position: absolute;
         z-index: 3;
         inset-inline: 0;
-        top: calc(50% - 1.5px);
-        height: 3px;
+        /* Stated once and halved to place it, so the line stays on the middle
+           of the card whatever it is set to. The two were matched by hand and
+           the width has been changed often enough for that to be a question of
+           when rather than whether. */
+        top: calc(50% - var(--groove) / 2);
+        height: var(--groove);
         content: "";
         background: linear-gradient(
           90deg,
