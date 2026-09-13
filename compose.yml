@@ -1,0 +1,51 @@
+# The local database.
+#
+# Everything a developer needs to reach the state the application expects is
+# here, so `docker compose up -d` is the whole setup. Before this file the
+# container on this machine came from a compose file in a directory that had
+# since been deleted, which meant the local database could not be recreated from
+# anything that was checked in.
+#
+# Production is Zerops and knows nothing about this file. What the two share is
+# the version of Postgres and the shape of the roles, so a migration that
+# applies here applies there.
+
+name: layered-work
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: layered-postgres
+    restart: unless-stopped
+    environment:
+      # The administrative role. It owns nothing the application touches and is
+      # used for creating roles, granting, and looking around.
+      POSTGRES_USER: layered
+      POSTGRES_PASSWORD: layered_local
+      POSTGRES_DB: layered
+    ports:
+      # Bound to the loopback address rather than to every interface, so the
+      # database is not offered to the network the laptop happens to be on.
+      # 5432 and 5433 belong to the sibling projects' own containers.
+      - "127.0.0.1:5434:5432"
+    volumes:
+      # The whole directory, not the `data` subdirectory inside it. From version
+      # 18 the image puts its cluster in a version-named subdirectory so that a
+      # later `pg_upgrade --link` does not cross a mount boundary, and it
+      # refuses to start when it finds a mount one level too deep.
+      - pgdata:/var/lib/postgresql
+      # Run once, when the data directory is first created. Recreating the role
+      # later means removing the volume, which on this project costs nothing.
+      - ./scripts/local-database/:/docker-entrypoint-initdb.d/:ro
+    healthcheck:
+      # `pg_isready` answers as soon as the socket accepts connections, which is
+      # before the initialisation scripts have run. Asking for the role those
+      # scripts create is what makes "healthy" mean "ready to be migrated".
+      test: ["CMD-SHELL", "psql -U layered -d layered -tAc \"select 1 from pg_roles where rolname = 'layered_app'\" | grep -q 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  pgdata:
