@@ -83,13 +83,12 @@ zerops:
         # itself. Set it to `countdown` to put the notice back up without moving
         # the date and without a deployment, or to `site` to open early.
         WEBSITE_MODE: auto
-      # PORT is set here rather than above, because Zerops holds that key in
-      # envVariables and rejects the whole file when it appears there. It has to
-      # be set at all because Astro's server listens on 4321 when nothing says
-      # otherwise, whilst the port declared above, which is where Zerops sends
-      # the requests, is 3000. The two numbers are a pair and are kept in sight
-      # of each other for that reason.
-      start: PORT=3000 node apps/website/dist/server/entry.mjs
+      # Nothing but the command. This line is handed to `exec`, not to a shell,
+      # so `PORT=3000 node …` here is read as the name of a program to run and
+      # fails with "not found": the service then restarts in a loop and the site
+      # answers 502. The port is set in astro.config.mjs instead, where it has to
+      # match the one declared above.
+      start: node apps/website/dist/server/entry.mjs
       # Asked before any traffic reaches a new container, so a deployment that
       # fails to start never replaces the one that is running. Liveness only: it
       # says the server is answering and touches nothing else, because a slow
