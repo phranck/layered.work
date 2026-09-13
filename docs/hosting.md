@@ -172,3 +172,15 @@ Repository secrets and variables the deploy workflow reads.
 There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet.
 
 `security.txt` is deferred. Its two signing secrets are not set and the deploy workflow does not generate the file, so nothing depends on them. Its own issue puts both back when it is worked.
+
+## What the backend refuses to start without
+
+`apps/backend/src/config.ts` checks the environment at import time, so a service that cannot be configured fails whilst starting and names what is missing. Three of its variables have to exist in production and are not set by the code:
+
+| Variable | Where it comes from | Why |
+| --- | --- | --- |
+| `SITE_ORIGIN` | `zerops.yml`, as `https://layered.work` | The origin the API may be called from with a cookie. Read from configuration rather than from a request header, which a caller controls |
+| `DASHBOARD_ORIGIN` | `zerops.yml`, as `https://dashboard.layered.work` | The same, for the dashboard |
+| `SESSION_SECRET` | The service's own secret variables, in the Zerops interface | It signs the session cookie, so its strength is its length. At least 32 characters, and never in this repository |
+
+A `SESSION_SECRET` of ten characters was found in this project on 13 September 2026 and replaced. Ten characters of any alphabet is around sixty bits, which is searchable; the value Zerops generates for `<@generateRandomString(<32>)>` in an import file is the right shape.

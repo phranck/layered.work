@@ -77,6 +77,12 @@ zerops:
         # be connected. It is not a superuser, which the run before this one
         # proved by not being refused.
         DATABASE_EXPECTED_ROLE: db
+        # The two origins that may call this API with a cookie. Public
+        # addresses rather than secrets, so they belong here where a diff shows
+        # them, and they are read from configuration rather than from a request
+        # header, which a caller controls.
+        SITE_ORIGIN: https://layered.work
+        DASHBOARD_ORIGIN: https://dashboard.layered.work
         S3_ENDPOINT: ${assets_apiUrl}
         S3_BUCKET: ${assets_bucketName}
         S3_ACCESS_KEY_ID: ${assets_accessKeyId}
