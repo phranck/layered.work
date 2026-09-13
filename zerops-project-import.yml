@@ -56,7 +56,7 @@ services:
   # --- Applications ----------------------------------------------------------
 
   - hostname: backend
-    type: alpine/nodejs@24
+    type: alpine/nodejs@22
     startWithoutCode: true
     enableSubdomainAccess: true
     minContainers: 1
@@ -70,7 +70,7 @@ services:
     priority: 5
 
   - hostname: website
-    type: alpine/nodejs@24
+    type: alpine/nodejs@22
     startWithoutCode: true
     enableSubdomainAccess: true
     minContainers: 1
