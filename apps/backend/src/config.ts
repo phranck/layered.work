@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 /**
@@ -138,6 +139,26 @@ function productionOnly(environment: NodeJS.ProcessEnv): string[] {
  * fails whilst it is starting rather than whilst it is serving.
  */
 export const config = readConfig();
+
+/**
+ * Whether the secret below was generated for this process rather than
+ * configured, which is only ever true outside production.
+ */
+export const sessionSecretIsEphemeral = !config.SESSION_SECRET;
+
+/**
+ * The key the session cookie is signed with.
+ *
+ * Never an empty string and never a fixed fallback. A guard whose key is empty
+ * when the secret is absent is a guard that passes the moment somebody forgets
+ * to set it, which is exactly the time it had to refuse; a fixed fallback is
+ * the same thing with a value everybody knows.
+ *
+ * Production cannot reach the generated branch, because `readConfig` refuses to
+ * return without the variable. Locally it means a restart signs everybody out,
+ * which is honest and costs nothing.
+ */
+export const sessionSecret: string = config.SESSION_SECRET ?? randomBytes(32).toString("base64url");
 
 /**
  * Where this is running.

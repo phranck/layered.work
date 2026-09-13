@@ -7,6 +7,7 @@ import { logger } from "../logger.js";
 import { health } from "./health.js";
 import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
+import { auth } from "./routes/auth.js";
 
 /**
  * The application, and the three things every request passes through whatever
@@ -53,6 +54,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/health", health);
+app.route("/auth", auth);
 
 /** An address that is not here, in the same shape as every other failure. */
 app.notFound((c) => fail(c, ErrorCode.NotFound, "There is nothing at this address."));

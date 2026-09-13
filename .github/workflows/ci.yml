@@ -1,7 +1,7 @@
 name: CI
 
 # Runs on every pull request, which is the only way anything reaches `main`.
-# The deploy workflow runs the same gate again after the merge, against the
+# The deploy workflow calls the same gate again after the merge, against the
 # merged tree rather than against the branch.
 on:
   pull_request:
@@ -16,21 +16,4 @@ concurrency:
 
 jobs:
   gate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      # Which workspaces actually carry a suite, printed rather than assumed.
-      # A job named `test` that silently covers one workspace of four is the
-      # failure this line exists to make visible.
-      - name: Say which workspaces carry tests
-        run: pnpm -r exec node -e "const p=require('./package.json'); if (p.scripts?.test) console.log(p.name)"
+    uses: ./.github/workflows/gate.yml

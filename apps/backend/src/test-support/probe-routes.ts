@@ -1,5 +1,6 @@
 import { body, ErrorCode, MaxLength, text } from "@layered/schemas";
 import type { Hono } from "hono";
+import { principalOf, requireSession } from "../http/require-session.js";
 import { HttpError, ok } from "../http/response.js";
 import { validate } from "../http/validate.js";
 
@@ -46,4 +47,9 @@ export function registerProbeRoutes(app: Hono, onValidated: () => void = () => {
   app.get("/test/throws-deliberately", () => {
     throw new HttpError(ErrorCode.Conflict, DELIBERATE_MESSAGE);
   });
+
+  // A protected route, so that `requireSession` and `principalOf` are exercised
+  // by something rather than only declared. The first feature route that needs
+  // a signed-in person uses the same two.
+  app.get("/test/protected", requireSession, (c) => ok(c, principalOf(c)));
 }
