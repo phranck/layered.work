@@ -24,5 +24,12 @@ export default defineConfig({
   },
   server: {
     host: true,
+    // The port Zerops sends requests to, declared in zerops.yml beside the
+    // service. It is set here because the start command there is handed to
+    // `exec` rather than to a shell, so it cannot carry an assignment, and
+    // because Zerops holds the key `PORT` itself and refuses the file when it
+    // appears among the environment variables. Astro's own default is 4321,
+    // which answers nothing that anybody asks for.
+    port: 3000,
   },
 });
