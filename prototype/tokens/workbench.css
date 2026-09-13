@@ -1,0 +1,125 @@
+/*
+ * Layer 4 of the token system: the workbench scope.
+ *
+ * The dashboard takes its colours and its shapes from the site, so it overrides
+ * nothing about them and simply inherits. What it does state is density: a page
+ * is read once and a workbench is worked in for hours, so the spacing steps are
+ * tighter, everything clickable shares one height, and the content reads a
+ * little larger.
+ *
+ * Those are properties of the task rather than of the design, which is why they
+ * are the only things here. Anything that would change how the product looks
+ * belongs in scale.css or palettes.css, where it applies to both.
+ *
+ * The scope is an element rather than a media query or a route, so a workbench
+ * panel can appear anywhere, including inside a page, and still bring its own
+ * density with it.
+ */
+
+.workbench {
+  /* --- Density ------------------------------------------------------------
+     Tighter than the site from the middle of the scale up, because a workbench
+     shows many rows at once whilst a page shows few things large. The first two
+     steps stay close to the site's, since a gap of a few pixels means the same
+     thing in both. */
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 10px;
+  --space-4: 14px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 40px;
+  --space-8: 56px;
+
+  /* One height for everything that can be clicked, which is what makes a row of
+     mixed controls line up without any of them being nudged. */
+  --control-height: 34px;
+
+  /* A text field stands four pixels above the other controls. It is the one
+     control that holds what the reader types, and the extra room is what makes
+     it read as a place to write rather than as a thing to press. Derived here,
+     on the element that declares the control height. */
+  --input-height: calc(var(--control-height) + 4px);
+
+  /* --- Geometry -----------------------------------------------------------
+     The site's card geometry at workbench scale. Both numbers are chosen and
+     everything else derives from them, exactly as on the site, so the two stay
+     recognisably the same family of shapes. The derivations are restated here
+     because a property containing var() resolves where it is declared. */
+  --card-radius: 18px;
+  --card-padding: 12px;
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+  --card-media-inset: 0px;
+  --card-media-radius: var(--card-radius);
+
+  /* --- Elevation ----------------------------------------------------------
+     Flatter than the site. A workbench that lifts every panel turns into a pile
+     of cards, and nothing in a pile is more important than anything else. */
+  --lift-2: var(--lift-1);
+  --lift-3: var(--lift-2);
+
+  /* --- Motion -------------------------------------------------------------
+     Shorter, because a workbench responds rather than unfolds. */
+  --duration: var(--duration-fast);
+  --duration-slow: var(--duration);
+  --travel: 6px;
+
+  /* --- Markdown editor ----------------------------------------------------
+     The editor's syntax scheme, carried over from lmaa and musiccloud unchanged,
+     so an author who works in more than one of these projects does not have to
+     relearn what a shortcode looks like.
+
+     These are the one set of colours that does not follow the palette, and
+     deliberately: each role has to stay distinguishable from the others, which a
+     palette cannot promise. A scheme bound to the accent would collapse two
+     roles into one hue the day the accent moves. */
+  --md-heading: #79c0ff;
+  --md-emphasis: #d2a8ff;
+  --md-code: #ffa657;
+  --md-quote: #7ee787;
+  --md-punctuation: #8b949e;
+  --md-shortcode-brace: #c9d1d9;
+  --md-shortcode-token: #d2a8ff;
+  --md-shortcode-target: #ffa657;
+  --md-shortcode-attribute: #79c0ff;
+  --md-shortcode-string: #7ee787;
+
+  /* --- Sidebar ------------------------------------------------------------
+     The width is a property rather than a fixed track, because the drag handle
+     writes to it and the stored value is read back into it on load. The bounds
+     live here too, so the drag and the stylesheet cannot disagree about how
+     narrow the sidebar may get. */
+  --sidebar-width: 248px;
+  --sidebar-min: 190px;
+  --sidebar-max: 420px;
+
+  /* Entries sit a shade under the workbench's own text: a navigation column is
+     scanned rather than read, and at reading size the list starts to compete
+     with what it points at. The icon is sized separately, because an icon size
+     is not a text size and tying the two makes one of them wrong whenever the
+     other moves. */
+  --sidebar-text: 1rem;
+  --sidebar-icon: 17px;
+}
+
+/*
+ * The content area and everything shown over it read two pixels above the
+ * site's steps. A page is read once at reading distance; a workbench is worked
+ * in for hours, and the site's sizes run a shade small there. The sidebar keeps
+ * the sizes stated above.
+ *
+ * The values mirror scale.css and are restated rather than derived, because a
+ * property declared on the root cannot be nudged from a scope: the nudge would
+ * resolve on the root, where it is not set.
+ */
+.workbench__main,
+.workbench .card-overlay {
+  --text-xs: calc(0.6875rem + 2px);
+  --text-sm: calc(0.8125rem + 2px);
+  --text-base: calc(0.9375rem + 2px);
+  --text-lg: calc(1.1875rem + 2px);
+  --text-code: calc(0.875rem + 2px);
+
+  /* The icon at the front of a content row, two pixels above the row default. */
+  --row-icon-size: 19px;
+}

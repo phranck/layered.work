@@ -1,0 +1,207 @@
+/*
+ * The sidebar.
+ *
+ * A column with three parts. The body takes the remaining height and scrolls
+ * when it has to, which is what keeps the mark at the top and the user at the
+ * foot on a window of any height.
+ *
+ * The sections inside it are the shared Section compound. Everything that makes
+ * them look like sidebar sections rather than page sections is set here, as
+ * token overrides on the scope, so the component itself needs no variant.
+ */
+
+.sidebar {
+  /* The section, told how to behave in here. Nothing about Section changes; it
+     reads these the way it reads them everywhere else. */
+  --section-heading-gap: var(--space-2);
+  --section-name-size: var(--text-sm);
+
+  /* The row, likewise. */
+  --row-padding: var(--space-2) var(--space-3);
+  --row-radius: var(--radius-control);
+  --row-title-size: var(--sidebar-text);
+  --row-icon-size: var(--sidebar-icon);
+  --row-gap: var(--space-3);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-inline-end: 1px solid var(--edge-hairline);
+}
+
+/* A sidebar section titles itself in small capitals, which is what tells a
+   reader it names a group rather than announcing a page. */
+.sidebar .section__name {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-shadow: none;
+}
+
+.sidebar .section__title {
+  padding-inline: var(--space-3);
+}
+
+/* Navigation entries share the control height, so a list of them lines up with
+   everything else that can be clicked. The user row in the footer is not one of
+   them: it holds a tile and two lines, and takes the same air on every side. */
+.sidebar__body .row {
+  height: var(--control-height);
+  padding-block: 0;
+}
+
+.sidebar__footer {
+  --row-padding: var(--space-3);
+}
+
+/* --- Header ---------------------------------------------------------------
+   The mark is centred in the column rather than aligned with the entries: it is
+   the sign above the list, not the first item in it. */
+
+.sidebar__header {
+  display: grid;
+  place-items: center;
+  padding-block: var(--space-3) var(--space-1);
+}
+
+/* --- Body -------------------------------------------------------------------
+   Takes what height is left and scrolls inside itself, so the header and the
+   footer stay where they are. */
+
+.sidebar__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* --- Footer ---------------------------------------------------------------- */
+
+.sidebar__footer {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--edge-hairline);
+}
+
+/* --- Handle -----------------------------------------------------------------
+   A wide hit area with a thin visible line, because a one pixel target is a
+   target nobody hits. It sits on the border rather than beside it, so the border
+   it moves is the thing being grabbed. */
+
+.sidebar__handle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -3px;
+  z-index: 5;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar__handle::after {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 3px;
+  width: 1px;
+  content: "";
+  background: var(--text-accent);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.sidebar__handle:hover::after,
+[data-resizing] .sidebar__handle::after {
+  opacity: 1;
+}
+
+/* --- Reordering ------------------------------------------------------------
+   The sections can be dragged into another order, so they animate back into
+   place when the order changes and stop animating whilst one is being dragged,
+   which would otherwise make it lag behind the pointer. */
+
+.sidebar .section {
+  transition: transform var(--duration) var(--ease);
+}
+
+[data-resizing] {
+  user-select: none;
+  cursor: col-resize;
+}
+
+[data-reordering] {
+  user-select: none;
+  cursor: grabbing;
+}
+
+.sidebar .section[data-dragging] {
+  position: relative;
+  z-index: 10;
+  background: var(--surface-floating);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-4);
+  transition: none;
+}
+
+.sidebar .section[data-dragging] .section__name {
+  color: var(--text-accent);
+}
+
+/*
+ * The grip appears on approach rather than sitting there permanently, because a
+ * sidebar showing five grips at rest reads as a settings screen. It takes no room
+ * in the flow either: an element nobody can see would otherwise indent the title
+ * by a width with no visible reason.
+ */
+.section__grip {
+  position: absolute;
+  inset-inline-start: -4px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.sidebar .section__title[data-section-handle] {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.sidebar .section__title:hover .section__grip,
+.sidebar .section[data-dragging] .section__grip {
+  opacity: 1;
+}
+
+/* Where the dragged section will land. The gap the others open is the absence of
+   something and reads as one only once you know what is happening; an outline in
+   the size of the section says it outright. */
+.drop-slot {
+  position: absolute;
+  inset-inline: var(--space-4);
+  top: 0;
+  z-index: 0;
+  visibility: hidden;
+  background: var(--accent-tint);
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--radius-control);
+  opacity: 0;
+  transition:
+    transform var(--duration) var(--ease),
+    opacity var(--duration-fast) var(--ease),
+    visibility 0s linear var(--duration-fast);
+  pointer-events: none;
+}
+
+.drop-slot[data-visible] {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}

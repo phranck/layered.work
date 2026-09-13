@@ -1,0 +1,24 @@
+/*
+ * The wordmark.
+ *
+ * The logo file carries roughly a quarter of its height as empty margin above
+ * and below the mark, so the element is always taller than the mark appears. The
+ * height comes from the derivation in the token system rather than a number
+ * written here, which is what makes asking for a 30px mark produce one.
+ */
+
+.logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+.logo__image {
+  width: auto;
+  height: var(--logo-height);
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.logo:hover .logo__image {
+  opacity: 0.82;
+}

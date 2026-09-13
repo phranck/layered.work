@@ -1,0 +1,104 @@
+/*
+ * The prototype chrome.
+ *
+ * Deliberately neutral and deliberately not part of any proposal's design
+ * language: it is the tool that carries the three proposals, and confusing it
+ * with the work would make the work harder to judge. It therefore states its own
+ * values rather than reading a proposal's tokens.
+ */
+
+/*
+ * How much room the bar needs at the bottom of a page. Declared here because the
+ * bar owns the number, and read by the design with a fallback of zero, so the
+ * design never depends on the prototype chrome existing.
+ */
+:root {
+  --proto-bar-clearance: 92px;
+}
+
+.proto-bar {
+  --bar-radius: 16px;
+  --bar-padding: 6px;
+  --bar-inner-radius: max(calc(var(--bar-radius) - var(--bar-padding)), 0px);
+
+  position: fixed;
+  inset-inline: 0;
+  bottom: 18px;
+  z-index: 900;
+
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin-inline: auto;
+  padding: var(--bar-padding);
+
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1;
+
+  background: rgb(16 16 18 / 82%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: var(--bar-radius);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 6%) inset,
+    0 18px 40px -12px rgb(0 0 0 / 70%);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+.proto-bar a,
+.proto-bar button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 9px 12px;
+  font: inherit;
+  color: rgb(255 255 255 / 58%);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--bar-inner-radius);
+  transition:
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.proto-bar a:hover,
+.proto-bar button:hover {
+  color: rgb(255 255 255 / 92%);
+  background: rgb(255 255 255 / 7%);
+}
+
+.proto-bar__label {
+  padding-inline: 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 38%);
+}
+
+.proto-bar__views {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.proto-bar__view[data-current] {
+  color: rgb(255 255 255 / 95%);
+  background: rgb(255 255 255 / 10%);
+}
+
+/* The four layer stripes from the wordmark, used as the way back to the index. */
+
+/* Below the phone breakpoint the bar keeps the proposals and drops the views,
+   which are reachable from the page itself. */
+@media (width < 860px) {
+  .proto-bar__views { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-bar a { transition: none; }
+}
