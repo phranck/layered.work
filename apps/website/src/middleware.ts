@@ -1,4 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
+import { randomBytes } from "node:crypto";
+import { NO_FRAMING, SHARED_HEADERS, sitePolicy } from "@layered/policy";
 import { countdownPage } from "./countdown/page.js";
 import { hasOpened, isPreviewHost, websiteMode } from "./site.js";
 
@@ -21,14 +23,64 @@ const COUNTDOWN_MAX_AGE_SECONDS = 300;
 /**
  * Headers every response from this site carries.
  *
- * Written in one place so the next route added is not the one that quietly
- * omits the last of them.
+ * The values come from `@layered/policy` rather than from here, because the
+ * API and the dashboard send the same three and a copy in each of the three
+ * places is a copy that drifts.
  */
-const SAFETY_HEADERS: Record<string, string> = {
-  "x-content-type-options": "nosniff",
-  "referrer-policy": "strict-origin-when-cross-origin",
-  "x-frame-options": "DENY",
-};
+const SAFETY_HEADERS: Record<string, string> = { ...SHARED_HEADERS, ...NO_FRAMING };
+
+/**
+ * A value that names this response's own inline elements, and nothing else.
+ *
+ * 16 bytes from the system's random source, which is 128 bits. The property it
+ * needs is that it cannot be predicted before the response is written: anything
+ * injected into the document afterwards has to carry it to run, and cannot.
+ *
+ * Issued here rather than in the page, so that the header and the document are
+ * written from the same value by construction.
+ */
+function issueNonce(): string {
+  return randomBytes(16).toString("base64");
+}
+
+/**
+ * Puts the shared headers and this response's policy on it.
+ *
+ * @param response - What the route produced.
+ * @param nonce - The one issued for this response.
+ */
+function withSafety(response: Response, nonce: string): Response {
+  for (const [name, value] of Object.entries(SAFETY_HEADERS)) {
+    response.headers.set(name, value);
+  }
+  if (ENFORCE_POLICY) {
+    response.headers.set("content-security-policy", sitePolicy(nonce));
+  }
+  return response;
+}
+
+/**
+ * Whether the content policy is sent at all.
+ *
+ * **Not in development.** The dev server injects its own scripts and styles
+ * into every page without a nonce, so a policy loose enough to let those
+ * through has stopped saying anything, and one tight enough to be worth having
+ * breaks the tooling. Either way the console fills with violations that are
+ * about Vite rather than about this site, which is the state in which a real
+ * violation goes unread.
+ *
+ * The policy is therefore checked against the built output, which is what
+ * ships, by running it and loading the page:
+ *
+ * ```bash
+ * pnpm --filter "@layered/website..." build
+ * WEBSITE_MODE=countdown PORT=4321 node apps/website/dist/server/entry.mjs
+ * ```
+ *
+ * A condition on the environment rather than on whether something happens to be
+ * present, so production cannot end up in the lenient branch by accident.
+ */
+const ENFORCE_POLICY = import.meta.env.PROD;
 
 /**
  * Decides, for every request, whether the countdown answers or the site does.
@@ -63,42 +115,43 @@ export const onRequest = defineMiddleware(async (context, next) => {
     mode === "site" ||
     (mode !== "countdown" && (hasOpened() || isPreviewHost(context.request.headers.get("host"))));
 
+  const nonce = issueNonce();
+  // Read by a page that renders inline, so it does not have to be passed down
+  // through every component that might.
+  context.locals.nonce = nonce;
+
   if (showSite) {
-    const response = await next();
-    for (const [name, value] of Object.entries(SAFETY_HEADERS)) {
-      response.headers.set(name, value);
-    }
-    return response;
+    return withSafety(await next(), nonce);
   }
 
   if (path === "/") {
-    return new Response(countdownPage(), {
-      status: 200,
-      headers: {
-        ...SAFETY_HEADERS,
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": `public, max-age=${COUNTDOWN_MAX_AGE_SECONDS}`,
-      },
-    });
+    return withSafety(
+      new Response(countdownPage(nonce), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": `public, max-age=${COUNTDOWN_MAX_AGE_SECONDS}`,
+        },
+      }),
+      nonce,
+    );
   }
 
   // A file under public/, or one of the two routes machines read. Astro serves
   // the first and renders the second, and answers 404 itself when there is no
   // such file, which is the right answer either way.
   if (OPEN_BEFORE_LAUNCH.has(path) || path.slice(path.lastIndexOf("/")).includes(".")) {
-    const response = await next();
-    for (const [name, value] of Object.entries(SAFETY_HEADERS)) {
-      response.headers.set(name, value);
-    }
-    return response;
+    return withSafety(await next(), nonce);
   }
 
-  return new Response("Not found", {
-    status: 404,
-    headers: {
-      ...SAFETY_HEADERS,
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "public, max-age=0",
-    },
-  });
+  return withSafety(
+    new Response("Not found", {
+      status: 404,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "public, max-age=0",
+      },
+    }),
+    nonce,
+  );
 });
