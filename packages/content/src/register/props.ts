@@ -21,7 +21,7 @@ type Components = typeof components;
 type ValueOf<P extends Parameter> = P extends { kind: "keyword"; values: readonly (infer V)[] }
   ? V
   : P extends { kind: "step" }
-    ? SpaceStep | number
+    ? SpaceStep
     : P extends { kind: "number" }
       ? number
       : P extends { kind: "flag" }

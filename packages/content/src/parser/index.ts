@@ -1,4 +1,4 @@
-import { type MarkdownParser, parser as markdown } from "@lezer/markdown";
+import { GFM, type MarkdownParser, parser as markdown } from "@lezer/markdown";
 import { componentSyntax } from "./extension.js";
 
 /**
@@ -11,8 +11,15 @@ import { componentSyntax } from "./extension.js";
  * refuses would then be able to disagree.
  */
 
-/** Markdown, plus the component syntax. */
-export const parser: MarkdownParser = markdown.configure(componentSyntax);
+/**
+ * Markdown, plus what GitHub added to it, plus the component syntax.
+ *
+ * GFM is here because the epic promises that tables stay Markdown, and a table
+ * is not Markdown as the specification wrote it. Strikethrough, task lists and
+ * bare links come in the same bundle, which is what anybody writing Markdown
+ * today expects of it; taking the table alone would leave three surprises.
+ */
+export const parser: MarkdownParser = markdown.configure([GFM, componentSyntax]);
 
 /**
  * Parses a document.

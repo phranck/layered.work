@@ -34,7 +34,10 @@ export const SPACE_STEP_RANGE = {
 const SPACING = {
   kind: "step",
   description: `A step of the space scale, from ${SPACE_STEP_RANGE.first} to ${SPACE_STEP_RANGE.last}.`,
-  default: 5,
+  // A name rather than a number, the same as every other step: `var(--space-5)`
+  // wants the 5 as a name, and a default written differently from the values it
+  // stands among is a difference a renderer would have to know about.
+  default: "5",
 } as const;
 
 /** What a stack does with children that are not all the same size. */
