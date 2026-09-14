@@ -36,7 +36,7 @@ export type ScannedComponent = {
 /** Something the scanner could not make sense of. */
 export type ScanError = {
   /** What went wrong, in a word something else can branch on. */
-  code: "unclosed-arguments" | "unclosed-body" | "unexpected-character";
+  code: "unclosed-arguments" | "unclosed-body";
   /** Where it was noticed. */
   at: number;
   /** Safe to show a person. */
