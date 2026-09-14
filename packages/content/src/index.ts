@@ -12,4 +12,5 @@
  * validator, the editor's completion and its highlighting all read from it.
  * Nothing about a component is written down twice.
  */
+export * from "./parser/index.js";
 export * from "./register/index.js";
