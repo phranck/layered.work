@@ -1,3 +1,4 @@
+import { nearestName } from "../nearest.js";
 import { COMPONENT_NAMES, type ComponentName, components } from "./components.js";
 import type { ComponentDefinition, Parameter, Register } from "./kinds.js";
 
@@ -62,47 +63,11 @@ export function resolveComponent(written: string, register: Register = REGISTER)
     };
   }
 
-  return { found: false, name: written, suggestion: nearest(written, Object.keys(register)) };
-}
-
-/**
- * The component whose name is closest to what was written.
- *
- * Only useful for a near miss, which is what it is for: somebody who wrote
- * `VStac` gets `VStack`, and somebody who wrote `Carousel` gets nothing, which
- * is more helpful than being offered `Card`.
- *
- * @param written - What was actually written.
- * @param names - The component names to measure against.
- */
-function nearest(written: string, names: string[]): ComponentName | undefined {
-  const lower = written.toLowerCase();
-  let best: { name: ComponentName; distance: number } | undefined;
-
-  for (const name of names) {
-    const distance = editDistance(lower, name.toLowerCase());
-    if (!best || distance < best.distance) best = { name: name as ComponentName, distance };
-  }
-
-  // A third of the length, so a short name tolerates one wrong letter and a
-  // long one tolerates two. Beyond that a suggestion is a guess.
-  return best && best.distance <= Math.max(1, Math.floor(written.length / 3)) ? best.name : undefined;
-}
-
-/** How many single-character changes turn one string into the other. */
-function editDistance(from: string, to: string): number {
-  let previous = Array.from({ length: to.length + 1 }, (_, index) => index);
-
-  for (let row = 1; row <= from.length; row += 1) {
-    const current = [row];
-    for (let column = 1; column <= to.length; column += 1) {
-      const substitution = (previous[column - 1] ?? 0) + (from[row - 1] === to[column - 1] ? 0 : 1);
-      current[column] = Math.min(substitution, (previous[column] ?? 0) + 1, (current[column - 1] ?? 0) + 1);
-    }
-    previous = current;
-  }
-
-  return previous[to.length] ?? to.length;
+  return {
+    found: false,
+    name: written,
+    suggestion: nearestName(written, Object.keys(register)) as ComponentName | undefined,
+  };
 }
 
 /**

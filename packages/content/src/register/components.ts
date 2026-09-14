@@ -18,10 +18,22 @@ import type { Register } from "./kinds.js";
  * which step, never how many pixels.
  */
 
+/**
+ * The ends of the space scale.
+ *
+ * Every sentence about the scale, here and in the validator, is built from
+ * these rather than from a number somebody typed, so a step added to the
+ * stylesheet cannot leave one of them claiming otherwise.
+ */
+export const SPACE_STEP_RANGE = {
+  first: SPACE_STEPS[0],
+  last: SPACE_STEPS[SPACE_STEPS.length - 1] ?? SPACE_STEPS[0],
+} as const;
+
 /** The steps, as the language writes them: bare numbers. */
 const SPACING = {
   kind: "step",
-  description: "A step of the space scale, from 1 to 10.",
+  description: `A step of the space scale, from ${SPACE_STEP_RANGE.first} to ${SPACE_STEP_RANGE.last}.`,
   default: 5,
 } as const;
 
