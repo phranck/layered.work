@@ -1,8 +1,9 @@
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { nearestName } from "../nearest.js";
 import { parseContent } from "../parser/index.js";
-import { NODE, VALUE_NODE } from "../parser/nodes.js";
-import { type ArgumentKind, scanComponent } from "../parser/scan.js";
+import { NODE } from "../parser/nodes.js";
+import { argumentsOf, childOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
+import { scanComponent } from "../parser/scan.js";
 import { SPACE_STEP_RANGE, SPACE_STEPS } from "../register/components.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
 import { resolveComponent, unnamedParameter } from "../register/lookup.js";
@@ -58,14 +59,6 @@ type Subject = { name: string; definition: ComponentDefinition };
 
 /** A parameter and the name it is written under. */
 type Bound = { name: string; parameter: Parameter };
-
-/** Which written form each value node stands for, read off the parser's own map. */
-const WRITTEN_KIND: Record<string, ArgumentKind> = Object.fromEntries(
-  Object.entries(VALUE_NODE).map(([kind, name]) => [name, kind as ArgumentKind]),
-);
-
-/** The node names a value may appear under. */
-const VALUE_NAMES = new Set<string>(Object.values(VALUE_NODE));
 
 /**
  * Checks a document.
@@ -382,7 +375,7 @@ function checkRequired(
  */
 function checkValue(bound: Bound, valueNode: SyntaxNode, subject: Subject, context: Context): void {
   const raw = context.text.slice(valueNode.from, valueNode.to);
-  const written = WRITTEN_KIND[valueNode.name];
+  const written = writtenKindOf(valueNode);
   const { parameter } = bound;
 
   const refuse = () =>
@@ -542,42 +535,4 @@ function withinRange(value: number, range: Parameter["range"]): boolean {
 /** Whether a bare number names a step of the space scale. */
 function isSpaceStep(raw: string): boolean {
   return (SPACE_STEPS as readonly string[]).includes(raw);
-}
-
-/** A quoted value without its quotes, and without the backslashes inside it. */
-function unquote(raw: string): string {
-  return raw.slice(1, -1).replace(/\\(.)/g, "$1");
-}
-
-/** The first direct child of this node with that name. */
-function childOf(node: SyntaxNode, name: string): SyntaxNode | null {
-  for (let at = node.firstChild; at; at = at.nextSibling) {
-    if (at.name === name) return at;
-  }
-  return null;
-}
-
-/**
- * The arguments written on a component.
- *
- * Direct children only. A component nested inside this one has arguments of its
- * own, and it is checked on its own visit.
- */
-function argumentsOf(node: SyntaxNode): SyntaxNode[] {
-  const list = childOf(node, NODE.ComponentArguments);
-  if (!list) return [];
-
-  const items: SyntaxNode[] = [];
-  for (let at = list.firstChild; at; at = at.nextSibling) {
-    if (at.name === NODE.ComponentArgument) items.push(at);
-  }
-  return items;
-}
-
-/** The value node of one argument, whichever of the written forms it is. */
-function writtenValueOf(argument: SyntaxNode): SyntaxNode | null {
-  for (let at = argument.firstChild; at; at = at.nextSibling) {
-    if (VALUE_NAMES.has(at.name)) return at;
-  }
-  return null;
 }
