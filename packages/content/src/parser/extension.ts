@@ -47,11 +47,9 @@ function takeComponent(cx: BlockContext, line: Line): { found: ScannedComponent;
     const found = scanComponent(buffer, 0);
     if (!found) return null;
 
-    // Closed, or as closed as it is going to get: either way this is the
-    // component, and an error on it is marked rather than read past.
-    if (!found.error || found.error.code === "unexpected-character") {
-      return { found, start };
-    }
+    // Closed. Every error the scanner reports is a thing that is still open, so
+    // the component is not finished until another line has been added to it.
+    if (!found.error) return { found, start };
 
     // The line after the current one, read without moving, which is the only
     // public way to see text the context has not reached yet. At the end of the
