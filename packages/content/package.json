@@ -22,7 +22,9 @@
     "dist"
   ],
   "dependencies": {
-    "@layered/tokens": "workspace:*"
+    "@layered/tokens": "workspace:*",
+    "@lezer/common": "^1.5.2",
+    "@lezer/markdown": "^1.7.2"
   },
   "devDependencies": {
     "vitest": "^3.2.7"
