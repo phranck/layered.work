@@ -86,7 +86,15 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/content: {}
+  packages/content:
+    dependencies:
+      '@layered/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+    devDependencies:
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.2)(lightningcss@1.33.0)(tsx@4.23.13)(yaml@2.9.1)
 
   packages/mcp: {}
 
