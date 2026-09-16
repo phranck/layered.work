@@ -14,7 +14,9 @@ The work is planned entirely in GitHub Issues on the `layered.work` project boar
 
 ## Repository layout
 
-Nothing is built yet. `prototype/` holds the interactive design study that settles the visual language, the token system and the component set, and it runs on its own:
+`apps/` holds the three surfaces and `packages/` holds what they share: the content language, the design tokens, the request schemas, the response headers and the component set.
+
+`prototype/` holds the interactive design study that settles the visual language, the token system and the component set. It is not a dependency and it does not ship, and it runs on its own:
 
 ```bash
 python3 prototype/serve.py
@@ -24,20 +26,9 @@ python3 prototype/serve.py
 
 ## Content
 
-Content is Markdown with a component syntax modelled on SwiftUI, so that an author composes a page from the same components the site is built from:
+Content is Markdown with a component syntax modelled on SwiftUI, so that an author composes a page from the same components the site is built from. One register defines every component, and the parser, the renderer, the editor's completion, its highlighting and its validation all read from it.
 
-```markdown
-HStack(spacing: 6) {
-  Image("soundbox-front", caption: "Die Front")
-  VStack {
-    ## Gehäuse
-
-    Zwei Hälften aus PETG.
-  }
-}
-```
-
-The component register is one definition per component, and the parser, the renderer, the editor's completion, its highlighting and its validation all read from it.
+[The language reference](docs/content-language.md) says what can be written. It is generated from that register, so it cannot promise anything the parser refuses.
 
 ## Hosting
 

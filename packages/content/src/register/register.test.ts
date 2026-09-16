@@ -1,5 +1,6 @@
 import { SPACE_STEPS, STATUS_TONES } from "@layered/tokens";
 import { describe, expect, it } from "vitest";
+import { validateContent } from "../validate/validate.js";
 import { COMPONENT_NAMES, components } from "./components.js";
 import type { Register } from "./kinds.js";
 import { completionList, defaultsOf, resolveComponent, unnamedParameter } from "./lookup.js";
@@ -31,6 +32,23 @@ describe("every entry", () => {
     expect(definition.description.length, "the editor shows this in its list").toBeGreaterThan(0);
     expect(definition.renders.length, "something has to render it").toBeGreaterThan(0);
     expect(["required", "optional", "never"]).toContain(definition.body);
+  });
+
+  it.each(COMPONENT_NAMES)("%s shows an example that the validator accepts", (name) => {
+    // No media library is given, so a name is taken on trust. The example is
+    // about how a component is written, and holding it against the files that
+    // happen to exist would make the reference fail for a reason that has
+    // nothing to do with the reference.
+    const { findings, publishable } = validateContent(components[name].example);
+
+    expect(findings, `${name}: ${findings.map((finding) => finding.message).join(" ")}`).toEqual([]);
+    expect(publishable).toBe(true);
+  });
+
+  it.each(COMPONENT_NAMES)("%s shows an example of itself", (name) => {
+    // An example naming a different component would be honest Markdown and
+    // useless documentation.
+    expect(components[name].example.startsWith(name)).toBe(true);
   });
 
   it.each(COMPONENT_NAMES)("%s names an unnamed parameter that exists", (name) => {

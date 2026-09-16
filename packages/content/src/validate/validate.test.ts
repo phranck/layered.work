@@ -57,6 +57,7 @@ describe("a name the register has retired", () => {
   const retired: Register = {
     Note: {
       description: "Something set apart from the text around it.",
+      example: "Note(tone: warning) { Careful. }",
       body: "required",
       parameters: {
         tone: { kind: "keyword", description: "What kind of thing it is.", values: ["info", "warning"] },

@@ -4,7 +4,8 @@ import { parseContent } from "../parser/index.js";
 import { NODE } from "../parser/nodes.js";
 import { argumentsOf, childOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
 import { scanComponent } from "../parser/scan.js";
-import { SPACE_STEP_RANGE, SPACE_STEPS } from "../register/components.js";
+import { SPACE_STEPS } from "../register/components.js";
+import { accepts } from "../register/describe.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
 import { resolveComponent, unnamedParameter } from "../register/lookup.js";
 import { FINDING, type Finding, type Validation } from "./findings.js";
@@ -496,35 +497,6 @@ function reportUnreadable(node: SyntaxNode, context: Context): void {
     to: error.at + 1,
     component: found?.name.text,
   });
-}
-
-/** What a parameter accepts, as the end of a sentence. */
-function accepts(parameter: Parameter): string {
-  switch (parameter.kind) {
-    case "text":
-      return "text in quotes";
-    case "slug":
-      return "the name of a file in the media library, in quotes";
-    case "number":
-      return parameter.range
-        ? `a whole number from ${parameter.range[0]} to ${parameter.range[1]}`
-        : "a whole number";
-    case "step":
-      return `a step of the space scale, from ${SPACE_STEP_RANGE.first} to ${SPACE_STEP_RANGE.last}`;
-    case "flag":
-      return "true or false";
-    case "keyword":
-      return `one of ${either(parameter.values ?? [])}`;
-    case "icon":
-      return "the name of an icon";
-  }
-}
-
-/** A list as a person would say it aloud, with the Oxford comma. */
-function either(values: readonly string[]): string {
-  if (values.length < 2) return values[0] ?? "nothing";
-  if (values.length === 2) return `${values[0]} or ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")}, or ${values[values.length - 1]}`;
 }
 
 /** Whether a number is inside a range, both ends included. */
