@@ -26,6 +26,8 @@ The dashboard interface is German or English, chosen in the account and applied 
 
 Markdown with a SwiftUI-shaped component syntax. One register defines every component, and the parser, the renderer, the editor and the validator all read from it. Nothing about a component is written down twice.
 
+`docs/content-language.md` is the reference, generated from that register by the content package's build. Change the register, not the document.
+
 ## Verification
 
 `evidence-first.md` applies without exception, and the visual half of it is not optional here: a layout claim is a measurement, not a screenshot.
