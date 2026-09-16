@@ -57,6 +57,16 @@ export type Alias = { readonly was: string; readonly message: string };
 export type ComponentDefinition = {
   /** The one line the editor shows in its completion list. */
   description: string;
+  /**
+   * How it is written, as a person would write it.
+   *
+   * Required rather than optional, so a component added to the register cannot
+   * reach the reference without one. Written rather than built from the
+   * parameters, because a generated example reads as a list of parameter names
+   * and teaches nobody anything. A test parses every one of these and refuses
+   * whatever the validator would.
+   */
+  example: string;
   /** Whether it wraps content, and whether it must. */
   body: BodyRule;
   /**
