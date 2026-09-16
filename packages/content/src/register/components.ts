@@ -21,9 +21,9 @@ import type { Register } from "./kinds.js";
 /**
  * The ends of the space scale.
  *
- * Every sentence about the scale, here and in the validator, is built from
- * these rather than from a number somebody typed, so a step added to the
- * stylesheet cannot leave one of them claiming otherwise.
+ * Every sentence about the scale, in a refusal and in the reference alike, is
+ * built from these rather than from a number somebody typed, so a step added to
+ * the stylesheet cannot leave one of them claiming otherwise.
  */
 export const SPACE_STEP_RANGE = {
   first: SPACE_STEPS[0],
@@ -33,7 +33,7 @@ export const SPACE_STEP_RANGE = {
 /** The steps, as the language writes them: bare numbers. */
 const SPACING = {
   kind: "step",
-  description: `A step of the space scale, from ${SPACE_STEP_RANGE.first} to ${SPACE_STEP_RANGE.last}.`,
+  description: "How much room there is between the contents.",
   // A name rather than a number, the same as every other step: `var(--space-5)`
   // wants the 5 as a name, and a default written differently from the values it
   // stands among is a difference a renderer would have to know about.
@@ -46,6 +46,7 @@ const CROSS_ALIGN = ["leading", "center", "trailing", "stretch"] as const;
 export const components = {
   VStack: {
     description: "Stacks its contents vertically.",
+    example: `VStack(spacing: 4) {\n  ## The enclosure\n\n  Two halves in PETG, with the vents printed.\n}`,
     body: "required",
     parameters: {
       spacing: SPACING,
@@ -61,6 +62,7 @@ export const components = {
 
   HStack: {
     description: "Places its contents side by side.",
+    example: `HStack(spacing: 6, align: top) {\n  Image("workbench")\n  A paragraph beside the picture.\n}`,
     body: "required",
     parameters: {
       spacing: SPACING,
@@ -81,6 +83,7 @@ export const components = {
 
   Grid: {
     description: "Arranges its contents in columns of equal width.",
+    example: `Grid(columns: 3) {\n  Image("front")\n  Image("back")\n  Image("inside")\n}`,
     body: "required",
     parameters: {
       columns: {
@@ -96,6 +99,7 @@ export const components = {
 
   Spacer: {
     description: "Pushes what follows away from what came before.",
+    example: "Spacer(4)",
     body: "never",
     unnamed: "size",
     parameters: {
@@ -109,6 +113,7 @@ export const components = {
 
   Divider: {
     description: "A line between two parts of a page.",
+    example: "Divider()",
     body: "never",
     parameters: {},
     renders: "Divider",
@@ -116,12 +121,13 @@ export const components = {
 
   Image: {
     description: "A picture from the media library.",
+    example: 'Image("workbench", caption: "The bench, half way through")',
     body: "never",
     unnamed: "slug",
     parameters: {
       slug: {
         kind: "slug",
-        description: "The name of the picture in the media library.",
+        description: "Which picture.",
         required: true,
       },
       caption: {
@@ -139,6 +145,7 @@ export const components = {
 
   Gallery: {
     description: "Several pictures together, shown as a set.",
+    example: `Gallery(columns: 2) {\n  Image("front")\n  Image("back")\n}`,
     body: "required",
     parameters: {
       columns: {
@@ -154,12 +161,13 @@ export const components = {
 
   Model: {
     description: "A three-dimensional model that can be turned.",
+    example: 'Model("soundbox", alt: "The NeXT SoundBox, seen from the front")',
     body: "never",
     unnamed: "slug",
     parameters: {
       slug: {
         kind: "slug",
-        description: "The name of the model in the media library.",
+        description: "Which model.",
         required: true,
       },
       alt: {
@@ -173,10 +181,11 @@ export const components = {
 
   Video: {
     description: "A video from the media library.",
+    example: 'Video("assembly", poster: "assembly-still")',
     body: "never",
     unnamed: "slug",
     parameters: {
-      slug: { kind: "slug", description: "The name of the video in the media library.", required: true },
+      slug: { kind: "slug", description: "Which video.", required: true },
       poster: { kind: "slug", description: "A picture to show before it plays." },
       caption: { kind: "text", description: "Shown beneath it." },
     },
@@ -185,10 +194,11 @@ export const components = {
 
   Pdf: {
     description: "A document to read or download.",
+    example: 'Pdf("schematic", label: "The schematic, as a PDF")',
     body: "never",
     unnamed: "slug",
     parameters: {
-      slug: { kind: "slug", description: "The name of the document in the media library.", required: true },
+      slug: { kind: "slug", description: "Which document.", required: true },
       label: { kind: "text", description: "What the link says. The file's own name otherwise." },
     },
     renders: "Document",
@@ -196,6 +206,7 @@ export const components = {
 
   Note: {
     description: "Something set apart from the text around it.",
+    example: `Note(tone: warning) {\n  This image wants a card of at least 16 GB.\n}`,
     body: "required",
     parameters: {
       tone: {
@@ -211,6 +222,7 @@ export const components = {
 
   Button: {
     description: "A link that looks like something to press.",
+    example: 'Button("See the model", href: "#model", icon: cube, tone: primary)',
     body: "never",
     unnamed: "label",
     parameters: {
@@ -232,6 +244,7 @@ export const components = {
 
   Card: {
     description: "A piece of content standing on its own, with a border around it.",
+    example: `Card(title: "The enclosure", image: "enclosure") {\n  Two halves in PETG.\n}`,
     body: "required",
     parameters: {
       title: { kind: "text", description: "A heading for the card." },
