@@ -15,7 +15,7 @@
  * whose target depends on the reader's own clock counts to a different moment
  * for every reader. Bregenz is UTC+2 in September.
  */
-export const LAUNCH = "2026-09-21T21:21:00+02:00";
+export const LAUNCH = "2026-09-25T21:21:00+02:00";
 
 /**
  * The zone the site keeps time in.
