@@ -12,7 +12,8 @@
       "development": "./src/index.ts",
       "default": "./dist/index.js"
     },
-    "./*.css": "./src/*.css"
+    "./*.css": "./src/*.css",
+    "./copy-fonts": "./copy-fonts.mjs"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
