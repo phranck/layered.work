@@ -1,0 +1,22 @@
+/*
+ * The component package's styles.
+ *
+ * One file per component, imported here in dependency order: the card before
+ * anything that sits in one, the row before the sidebar that is made of them.
+ *
+ * Nothing in these files names a colour, a radius or a spacing value. They read
+ * the semantic tokens, and the scope a component finds itself in supplies the
+ * values. That is what lets the same card work on a page and in a workbench that
+ * look nothing alike.
+ */
+
+@import url("logo.css");
+@import url("button.css");
+@import url("shortcut.css");
+@import url("field.css");
+@import url("row.css");
+@import url("section.css");
+@import url("card.css");
+@import url("choice.css");
+@import url("editor.css");
+@import url("sidebar.css");

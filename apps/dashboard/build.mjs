@@ -2,14 +2,65 @@
 // build rather than a bundle for now. Vite replaces this with its own output
 // when the shell epic lands; what matters here is that `dist/` exists, holds an
 // index, and carries the nginx configuration that puts the headers on it.
-import { mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dashboardPolicy, NO_FRAMING, SHARED_HEADERS } from "@layered/policy";
+import { Card, Row, Section } from "@layered/ui";
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 /** Where the API answers. The dashboard talks to nothing else. */
 const API_ORIGIN = process.env.API_ORIGIN ?? "https://api.layered.work";
 
 const dist = new URL("./dist/", import.meta.url);
 await mkdir(dist, { recursive: true });
+
+// CSS imports remain relative inside each package. Copy the published sheets
+// into separate directories so nginx can serve the complete dependency tree.
+for (const [name, entry] of [
+  ["ui", "@layered/ui/index.css"],
+  ["tokens", "@layered/tokens/index.css"],
+]) {
+  const source = new URL("./", import.meta.resolve(entry));
+  const target = new URL(`./styles/${name}/`, dist);
+  await mkdir(target, { recursive: true });
+  for (const file of await readdir(source)) {
+    if (file.endsWith(".css")) await copyFile(new URL(file, source), new URL(file, target));
+  }
+}
+await writeFile(
+  new URL("./styles/base.css", dist),
+  '@import "./tokens/index.css";\n@import "./ui/base.css";\n@import "./ui/index.css";\n',
+);
+
+const content = renderToStaticMarkup(
+  h(
+    "main",
+    { className: "ui-placeholder workbench__main" },
+    h(
+      Section,
+      null,
+      h(Section.Title, { title: "Dashboard", level: 1 }),
+      h(
+        Section.Body,
+        null,
+        h(
+          Card,
+          null,
+          h(Card.Header, { title: "layered.work" }),
+          h(
+            Card.Body,
+            null,
+            h(
+              Row,
+              null,
+              h(Row.Text, { title: "Your publishing workspace", note: "This dashboard is being built." }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
 
 await writeFile(
   new URL("./index.html", dist),
@@ -20,10 +71,10 @@ await writeFile(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>layered.work dashboard</title>
+    <link rel="stylesheet" href="./styles/base.css" />
   </head>
-  <body>
-    <h1>Dashboard</h1>
-    <p>Not built yet. This page proves the static path: built here, served by nginx.</p>
+  <body class="workbench">
+    ${content}
   </body>
 </html>
 `,

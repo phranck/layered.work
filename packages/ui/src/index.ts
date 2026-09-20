@@ -1,11 +1,34 @@
-/**
- * The shared components.
- *
- * Every one of them is a compound: the caller composes the parts it needs
- * rather than switching them on with flags, which is what stops the set growing
- * a boolean per variation. A component names a semantic token and never a
- * colour, a step of a ramp or a literal.
- *
- * Filled by issue "Move the component set into packages/ui".
- */
-export const UI_PACKAGE = "@layered/ui" as const;
+/** Shared UI components and their documented public prop types. */
+export {
+  Button,
+  type ButtonIconProps,
+  type ButtonInertProps,
+  type ButtonLinkProps,
+  type ButtonProps,
+} from "./button.js";
+export { Card, type CardFooterProps, type CardHeaderProps, type CardMediaProps } from "./card.js";
+export { Choice, type ChoiceOptionProps, type ChoiceProps } from "./choice.js";
+export {
+  Editor,
+  type EditorActionsProps,
+  type EditorPanelProps,
+  type EditorToolbarProps,
+  type EditorToolProps,
+} from "./editor.js";
+export {
+  type ControlOption,
+  Field,
+  type FieldProps,
+  Input,
+  Segmented,
+  type SegmentedProps,
+  Select,
+  type SelectProps,
+  Switch,
+  type SwitchProps,
+} from "./field.js";
+export { Logo, type LogoProps } from "./logo.js";
+export { Row, RowList, type RowTextProps } from "./row.js";
+export { Section, type SectionLeadProps, type SectionTitleProps } from "./section.js";
+export { Shortcut, type ShortcutPlatform, type ShortcutProps } from "./shortcut.js";
+export { Sidebar } from "./sidebar.js";

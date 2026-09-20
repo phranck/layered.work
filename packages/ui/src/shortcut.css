@@ -1,0 +1,25 @@
+/*
+ * The key cap.
+ *
+ * One size on every surface. A key does not grow with the text around it, so
+ * the cap reads its size from its own token rather than from the scale step the
+ * surrounding control happens to use.
+ */
+
+.shortcut {
+  flex: none;
+  /* One pixel more above than below, and one more on the left than the right.
+     Fira Code's ascent outweighs its descent, so a line box centred on the em
+     box hangs the caps a pixel high; measured at 0.8px on 13px. And the ink
+     mass of the pair sits 0.9px left of its advance box, because the command
+     sign is dense and the K carries its stem on the left, so a box centred on
+     the advance reads as holding the cap too far left. */
+  padding: 3px 6px 1px 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-shortcut);
+  line-height: var(--leading-snug);
+  color: var(--text-faint);
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid var(--edge-hairline);
+  border-radius: 5px;
+}
