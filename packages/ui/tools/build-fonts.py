@@ -143,6 +143,8 @@ def font_face(source: FontSource, output_name: str, unicodes: str) -> str:
 def notices() -> str:
     return f"""# Third-party font notices
 
+Icon sources and licences are recorded separately in [ICON_NOTICES.md](ICON_NOTICES.md).
+
 The webfonts in this directory are generated subsets. Do not edit the WOFF2
 files directly. From the repository root, run:
 

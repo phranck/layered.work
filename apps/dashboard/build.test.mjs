@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFile, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -40,6 +40,23 @@ test("the dashboard ships shared components and their complete stylesheet depend
     assert.deepEqual(
       await readFile(join(workspace, "dist/logo.svg")),
       await readFile(new URL("../../prototype/assets/logo.svg", import.meta.url)),
+    );
+    const brandFiles = ["github.svg", "instagram.svg", "mastodon.svg", "xing.svg", "youtube.svg"];
+    assert.deepEqual((await readdir(join(workspace, "dist/brands"))).sort(), brandFiles);
+    for (const brandFile of brandFiles) {
+      assert.deepEqual(
+        await readFile(join(workspace, "dist/brands", brandFile)),
+        await readFile(new URL(`../../prototype/assets/brands/${brandFile}`, import.meta.url)),
+      );
+    }
+    assert.match(await readFile(join(workspace, "dist/ICON_NOTICES.md"), "utf8"), /Simple Icons 15\.16\.0/);
+    assert.match(
+      await readFile(join(workspace, "dist/icon-licenses/Simple-Icons-CC0-1.0.txt"), "utf8"),
+      /CC0 1\.0 Universal/,
+    );
+    assert.match(
+      await readFile(join(workspace, "dist/icon-licenses/Phosphor-Icons-MIT-2.1.10.txt"), "utf8"),
+      /MIT License/,
     );
     for (const component of ["card", "row", "section"]) {
       assert.equal(
