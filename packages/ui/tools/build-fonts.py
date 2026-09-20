@@ -236,7 +236,10 @@ def main() -> None:
                 faces.append(font_face(source, source.symbols_output, PUA_UNICODES))
 
         for filename, url in LICENSES.items():
-            download(url, licenses_dir / filename)
+            source_license = temporary_dir / filename
+            download(url, source_license)
+            license_text = "\n".join(line.rstrip() for line in source_license.read_text().splitlines()) + "\n"
+            (licenses_dir / filename).write_text(license_text)
 
     (assets_dir / "fonts.css").write_text("\n\n".join(faces) + "\n")
     (assets_dir / "THIRD_PARTY_NOTICES.md").write_text(notices())
