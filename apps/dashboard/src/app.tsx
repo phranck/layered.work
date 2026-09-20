@@ -1,21 +1,13 @@
-import { Button, Card, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { SignOutIcon, UserCircleIcon, XIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
+import { UserCircleIcon } from "@layered/ui/icons";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
-import { DashboardApiError } from "./api.js";
+import { AccountDialog } from "./account-dialog.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { ErrorNotice } from "./error-notice.js";
+import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
-
-function ErrorNotice({ error }: { error: unknown }) {
-  const known = error instanceof DashboardApiError ? error : null;
-  return (
-    <p className="dashboard-error" role="alert">
-      {known?.message ?? "Die Daten konnten nicht geladen werden."}
-      {known?.id && <span className="dashboard-error__id">Fehler-ID: {known.id}</span>}
-    </p>
-  );
-}
 
 function AreaLink({
   area,
@@ -26,28 +18,35 @@ function AreaLink({
 }) {
   const active = useMatch({ path: `/${area.path}`, end: true });
   const handleClick = useLinkClickHandler(`/${area.path}`);
+  const { text } = useDashboardLanguage();
   const Icon = area.icon;
+  const label = text(area.labelKey);
   return (
     <Row.Link
       href={`/${area.path}`}
       onClick={handleClick}
-      title={area.label}
+      title={label}
       aria-current={active ? "page" : undefined}
       data-current={active ? "true" : undefined}
     >
       <Row.Lead aria-hidden="true">
         <Icon weight="duotone" />
       </Row.Lead>
-      <Row.Text title={area.label} />
+      <Row.Text title={label} />
       {count !== null && count !== undefined && <Row.Meta>{count}</Row.Meta>}
     </Row.Link>
   );
 }
 
-function DashboardSidebar() {
+function DashboardSidebar({
+  accountOpen,
+  onOpenAccount,
+}: {
+  accountOpen: boolean;
+  onOpenAccount: () => void;
+}) {
   const api = useDashboardApi();
-  const navigate = useNavigate();
-  const [accountOpen, setAccountOpen] = useState(false);
+  const { text } = useDashboardLanguage();
   const handleLogoClick = useLinkClickHandler("/posts");
   const session = useQuery({
     queryKey: ["session"],
@@ -55,14 +54,20 @@ function DashboardSidebar() {
     retry: false,
     staleTime: Infinity,
   });
+  const account = useQuery({
+    queryKey: ["account", session.data?.id],
+    queryFn: api.fetchAccount,
+    enabled: Boolean(session.data),
+    retry: false,
+    staleTime: Infinity,
+  });
   const counts = useQuery({
     queryKey: ["dashboard-counts", session.data?.id],
     queryFn: api.fetchDashboardCounts,
-    enabled: session.isSuccess && session.data !== null,
+    enabled: Boolean(session.data),
     retry: false,
   });
   const visibleCounts = session.isSuccess && session.data ? counts.data : undefined;
-
   return (
     <Sidebar>
       <Sidebar.Header>
@@ -71,16 +76,19 @@ function DashboardSidebar() {
       <Sidebar.Body>
         {session.isError && <ErrorNotice error={session.error} />}
         {session.data && counts.isError && <ErrorNotice error={counts.error} />}
-        <nav aria-label="Dashboard-Bereiche">
+        <nav aria-label={text("dashboardNav")}>
           {dashboardGroups.map((group) => (
             <Section key={group.id}>
-              <Section.Title title={group.label} />
+              <Section.Title title={text(group.labelKey)} />
               <Section.Body>
                 <RowList>
-                  {group.areas.map((area) => {
-                    const count = area.countKey && visibleCounts ? visibleCounts[area.countKey] : null;
-                    return <AreaLink key={area.id} area={area} count={count} />;
-                  })}
+                  {group.areas.map((area) => (
+                    <AreaLink
+                      key={area.id}
+                      area={area}
+                      count={area.countKey && visibleCounts ? visibleCounts[area.countKey] : null}
+                    />
+                  ))}
                 </RowList>
               </Section.Body>
             </Section>
@@ -88,19 +96,34 @@ function DashboardSidebar() {
         </nav>
       </Sidebar.Body>
       <Sidebar.Footer>
-        <Row.Button onClick={() => setAccountOpen(true)} disabled={!session.data} aria-haspopup="dialog">
+        <Row.Button
+          onClick={onOpenAccount}
+          disabled={!account.data}
+          aria-haspopup="dialog"
+          aria-expanded={accountOpen}
+        >
           <Row.Lead aria-hidden="true">
-            <UserCircleIcon weight="duotone" />
+            {account.data?.avatarUrl ? (
+              <img className="dashboard-avatar" src={account.data.avatarUrl} alt="" />
+            ) : (
+              <UserCircleIcon weight="duotone" />
+            )}
           </Row.Lead>
           <Row.Text
             title={
               session.isPending
-                ? "Sitzung wird geladen…"
+                ? text("loadingSession")
                 : session.isError
-                  ? "Sitzung nicht verfügbar"
-                  : (session.data?.displayName ?? "Nicht angemeldet")
+                  ? text("unavailableSession")
+                  : (account.data?.displayName ?? text("signedOut"))
             }
-            note={session.data ? (session.data.role === "owner" ? "Administrator" : "Redaktion") : undefined}
+            note={
+              account.data
+                ? account.data.role === "owner"
+                  ? text("administrator")
+                  : text("roleEditor")
+                : undefined
+            }
           />
         </Row.Button>
       </Sidebar.Footer>
@@ -108,131 +131,90 @@ function DashboardSidebar() {
         className="dashboard-sidebar__separator"
         aria-label="Trennung zwischen Navigation und Inhalt"
       />
-      {session.data && (
-        <AccountDialog
-          open={accountOpen}
-          displayName={session.data.displayName}
-          email={session.data.email}
-          onClose={() => setAccountOpen(false)}
-          onSignedOut={() => navigate("/login", { replace: true })}
-        />
-      )}
     </Sidebar>
   );
 }
 
-function AccountDialog({
-  displayName,
-  email,
-  onClose,
-  onSignedOut,
-  open,
-}: {
-  displayName: string;
-  email: string;
-  onClose: () => void;
-  onSignedOut: () => void;
-  open: boolean;
-}) {
+function DashboardLayout() {
   const api = useDashboardApi();
-  const queryClient = useQueryClient();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const signOut = useMutation({ mutationFn: api.signOut, onSuccess: () => queryClient.clear() });
-  const closeAccount = useEffectEvent(onClose);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-    const closeFromBackdrop = (event: MouseEvent) => {
-      if (event.target === dialog) closeAccount();
-    };
-    dialog.addEventListener("click", closeFromBackdrop);
-    return () => dialog.removeEventListener("click", closeFromBackdrop);
-  }, [open]);
-
-  async function submitSignOut() {
-    try {
-      await signOut.mutateAsync();
-      onClose();
-      onSignedOut();
-    } catch {
-      // The mutation retains the structured error for the alert below.
-    }
-  }
-
-  return (
-    <dialog
-      ref={dialogRef}
-      className="account-dialog card-overlay"
-      data-open={open || undefined}
-      aria-labelledby="account-dialog-title"
-      tabIndex={-1}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-    >
-      <Card>
-        <Card.Header id="account-dialog-title" title="Benutzerkonto" />
-        <Card.Stack>
-          <Row>
-            <Row.Text title={displayName} note={email} />
-          </Row>
-          {signOut.error && <ErrorNotice error={signOut.error} />}
-        </Card.Stack>
-        <Card.Footer
-          actions={
-            <>
-              <Button onClick={onClose} icon={<XIcon weight="bold" />}>
-                Schließen
-              </Button>
-              <Button
-                tone="danger"
-                onClick={submitSignOut}
-                disabled={signOut.isPending}
-                autoFocus
-                icon={<SignOutIcon weight="bold" />}
-              >
-                {signOut.isPending ? "Abmeldung läuft…" : "Abmelden"}
-              </Button>
-            </>
-          }
-        />
-      </Card>
-    </dialog>
-  );
-}
-
-export function DashboardShell() {
+  const navigate = useNavigate();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const session = useQuery({
+    queryKey: ["session"],
+    queryFn: api.fetchSession,
+    retry: false,
+    staleTime: Infinity,
+  });
+  const account = useQuery({
+    queryKey: ["account", session.data?.id],
+    queryFn: api.fetchAccount,
+    enabled: Boolean(session.data),
+    retry: false,
+    staleTime: Infinity,
+  });
   return (
     <div className="workbench dashboard-layout">
-      <DashboardSidebar />
+      <DashboardSidebar accountOpen={accountOpen} onOpenAccount={() => setAccountOpen(true)} />
       <main className="workbench__main dashboard-main">
         <Outlet />
       </main>
+      {accountOpen && account.data && (
+        <AccountDialog
+          account={account.data}
+          onClose={() => setAccountOpen(false)}
+          onSignedOut={() => navigate("/login", { replace: true })}
+        />
+      )}
     </div>
   );
 }
 
-export function AreaScreen({ title }: { title: string }) {
+export function DashboardShell() {
+  const api = useDashboardApi();
+  const session = useQuery({
+    queryKey: ["session"],
+    queryFn: api.fetchSession,
+    retry: false,
+    staleTime: Infinity,
+  });
+  const account = useQuery({
+    queryKey: ["account", session.data?.id],
+    queryFn: api.fetchAccount,
+    enabled: Boolean(session.data),
+    retry: false,
+    staleTime: Infinity,
+  });
+  if (!account.data) return null;
+  return (
+    <DashboardLanguageProvider language={account.data.interfaceLanguage}>
+      <DashboardLayout />
+    </DashboardLanguageProvider>
+  );
+}
+
+export function AreaScreen({
+  titleKey,
+}: {
+  titleKey: (typeof dashboardGroups)[number]["areas"][number]["labelKey"];
+}) {
+  const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title={title} level={1} />
+      <Section.Title title={text(titleKey)} level={1} />
       <Section.Body>
-        <p className="unfinished">Dieser Bereich wird in einem eigenen Arbeitsschritt umgesetzt.</p>
+        <p className="unfinished">{text("unfinished")}</p>
       </Section.Body>
     </Section>
   );
 }
 
 export function NotFoundScreen() {
+  const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title="Seite nicht gefunden" level={1} />
+      <Section.Title title={text("notFound")} level={1} />
       <Section.Body>
-        <p>Für diese Adresse gibt es keinen Dashboard-Bereich.</p>
+        <p>{text("notFoundBody")}</p>
       </Section.Body>
     </Section>
   );

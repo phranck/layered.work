@@ -16,6 +16,13 @@ const signedIn = {
   role: "owner",
 };
 
+const account = {
+  ...signedIn,
+  interfaceLanguage: "de",
+  avatarMediaId: null,
+  avatarUrl: null,
+};
+
 const counts = {
   posts: 12,
   pages: 4,
@@ -35,6 +42,13 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+function successfulGet(input: RequestInfo | URL) {
+  const url = String(input);
+  if (url.endsWith("/dashboard/counts")) return json({ data: counts });
+  if (url.endsWith("/account")) return json({ data: account });
+  return json({ data: signedIn });
 }
 
 function renderDashboard(path = "/posts") {
@@ -78,11 +92,7 @@ describe("dashboard shell", () => {
   it("navigates between all areas and marks the current row", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((input) =>
-        Promise.resolve(
-          String(input).endsWith("/dashboard/counts") ? json({ data: counts }) : json({ data: signedIn }),
-        ),
-      ),
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
     );
     const { router } = renderDashboard();
 
@@ -104,11 +114,7 @@ describe("dashboard shell", () => {
   it("shows the real API counts and omits unavailable badges", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((input) =>
-        Promise.resolve(
-          String(input).endsWith("/dashboard/counts") ? json({ data: counts }) : json({ data: signedIn }),
-        ),
-      ),
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
     );
     renderDashboard();
 
@@ -128,6 +134,7 @@ describe("dashboard shell", () => {
       vi
         .fn()
         .mockResolvedValueOnce(json({ data: signedIn }))
+        .mockResolvedValueOnce(json({ data: account }))
         .mockResolvedValueOnce(
           json(
             { error: { code: "internal", message: "Zahlen konnten nicht geladen werden.", id: "req-54" } },
@@ -159,6 +166,7 @@ describe("dashboard shell", () => {
       vi
         .fn()
         .mockResolvedValueOnce(json({ data: signedIn }))
+        .mockResolvedValueOnce(json({ data: account }))
         .mockResolvedValueOnce(json({ data: counts }))
         .mockResolvedValueOnce(json({ data: null })),
     );
@@ -189,6 +197,7 @@ describe("dashboard shell", () => {
             resolveSession = resolve;
           });
         }
+        if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
         countRequests += 1;
         if (countRequests === 1) return Promise.resolve(json({ data: counts }));
         return new Promise<Response>((resolve) => {
@@ -233,11 +242,7 @@ describe("dashboard shell", () => {
   it("renders a truthful not-found page for an unknown path", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((input) =>
-        Promise.resolve(
-          String(input).endsWith("/dashboard/counts") ? json({ data: counts }) : json({ data: signedIn }),
-        ),
-      ),
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
     );
     renderDashboard("/does-not-exist");
 
@@ -280,11 +285,7 @@ describe("dashboard shell", () => {
   it("returns to the requested internal route after signing in", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((input) => {
-        const url = String(input);
-        if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
-        return Promise.resolve(json({ data: signedIn }));
-      }),
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
     );
     const { router } = renderDashboard("/login?returnTo=%2Fsettings%3Ftab%3Dmail");
 
@@ -300,7 +301,7 @@ describe("dashboard shell", () => {
   it("submits sign-in only once when the form is triggered twice while pending", async () => {
     let resolveSignIn: (response: Response) => void = () => undefined;
     let signedInAfterRequest = false;
-    const request = vi.fn((input) => {
+    const request = vi.fn((input, _init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/auth/sign-in")) {
         return new Promise<Response>((resolve) => {
@@ -308,6 +309,7 @@ describe("dashboard shell", () => {
         });
       }
       if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
+      if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
       return Promise.resolve(json({ data: signedInAfterRequest ? signedIn : null }));
     });
     vi.stubGlobal("fetch", request);
@@ -328,12 +330,195 @@ describe("dashboard shell", () => {
     expect(await screen.findByRole("heading", { name: "Medien" })).toBeTruthy();
   });
 
+  it("saves account changes and applies the language across the dashboard immediately", async () => {
+    const englishAccount = { ...account, displayName: "Frank Updated", interfaceLanguage: "en" };
+    const mediaItem = {
+      id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
+      slug: "portrait",
+      url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
+      width: 600,
+      height: 600,
+    };
+    const request = vi.fn((input, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/account") && init?.method === "PATCH")
+        return Promise.resolve(json({ data: englishAccount }));
+      if (url.includes("/account/media?"))
+        return Promise.resolve(json({ data: { items: [mediaItem], page: 1, hasMore: false } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Frank Updated" } });
+    fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "portrait" }));
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("heading", { name: "Posts" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Dashboard areas" })).toBeTruthy();
+    expect(document.documentElement.lang).toBe("en");
+    const patchCall = request.mock.calls.find(
+      ([input, init]) => String(input).endsWith("/account") && init?.method === "PATCH",
+    );
+    expect(JSON.parse(String(patchCall?.[1]?.body))).toMatchObject({
+      displayName: "Frank Updated",
+      interfaceLanguage: "en",
+      avatarMediaId: mediaItem.id,
+    });
+  });
+
+  it("discards account language and portrait drafts on cancel", async () => {
+    const mediaItem = {
+      id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
+      slug: "portrait",
+      url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
+      width: 600,
+      height: 600,
+    };
+    const request = vi.fn((input, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/account/media?"))
+        return Promise.resolve(json({ data: { items: [mediaItem], page: 1, hasMore: false } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "portrait" }));
+    expect(
+      screen.getByRole("dialog", { name: "Benutzerkonto" }).querySelector("img")?.getAttribute("src"),
+    ).toBe(mediaItem.url);
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.getByRole("heading", { name: "Beiträge" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Frank Gregor/ }));
+    expect(screen.getByRole("button", { name: "Deutsch" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("dialog", { name: "Benutzerkonto" }).querySelector("img")).toBeNull();
+    expect(
+      request.mock.calls.some(
+        ([input, init]) => String(input).endsWith("/account") && init?.method === "PATCH",
+      ),
+    ).toBe(false);
+  });
+
+  it("discards the account draft on Escape and backdrop close", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard();
+    const footer = await screen.findByRole("button", { name: /Frank Gregor/ });
+
+    footer.focus();
+    expect(document.activeElement).toBe(footer);
+    fireEvent.click(footer);
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Discard me" } });
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(footer);
+    fireEvent.click(footer);
+    expect(screen.getByLabelText("Name").getAttribute("value")).toBe("Frank Gregor");
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(footer);
+  });
+
+  it("keeps the role read-only and shows account save errors with their id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input, init?: RequestInit) => {
+        if (String(input).endsWith("/account") && init?.method === "PATCH")
+          return Promise.resolve(
+            json(
+              { error: { code: "conflict", message: "Adresse wird bereits verwendet.", id: "account-1" } },
+              409,
+            ),
+          );
+        return Promise.resolve(successfulGet(input));
+      }),
+    );
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    expect(within(screen.getByRole("dialog")).getByText("Administrator").closest(".badge")).toBeTruthy();
+    expect(screen.queryByLabelText("Rolle")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Adresse wird bereits verwendet.");
+    expect(alert.textContent).toContain("account-1");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("cannot dismiss the account dialog while a save is pending", async () => {
+    let resolveSave: (response: Response) => void = () => undefined;
+    const request = vi.fn((input, init?: RequestInit) => {
+      if (String(input).endsWith("/account") && init?.method === "PATCH") {
+        return new Promise<Response>((resolve) => {
+          resolveSave = resolve;
+        });
+      }
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(
+        request.mock.calls.filter(
+          ([input, init]) => String(input).endsWith("/account") && init?.method === "PATCH",
+        ),
+      ).toHaveLength(1),
+    );
+    const dialog = screen.getByRole("dialog");
+    fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    fireEvent.click(dialog);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    resolveSave(json({ data: { ...account, interfaceLanguage: "en" } }));
+    expect(await screen.findByRole("heading", { name: "Posts" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("shows a protected error page when the account profile cannot load", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) =>
+        String(input).endsWith("/account")
+          ? Promise.resolve(
+              json(
+                {
+                  error: { code: "internal", message: "Konto konnte nicht geladen werden.", id: "profile-1" },
+                },
+                500,
+              ),
+            )
+          : Promise.resolve(json({ data: signedIn })),
+      ),
+    );
+    renderDashboard();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Konto konnte nicht geladen werden.");
+    expect(alert.textContent).toContain("profile-1");
+    expect(screen.queryByRole("navigation", { name: "Dashboard-Bereiche" })).toBeNull();
+  });
+
   it("signs out from the account dialog and returns to login", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input) => {
         const url = String(input);
         if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
+        if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
         if (url.endsWith("/auth/sign-out")) return Promise.resolve(json({ data: { signedOut: true } }));
         return Promise.resolve(json({ data: signedIn }));
       }),
@@ -353,6 +538,7 @@ describe("dashboard shell", () => {
       vi.fn((input) => {
         const url = String(input);
         if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
+        if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
         if (url.endsWith("/auth/sign-out")) {
           return Promise.resolve(
             json({ error: { code: "internal", message: "Abmeldung fehlgeschlagen.", id: "logout-1" } }, 500),
