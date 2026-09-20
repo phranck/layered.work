@@ -8,6 +8,9 @@
  */
 
 .logo {
+  /* Resolve at the logo, where callers set their requested optical height. */
+  --logo-height: calc(var(--logo-ink-height) / var(--logo-ink-ratio));
+
   display: flex;
   flex: none;
   align-items: center;

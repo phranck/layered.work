@@ -145,8 +145,11 @@
      The logo file is used unchanged, so the empty margin inside it is accounted
      for here. Measured on the rendered file: the mark occupies 48.9% of the
      height, centred, and 82.4% of the width. Only the optical height is chosen,
-     and the element height follows, so asking for a 30px mark produces one. */
+     and the element height follows, so asking for a 30px mark produces one.
+     Source: the unchanged prototype/assets/logo.svg, viewBox 0 0 900 450.
+     Ratios are rounded optical bounds, not a crop of the original file. */
   --logo-ink-ratio: 0.489;
+  --logo-ink-width-ratio: 0.824;
   --logo-ink-height: 30px;
 
   /* --- Motion -------------------------------------------------------------

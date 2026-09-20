@@ -29,7 +29,12 @@ export const Logo = forwardRef<HTMLAnchorElement, LogoProps>(
       className={join("logo", className)}
       href={href}
       aria-label={label}
-      style={{ ...style, "--logo-ink-height": inkHeight } as CSSProperties}
+      style={
+        {
+          ...style,
+          "--logo-ink-height": typeof inkHeight === "number" ? `${inkHeight}px` : inkHeight,
+        } as CSSProperties
+      }
       {...props}
     >
       <img {...imageProps} className={join("logo__image", imageProps?.className)} src={src} alt={label} />
