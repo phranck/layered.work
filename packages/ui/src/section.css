@@ -1,0 +1,85 @@
+/*
+ * The section.
+ *
+ * The same three shapes on the site, in the workbench and in the sidebar. What
+ * differs between them is entirely in the tokens: the sidebar's scope makes the
+ * title small and capitalised and the gaps tight, the page's makes the title
+ * large and the gaps generous, and neither needs a rule of its own.
+ */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-heading-gap, var(--space-5));
+}
+
+/* A section on a page brings the rhythm between page sections. Inside a card or
+   a sidebar that spacing belongs to the container, which is why it is a variant
+   rather than the default. */
+.section--page {
+  padding-block: var(--section-gap);
+}
+
+.section--page + .section--page {
+  padding-block-start: 0;
+}
+
+/* --- Title ----------------------------------------------------------------
+   Eyebrow above, name below, actions at the right of the same row. Fixed across
+   the product, so the same information is always in the same place. */
+
+.section__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+/*
+ * The left group of the title row: a lead beside the heading. It exists so the
+ * row can spread its two groups apart without a lead being treated as a group of
+ * its own and pushing the title to the far edge.
+ */
+.section__start {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.section__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.section__name {
+  font-family: var(--font-display);
+  font-size: var(--section-name-size, var(--text-2xl));
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-shadow: var(--text-emboss);
+  text-wrap: balance;
+}
+
+.section__title--lead .section__name {
+  font-size: var(--text-3xl);
+}
+
+/* --- Body ------------------------------------------------------------------ */
+
+.section__body--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--section-grid-min, 272px), 1fr));
+  gap: var(--gap);
+}
+
+.section__body--stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}

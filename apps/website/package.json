@@ -14,10 +14,17 @@
   "dependencies": {
     "@astrojs/node": "^11.1.5",
     "@layered/policy": "workspace:*",
-    "astro": "^7.3.2"
+    "astro": "^7.3.2",
+    "@layered/ui": "workspace:*",
+    "@layered/tokens": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "@astrojs/react": "^6.0.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
   }
 }

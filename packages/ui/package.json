@@ -4,14 +4,35 @@
   "private": true,
   "type": "module",
   "description": "The shared components, used by the website and by the dashboard",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./*.js": "./src/*.ts",
-    "./*": "./src/*"
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./*.css": "./src/*.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "react": "^19.3.0"
+  },
+  "dependencies": {
+    "@layered/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "vitest": "^3.2.7",
+    "happy-dom": "^20.14.5",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/dom": "^10.4.1"
   }
 }
