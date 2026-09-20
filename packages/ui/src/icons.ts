@@ -10,6 +10,7 @@ export { ArticleIcon } from "@phosphor-icons/react/dist/ssr/Article";
 export { ChartLineIcon } from "@phosphor-icons/react/dist/ssr/ChartLine";
 export { EnvelopeSimpleIcon } from "@phosphor-icons/react/dist/ssr/EnvelopeSimple";
 export { FilesIcon } from "@phosphor-icons/react/dist/ssr/Files";
+export { FloppyDiskIcon } from "@phosphor-icons/react/dist/ssr/FloppyDisk";
 export { GearIcon } from "@phosphor-icons/react/dist/ssr/Gear";
 export { ImagesIcon } from "@phosphor-icons/react/dist/ssr/Images";
 export { ListIcon } from "@phosphor-icons/react/dist/ssr/List";

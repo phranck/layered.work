@@ -16,6 +16,7 @@
  * step that has to come after one.
  */
 
+export * from "./account.js";
 export * from "./auth.js";
 export * from "./dashboard.js";
 export * from "./errors.js";

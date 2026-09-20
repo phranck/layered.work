@@ -8,6 +8,7 @@ import { corsForInterfaces, safetyHeaders } from "./headers.js";
 import { health } from "./health.js";
 import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
+import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
 import { dashboard } from "./routes/dashboard.js";
 
@@ -59,6 +60,7 @@ app.use("*", async (c, next) => {
 
 app.route("/health", health);
 app.route("/auth", auth);
+app.route("/account", account);
 app.route("/dashboard", dashboard);
 
 /** An address that is not here, in the same shape as every other failure. */
