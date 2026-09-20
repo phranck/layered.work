@@ -93,6 +93,112 @@ dialog.account-dialog::backdrop {
   background: transparent;
 }
 
+.account-dialog.card-overlay > .card {
+  width: min(520px, 100%);
+}
+
+.account {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+.account__portrait {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+}
+.account__avatar {
+  display: grid;
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  place-items: center;
+  font-size: 72px;
+  color: var(--text-faint);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-pill);
+}
+.account__fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 9px 3px 7px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--badge-colour, var(--text-muted));
+  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
+  border-radius: var(--radius-chip);
+}
+
+.badge::before {
+  width: 5px;
+  height: 5px;
+  content: "";
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.badge[data-status="public"] {
+  --badge-colour: var(--state-success);
+}
+
+.account__fields .badge {
+  align-self: flex-start;
+}
+.dashboard-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-pill);
+}
+.media-picker__search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+.media-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+.media-picker__item {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.media-picker__item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--card-inner-radius);
+}
+.media-picker__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (width < 1100px) {
   .workbench {
     grid-template-columns: minmax(0, 1fr);
@@ -118,5 +224,16 @@ dialog.account-dialog::backdrop {
 
   .dashboard-sidebar__separator {
     display: none;
+  }
+
+  .account {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .account__portrait {
+    align-self: center;
+  }
+  .media-picker__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

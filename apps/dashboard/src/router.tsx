@@ -39,11 +39,19 @@ export function dashboardRouteObjects({ api, queryClient }: DashboardRouterOptio
           queryClient.clear();
           throw redirect(loginLocation(request.url, Boolean(previousSession)));
         }
+        await queryClient.fetchQuery({
+          queryKey: ["account", session.id],
+          queryFn: api.fetchAccount,
+          staleTime: 0,
+        });
         return session;
       },
       children: [
         { index: true, element: <Navigate to="/posts" replace /> },
-        ...dashboardAreas.map((area) => ({ path: area.path, element: <AreaScreen title={area.label} /> })),
+        ...dashboardAreas.map((area) => ({
+          path: area.path,
+          element: <AreaScreen titleKey={area.labelKey} />,
+        })),
         { path: "*", Component: NotFoundScreen },
       ],
     },

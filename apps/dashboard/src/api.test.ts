@@ -61,4 +61,51 @@ describe("dashboard API authentication", () => {
     );
     expect(expired).toHaveBeenCalledTimes(1);
   });
+
+  it("uses the protected account profile, update, and media contracts", async () => {
+    const profile = {
+      id: "65f4582c-c983-4bd0-977c-d358d382fc83",
+      email: "frank@example.com",
+      displayName: "Frank Gregor",
+      role: "owner",
+      interfaceLanguage: "de",
+      avatarMediaId: null,
+      avatarUrl: null,
+    };
+    const item = {
+      id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
+      slug: "portrait",
+      url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
+      width: 600,
+      height: 600,
+    };
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json({ data: profile }))
+      .mockResolvedValueOnce(json({ data: { ...profile, interfaceLanguage: "en" } }))
+      .mockResolvedValueOnce(json({ data: { items: [item], page: 2, hasMore: false } }));
+    vi.stubGlobal("fetch", request);
+    const api = createDashboardApi(new QueryClient(), vi.fn());
+
+    await expect(api.fetchAccount()).resolves.toEqual(profile);
+    await expect(
+      api.updateAccount({
+        displayName: profile.displayName,
+        email: profile.email,
+        interfaceLanguage: "en",
+        avatarMediaId: null,
+      }),
+    ).resolves.toMatchObject({ interfaceLanguage: "en" });
+    await expect(api.fetchAccountMedia("portrait & me", 2)).resolves.toMatchObject({ items: [item] });
+
+    expect(request).toHaveBeenNthCalledWith(1, "/api/account", { credentials: "include" });
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      "/api/account",
+      expect.objectContaining({ credentials: "include", method: "PATCH" }),
+    );
+    expect(request).toHaveBeenNthCalledWith(3, "/api/account/media?search=portrait+%26+me&page=2", {
+      credentials: "include",
+    });
+  });
 });
