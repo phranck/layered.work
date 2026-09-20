@@ -1,5 +1,6 @@
 // @ts-check
 import node from "@astrojs/node";
+import react from "@astrojs/react";
 import { defineConfig } from "astro/config";
 
 /**
@@ -17,6 +18,12 @@ export default defineConfig({
   site: "https://layered.work",
   output: "server",
   adapter: node({ mode: "standalone" }),
+  integrations: [react()],
+  vite: {
+    // Zerops deploys dist without the app's pnpm dependency links. Keep the
+    // React server renderer inside that standalone output.
+    ssr: { noExternal: ["react", "react-dom"] },
+  },
   build: {
     // Kept out of the way of public/, which holds the wordmark, the typefaces
     // and the sharing image, and which zerops.yml deploys as its own directory.

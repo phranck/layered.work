@@ -1,0 +1,208 @@
+/*
+ * Fields and the controls that sit in them.
+ *
+ * The field is the label, the hint and the space between them. What the control
+ * is, it does not know, which is why a switch, a text input, a segmented control
+ * and a row of chips all sit in the same field without it growing a branch per
+ * kind.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* A label and its control on one line, for a switch: the two read as one
+   sentence, and a label stacked above a toggle spends a line saying so. */
+.field--inline {
+  flex-direction: row;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.field__hint {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  text-wrap: pretty;
+}
+
+/* --- Input ----------------------------------------------------------------- */
+
+.input {
+  width: 100%;
+  min-width: 0;
+  height: var(--input-height, auto);
+  padding: var(--input-padding, 10px 13px);
+  font: inherit;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+/* A stand-in for a multi-line field. Not a textarea, because it is not an
+   editor: it shows what the setting holds, at the height that text needs. */
+.input--area {
+  height: auto;
+  min-height: 74px;
+  line-height: var(--leading-normal);
+  white-space: pre-wrap;
+}
+
+/* --- Select -----------------------------------------------------------------
+   The native element in the input's box, with the browser's own arrow replaced
+   by one drawn on the wrapper, so it matches the rest of the controls rather
+   than the platform's form widgets. The colour scheme is stated, or the opened
+   menu comes up light on a dark interface. */
+
+.select {
+  position: relative;
+  display: block;
+}
+
+/* No vertical padding: a select centres its text in the content box and clips
+   what does not fit there, so the input's padding would cut the word in half. */
+.select .input {
+  padding-block: 0;
+  padding-inline-end: calc(var(--space-3) + 22px);
+  cursor: pointer;
+  appearance: none;
+  color-scheme: dark;
+}
+
+.select::after {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 15px;
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-inline-end: 1.5px solid var(--text-faint);
+  border-block-end: 1.5px solid var(--text-faint);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* --- Switch ----------------------------------------------------------------- */
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 40px;
+  height: 23px;
+  padding: 2px;
+  cursor: pointer;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--duration) var(--ease);
+}
+
+.switch::after {
+  width: 17px;
+  height: 17px;
+  content: "";
+  background: var(--ink-400);
+  border-radius: 50%;
+  transition:
+    transform var(--duration) var(--ease),
+    background-color var(--duration) var(--ease);
+}
+
+.switch[data-on] {
+  background: var(--accent-500);
+  border-color: var(--accent-600);
+}
+
+.switch[data-on]::after {
+  background: var(--ink-100);
+  transform: translateX(17px);
+}
+
+/* --- Segmented --------------------------------------------------------------
+   Every option visible. With three of them a dropdown hides more than it saves,
+   and the reader cannot see what they are choosing between without opening it. */
+
+.segmented {
+  position: relative;
+  display: flex;
+  padding: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+/*
+ * The pill, drawn once and moved rather than faded in on one option and out on
+ * another. A change of state that jumps reads as the interface redrawing itself;
+ * one that travels reads as the same thing moving, which is what it is.
+ *
+ * Only `transform` moves, so the work stays on the compositor. The options are
+ * `flex: 1` and therefore all the same width, which is what lets the position be
+ * an index rather than a measurement.
+ */
+.segmented::before {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: 2px;
+  width: calc((100% - 4px) / var(--segment-count, 1));
+  content: "";
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-chip);
+  transform: translateX(calc(var(--segment-index, 0) * 100%));
+  transition: transform var(--duration) var(--ease);
+}
+
+/* The options sit above the pill and bring no fill of their own: the pill is the
+   fill, and two of them would show as a double edge whilst it travels. */
+.segmented button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  overflow: hidden;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-chip);
+  transition: color var(--duration) var(--ease);
+}
+
+.segmented button:hover {
+  color: var(--text-primary);
+}
+
+.segmented button[aria-pressed="true"] {
+  color: var(--text-accent);
+}

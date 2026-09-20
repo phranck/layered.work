@@ -1,0 +1,121 @@
+/*
+ * A list of explained options.
+ *
+ * The tone does two jobs: it colours the mark, and the chosen option takes a
+ * dimmed version of that same colour as its fill. A reader who has seen green
+ * beside "public" once knows what a green panel means without reading it again.
+ *
+ * Every part of the change is animated. A state that snaps reads as the
+ * interface redrawing itself rather than as the thing having changed.
+ */
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.choice__option {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3);
+  font: inherit;
+  color: var(--text-secondary);
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--card-inner-radius);
+  transition:
+    color var(--duration) var(--ease),
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+.choice__option:hover {
+  background: var(--hover-tint);
+}
+
+/*
+ * The chosen option, in a dimmed version of its own mark's colour. The tone is
+ * read off the element rather than written per option, so a new status is a new
+ * entry in the data and needs no rule here.
+ */
+.choice__option[aria-checked="true"] {
+  color: var(--text-primary);
+  background: color-mix(in oklab, var(--choice-tone) 16%, transparent);
+  border-color: color-mix(in oklab, var(--choice-tone) 34%, transparent);
+}
+
+/* --- Tones ------------------------------------------------------------------
+   Four names, bound to the status tokens. They are the only place this component
+   touches colour, and they read the semantic tokens like everything else. */
+
+.choice__option[data-tone="success"] {
+  --choice-tone: var(--state-success);
+}
+.choice__option[data-tone="warning"] {
+  --choice-tone: var(--state-warning);
+}
+.choice__option[data-tone="info"] {
+  --choice-tone: var(--state-info);
+}
+.choice__option[data-tone="accent"] {
+  --choice-tone: var(--accent-400);
+}
+.choice__option[data-tone="danger"] {
+  --choice-tone: var(--state-danger);
+}
+
+/* --- Mark -------------------------------------------------------------------
+   Large enough to read as a status light rather than as punctuation, and it
+   brightens as its option is chosen. */
+
+.choice__mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--choice-tone, var(--text-faint));
+  border-radius: 50%;
+  opacity: 0.72;
+  transition:
+    opacity var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.choice__option[aria-checked="true"] .choice__mark {
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--choice-tone) 22%, transparent);
+}
+
+/* --- Text -------------------------------------------------------------------
+   Neither line wraps: an option that grows a line changes its own height and no
+   other's, which makes the list read as misaligned. */
+
+.choice__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.choice__label,
+.choice__note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choice__label {
+  font-size: var(--text-base);
+}
+
+.choice__note {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
