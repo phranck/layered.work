@@ -29,7 +29,7 @@ The package exports Button, Card, Choice, Editor, Field, Input, Logo, Row, RowLi
 
 Switch, Segmented and Choice are controlled: the caller owns the selected value and applies the change callback. Choice options compose through `Choice.Option`. Shortcut accepts an explicit platform so the server and browser render the same label. Logo uses the original SVG through its `src` prop, defaulting to `/logo.svg`. Its `inkHeight` prop accepts either a numeric pixel value or a CSS length and derives `--logo-height` on the component instance. The derivation uses the original SVG's measured ink-to-viewBox ratios: 0.489 for height and 0.824 for width.
 
-The Astro website server-renders static compounds with its React integration and no client directive. The current dashboard build renders them to static HTML. Interactive screens can hydrate the same components when those screens are implemented.
+The Astro website server-renders static compounds with its React integration and no client directive. The Vite dashboard renders the same compounds in its React application, with React Router providing navigation.
 
 The prototype's design values remain intact. Logo derives `--logo-height` at component scope so each instance can request its own optical ink height. React and React DOM are MIT-licensed dependencies, with their license notices distributed in their packages.
 
