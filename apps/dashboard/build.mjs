@@ -6,6 +6,7 @@ import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dashboardPolicy, NO_FRAMING, SHARED_HEADERS } from "@layered/policy";
 import { Card, Row, Section } from "@layered/ui";
 import { copyUiAssets } from "@layered/ui/copy-assets";
+import { SquaresFourIcon } from "@layered/ui/icons";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -55,6 +56,7 @@ const content = renderToStaticMarkup(
             h(
               Row,
               null,
+              h(Row.Lead, { "aria-hidden": true }, h(SquaresFourIcon, { weight: "duotone" })),
               h(Row.Text, { title: "Your publishing workspace", note: "This dashboard is being built." }),
             ),
           ),

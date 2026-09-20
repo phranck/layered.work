@@ -22,7 +22,7 @@ export default defineConfig({
   vite: {
     // Zerops deploys dist without the app's pnpm dependency links. Keep the
     // React server renderer inside that standalone output.
-    ssr: { noExternal: ["react", "react-dom"] },
+    ssr: { noExternal: ["react", "react-dom", "@phosphor-icons/react"] },
   },
   build: {
     // Kept out of the way of public/, which holds the wordmark, the typefaces

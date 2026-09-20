@@ -13,7 +13,6 @@ const styleNames = [
   "choice",
   "editor",
   "sidebar",
-  "index",
 ] as const;
 
 function stableCssTokens(source: Buffer): string {
@@ -25,6 +24,14 @@ function stableCssTokens(source: Buffer): string {
 }
 
 describe("prototype style parity", () => {
+  it("retains every prototype component import in its original order", () => {
+    const imports = (source: string) =>
+      [...source.matchAll(/@import url\("(.+?)"\)/g)].map((match) => match[1]);
+    const readCss = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
+    const original = imports(readCss("../../../prototype/ui/index.css"));
+    const current = imports(readCss("./index.css"));
+    expect(current.filter((name) => original.includes(name))).toEqual(original);
+  });
   it.each(styleNames.map((name) => [name]))("keeps %s.css rules unchanged", (name) => {
     const packageCss = readFileSync(fileURLToPath(new URL(`./${name}.css`, import.meta.url)));
     const prototypeCss = readFileSync(
