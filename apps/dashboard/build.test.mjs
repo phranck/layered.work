@@ -4,12 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
+import { readApiError } from "@layered/schemas";
 import { prepareDeployment } from "./deploy.mjs";
+import viteConfig from "./vite.config.mjs";
 
 test("the dashboard ships shared assets and nginx policy with SPA fallback", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "layered-dashboard-build-"));
   try {
-    await prepareDeployment(pathToFileURL(`${workspace}/dist/`), "https://api.example.test");
+    await prepareDeployment(pathToFileURL(`${workspace}/dist/`), "http://backend:3000");
     const fonts = await readFile(join(workspace, "dist/fonts.css"), "utf8");
     for (const family of ["Barlow", "Barlow Condensed", "FiraCode Nerd Font"]) {
       assert.ok(fonts.includes(`font-family: "${family}"`));
@@ -45,12 +47,45 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
     );
     const nginx = await readFile(join(workspace, "dist/site.conf"), "utf8");
     assert.match(nginx, /Content-Security-Policy/);
-    assert.match(nginx, /connect-src 'self' https:\/\/api\.example\.test/);
+    assert.match(nginx, /connect-src 'self' https:\/\/umami.layered.work;/);
+    assert.doesNotMatch(nginx, /connect-src[^;]*(?:backend|undefined)/);
+    assert.match(nginx, /location \/api\//);
+    assert.match(nginx, /proxy_pass http:\/\/backend:3000\//);
+    assert.match(nginx, /proxy_set_header X-Forwarded-For \$http_x_forwarded_for/);
+    assert.match(nginx, /proxy_intercept_errors off/);
+    assert.match(nginx, /proxy_cache off/);
+    assert.doesNotMatch(nginx, /proxy_cookie_(?:path|domain)/);
+    const proxyErrorLocation = nginx.split("location @api_unavailable")[1].split("# Missing bundles")[0];
+    for (const name of [
+      "Content-Security-Policy",
+      "X-Content-Type-Options",
+      "X-Frame-Options",
+      "Referrer-Policy",
+    ]) {
+      assert.ok(proxyErrorLocation.includes(`add_header ${name} `));
+    }
+    assert.match(proxyErrorLocation, /access_log syslog:.* dashboard_api_failure/);
+    assert.match(nginx, /"errorId":"\$request_id"/);
+    const proxyFailure = JSON.parse(nginx.match(/return 502 '(.*?)';/)[1]);
+    assert.deepEqual(readApiError(proxyFailure), {
+      code: "internal",
+      message: "The API is temporarily unavailable.",
+      id: "$request_id",
+    });
     assert.match(nginx, /try_files \$uri \$uri\/ \/index\.html/);
     assert.match(nginx, /location \/assets\//);
     assert.match(nginx, /try_files \$uri =404/);
     assert.match(await readFile(join(workspace, "dist/DEPENDENCY_LICENSES.txt"), "utf8"), /react-router@/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("development and production bundles use the same-origin API transport", () => {
+  for (const command of ["serve", "build"]) {
+    const config = viteConfig({ command });
+    assert.equal(JSON.parse(config.define.__API_BASE__), "/api");
+    assert.equal(config.server.proxy["/api"].rewrite("/api/auth/me"), "/auth/me");
+    assert.equal(config.server.proxy["/api"].rewrite("/api/dashboard/counts"), "/dashboard/counts");
   }
 });

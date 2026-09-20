@@ -1,7 +1,7 @@
-/** One API origin for the browser bundle and its nginx content policy. */
+/** Private upstream used by nginx and the Vite development proxy. */
 export function dashboardApiOrigin(command = "build") {
   const value =
-    process.env.API_ORIGIN ?? (command === "serve" ? "http://localhost:4002" : "https://api.layered.work");
+    process.env.API_ORIGIN ?? (command === "serve" ? "http://localhost:4002" : "http://backend:3000");
   let url;
   try {
     url = new URL(value);

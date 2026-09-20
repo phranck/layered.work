@@ -18,9 +18,12 @@ export { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/ssr/MagnifyingGl
 export { PaperPlaneTiltIcon } from "@phosphor-icons/react/dist/ssr/PaperPlaneTilt";
 export { PlusIcon } from "@phosphor-icons/react/dist/ssr/Plus";
 export { ShareNetworkIcon } from "@phosphor-icons/react/dist/ssr/ShareNetwork";
+export { SignInIcon } from "@phosphor-icons/react/dist/ssr/SignIn";
+export { SignOutIcon } from "@phosphor-icons/react/dist/ssr/SignOut";
 export { SquaresFourIcon } from "@phosphor-icons/react/dist/ssr/SquaresFour";
 export { StackSimpleIcon } from "@phosphor-icons/react/dist/ssr/StackSimple";
 export { TagIcon } from "@phosphor-icons/react/dist/ssr/Tag";
 export { TextboxIcon } from "@phosphor-icons/react/dist/ssr/Textbox";
 export { TrayIcon } from "@phosphor-icons/react/dist/ssr/Tray";
 export { UserCircleIcon } from "@phosphor-icons/react/dist/ssr/UserCircle";
+export { XIcon } from "@phosphor-icons/react/dist/ssr/X";
