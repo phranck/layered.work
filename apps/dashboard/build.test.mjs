@@ -24,6 +24,19 @@ test("the dashboard ships shared components and their complete stylesheet depend
     assert.match(html, /class="workbench"/);
     assert.doesNotMatch(html, /<script/);
     assert.match(html, /href="\.\/styles\/base.css"/);
+    assert.match(html, /href="\.\/fonts.css"/);
+    const fonts = await readFile(join(workspace, "dist/fonts.css"), "utf8");
+    for (const family of ["Barlow", "Barlow Condensed", "FiraCode Nerd Font"]) {
+      assert.ok(fonts.includes(`font-family: "${family}"`));
+    }
+    assert.doesNotMatch(fonts, /https?:|local\(/);
+    const fontUrls = [...fonts.matchAll(/url\("(.+?)"\)/g)].map((match) => match[1]);
+    assert.ok(fontUrls.length >= 3);
+    for (const fontUrl of fontUrls) {
+      const font = await readFile(join(workspace, "dist", fontUrl));
+      assert.equal(font.subarray(0, 4).toString(), "wOF2");
+    }
+    assert.match(await readFile(join(workspace, "dist/THIRD_PARTY_NOTICES.md"), "utf8"), /Fira/);
     for (const component of ["card", "row", "section"]) {
       assert.equal(
         await readFile(join(workspace, `dist/styles/ui/${component}.css`), "utf8"),

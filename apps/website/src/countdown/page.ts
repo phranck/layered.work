@@ -172,7 +172,8 @@ export function countdownPage(nonce: string): string {
 
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="preload" href="/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css" />
 
     <!-- Deferred, so counting a visit never delays showing the page to the
