@@ -1,10 +1,16 @@
 import {
+  type AccountMediaPage,
+  type AccountProfile,
+  accountMediaPage,
+  accountProfile,
   type DashboardCounts,
   dashboardCounts,
   readApiError,
   type SignedInAs,
   type SignInBody,
   signedInAs,
+  type UpdateAccountBody,
+  updateAccountBody,
 } from "@layered/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -26,6 +32,9 @@ interface DataEnvelope {
 export interface DashboardApi {
   fetchSession(): Promise<SignedInAs | null>;
   fetchDashboardCounts(): Promise<DashboardCounts>;
+  fetchAccount(): Promise<AccountProfile>;
+  fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
+  updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   signIn(credentials: SignInBody): Promise<SignedInAs>;
   signOut(): Promise<void>;
 }
@@ -85,6 +94,36 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       );
       const parsed = dashboardCounts.safeParse(data);
       if (!parsed.success) throw new DashboardApiError("Die Zahlenantwort ist ungültig.");
+      return parsed.data;
+    },
+    async fetchAccount() {
+      const data = dataOf(await request("/account", undefined, true), "Die Kontoantwort ist ungültig.");
+      const parsed = accountProfile.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Kontoantwort ist ungültig.");
+      return parsed.data;
+    },
+    async fetchAccountMedia(search, page) {
+      const params = new URLSearchParams({ search, page: String(page) });
+      const data = dataOf(
+        await request(`/account/media?${params}`, undefined, true),
+        "Die Medienantwort ist ungültig.",
+      );
+      const parsed = accountMediaPage.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Medienantwort ist ungültig.");
+      return parsed.data;
+    },
+    async updateAccount(input) {
+      const body = updateAccountBody.parse(input);
+      const data = dataOf(
+        await request(
+          "/account",
+          { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+          true,
+        ),
+        "Die Kontoantwort ist ungültig.",
+      );
+      const parsed = accountProfile.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Kontoantwort ist ungültig.");
       return parsed.data;
     },
     async signIn(credentials) {

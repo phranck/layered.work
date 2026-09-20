@@ -17,61 +17,62 @@ import {
   TrayIcon,
 } from "@layered/ui/icons";
 import type { ComponentType } from "react";
+import type { DashboardStringKey } from "./dashboard-i18n.js";
 
 export type CountKey = keyof DashboardCounts;
 
 export interface DashboardArea {
   id: string;
   path: string;
-  label: string;
+  labelKey: DashboardStringKey;
   countKey?: CountKey;
   icon: ComponentType<IconProps>;
 }
 
 export interface DashboardGroup {
   id: string;
-  label: string;
+  labelKey: DashboardStringKey;
   areas: DashboardArea[];
 }
 
 export const dashboardGroups: DashboardGroup[] = [
   {
     id: "content",
-    label: "Inhalt",
+    labelKey: "content",
     areas: [
-      { id: "posts", path: "posts", label: "Beiträge", countKey: "posts", icon: ArticleIcon },
-      { id: "pages", path: "pages", label: "Seiten", countKey: "pages", icon: FilesIcon },
-      { id: "tags", path: "tags", label: "Themen", countKey: "tags", icon: TagIcon },
-      { id: "media", path: "media", label: "Medien", countKey: "media", icon: ImagesIcon },
+      { id: "posts", path: "posts", labelKey: "posts", countKey: "posts", icon: ArticleIcon },
+      { id: "pages", path: "pages", labelKey: "pages", countKey: "pages", icon: FilesIcon },
+      { id: "tags", path: "tags", labelKey: "tags", countKey: "tags", icon: TagIcon },
+      { id: "media", path: "media", labelKey: "media", countKey: "media", icon: ImagesIcon },
     ],
   },
   {
     id: "landing",
-    label: "Startseite",
-    areas: [{ id: "blocks", path: "blocks", label: "Bausteine", countKey: "blocks", icon: StackSimpleIcon }],
+    labelKey: "landing",
+    areas: [{ id: "blocks", path: "blocks", labelKey: "blocks", countKey: "blocks", icon: StackSimpleIcon }],
   },
   {
     id: "structure",
-    label: "Struktur",
+    labelKey: "structure",
     areas: [
       {
         id: "main-nav",
         path: "main-navigation",
-        label: "Hauptnavigation",
+        labelKey: "mainNavigation",
         countKey: "mainNav",
         icon: ListIcon,
       },
       {
         id: "footer-nav",
         path: "footer-navigation",
-        label: "Footer-Navigationen",
+        labelKey: "footerNavigation",
         countKey: "footerNav",
         icon: ListDashesIcon,
       },
       {
         id: "social",
         path: "social-accounts",
-        label: "Social-Media-Konten",
+        labelKey: "social",
         countKey: "social",
         icon: ShareNetworkIcon,
       },
@@ -79,20 +80,20 @@ export const dashboardGroups: DashboardGroup[] = [
   },
   {
     id: "forms",
-    label: "Formulare",
+    labelKey: "forms",
     areas: [
-      { id: "forms", path: "forms", label: "Formulare", countKey: "forms", icon: TextboxIcon },
+      { id: "forms", path: "forms", labelKey: "forms", countKey: "forms", icon: TextboxIcon },
       {
         id: "submissions",
         path: "submissions",
-        label: "Einsendungen",
+        labelKey: "formSubmissions",
         countKey: "submissions",
         icon: TrayIcon,
       },
       {
         id: "mail-templates",
         path: "mail-templates",
-        label: "E-Mail-Vorlagen",
+        labelKey: "emailTemplates",
         countKey: "mailTemplates",
         icon: EnvelopeSimpleIcon,
       },
@@ -100,11 +101,11 @@ export const dashboardGroups: DashboardGroup[] = [
   },
   {
     id: "system",
-    label: "System",
+    labelKey: "system",
     areas: [
-      { id: "smtp", path: "smtp", label: "SMTP2GO", icon: PaperPlaneTiltIcon },
-      { id: "analytics", path: "analytics", label: "Umami", icon: ChartLineIcon },
-      { id: "settings", path: "settings", label: "Einstellungen", icon: GearIcon },
+      { id: "smtp", path: "smtp", labelKey: "smtp", icon: PaperPlaneTiltIcon },
+      { id: "analytics", path: "analytics", labelKey: "analytics", icon: ChartLineIcon },
+      { id: "settings", path: "settings", labelKey: "settings", icon: GearIcon },
     ],
   },
 ];
