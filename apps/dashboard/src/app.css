@@ -61,6 +61,38 @@
   color: var(--text-muted);
 }
 
+.login-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  place-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
+.login-card {
+  width: min(420px, 100%);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+dialog.account-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  border: 0;
+}
+
+dialog.account-dialog::backdrop {
+  background: transparent;
+}
+
 @media (width < 1100px) {
   .workbench {
     grid-template-columns: minmax(0, 1fr);
