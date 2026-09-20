@@ -13,7 +13,7 @@
       "default": "./dist/index.js"
     },
     "./*.css": "./src/*.css",
-    "./copy-fonts": "./copy-fonts.mjs"
+    "./copy-assets": "./copy-assets.mjs"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
