@@ -1,30 +1,15 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { copyFile, mkdtemp, readdir, readFile, rm, symlink } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
+import { prepareDeployment } from "./deploy.mjs";
 
-test("the dashboard ships shared components and their complete stylesheet dependencies", async () => {
+test("the dashboard ships shared assets and nginx policy with SPA fallback", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "layered-dashboard-build-"));
   try {
-    await copyFile(new URL("./build.mjs", import.meta.url), join(workspace, "build.mjs"));
-    await symlink(fileURLToPath(new URL("./node_modules", import.meta.url)), join(workspace, "node_modules"));
-    execFileSync(process.execPath, [...process.execArgv, join(workspace, "build.mjs")], {
-      env: {
-        ...process.env,
-        TSX_TSCONFIG_PATH: fileURLToPath(new URL("../../packages/ui/tsconfig.json", import.meta.url)),
-      },
-    });
-    const html = await readFile(join(workspace, "dist/index.html"), "utf8");
-    for (const component of ["card", "row", "section"]) {
-      assert.match(html, new RegExp(`class="${component}(?: |")`));
-    }
-    assert.match(html, /class="workbench"/);
-    assert.doesNotMatch(html, /<script/);
-    assert.match(html, /href="\.\/styles\/base.css"/);
-    assert.match(html, /href="\.\/fonts.css"/);
+    await prepareDeployment(pathToFileURL(`${workspace}/dist/`), "https://api.example.test");
     const fonts = await readFile(join(workspace, "dist/fonts.css"), "utf8");
     for (const family of ["Barlow", "Barlow Condensed", "FiraCode Nerd Font"]) {
       assert.ok(fonts.includes(`font-family: "${family}"`));
@@ -58,17 +43,13 @@ test("the dashboard ships shared components and their complete stylesheet depend
       await readFile(join(workspace, "dist/icon-licenses/Phosphor-Icons-MIT-2.1.10.txt"), "utf8"),
       /MIT License/,
     );
-    for (const component of ["card", "row", "section"]) {
-      assert.equal(
-        await readFile(join(workspace, `dist/styles/ui/${component}.css`), "utf8"),
-        await readFile(new URL(`../../prototype/ui/${component}.css`, import.meta.url), "utf8"),
-      );
-    }
-    assert.match(
-      await readFile(join(workspace, "dist/styles/tokens/semantic.css"), "utf8"),
-      /--card-inner-radius/,
-    );
-    assert.match(await readFile(join(workspace, "dist/site.conf"), "utf8"), /Content-Security-Policy/);
+    const nginx = await readFile(join(workspace, "dist/site.conf"), "utf8");
+    assert.match(nginx, /Content-Security-Policy/);
+    assert.match(nginx, /connect-src 'self' https:\/\/api\.example\.test/);
+    assert.match(nginx, /try_files \$uri \$uri\/ \/index\.html/);
+    assert.match(nginx, /location \/assets\//);
+    assert.match(nginx, /try_files \$uri =404/);
+    assert.match(await readFile(join(workspace, "dist/DEPENDENCY_LICENSES.txt"), "utf8"), /react-router@/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

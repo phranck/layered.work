@@ -5,17 +5,31 @@
   "type": "module",
   "description": "The editorial interface on dashboard.layered.work",
   "scripts": {
+    "dev": "vite",
     "build": "node build.mjs",
-    "test": "node --import tsx --conditions=development --test build.test.mjs"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run && node --import tsx --conditions=development --test build.test.mjs"
   },
   "dependencies": {
     "@layered/policy": "workspace:*",
-    "@layered/ui": "workspace:*",
+    "@layered/schemas": "workspace:*",
     "@layered/tokens": "workspace:*",
+    "@layered/ui": "workspace:*",
+    "@tanstack/react-query": "5.103.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-router": "8.4.0"
   },
   "devDependencies": {
-    "tsx": "^4.23.13"
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "happy-dom": "20.14.5",
+    "tsx": "^4.23.13",
+    "typescript": "5.9.3",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
   }
 }
