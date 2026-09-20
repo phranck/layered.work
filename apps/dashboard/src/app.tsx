@@ -1,8 +1,10 @@
-import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { UserCircleIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
-import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
-import { DashboardApiError, fetchDashboardCounts, fetchSession } from "./api.js";
+import { Button, Card, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
+import { SignOutIcon, UserCircleIcon, XIcon } from "@layered/ui/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
+import { DashboardApiError } from "./api.js";
+import { useDashboardApi } from "./dashboard-context.js";
 import { dashboardGroups } from "./routes.js";
 
 function ErrorNotice({ error }: { error: unknown }) {
@@ -43,11 +45,19 @@ function AreaLink({
 }
 
 function DashboardSidebar() {
+  const api = useDashboardApi();
+  const navigate = useNavigate();
+  const [accountOpen, setAccountOpen] = useState(false);
   const handleLogoClick = useLinkClickHandler("/posts");
-  const session = useQuery({ queryKey: ["session"], queryFn: fetchSession, retry: false });
+  const session = useQuery({
+    queryKey: ["session"],
+    queryFn: api.fetchSession,
+    retry: false,
+    staleTime: Infinity,
+  });
   const counts = useQuery({
     queryKey: ["dashboard-counts", session.data?.id],
-    queryFn: fetchDashboardCounts,
+    queryFn: api.fetchDashboardCounts,
     enabled: session.isSuccess && session.data !== null,
     retry: false,
   });
@@ -78,7 +88,7 @@ function DashboardSidebar() {
         </nav>
       </Sidebar.Body>
       <Sidebar.Footer>
-        <Row>
+        <Row.Button onClick={() => setAccountOpen(true)} disabled={!session.data} aria-haspopup="dialog">
           <Row.Lead aria-hidden="true">
             <UserCircleIcon weight="duotone" />
           </Row.Lead>
@@ -92,13 +102,106 @@ function DashboardSidebar() {
             }
             note={session.data ? (session.data.role === "owner" ? "Administrator" : "Redaktion") : undefined}
           />
-        </Row>
+        </Row.Button>
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
         aria-label="Trennung zwischen Navigation und Inhalt"
       />
+      {session.data && (
+        <AccountDialog
+          open={accountOpen}
+          displayName={session.data.displayName}
+          email={session.data.email}
+          onClose={() => setAccountOpen(false)}
+          onSignedOut={() => navigate("/login", { replace: true })}
+        />
+      )}
     </Sidebar>
+  );
+}
+
+function AccountDialog({
+  displayName,
+  email,
+  onClose,
+  onSignedOut,
+  open,
+}: {
+  displayName: string;
+  email: string;
+  onClose: () => void;
+  onSignedOut: () => void;
+  open: boolean;
+}) {
+  const api = useDashboardApi();
+  const queryClient = useQueryClient();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const signOut = useMutation({ mutationFn: api.signOut, onSuccess: () => queryClient.clear() });
+  const closeAccount = useEffectEvent(onClose);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+    const closeFromBackdrop = (event: MouseEvent) => {
+      if (event.target === dialog) closeAccount();
+    };
+    dialog.addEventListener("click", closeFromBackdrop);
+    return () => dialog.removeEventListener("click", closeFromBackdrop);
+  }, [open]);
+
+  async function submitSignOut() {
+    try {
+      await signOut.mutateAsync();
+      onClose();
+      onSignedOut();
+    } catch {
+      // The mutation retains the structured error for the alert below.
+    }
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="account-dialog card-overlay"
+      data-open={open || undefined}
+      aria-labelledby="account-dialog-title"
+      tabIndex={-1}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <Card>
+        <Card.Header id="account-dialog-title" title="Benutzerkonto" />
+        <Card.Stack>
+          <Row>
+            <Row.Text title={displayName} note={email} />
+          </Row>
+          {signOut.error && <ErrorNotice error={signOut.error} />}
+        </Card.Stack>
+        <Card.Footer
+          actions={
+            <>
+              <Button onClick={onClose} icon={<XIcon weight="bold" />}>
+                Schließen
+              </Button>
+              <Button
+                tone="danger"
+                onClick={submitSignOut}
+                disabled={signOut.isPending}
+                autoFocus
+                icon={<SignOutIcon weight="bold" />}
+              >
+                {signOut.isPending ? "Abmeldung läuft…" : "Abmelden"}
+              </Button>
+            </>
+          }
+        />
+      </Card>
+    </dialog>
   );
 }
 

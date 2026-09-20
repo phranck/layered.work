@@ -6,7 +6,9 @@ The sidebar uses shared Sidebar, Section, Row and Logo compounds and the prototy
 
 ## Development and verification
 
-The dashboard is registered in `grat.config` on port 4502. Inspect local service state with `grat status`. Its API defaults to `http://localhost:4002` during development. Set the public `API_ORIGIN` environment variable to override the origin. Production uses the origin supplied in `zerops.yml`; the same resolved value is compiled into the browser bundle and nginx policy.
+The dashboard is registered in `grat.config` on port 4502. Inspect local service state with `grat status`. Browser requests always use the same-origin `/api/` prefix. Vite forwards it to `http://localhost:4002` during development; nginx forwards it to `http://backend:3000` over the Zerops private network in production. `API_ORIGIN` selects that upstream and is never a browser URL. nginx preserves the incoming edge forwarding chain so the existing per-client sign-in limiter still identifies the original caller. Calling the public Zerops API from this proxy would add extra hops and must not replace the private upstream.
+
+The session cookie remains HttpOnly, Secure in production, host-only and SameSite=Lax. The proxy leaves cookie attributes and backend error bodies unchanged. Transport failures return a safe JSON error with a request ID. Protected routes check the session before rendering and on navigation; sign-in restores a validated internal destination. The account dialog contains sign-out; account editing follows in #56.
 
 ```sh
 pnpm --filter @layered/dashboard typecheck
