@@ -5,9 +5,17 @@
   "type": "module",
   "description": "The editorial interface on dashboard.layered.work",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "node --import tsx --conditions=development --test build.test.mjs"
   },
   "dependencies": {
-    "@layered/policy": "workspace:*"
+    "@layered/policy": "workspace:*",
+    "@layered/ui": "workspace:*",
+    "@layered/tokens": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
   }
 }

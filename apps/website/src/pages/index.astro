@@ -7,11 +7,15 @@
  * it is rather than pretending. The real home page is assembled from blocks out
  * of the database and is its own issue.
  *
- * The page colour is written into a rule of its own rather than through Astro's
- * `define:vars`, which puts the variable on every element in the component as
- * an inline style.
+ * Shared React compounds render on the server. No client directive is needed
+ * for this static page, so React does not hydrate it in the browser.
  */
-import { COPY, DESCRIPTION, PAGE_COLOR, SITE_ORIGIN } from "../site.js";
+import { Card, Logo, Row, Section } from "@layered/ui";
+import { createElement } from "react";
+import "@layered/tokens/index.css";
+import "@layered/ui/base.css";
+import "@layered/ui/index.css";
+import { COPY, DESCRIPTION, SITE_ORIGIN } from "../site.js";
 ---
 
 <!doctype html>
@@ -25,41 +29,22 @@ import { COPY, DESCRIPTION, PAGE_COLOR, SITE_ORIGIN } from "../site.js";
     <link rel="canonical" href={`${SITE_ORIGIN}/`} />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/fonts.css" />
-    <style is:inline set:html={`:root { --page: ${PAGE_COLOR}; }`}></style>
   </head>
   <body>
-    <main>
-      <h1><img class="mark" src="/logo.svg" alt={COPY.logoLabel} width="900" height="450" /></h1>
-      <p>{COPY.body[0]}</p>
-      <p class="note">This page is being built.</p>
+    <main class="ui-placeholder">
+      <Section>
+        <Section.Title title={createElement(Logo, { href: "/", label: COPY.logoLabel })} level={1} />
+        <Section.Body>
+          <Card>
+            <Card.Header title={COPY.tagline} />
+            <Card.Body>
+              <Row>
+                <Row.Text title={COPY.body[0]} note="This page is being built." />
+              </Row>
+            </Card.Body>
+          </Card>
+        </Section.Body>
+      </Section>
     </main>
   </body>
 </html>
-
-<style>
-  :global(*), :global(*::before), :global(*::after) { box-sizing: border-box; }
-  :global(*) { margin: 0; }
-
-  :global(body) {
-    display: grid;
-    place-items: center;
-    min-height: 100dvh;
-    padding: clamp(20px, 5vw, 44px);
-    font-family: "Barlow", ui-sans-serif, system-ui, sans-serif;
-    font-size: 1.0625rem;
-    line-height: 1.65;
-    color: oklch(0.963 0.008 250);
-    background: var(--page);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  main { text-align: center; }
-
-  /* The file carries empty margin above and below the mark, which is 48.9 per
-     cent of its height, so the element is sized from the optical height wanted
-     rather than the file being edited. */
-  .mark { display: block; width: auto; height: calc(44px / 0.489); margin-inline: auto; }
-
-  p { margin-block-start: 20px; color: oklch(0.845 0.008 250); }
-  .note { color: oklch(0.655 0.008 250); }
-</style>
