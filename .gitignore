@@ -9,6 +9,12 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# Shared font assets are copied here before website development and builds.
+/apps/website/public/fonts/
+/apps/website/public/fonts.css
+/apps/website/public/font-licenses/
+/apps/website/public/THIRD_PARTY_NOTICES.md
+
 # Environment
 .env
 .env.*

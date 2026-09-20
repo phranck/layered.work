@@ -5,6 +5,7 @@
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dashboardPolicy, NO_FRAMING, SHARED_HEADERS } from "@layered/policy";
 import { Card, Row, Section } from "@layered/ui";
+import { copyFontAssets } from "@layered/ui/copy-fonts";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -13,6 +14,7 @@ const API_ORIGIN = process.env.API_ORIGIN ?? "https://api.layered.work";
 
 const dist = new URL("./dist/", import.meta.url);
 await mkdir(dist, { recursive: true });
+await copyFontAssets(dist);
 
 // CSS imports remain relative inside each package. Copy the published sheets
 // into separate directories so nginx can serve the complete dependency tree.
@@ -71,6 +73,7 @@ await writeFile(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>layered.work dashboard</title>
+    <link rel="stylesheet" href="./fonts.css" />
     <link rel="stylesheet" href="./styles/base.css" />
   </head>
   <body class="workbench">
