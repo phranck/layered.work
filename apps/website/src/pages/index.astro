@@ -11,6 +11,7 @@
  * for this static page, so React does not hydrate it in the browser.
  */
 import { Card, Logo, Row, Section } from "@layered/ui";
+import { SquaresFourIcon } from "@layered/ui/icons";
 import { createElement } from "react";
 import "@layered/tokens/index.css";
 import "@layered/ui/base.css";
@@ -41,6 +42,7 @@ import { COPY, DESCRIPTION, SITE_ORIGIN } from "../site.js";
             <Card.Header title={COPY.tagline} />
             <Card.Body>
               <Row>
+                <Row.Lead aria-hidden="true"><SquaresFourIcon weight="duotone" /></Row.Lead>
                 <Row.Text title={COPY.body[0]} note="This page is being built." />
               </Row>
             </Card.Body>
