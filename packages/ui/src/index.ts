@@ -1,4 +1,5 @@
 /** Shared UI components and their documented public prop types. */
+export { BrandMark, type BrandMarkProps, type BrandName } from "./brand-mark.js";
 export {
   Button,
   type ButtonIconProps,

@@ -15,6 +15,9 @@ build/
 /apps/website/public/font-licenses/
 /apps/website/public/THIRD_PARTY_NOTICES.md
 /apps/website/public/logo.svg
+/apps/website/public/brands/
+/apps/website/public/icon-licenses/
+/apps/website/public/ICON_NOTICES.md
 
 # Environment
 .env

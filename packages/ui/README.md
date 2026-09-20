@@ -40,3 +40,11 @@ The prototype's design values remain intact. Logo derives `--logo-height` at com
 Barlow and Barlow Condensed provide the design token weights. FiraCode Nerd Font supplies code text and ligatures, with patched symbols in a separate subset loaded only when needed. All faces use `font-display: swap`. The website preloads Barlow 400 and Barlow Condensed 700; other faces remain lazy.
 
 Source revisions, licences and the regeneration command are recorded in [the font notices](assets/THIRD_PARTY_NOTICES.md).
+
+## Icons
+
+Import interface components from `@layered/ui/icons`, for example `MagnifyingGlassIcon`, `PlusIcon` and `SquaresFourIcon`. These are direct Phosphor React exports, with `size`, `weight` and `color` props. Their default `1em` size follows existing component tokens: a `Row.Lead` uses 17 px in the sidebar and 19 px in workbench content. Add explicit Phosphor submodule exports when screens need more icons; do not copy SVG paths or load an icon stylesheet.
+
+`BrandMark` is separate: `<BrandMark brand="github" />` renders a decorative CSS mask from the unchanged Simple Icons asset. The surrounding social link supplies the accessible name and text colour. Only Mastodon, GitHub, YouTube, Instagram and Xing ship. CSS rules choose same-origin masks without inline styles, so the strict dashboard policy also permits them.
+
+See [icon notices](assets/ICON_NOTICES.md) for pinned sources, licences and the steps for adding a social brand.

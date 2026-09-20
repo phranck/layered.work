@@ -1,0 +1,26 @@
+/* Ported from the prototype footer. External masks retain the original assets
+   and currentcolor makes every mark follow the text around it. */
+.brand-mark {
+  display: block;
+  width: var(--brand-size, 18px);
+  height: var(--brand-size, 18px);
+  background: currentcolor;
+  mask: var(--brand) center / contain no-repeat;
+}
+
+/* Static rules also work under the dashboard's strict style-src policy. */
+.brand-mark[data-brand="mastodon"] {
+  --brand: url("/brands/mastodon.svg");
+}
+.brand-mark[data-brand="github"] {
+  --brand: url("/brands/github.svg");
+}
+.brand-mark[data-brand="youtube"] {
+  --brand: url("/brands/youtube.svg");
+}
+.brand-mark[data-brand="instagram"] {
+  --brand: url("/brands/instagram.svg");
+}
+.brand-mark[data-brand="xing"] {
+  --brand: url("/brands/xing.svg");
+}
