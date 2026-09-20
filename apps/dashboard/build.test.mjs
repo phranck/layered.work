@@ -37,6 +37,10 @@ test("the dashboard ships shared components and their complete stylesheet depend
       assert.equal(font.subarray(0, 4).toString(), "wOF2");
     }
     assert.match(await readFile(join(workspace, "dist/THIRD_PARTY_NOTICES.md"), "utf8"), /Fira/);
+    assert.deepEqual(
+      await readFile(join(workspace, "dist/logo.svg")),
+      await readFile(new URL("../../prototype/assets/logo.svg", import.meta.url)),
+    );
     for (const component of ["card", "row", "section"]) {
       assert.equal(
         await readFile(join(workspace, `dist/styles/ui/${component}.css`), "utf8"),

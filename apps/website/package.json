@@ -5,8 +5,8 @@
   "type": "module",
   "description": "The public site on layered.work",
   "scripts": {
-    "dev": "node tools/prepare-fonts.mjs && astro dev",
-    "build": "node tools/prepare-fonts.mjs && astro build",
+    "dev": "node tools/prepare-assets.mjs && astro dev",
+    "build": "node tools/prepare-assets.mjs && astro build",
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
     "typecheck": "astro check"
