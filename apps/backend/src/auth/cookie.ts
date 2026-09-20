@@ -39,11 +39,11 @@ const MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 /**
  * Puts the session cookie on the response.
  *
- * `sameSite: "Lax"` because the dashboard and the API are different hosts under
- * the same registrable domain, which makes a request between them same-site and
- * the cookie is sent. `Strict` would work for that too and would additionally
- * withhold the cookie when somebody arrives from a link in an email, so they
- * would see themselves signed out and then signed in a moment later.
+ * The dashboard reaches this service through its same-origin `/api/` proxy,
+ * which forwards these attributes unchanged. The browser therefore stores the
+ * host-only cookie on the dashboard host, even while the public API uses a
+ * different domain. `Lax` also permits arriving from an ordinary external link;
+ * cross-site subrequests cannot use the cookie.
  *
  * @param c - The request being answered.
  * @param value - What `openSession` returned.

@@ -94,18 +94,18 @@ export const API_POLICY = contentSecurityPolicy({
  * An authenticated interface, so framing is denied outright: a page that can be
  * put in a frame can be clicked through by the page around it.
  *
- * `connect-src` reaches the API, which is a different host under the same
- * domain, and the analytics instance. `'self'` covers the built assets, which
- * nginx serves from the same origin.
+ * The dashboard reaches its API through the same-origin nginx proxy. An
+ * explicit API origin remains available for interfaces without that proxy;
+ * omitting it permits only this host and the analytics instance.
  */
-export function dashboardPolicy(apiOrigin: string): string {
+export function dashboardPolicy(apiOrigin?: string): string {
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     "script-src": ["'self'"],
     "style-src": ["'self'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", apiOrigin, ANALYTICS_ORIGIN],
+    "connect-src": ["'self'", ...(apiOrigin ? [apiOrigin] : []), ANALYTICS_ORIGIN],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'self'"],

@@ -1,1 +1,1 @@
-declare const __API_ORIGIN__: string;
+declare const __API_BASE__: string;

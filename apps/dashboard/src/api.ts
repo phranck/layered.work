@@ -3,53 +3,108 @@ import {
   dashboardCounts,
   readApiError,
   type SignedInAs,
+  type SignInBody,
   signedInAs,
 } from "@layered/schemas";
+import type { QueryClient } from "@tanstack/react-query";
 
 export class DashboardApiError extends Error {
   constructor(
     message: string,
     readonly id?: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "DashboardApiError";
   }
 }
 
-async function get(path: string): Promise<unknown> {
-  const response = await fetch(`${__API_ORIGIN__}${path}`, { credentials: "include" });
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    throw new DashboardApiError("Die Antwort des Servers konnte nicht gelesen werden.");
-  }
-  if (!response.ok) {
-    const failure = readApiError(body);
-    throw failure
-      ? new DashboardApiError(failure.message, failure.id)
-      : new DashboardApiError("Der Server hat unerwartet geantwortet.");
-  }
-  return body;
+interface DataEnvelope {
+  data: unknown;
 }
 
-export async function fetchSession(): Promise<SignedInAs | null> {
-  const body = await get("/auth/me");
-  if (!body || typeof body !== "object" || !("data" in body)) {
-    throw new DashboardApiError("Die Sitzungsantwort ist ungültig.");
-  }
-  if (body.data === null) return null;
-  const parsed = signedInAs.safeParse(body.data);
-  if (!parsed.success) throw new DashboardApiError("Die Sitzungsantwort ist ungültig.");
-  return parsed.data;
+export interface DashboardApi {
+  fetchSession(): Promise<SignedInAs | null>;
+  fetchDashboardCounts(): Promise<DashboardCounts>;
+  signIn(credentials: SignInBody): Promise<SignedInAs>;
+  signOut(): Promise<void>;
 }
 
-export async function fetchDashboardCounts(): Promise<DashboardCounts> {
-  const body = await get("/dashboard/counts");
-  if (!body || typeof body !== "object" || !("data" in body)) {
-    throw new DashboardApiError("Die Zahlenantwort ist ungültig.");
+export function createDashboardApi(queryClient: QueryClient, onSessionExpired: () => void): DashboardApi {
+  let expiryReported = false;
+
+  async function request(path: string, init?: RequestInit, protectedRequest = false): Promise<unknown> {
+    let response: Response;
+    try {
+      response = await fetch(`${__API_BASE__}${path}`, { credentials: "include", ...init });
+    } catch {
+      throw new DashboardApiError("Der Server ist nicht erreichbar.");
+    }
+    if (protectedRequest && response.status === 401) {
+      queryClient.clear();
+      if (!expiryReported) {
+        expiryReported = true;
+        onSessionExpired();
+      }
+    }
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new DashboardApiError("Die Antwort des Servers konnte nicht gelesen werden.");
+    }
+    if (!response.ok) {
+      const failure = readApiError(body);
+      throw failure
+        ? new DashboardApiError(failure.message, failure.id, failure.code)
+        : new DashboardApiError("Der Server hat unerwartet geantwortet.");
+    }
+    return body;
   }
-  const parsed = dashboardCounts.safeParse(body.data);
-  if (!parsed.success) throw new DashboardApiError("Die Zahlenantwort ist ungültig.");
-  return parsed.data;
+
+  function dataOf(body: unknown, invalidMessage: string): unknown {
+    if (!body || typeof body !== "object" || !("data" in body)) throw new DashboardApiError(invalidMessage);
+    return (body as DataEnvelope).data;
+  }
+
+  return {
+    async fetchSession() {
+      const data = dataOf(
+        await request("/auth/me", { cache: "no-store" }),
+        "Die Sitzungsantwort ist ungültig.",
+      );
+      if (data === null) return null;
+      const parsed = signedInAs.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Sitzungsantwort ist ungültig.");
+      return parsed.data;
+    },
+    async fetchDashboardCounts() {
+      const data = dataOf(
+        await request("/dashboard/counts", undefined, true),
+        "Die Zahlenantwort ist ungültig.",
+      );
+      const parsed = dashboardCounts.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Zahlenantwort ist ungültig.");
+      return parsed.data;
+    },
+    async signIn(credentials) {
+      const data = dataOf(
+        await request("/auth/sign-in", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(credentials),
+        }),
+        "Die Anmeldeantwort ist ungültig.",
+      );
+      const parsed = signedInAs.safeParse(data);
+      if (!parsed.success) throw new DashboardApiError("Die Anmeldeantwort ist ungültig.");
+      expiryReported = false;
+      return parsed.data;
+    },
+    async signOut() {
+      await request("/auth/sign-out", { method: "POST" });
+      expiryReported = false;
+      queryClient.clear();
+    },
+  };
 }

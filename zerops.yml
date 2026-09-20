@@ -184,11 +184,10 @@ zerops:
         - apps/dashboard/dist
       cache: node_modules
       envVariables:
-        # Where the browser reaches the API, which the generated content policy
-        # names in `connect-src`. The Zerops subdomain until `api.layered.work`
-        # has a record of its own; a policy naming a host that does not resolve
-        # would refuse the only connection this interface makes.
-        API_ORIGIN: https://backend-2444-3000.prg1.zerops.app
+        # nginx forwards same-origin /api/ requests over the private network.
+        # Keeping the edge's forwarding chain intact preserves caller limits;
+        # calling the public API here would add another pair of proxy hops.
+        API_ORIGIN: http://backend:3000
     deploy:
       # nginx starts whatever is in the document root, including nothing, so a
       # build that produced no index.html would otherwise replace a working
