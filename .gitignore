@@ -24,13 +24,6 @@ build/
 .env.*
 !.env.example
 
-# Local agent artefacts. These stay on the machine and never reach the remote.
-.claude/
-.codex/
-.serena/
-.openspec/
-.graphify-out/
-
 # Editors and operating systems
 .DS_Store
 *.swp
