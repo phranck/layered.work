@@ -4,6 +4,7 @@ import { NODE } from "../parser/nodes.js";
 import { argumentsOf, childOf, childrenOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
 import { defaultsOf, resolveComponent, unnamedParameter } from "../register/lookup.js";
+import { headingId } from "./headings.js";
 import { type CodeNode, type ComponentNode, element, type RenderNode, text } from "./model.js";
 import { type Content, ENTITIES, MARKS, PROSE } from "./prose.js";
 
@@ -38,6 +39,8 @@ type Context = {
   register?: Register;
   /** Where each reference link points, by its label in lower case. */
   references: Map<string, string>;
+  /** Heading anchors already assigned in this document, including nested bodies. */
+  headingIds: Set<string>;
 };
 
 /**
@@ -76,6 +79,7 @@ export function renderTree(tree: Tree, text: string, options: RenderOptions = {}
     text,
     register: options.register,
     references: linkTargets(tree, text),
+    headingIds: new Set(),
   };
 
   return blockChildren(tree.topNode, context);
@@ -183,7 +187,16 @@ function renderNode(node: SyntaxNode, context: Context): RenderNode[] {
   if (name === "Entity") return [text(decodeEntity(source(node, context)))];
 
   const prose = PROSE[name];
-  if (prose) return [element(prose.tag, contentOf(node, prose.content, context))];
+  if (prose) {
+    const children = contentOf(node, prose.content, context);
+    return [
+      element(
+        prose.tag,
+        children,
+        prose.content === "heading" ? { id: headingId(children, context.headingIds) } : {},
+      ),
+    ];
+  }
 
   // Not in the table. Keep everything it covers, lose only the wrapper, which
   // for a leaf is the text itself and for a container is its children.
