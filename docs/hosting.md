@@ -182,6 +182,23 @@ Copy `.env.example` to `.env.local`. The services read it themselves through Nod
 
 Until 13 September 2026 the container on this machine came from a compose file in `/Users/phranck/Sites/layered.work`, which is the old project and no longer exists. The database could not be recreated from anything checked in, and it carried two abandoned schemas from earlier attempts. Both were dumped and dropped.
 
+## The schema is one file, and the database is thrown away
+
+`apps/backend/drizzle/` holds a single generated file describing the schema as it stands. There is no migration history, because nothing in either database cannot be rebuilt: the local one holds the seeded account and whatever a preview run put there, and the deployed one holds the same.
+
+A schema change is therefore two commands, neither of them written by hand:
+
+```sh
+pnpm --filter @layered/backend db:generate --name=initial_schema
+pnpm db:reset
+```
+
+`db:generate` rewrites the one file from `src/db/schema/`, and `db:reset` removes the container together with its volume, brings it back, applies that file and seeds the account. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
+
+The deployed database carries the journal of the four migrations that came before this. It is emptied once, before the next deployment applies the new file. Until that happens, a deployment would fail on the first statement, which is the right way round: it stops rather than half-applying.
+
+**This ends at launch**, or sooner if anything reaches the database that the Publii export and the seed cannot produce again. From that day a schema change is a migration appended to what exists, the history starts being worth keeping, and `db:reset` becomes a local convenience rather than the way schemas move.
+
 ## How another service reaches the database and the bucket
 
 Zerops exposes a service's own variables to its siblings, prefixed by the hostname. Nothing is written down; `zerops.yml` references them.

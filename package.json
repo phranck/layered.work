@@ -18,7 +18,8 @@
     "test:migration": "node --test scripts/publii/*.test.mjs && python3 -m unittest discover -s scripts/publii -p 'test_*.py'",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "db:reset": "pnpm --filter @layered/backend db:reset"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
