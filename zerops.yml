@@ -182,7 +182,12 @@ zerops:
         # instead, under the prefix the migration wrote them to. The policy in
         # @layered/policy names the same host, because the browser refuses a
         # picture from an origin the page did not declare.
-        MEDIA_ORIGIN: ${assets_storageCdnUrl}/${assets_bucketName}/migration
+        # The host is written out because Zerops does not resolve
+        # ${assets_storageCdnUrl} here: the deployed page carried that
+        # reference verbatim in every image source. It is no secret, and
+        # @layered/policy names the same host for the browser. The bucket name
+        # is a reference, and that one does resolve.
+        MEDIA_ORIGIN: https://storage.cdn.zerops.app/${assets_bucketName}/migration
       # Nothing but the command. This line is handed to `exec`, not to a shell,
       # so `PORT=3000 node …` here is read as the name of a program to run and
       # fails with "not found": the service then restarts in a loop and the site
