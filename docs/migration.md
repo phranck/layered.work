@@ -97,6 +97,21 @@ The trashed entry `happy-birthday` needs no redirect. Publii does not generate a
 
 Verified on 21 September 2026: the preview renderer checked 42 legacy addresses and the six archived ones, and reported 36 redirect targets returning 200, four private entries returning 404 and no other status.
 
+## The upload
+
+The pipeline itself never talks to the network, which is why the upload is its own command:
+
+```sh
+node scripts/publii/upload.mjs --dry-run
+node scripts/publii/upload.mjs
+```
+
+It needs `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. Missing any of them, it writes nothing and says which one. The values belong to the `assets` object storage of the `layered.work` project on Zerops; `zcli project env` prints the endpoint and the bucket name but masks the secret, so that one is read from the Zerops interface.
+
+Every object is written below the `migration/` prefix, so the whole set can be listed, counted and removed again without touching what the dashboard uploads later. After each write the object is read back and compared with its source by byte count and by SHA-256, because a successful `PUT` says the request was accepted rather than what is stored under that key. The run finishes by listing the prefix and recording what the bucket actually holds, in `migration-out/upload-report.json`.
+
+**Only what a page names is uploaded.** Measured on 21 September 2026: 76 originals at 124.2 MB and 206 generated variants at 17.4 MB go up, and 89.7 MB stays behind. That is 27.1 MB of Publii's own responsive copies and 17.9 MB of its gallery thumbnails, both superseded by the variants generated here, plus 44.0 MB in the file manager that no entry and no generated page ever referenced, of which 42.1 MB is a single unused video. Each of those is listed in the report with its reason, because a file left out silently looks exactly like a file that failed. They remain in the Publii archive and in the local staging directory.
+
 ## Language review
 
 `scripts/publii/language-decisions.json` records the reviewed language of all 21 source entries and the exact database SHA-256. German IDs are 16, 22, 23, and 29. Empty drafts 9, 11, and 12 use their English titles as an explicitly recorded assumption; trashed entry 31 is marked as skipped for publication. A changed source database invalidates this review and returns the entries to pending. A subsequent reviewed map can be supplied through `--language-review`.
@@ -122,9 +137,10 @@ Publii `#INTERNAL_LINK#/file` markers in PDF download links are resolved to the 
 The fixtures create their own SQLite database, media files and output directories under a unique temporary directory. They never open the user's Publii database or application persistence:
 
 ```sh
-python3 -m unittest discover -s scripts/publii -p 'test_*.py'
-node --test scripts/publii/pipeline.test.mjs
+pnpm test:migration
 ```
+
+That is both suites, the Node one and the Python one, and `pnpm test` runs it after the workspaces. Before 21 September 2026 neither ran anywhere except by hand, so a broken converter would have been reported by nothing.
 
 Tests cover the full raw body, visibility, original paths and dates, translation links, collision handling, ISO exclusion, original checksums, deterministic reruns, unsupported forms, Markdown embeds outside code fences, source-directory protection, published nested paths from the actual legacy output, both PDF file markers, source-bound language review, responsive sizes, placeholders, corrupted originals and real content validation.
 
