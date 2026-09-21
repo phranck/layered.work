@@ -1,43 +1,14 @@
 import { createHash } from "node:crypto";
+import { callerAddress } from "@layered/policy";
 import type { Context } from "hono";
 
 /**
- * Who is asking, as far as the network can say.
+ * Who is asking, as far as the network can say, in the shape Hono hands over.
  *
- * **A forwarded header is attacker input.** Anybody can send
- * `X-Forwarded-For: 1.2.3.4`, so reading the first entry of that list means a
- * per-source limit is per-whatever-the-caller-typed, which is no limit at all.
- *
- * What cannot be forged is what the infrastructure appends. Measured against
- * the deployed service on 13 September 2026, by sending a request with a
- * spoofed header and reading the chain back out of the log:
- *
- * ```
- * X-Forwarded-For: 1.2.3.4   ->   [1.2.3.4, <the caller>, <a Zerops hop>]
- * nothing sent               ->   [<the caller>, <a Zerops hop>]
- * ```
- *
- * Zerops appends the address it saw the connection come from, and then one more
- * internal hop appends its own. The caller is therefore always **two from the
- * end**, whatever they prepended, and the number below is that two.
- *
- * Reading the last entry instead puts every caller into one bucket, because
- * that entry is the same Zerops hop for everybody, which turns a per-source
- * limit into a global one. That is exactly what the first measurement found.
+ * Which entry of a forwarded chain that is, and why, is written down once in
+ * `@layered/policy`. This file is the part that reads a Hono request and the
+ * part that makes an address safe to log.
  */
-
-/**
- * How far from the end of the chain the caller is.
- *
- * Not a count of proxies to believe in: a figure read off the deployed service.
- * A CDN in front would add one more entry and make this three, and the rate
- * limiter logs the whole chain, hashed, on every refusal so that the change is
- * visible rather than silent.
- */
-const CLIENT_FROM_END = 2;
-
-/** What a source is called when there is nothing to go on. */
-const UNKNOWN = "unknown";
 
 /** The chain as it arrived, for counting rather than for reading. */
 export function forwardedChain(c: Context): string[] {
@@ -52,13 +23,14 @@ export function forwardedChain(c: Context): string[] {
 /**
  * The address to hold responsible for this request.
  *
- * @returns The address, or `unknown` when nothing said. `unknown` is one bucket
- *   shared by everything that arrives without a chain, which is the safe
- *   direction: it limits more, not less.
+ * Which entry of the chain that is belongs to `@layered/policy`, because the
+ * site's password gate counts against the same answer and the two must not
+ * disagree about who is asking.
+ *
+ * @returns The address, or `unknown` when nothing said.
  */
 export function sourceAddress(c: Context): string {
-  const chain = forwardedChain(c);
-  return chain[chain.length - CLIENT_FROM_END] ?? UNKNOWN;
+  return callerAddress(c.req.header("x-forwarded-for"));
 }
 
 /**

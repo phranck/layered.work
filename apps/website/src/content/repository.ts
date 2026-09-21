@@ -32,6 +32,15 @@ const entrySchema = z.object({
   onHomePage: z.boolean().default(true),
   readingWidth: z.enum(["narrow", "normal", "wide"]).default("normal"),
   /**
+   * The hash of the password a protected entry asks for. Never the password.
+   *
+   * Present exactly when `visibility` is `protected`, which the database states
+   * as a constraint and `createRepository` refuses a snapshot for. An entry
+   * marked protected with nothing to ask for would render to anybody, which is
+   * the one failure this field exists to prevent.
+   */
+  passwordHash: z.string().min(1).nullish(),
+  /**
    * What an entry states about itself beside its prose, as the author's own
    * pairs rather than as fixed fields.
    *
@@ -180,6 +189,14 @@ export function createRepository(input: unknown) {
     if (entries.has(item.path)) throw new Error(`Duplicate entry path: ${item.path}`);
     entries.set(item.path, item);
   }
+  for (const item of data.entries) {
+    // The same rule the database states as a constraint, restated where the
+    // snapshot enters: protected with no hash renders to anybody, and a hash on
+    // anything else is a password nothing will ever ask for.
+    if ((item.visibility === "protected") !== Boolean(item.passwordHash)) {
+      throw new Error(`Protected entries need a password hash and only they may carry one: ${item.path}`);
+    }
+  }
   const media = new Map(data.media.map((item) => [item.slug, item]));
   if (media.size !== data.media.length) throw new Error("Duplicate media slug");
   const redirects = new Map(data.redirects.map((item) => [item.source, item.target]));
@@ -219,6 +236,23 @@ export function createRepository(input: unknown) {
     entry: (name: string) => {
       const entry = entries.get(name);
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
+    },
+    /**
+     * A protected entry, for the gate in front of it and for nothing else.
+     *
+     * Separate from `entry` so that a page cannot render one by accident: every
+     * existing caller asks for an entry it may show, and this one returns
+     * something it may not, together with the hash that decides when it may.
+     *
+     * @param name - The address being read.
+     * @returns The entry and its hash, or undefined when that address is not a
+     *   protected entry.
+     */
+    protectedEntry: (name: string) => {
+      const entry = entries.get(name);
+      return entry?.visibility === "protected" && entry.passwordHash
+        ? { entry, passwordHash: entry.passwordHash }
+        : undefined;
     },
     redirect: (name: string) => redirects.get(name),
     publicEntries,
