@@ -14,7 +14,7 @@ const api = createDashboardApi(queryClient, () => {
   const destination = expirationLoginLocation(router.state.location);
   if (destination) void router.navigate(destination, { replace: true });
 });
-router = createDashboardBrowserRouter({ api, queryClient });
+router = createDashboardBrowserRouter({ api, queryClient, loginAlias: __LOGIN_ALIAS__ ?? undefined });
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>

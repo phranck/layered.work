@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject, redirect } from "react-router";
 import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
-import { LoginScreen } from "./auth.js";
+import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { dashboardAreas } from "./routes.js";
 
@@ -10,6 +10,7 @@ export interface DashboardRouterOptions {
   api: DashboardApi;
   queryClient: QueryClient;
   initialEntries?: string[];
+  loginAlias?: LoginScreenProps["loginAlias"];
 }
 
 function loginLocation(requestUrl: string, expired = false): string {
@@ -20,9 +21,13 @@ function loginLocation(requestUrl: string, expired = false): string {
   return `/login?${search}`;
 }
 
-export function dashboardRouteObjects({ api, queryClient }: DashboardRouterOptions): RouteObject[] {
+export function dashboardRouteObjects({
+  api,
+  queryClient,
+  loginAlias,
+}: DashboardRouterOptions): RouteObject[] {
   return [
-    { path: "/login", Component: LoginScreen },
+    { path: "/login", element: <LoginScreen loginAlias={loginAlias} /> },
     {
       path: "/",
       Component: DashboardShell,

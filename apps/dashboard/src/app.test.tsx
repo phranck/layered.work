@@ -51,7 +51,7 @@ function successfulGet(input: RequestInfo | URL) {
   return json({ data: signedIn });
 }
 
-function renderDashboard(path = "/posts") {
+function renderDashboard(path = "/posts", loginAlias?: { username: string; email: string }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClients.add(queryClient);
   let router: ReturnType<typeof createDashboardMemoryRouter>;
@@ -59,7 +59,7 @@ function renderDashboard(path = "/posts") {
     const destination = expirationLoginLocation(router.state.location);
     if (destination) void router.navigate(destination, { replace: true });
   });
-  router = createDashboardMemoryRouter({ api, queryClient, initialEntries: [path] });
+  router = createDashboardMemoryRouter({ api, queryClient, initialEntries: [path], loginAlias });
   render(
     <QueryClientProvider client={queryClient}>
       <DashboardApiProvider api={api}>
@@ -79,6 +79,31 @@ afterEach(() => {
 });
 
 describe("dashboard shell", () => {
+  it("maps an explicitly configured local login alias before normal email validation", async () => {
+    const request = vi.fn((input, _init?: RequestInit) => Promise.resolve(successfulGet(input)));
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/login", { username: "phranck", email: signedIn.email });
+    fireEvent.change(screen.getByLabelText("Benutzername"), { target: { value: "phranck" } });
+    fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "phranck" } });
+    fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    await screen.findByRole("heading", { name: "Beiträge" });
+    const call = request.mock.calls.find(([input]) => String(input).endsWith("/auth/sign-in"));
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ email: signedIn.email, password: "phranck" });
+  });
+  it("keeps real login email validation when no local alias is configured", async () => {
+    const request = vi.fn();
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/login");
+    const input = screen.getByLabelText("E-Mail-Adresse");
+    expect(input.getAttribute("type")).toBe("email");
+    fireEvent.change(input, { target: { value: "phranck" } });
+    fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "phranck" } });
+    const form = screen.getByRole("button", { name: "Anmelden" }).closest("form");
+    if (!form) throw new Error("Missing login form");
+    fireEvent.submit(form);
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(request).not.toHaveBeenCalled();
+  });
   it("does not claim the reader is signed out while the session is loading", () => {
     vi.stubGlobal(
       "fetch",

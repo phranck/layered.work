@@ -107,3 +107,24 @@ test("development and production bundles use the same-origin API transport", () 
     assert.equal(config.server.proxy["/api"].rewrite("/api/dashboard/counts"), "/dashboard/counts");
   }
 });
+
+test("the local login alias reaches a development server and no built bundle", () => {
+  const previous = { name: process.env.SEED_NAME, email: process.env.SEED_EMAIL };
+  process.env.SEED_NAME = "local-owner";
+  process.env.SEED_EMAIL = "Local.Owner@example.test";
+  try {
+    assert.equal(JSON.parse(viteConfig({ command: "build" }).define.__LOGIN_ALIAS__), null);
+    assert.deepEqual(JSON.parse(viteConfig({ command: "serve" }).define.__LOGIN_ALIAS__), {
+      username: "local-owner",
+      email: "local.owner@example.test",
+    });
+  } finally {
+    for (const [key, value] of [
+      ["SEED_NAME", previous.name],
+      ["SEED_EMAIL", previous.email],
+    ]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
