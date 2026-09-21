@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1789300350261,
-      "tag": "0000_entries_translations_paths_topics",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1789303643944,
-      "tag": "0001_users_sessions_tokens_audit",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1789310483525,
-      "tag": "0002_media_variants_translations_references",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1789310887945,
-      "tag": "0003_navigations_social_home_blocks_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1790004559460,
-      "tag": "0004_remove_protected_state",
+      "when": 1790005213549,
+      "tag": "0000_initial_schema",
       "breakpoints": true
     }
   ]
