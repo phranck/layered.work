@@ -61,6 +61,20 @@ export const NO_FRAMING: Readonly<Record<string, string>> = Object.freeze({
 export const ANALYTICS_ORIGIN = "https://umami.layered.work";
 
 /**
+ * Where the site's pictures, videos and models are served from.
+ *
+ * The object storage holds them and answers on Zerops' CDN, so a page on
+ * layered.work loads them from another origin and the policy has to say so.
+ * The bucket name is not part of this: a host is enough for the browser, and
+ * naming only the host keeps an identifier out of a public repository.
+ *
+ * It appears in three directives because three kinds of element fetch from it.
+ * An `img` needs `img-src`, a `video` needs `media-src`, and the model viewer
+ * fetches its GLB with a request, which is `connect-src`.
+ */
+export const MEDIA_ORIGIN = "https://storage.cdn.zerops.app";
+
+/**
  * Builds a policy from its directives.
  *
  * @param directives - Each name with the sources it permits. An empty list
@@ -130,10 +144,10 @@ export function sitePolicy(nonce: string): string {
     "default-src": ["'none'"],
     "script-src": ["'self'", `'nonce-${nonce}'`, ANALYTICS_ORIGIN],
     ...styleSources(nonce),
-    "img-src": ["'self'", "data:", "blob:"],
-    "media-src": ["'self'"],
+    "img-src": ["'self'", "data:", "blob:", MEDIA_ORIGIN],
+    "media-src": ["'self'", MEDIA_ORIGIN],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", ANALYTICS_ORIGIN],
+    "connect-src": ["'self'", ANALYTICS_ORIGIN, MEDIA_ORIGIN],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'self'"],

@@ -176,6 +176,13 @@ zerops:
         # committed and carries only what a reader may reach, which a test in
         # the website enforces.
         WEBSITE_CONTENT_FILE: /var/www/apps/website/content/site.json
+        # Where the media actually are. The snapshot records every asset as
+        # /media/<file>, which is the path on the machine that produced it; a
+        # deployment has no such directory and the files sit in the bucket
+        # instead, under the prefix the migration wrote them to. The policy in
+        # @layered/policy names the same host, because the browser refuses a
+        # picture from an origin the page did not declare.
+        MEDIA_ORIGIN: ${assets_storageCdnUrl}/${assets_bucketName}/migration
       # Nothing but the command. This line is handed to `exec`, not to a shell,
       # so `PORT=3000 node …` here is read as the name of a program to run and
       # fails with "not found": the service then restarts in a loop and the site

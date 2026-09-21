@@ -137,3 +137,49 @@ describe("public content repository", () => {
       expect(() => parseListingQuery(new URLSearchParams(value))).toThrow();
   });
 });
+
+describe("where the media are served from", () => {
+  const withMedia = {
+    ...snapshot,
+    media: [
+      {
+        slug: "a-picture",
+        src: "/media/a-picture.webp",
+        srcSet: "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+      },
+    ],
+  };
+
+  it("leaves the paths alone when nothing says otherwise, which is the local case", () => {
+    delete process.env.MEDIA_ORIGIN;
+    const asset = createRepository(withMedia).media("a-picture");
+    expect(asset?.src).toBe("/media/a-picture.webp");
+    expect(asset?.srcSet).toBe(
+      "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+    );
+  });
+
+  it("puts the configured origin in front of every candidate, keeping the widths", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration";
+    try {
+      const asset = createRepository(withMedia).media("a-picture");
+      expect(asset?.src).toBe("https://storage.example/bucket/migration/a-picture.webp");
+      expect(asset?.srcSet).toBe(
+        "https://storage.example/bucket/migration/a-picture-variant-480.webp 480w, https://storage.example/bucket/migration/a-picture-variant-960.webp 960w",
+      );
+    } finally {
+      delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
+  it("tolerates a trailing slash on the origin rather than doubling it", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration/";
+    try {
+      expect(createRepository(withMedia).media("a-picture")?.src).toBe(
+        "https://storage.example/bucket/migration/a-picture.webp",
+      );
+    } finally {
+      delete process.env.MEDIA_ORIGIN;
+    }
+  });
+});

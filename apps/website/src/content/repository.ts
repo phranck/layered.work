@@ -172,6 +172,41 @@ export interface SearchIndexEntry {
   text: string;
 }
 
+/**
+ * Where the media actually are, when they are not beside the site.
+ *
+ * The snapshot records every asset as `/media/<file>`, which is where they sit
+ * on the machine that produced it. A deployment has no such directory: the
+ * files live in the object storage, and `MEDIA_ORIGIN` names the prefix they
+ * answer under there. Unset means the paths are already right, which is the
+ * local case.
+ *
+ * Read per call rather than once, so a test can set it and so the value cannot
+ * be captured before the environment is complete.
+ *
+ * @param path - The `/media/...` path as the snapshot records it.
+ * @returns The address a browser should ask for.
+ */
+function mediaUrl(path: string): string {
+  const origin = process.env.MEDIA_ORIGIN?.replace(/\/+$/, "");
+  return origin ? `${origin}${path.slice("/media".length)}` : path;
+}
+
+/**
+ * The same, for a `srcset`, which is a list of `<url> <width>w` pairs.
+ *
+ * @param srcSet - The attribute as the snapshot records it.
+ */
+function mediaSrcSet(srcSet: string): string {
+  return srcSet
+    .split(",")
+    .map((candidate) => {
+      const [url, descriptor] = candidate.trim().split(/\s+/);
+      return [mediaUrl(url ?? ""), descriptor].filter(Boolean).join(" ");
+    })
+    .join(", ");
+}
+
 /** Validated read model shared by the migration snapshot and future database adapter. */
 export function createRepository(input: unknown) {
   const data = snapshotSchema.parse(input);
@@ -212,9 +247,13 @@ export function createRepository(input: unknown) {
     data,
     media: (name: string) => {
       const asset = media.get(name);
-      return asset
-        ? { ...asset, sizes: "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px" }
-        : undefined;
+      if (!asset) return undefined;
+      return {
+        ...asset,
+        src: mediaUrl(asset.src),
+        ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
+        sizes: "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px",
+      };
     },
     entry: (name: string) => {
       const entry = entries.get(name);
