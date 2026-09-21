@@ -1,0 +1,238 @@
+.content-prose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--content-gap);
+  min-width: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.content-prose :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre) {
+  margin-block: 0;
+}
+/* No weight here: the heading level sets it, in base.css. */
+.content-prose :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-display);
+  line-height: var(--leading-snug);
+  color: var(--text-primary);
+}
+/* Not the first one: a heading opening the body has the page above it rather
+   than a paragraph, and the space is already there. */
+.content-prose :where(h1, h2, h3, h4, h5, h6):not(:first-child) {
+  margin-block-start: var(--content-heading-gap);
+}
+.content-prose h1 {
+  font-size: var(--text-3xl);
+}
+.content-prose h2 {
+  font-size: var(--text-2xl);
+}
+.content-prose h3 {
+  font-size: var(--text-xl);
+}
+.content-prose :where(h4, h5, h6) {
+  font-size: var(--text-lg);
+}
+/* A card standing in the prose is an aside rather than the argument, and it is
+   read at a glance. Everything in it drops one step of the scale, headings
+   included, so the card reads as subordinate to the text around it. */
+.content-prose .card {
+  font-size: var(--text-base);
+}
+.content-prose .card :where(h1) {
+  font-size: var(--text-2xl);
+}
+.content-prose .card :where(h2) {
+  font-size: var(--text-xl);
+}
+.content-prose .card :where(h3) {
+  font-size: var(--text-lg);
+}
+.content-prose .card :where(h4, h5, h6) {
+  font-size: var(--text-base);
+}
+/* A heading in such a card belongs to the lines under it rather than standing
+   over the card, so they sit closer than two stacked sections would. */
+.content-prose .card__body--stack {
+  gap: var(--gap-tight);
+}
+/* The horizontal inset alone, against the equal-padding rule the design system
+   otherwise keeps. Asked for by phranck on 21 September 2026: these cards sit
+   in a column of text, and the lines inside them want more room from the edge
+   than the lines above and below them want from the top and bottom. The corner
+   arithmetic is untouched, because the vertical inset is the smaller of the two
+   and is what the nested radius derives from. */
+.content-prose .card__body {
+  padding-inline: var(--space-5);
+}
+.content-prose a:not(.button) {
+  color: var(--text-accent);
+  text-underline-offset: var(--content-rule-width);
+}
+.content-prose :where(ul, ol) {
+  padding-inline-start: var(--content-gap);
+}
+.content-prose blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--content-gap);
+  border-inline-start: var(--content-note-edge) solid var(--edge-strong);
+}
+.content-prose img {
+  max-width: 100%;
+  height: auto;
+}
+/* The three surfaces an article sets apart from its prose. They state what makes
+   them one family here, and each block below states only what distinguishes it,
+   so the edge, the fill and the height move for all three at once. */
+.content-table,
+.content-code,
+.content-diagram {
+  border: var(--content-rule-width) solid var(--edge-hairline);
+  background: var(--surface-sunken);
+  box-shadow: var(--lift-2);
+}
+/* A table is read down its columns rather than along its lines, so it is set a
+   step below the prose around it and packs more rows into a screen. */
+.content-table {
+  min-width: 0;
+  font-size: var(--text-base);
+  border-radius: var(--card-radius);
+  overflow-x: auto;
+}
+.content-table table {
+  width: 100%;
+  min-width: max(100%, 44rem);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+/* Shallower than it is wide: a row is scanned down a column, so the lines want
+   to sit close enough to be compared, whilst the columns still want air between
+   them. The header takes the same figures, because a row of labels reads as one
+   of the rows. */
+.content-table :where(th, td) {
+  padding: var(--space-2) var(--space-4);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.content-table thead {
+  color: var(--text-primary);
+  background: var(--surface-raised);
+}
+.content-table th {
+  font-weight: var(--weight-semibold);
+}
+.content-table thead th,
+.content-table tbody tr + tr > * {
+  border-block-start: var(--content-rule-width) solid var(--edge-hairline);
+}
+.content-table thead:first-child th {
+  border-block-start: 0;
+  border-block-end: var(--content-rule-width) solid var(--edge-hairline);
+}
+.content-table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease);
+}
+.content-table tbody tr:hover {
+  background: var(--hover-tint);
+}
+.content-prose code {
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  font-feature-settings: var(--mono-ligatures);
+}
+.content-code {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  contain: inline-size;
+  border-radius: var(--card-inner-radius);
+}
+.content-code__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--content-caption-gap);
+  border-block-end: var(--content-rule-width) solid var(--edge-hairline);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+/* The mark sits on the language's cap midline rather than in the middle of its
+   own box, which is where centring it by box alone would leave it. */
+.content-code__mark {
+  flex: none;
+  width: var(--brand-size, 18px);
+  height: var(--brand-size, 18px);
+  transform: translateY(var(--icon-cap-offset));
+}
+.content-code__copy {
+  margin-inline-start: auto;
+}
+.content-code__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+}
+/* Both columns take their line height from this one block, because a number and
+   a gutter set apart drift by a full line over nine of them. Code is set closer
+   than prose: its lines are read one at a time rather than as a paragraph. */
+.content-code__gutter,
+.content-code__source {
+  margin: 0;
+  padding: var(--card-padding);
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  line-height: var(--leading-snug);
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.content-code__gutter {
+  padding-inline: var(--content-caption-gap);
+  text-align: end;
+  color: var(--text-faint);
+  background: var(--surface-page);
+  border-inline-end: var(--content-rule-width) solid var(--edge-hairline);
+  user-select: none;
+}
+.content-code__source {
+  min-width: 0;
+  overflow-x: auto;
+}
+.content-code__source code {
+  font: inherit;
+}
+.content-code__copy,
+.content-code__copy:hover {
+  border: 0;
+  background: transparent;
+}
+.content-code__copy:disabled {
+  cursor: default;
+}
+.content-code__copy[data-copied] {
+  color: var(--content-note-success);
+}
+.content-placeholder {
+  padding: var(--card-padding);
+  color: var(--text-primary);
+  border: var(--content-rule-width) dashed var(--content-note-warning);
+  border-radius: var(--card-inner-radius);
+  background: var(--surface-raised);
+}
+.content-action {
+  display: flex;
+  justify-content: flex-end;
+}
+.content-diagram {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  border-radius: var(--card-inner-radius);
+}
+.content-diagram__output img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

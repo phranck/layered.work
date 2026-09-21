@@ -2,10 +2,9 @@ import { type ComponentPropsWithoutRef, forwardRef, type ReactNode } from "react
 import { join } from "./shared.js";
 
 type Tone = "primary" | "secondary" | "danger";
-type Size = "small";
 
-function buttonClasses(tone: Tone, size?: Size, className?: string): string {
-  return join("button", `button--${tone}`, size === "small" && "button--small", className);
+function buttonClasses(tone: Tone, className?: string): string {
+  return join("button", `button--${tone}`, className);
 }
 
 /** Props shared by labelled button shapes. */
@@ -14,8 +13,6 @@ export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
   icon?: ReactNode;
   /** Visual emphasis. */
   tone?: Tone;
-  /** Compact workbench size. */
-  size?: Size;
 }
 
 /** Props for a button-shaped link. */
@@ -24,8 +21,6 @@ export interface ButtonLinkProps extends ComponentPropsWithoutRef<"a"> {
   icon?: ReactNode;
   /** Visual emphasis. */
   tone?: Tone;
-  /** Compact workbench size. */
-  size?: Size;
 }
 
 /** Props for an icon-only button. */
@@ -42,24 +37,30 @@ export interface ButtonInertProps extends ComponentPropsWithoutRef<"span"> {
   icon?: ReactNode;
   /** Visual emphasis. */
   tone?: Tone;
-  /** Compact workbench size. */
-  size?: Size;
 }
 
 /** The standard action button. */
 const ButtonRoot = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ children, className, icon, size, tone = "secondary", type = "button", ...props }, ref) => (
-    <button ref={ref} className={buttonClasses(tone, size, className)} type={type} {...props}>
-      {icon && <span aria-hidden="true">{icon}</span>}
+  ({ children, className, icon, tone = "secondary", type = "button", ...props }, ref) => (
+    <button ref={ref} className={buttonClasses(tone, className)} type={type} {...props}>
+      {icon && (
+        <span className="button__icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
       {children}
     </button>
   ),
 );
 /** A button-shaped navigation link. */
 const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
-  ({ children, className, icon, size, tone = "secondary", ...props }, ref) => (
-    <a ref={ref} className={buttonClasses(tone, size, className)} {...props}>
-      {icon && <span aria-hidden="true">{icon}</span>}
+  ({ children, className, icon, tone = "secondary", ...props }, ref) => (
+    <a ref={ref} className={buttonClasses(tone, className)} {...props}>
+      {icon && (
+        <span className="button__icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
       {children}
     </a>
   ),
@@ -75,15 +76,21 @@ const ButtonIcon = forwardRef<HTMLButtonElement, ButtonIconProps>(
       title={title}
       {...props}
     >
-      <span aria-hidden="true">{icon}</span>
+      <span className="button__icon" aria-hidden="true">
+        {icon}
+      </span>
     </button>
   ),
 );
 /** A non-interactive button-shaped mark. */
 const ButtonInert = forwardRef<HTMLSpanElement, ButtonInertProps>(
-  ({ children, className, icon, size, tone = "secondary", ...props }, ref) => (
-    <span ref={ref} className={buttonClasses(tone, size, className)} {...props}>
-      {icon && <span aria-hidden="true">{icon}</span>}
+  ({ children, className, icon, tone = "secondary", ...props }, ref) => (
+    <span ref={ref} className={buttonClasses(tone, className)} {...props}>
+      {icon && (
+        <span className="button__icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
       {children}
     </span>
   ),

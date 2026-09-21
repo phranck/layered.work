@@ -8,7 +8,12 @@ import { DashboardApiError } from "./api.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { useDashboardApi } from "./dashboard-context.js";
 
-export function LoginScreen() {
+export interface LoginScreenProps {
+  /** An explicitly injected alias for isolated local previews, never an auth bypass. */
+  loginAlias?: { username: string; email: string };
+}
+
+export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -34,12 +39,17 @@ export function LoginScreen() {
     submittingRef.current = true;
     setError(null);
     const form = new FormData(event.currentTarget);
+    const identifier = String(form.get("email"));
     const parsed = signInBody.safeParse({
-      email: String(form.get("email")),
+      email: loginAlias && identifier === loginAlias.username ? loginAlias.email : identifier,
       password: String(form.get("password")),
     });
     if (!parsed.success) {
-      setError(new DashboardApiError("Bitte prüfe E-Mail-Adresse und Passwort."));
+      setError(
+        new DashboardApiError(
+          loginAlias ? "Bitte prüfe Benutzername und Passwort." : "Bitte prüfe E-Mail-Adresse und Passwort.",
+        ),
+      );
       submittingRef.current = false;
       return;
     }
@@ -53,7 +63,11 @@ export function LoginScreen() {
           : new DashboardApiError("Die Anmeldung ist fehlgeschlagen.");
       setError(
         apiError.code === "unauthenticated"
-          ? new DashboardApiError("E-Mail-Adresse oder Passwort stimmen nicht.")
+          ? new DashboardApiError(
+              loginAlias
+                ? "Benutzername oder Passwort stimmen nicht."
+                : "E-Mail-Adresse oder Passwort stimmen nicht.",
+            )
           : apiError,
       );
     } finally {
@@ -63,7 +77,7 @@ export function LoginScreen() {
 
   return (
     <main className="workbench login-page">
-      <Logo href="/login" inkHeight="26px" />
+      <Logo href="/login" inkHeight="34px" />
       <Card className="login-card">
         <Card.Header title="Anmelden" />
         <Card.Body>
@@ -75,11 +89,11 @@ export function LoginScreen() {
                 {error.id && <span className="dashboard-error__id">Fehler-ID: {error.id}</span>}
               </p>
             )}
-            <Field label="E-Mail-Adresse" htmlFor="login-email">
+            <Field label={loginAlias ? "Benutzername" : "E-Mail-Adresse"} htmlFor="login-email">
               <Input
                 id="login-email"
                 name="email"
-                type="email"
+                type={loginAlias ? "text" : "email"}
                 autoComplete="username"
                 maxLength={MaxLength.Line}
                 required

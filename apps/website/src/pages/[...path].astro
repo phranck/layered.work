@@ -1,0 +1,93 @@
+---
+import { randomUUID } from "node:crypto";
+import { renderContent } from "@layered/content";
+import { Button, ContentRenderer, Section } from "@layered/ui";
+import { MagnifyingGlassIcon } from "@layered/ui/icons";
+import { createElement } from "react";
+import SiteLayout from "../layouts/SiteLayout.astro";
+import HomeContent from "../components/HomeContent.astro";
+import ListingContent from "../components/ListingContent.astro";
+import ModelViewer from "../components/ModelViewer.astro";
+import MermaidDiagrams from "../components/MermaidDiagrams.astro";
+import { EntryCard } from "../components/entry-card.js";
+import { loadContent } from "../content/load.js";
+import { dateLabel, languageRoot, parseListingQuery, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
+import "../styles/pages.css";
+
+const language:Language=Astro.url.pathname.startsWith("/de/")?"de":"en";
+const root=languageRoot(language);
+const de=language==="de";
+const rawPath=Astro.url.pathname;
+const path=rawPath.endsWith("/")?rawPath:`${rawPath}/`;
+let repository:ContentRepository|undefined;
+let errorId:string|undefined;
+try{repository=await loadContent();}catch(error){
+  errorId=randomUUID();
+  console.error(JSON.stringify({code:"WEBSITE_CONTENT_UNAVAILABLE",errorId,operation:"load_content",status:503,result:"unavailable",cause:error instanceof Error?error.name:"UnknownError"}));
+  Astro.response.status=503;
+  Astro.response.headers.set("Cache-Control","no-store");
+}
+if(repository?.redirect(path)) return Astro.redirect(repository.redirect(path)!,308);
+if(path==="/en/")return Astro.redirect("/",308);
+if(repository&&path==="/tags/")return Astro.redirect("/topics/",308);
+const legacyTopic=/^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
+if(legacyTopic&&repository?.data.topics.some(topic=>topic.slug===legacyTopic))return Astro.redirect(topicPath("en",legacyTopic),308);
+if(repository&&path==="/authors/frank-gregor/")return Astro.redirect("/",308);
+if(repository&&rawPath==="/media/files/claude-fonts-preview.html"){
+  const media=repository.media("claude-fonts-preview");
+  if(media)return Astro.redirect(media.src,308);
+}
+const relative=path.slice(root.length);
+const home=relative==="";
+const kind=relative==="posts/"?"post":relative==="projects/"?"project":undefined;
+const topicSlug=/^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
+const topic=repository?.data.topics.find(topic=>topic.slug===topicSlug);
+const topics=relative==="topics/";
+const search=relative==="search/";
+const legacyPage=/^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
+if(repository&&legacyPage){
+  const target=new URL(`${root}archive/`,Astro.site);
+  target.searchParams.set("page",legacyPage);
+  return Astro.redirect(target.pathname+target.search,308);
+}
+const listing=!!kind||!!topic||relative==="archive/"||search;
+const entry=!home&&!listing&&!topics?repository?.entry(path):undefined;
+let page=1,query="",invalidQuery=false;
+if(listing){try{({page,query}=parseListingQuery(Astro.url.searchParams));}catch{invalidQuery=true;Astro.response.status=400;}}
+const found=home||listing||topics||!!entry;
+if(repository&&!found)Astro.response.status=404;
+const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):listing?(de?"Archiv":"Archive"):(de?"Seite nicht gefunden":"Page not found")));
+const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
+const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`},{label:de?"Themen":"Topics",href:`${root}topics/`},{label:de?"Archiv":"Archive",href:`${root}archive/`}];
+const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:navigation},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
+const nodes=entry?renderContent(entry.body):[];
+const feature=entry?.featuredImage?repository?.media(entry.featuredImage):undefined;
+// A project opens with its picture and closes with the other projects; a post
+// keeps the head it has and closes with what shares its topics.
+const project=entry?.kind==="project";
+const neighbours=entry?(project?repository?.otherEntries(entry)??[]:repository?.related(entry)??[]):[];
+if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
+---
+<SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry ? "full" : undefined}>
+  {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
+  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions"><Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
+    {home&&<HomeContent {repository} {language} />}
+    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topicSlug} {page} {query} {search} />}
+    {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>}
+    {entry&&<>
+      <article>
+        {project&&feature
+          ? <header class="project-hero"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt??""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entry.topics.map(slug=><a class="chip" href={topicPath(language,slug)}>{repository.data.topics.find(topic=>topic.slug===slug)?.name??slug}</a>)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt??undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
+          : <header class="article-head"><div class="cluster">{entry.topics.map(slug=><a class="chip" href={topicPath(language,slug)}>{repository.data.topics.find(topic=>topic.slug===slug)?.name??slug}</a>)}</div><h1 class="title-page">{entry.title}</h1><div class="meta"><time datetime={entry.publishedAt??undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></header>}
+        {project&&entry.specs.length>0&&<div class="spec-grid">{entry.specs.map(spec=><div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
+        <div class="article-body">
+          {feature&&!project&&<figure class="article-cover"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt??""} fetchpriority="high" /></figure>}
+          <ContentRenderer {nodes} media={repository.media} />
+        </div>
+      </article>
+      {neighbours.length>0&&<Section.Page><Section.Title title={project?(de?"Andere Projekte":"Other projects"):(de?"Verwandte Beiträge":"Related entries")}/><div class="entry-grid">{neighbours.map(related=><EntryCard entry={related} image={related.featuredImage?repository.media(related.featuredImage):undefined} />)}</div></Section.Page>}
+      <ModelViewer />
+      <MermaidDiagrams />
+    </>}
+  </>}
+</SiteLayout>

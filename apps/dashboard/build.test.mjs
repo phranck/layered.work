@@ -28,9 +28,27 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
       await readFile(join(workspace, "dist/logo.svg")),
       await readFile(new URL("../../prototype/assets/logo.svg", import.meta.url)),
     );
-    const brandFiles = ["github.svg", "instagram.svg", "mastodon.svg", "xing.svg", "youtube.svg"];
+    // Every mark ships exactly as it was downloaded, and the five carried over
+    // from the prototype are additionally checked against it, so neither copy
+    // can drift from the other unnoticed.
+    const brandFiles = [
+      "github.svg",
+      "gnubash.svg",
+      "html5.svg",
+      "instagram.svg",
+      "mastodon.svg",
+      "swift.svg",
+      "xing.svg",
+      "youtube.svg",
+    ];
     assert.deepEqual((await readdir(join(workspace, "dist/brands"))).sort(), brandFiles);
     for (const brandFile of brandFiles) {
+      assert.deepEqual(
+        await readFile(join(workspace, "dist/brands", brandFile)),
+        await readFile(new URL(`../../packages/ui/assets/brands/${brandFile}`, import.meta.url)),
+      );
+    }
+    for (const brandFile of ["github.svg", "instagram.svg", "mastodon.svg", "xing.svg", "youtube.svg"]) {
       assert.deepEqual(
         await readFile(join(workspace, "dist/brands", brandFile)),
         await readFile(new URL(`../../prototype/assets/brands/${brandFile}`, import.meta.url)),
@@ -87,5 +105,26 @@ test("development and production bundles use the same-origin API transport", () 
     assert.equal(JSON.parse(config.define.__API_BASE__), "/api");
     assert.equal(config.server.proxy["/api"].rewrite("/api/auth/me"), "/auth/me");
     assert.equal(config.server.proxy["/api"].rewrite("/api/dashboard/counts"), "/dashboard/counts");
+  }
+});
+
+test("the local login alias reaches a development server and no built bundle", () => {
+  const previous = { name: process.env.SEED_NAME, email: process.env.SEED_EMAIL };
+  process.env.SEED_NAME = "local-owner";
+  process.env.SEED_EMAIL = "Local.Owner@example.test";
+  try {
+    assert.equal(JSON.parse(viteConfig({ command: "build" }).define.__LOGIN_ALIAS__), null);
+    assert.deepEqual(JSON.parse(viteConfig({ command: "serve" }).define.__LOGIN_ALIAS__), {
+      username: "local-owner",
+      email: "local.owner@example.test",
+    });
+  } finally {
+    for (const [key, value] of [
+      ["SEED_NAME", previous.name],
+      ["SEED_EMAIL", previous.email],
+    ]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
 });

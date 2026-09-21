@@ -1,0 +1,8 @@
+.content-spacer {
+  flex: 1 1 auto;
+}
+.content-spacer[data-fixed] {
+  flex: 0 0 var(--content-gap);
+  min-height: var(--content-gap);
+  min-width: var(--content-gap);
+}

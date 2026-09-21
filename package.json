@@ -11,6 +11,8 @@
   "scripts": {
     "build": "pnpm -r --if-present build",
     "dev": "pnpm -r --parallel --if-present dev",
+    "preview:website": "pnpm --filter @layered/website... build && node apps/website/tools/render-preview.mjs",
+    "preview:refresh": "pnpm --filter @layered/website... build && node apps/website/tools/refresh-preview.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "lint": "biome check .",

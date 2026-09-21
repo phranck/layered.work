@@ -40,6 +40,8 @@ build/
 # Local media and migration scratch
 /media-local/
 /migration-out/
+/apps/website/public/media/
+/apps/website/public/model-viewer-license.txt
 
 # The seed that created the board. The issues are the plan from that moment on.
 .issues/

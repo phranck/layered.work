@@ -119,6 +119,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Read by a page that renders inline, so it does not have to be passed down
   // through every component that might.
   context.locals.nonce = nonce;
+  context.locals.siteVisible = showSite;
 
   if (showSite) {
     return withSafety(await next(), nonce);
@@ -140,7 +141,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // A file under public/, or one of the two routes machines read. Astro serves
   // the first and renders the second, and answers 404 itself when there is no
   // such file, which is the right answer either way.
-  if (OPEN_BEFORE_LAUNCH.has(path) || path.slice(path.lastIndexOf("/")).includes(".")) {
+  const isFeed = path === "/feed.xml" || path === "/feed.json";
+  if (OPEN_BEFORE_LAUNCH.has(path) || (!isFeed && path.slice(path.lastIndexOf("/")).includes("."))) {
     return withSafety(await next(), nonce);
   }
 

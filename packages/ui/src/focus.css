@@ -1,0 +1,31 @@
+:root {
+  --focus-width: 2px;
+  --focus-offset: 3px;
+
+  /* A soft spill outwards, for surfaces that carry the focus of a control
+     inside them. It sits outside the ring rather than replacing it, so the
+     indication survives a background it happens to match. */
+  --focus-glow: 0 0 12px 2px color-mix(in oklab, var(--accent-400) 28%, transparent);
+}
+
+/* The application owns focus presentation; keyboard focus remains visible.
+   No element on this site shows the browser's own ring: `outline: none` covers
+   focus by any means, and the ring below is drawn by us for keyboard focus
+   alone. An outline follows the element's own corners, so nothing here states a
+   radius; doing that would round the element itself whilst it has focus and
+   square off anything that is rounder. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: var(--focus-width) solid var(--accent-400);
+  outline-offset: var(--focus-offset);
+}
+
+/* Focus handed back after an overlay closed. The reader did not navigate here,
+   so nothing is drawn until they do; `returnFocusQuietly` sets the attribute and
+   drops it again on their next action. */
+[data-focus-quiet]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}

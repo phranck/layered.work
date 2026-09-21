@@ -93,6 +93,11 @@
      vertical padding, so the box keeps its height. */
   --label-lift: 0.06em;
 
+  /* Barlow capitals centre 0.05em below the middle of a 1.2em control line.
+     Measured from rendered H pixels; SVGs use this after removing their
+     inline baseline box. Icon-only controls have no text to align with. */
+  --icon-cap-offset: 0.05em;
+
   /* The condensed face runs narrower at the same size, so the tracking that
      stops the upright face looking loose would make this one look cramped. */
   --tracking-display: -0.008em;

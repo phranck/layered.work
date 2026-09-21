@@ -1,0 +1,545 @@
+/* The frame follows prototype/schichtung. These inputs preserve its geometry;
+   shared type, colour, surface and spacing come from @layered/tokens. */
+:root {
+  --line-width: 1px;
+  --bar-height: 68px;
+  --bar-layer: 60;
+  --bar-surface: color-mix(in oklab, var(--surface-page) 78%, transparent);
+  --frost-blur: 18px;
+  --frost-saturation: 140%;
+  --nav-padding-inline: 13px;
+  --control-padding-inline: 10px;
+  --control-padding-block: 5px;
+  --control-inset: 3px;
+  --nav-control-height: calc(
+    var(--text-xs) *
+    var(--leading-normal) +
+    2 *
+    (var(--control-padding-block) + var(--control-inset) + var(--line-width))
+  );
+  --control-inner-radius: max(calc(var(--radius-control) - var(--control-inset) - var(--line-width)), 0px);
+  --selected-fill: rgb(255 255 255 / 8%);
+  --brand-column-min: 240px;
+  --nav-column-min: 130px;
+  --social-target-size: 38px;
+  --logo-ink-height-large: 34px;
+  --reading-narrow: 56ch;
+  --reading-wide: 82ch;
+  --backdrop-primary: 80vw 60vh at 12% -8%;
+  --backdrop-secondary: 70vw 50vh at 92% 4%;
+  --backdrop-primary-stop: 62%;
+  --backdrop-secondary-stop: 58%;
+
+  /* The search panel hangs below the top edge rather than sitting in the middle
+     of the window, so the eye finds it where the trigger it came from is. */
+  --search-dialog-offset: 14vh;
+  --search-dialog-blur: 8px;
+
+  /* Narrow enough that four pairs share one row at the page measure, wide
+     enough that a value such as "USB-C, ESD protection" stays on one line. */
+  --spec-column-min: 160px;
+}
+
+html {
+  /* Scale the complete website typography while retaining the shared hierarchy. */
+  font-size: 106.25%;
+  scroll-behavior: smooth;
+  scroll-padding-block-start: calc(var(--bar-height) + var(--space-5));
+  -webkit-text-size-adjust: 100%;
+}
+html[data-reading-width="narrow"] {
+  --reading-measure: var(--reading-narrow);
+}
+html[data-reading-width="wide"] {
+  --reading-measure: var(--reading-wide);
+}
+html[data-reading-width="full"] {
+  --reading-measure: 100%;
+}
+body {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  font-weight: var(--weight-regular);
+}
+/* A fixed layer keeps both washes still while the document scrolls. */
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(var(--backdrop-primary), var(--wash-primary), transparent var(--backdrop-primary-stop)),
+    radial-gradient(
+      var(--backdrop-secondary),
+      var(--wash-secondary),
+      transparent var(--backdrop-secondary-stop)
+    );
+}
+body > main {
+  flex: 1;
+  min-width: 0;
+}
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+img,
+video {
+  height: auto;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input,
+select,
+textarea {
+  color: inherit;
+}
+::selection {
+  color: var(--text-on-accent);
+  background: var(--accent-400);
+}
+.page {
+  width: min(100%, var(--page-width));
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+/* One decorative prefix for every H1, including authored content headings.
+   Position against the first line so wrapped titles keep their text alignment. */
+main h1 {
+  position: relative;
+  padding-inline-start: 1.15em;
+}
+main h1::before {
+  position: absolute;
+  inset-inline-start: 0.08em;
+  top: calc((1lh - 1cap) / 2);
+  width: calc(0.156em - 1px);
+  height: 1cap;
+  content: "";
+  transform: skewX(-12deg);
+  background: var(--brand-stripe-rust);
+  box-shadow:
+    calc(0.208em - 1px) 0 var(--brand-stripe-amber),
+    calc(0.416em - 2px) 0 var(--brand-stripe-olive),
+    calc(0.624em - 3px) 0 var(--brand-stripe-petrol);
+}
+.skip-link {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--page-gutter);
+  z-index: calc(var(--bar-layer) + 1);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-on-accent);
+  background: var(--accent-500);
+  border-radius: var(--radius-control);
+  transform: translateY(calc(-100% - var(--space-5)));
+}
+.skip-link:focus {
+  transform: none;
+}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--bar-layer);
+  background: var(--bar-surface);
+  border-block-end: var(--line-width) solid var(--edge-hairline);
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturation));
+}
+.site-header__row {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  min-height: var(--bar-height);
+}
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--focus-width);
+  align-items: center;
+  margin-inline-start: var(--space-4);
+}
+.site-nav a {
+  display: inline-flex;
+  align-items: center;
+  height: var(--nav-control-height);
+  padding-inline: var(--nav-padding-inline);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  border-radius: var(--radius-chip);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+.site-nav a:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+}
+.site-nav a[aria-current] {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+}
+.site-nav a[aria-current]:hover {
+  background: var(--accent-tint-strong);
+}
+.header-tools {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  align-items: center;
+  margin-inline-start: auto;
+}
+.search-trigger {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  height: var(--nav-control-height);
+  padding-inline: var(--nav-padding-inline) var(--control-padding-inline);
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+.search-trigger svg {
+  flex: none;
+  transform: translateY(var(--icon-cap-offset));
+}
+.search-trigger:hover {
+  color: var(--text-secondary);
+  border-color: var(--edge-strong);
+}
+.lang-switch {
+  position: relative;
+  display: flex;
+  height: var(--nav-control-height);
+  padding: var(--control-inset);
+  background: var(--surface-sunken);
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+.lang-switch__option {
+  padding: var(--control-padding-block) var(--control-padding-inline);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  border-radius: var(--control-inner-radius);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+.lang-switch__option[aria-current] {
+  color: var(--text-primary);
+  background: var(--selected-fill);
+}
+a.lang-switch__option:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+}
+.lang-switch__option[aria-disabled] {
+  color: var(--ink-700);
+  cursor: not-allowed;
+}
+.lang-switch__explanation {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: max-content;
+  max-width: calc(100vw - var(--page-gutter) * 2);
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--surface-floating);
+  border: var(--line-width) solid var(--edge-strong);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+.lang-switch:has([aria-disabled]:hover, [aria-disabled]:focus) .lang-switch__explanation {
+  opacity: 1;
+}
+/* The search overlay. A dialog rather than a div, so Escape, the focus trap and
+   the return of focus to the trigger are the browser's work rather than this
+   script's. */
+.search-dialog {
+  /* The panel states its own padding, so it re-derives the radius its rows
+     read. Without this line they would keep the arithmetic of the page's
+     cards. */
+  --card-padding: var(--space-3);
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+
+  width: min(600px, calc(100vw - 2 * var(--page-gutter)));
+  max-width: none;
+  max-height: calc(100vh - 2 * var(--search-dialog-offset));
+  margin: var(--search-dialog-offset) auto auto;
+  padding: var(--card-padding);
+  overflow: hidden auto;
+  color: var(--text-primary);
+  background: var(--surface-floating);
+  border: var(--line-width) solid var(--edge-strong);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-4);
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--travel-far))) scale(0.97);
+  transition:
+    opacity var(--duration) var(--ease),
+    transform var(--duration-slow) var(--ease),
+    overlay var(--duration) allow-discrete,
+    display var(--duration) allow-discrete;
+}
+.search-dialog[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+@starting-style {
+  .search-dialog[open] {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--travel-far))) scale(0.97);
+  }
+}
+.search-dialog::backdrop {
+  background: var(--scrim-strong);
+  opacity: 0;
+  backdrop-filter: blur(var(--search-dialog-blur));
+  transition:
+    opacity var(--duration) var(--ease),
+    overlay var(--duration) allow-discrete,
+    display var(--duration) allow-discrete;
+}
+.search-dialog[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  .search-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+.search-dialog__form {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding-inline: var(--space-3);
+  background: var(--surface-sunken);
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--card-inner-radius);
+}
+.search-dialog__form svg {
+  flex: none;
+  color: var(--text-faint);
+  transform: translateY(var(--icon-cap-offset));
+}
+.search-dialog__field {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--space-3);
+  font: inherit;
+  background: transparent;
+  border: 0;
+}
+/* The field is a bare box inside the bar, so a ring around it would be a
+   rectangle inside a rounded shape. The bar carries the focus instead, and the
+   ring follows the corners the reader sees. */
+.search-dialog__field:focus-visible {
+  outline: none;
+}
+.search-dialog__form:has(.search-dialog__field:focus-visible) {
+  border-color: var(--accent-line);
+  outline: var(--focus-width) solid var(--accent-400);
+  outline-offset: var(--line-width);
+  box-shadow: var(--focus-glow);
+}
+.search-dialog__field::-webkit-search-cancel-button {
+  display: none;
+}
+.search-dialog__results {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.search-dialog__results:not(:empty) {
+  padding-block-start: var(--space-3);
+}
+.search-result {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-3);
+  border-radius: var(--card-inner-radius);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+.search-result:hover,
+.search-result:focus-visible {
+  background: var(--hover-tint);
+}
+.search-result__title {
+  overflow: hidden;
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result__kind {
+  flex: none;
+  margin-inline-start: auto;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.search-dialog__note {
+  padding: var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+.search-dialog__note:empty {
+  display: none;
+}
+.site-footer {
+  margin-block-start: var(--section-gap);
+  padding-block: var(--space-8);
+  background: var(--surface-sunken);
+  border-block-start: var(--line-width) solid var(--edge-hairline);
+}
+.site-footer__row {
+  display: grid;
+  grid-template-columns: minmax(var(--brand-column-min), 1fr) minmax(0, 2fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+.footer-navs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--nav-column-min), 1fr));
+  gap: var(--space-6);
+}
+.footer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.footer-nav__title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.footer-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.footer-nav a {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease);
+}
+.footer-nav a:hover {
+  color: var(--text-primary);
+}
+.site-footer__baseline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  border-block-start: var(--line-width) solid var(--edge-hairline);
+}
+.site-footer__note {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+.social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.social-row__link {
+  display: grid;
+  place-items: center;
+  width: var(--social-target-size);
+  height: var(--social-target-size);
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+.social-row__link--text {
+  width: auto;
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+}
+.social-row__link:hover {
+  color: var(--accent-300);
+  background: var(--surface-floating);
+  border-color: var(--accent-line);
+  transform: translateY(calc(-1 * var(--focus-width)));
+}
+/* Keep the navigation available on small screens, without a script-dependent
+   toggle. The prototype's links become a wrapping second row. */
+@media (width < 1040px) {
+  .site-header__row {
+    flex-wrap: wrap;
+    gap: 0 var(--space-3);
+  }
+  .site-nav {
+    order: 1;
+    flex-basis: 100%;
+    margin-inline-start: 0;
+    padding-block-end: var(--space-2);
+  }
+}
+@media (width < 720px) {
+  .search-trigger span,
+  .search-trigger .shortcut {
+    display: none;
+  }
+  .site-footer__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .social-row__link:hover {
+    transform: none;
+  }
+}
