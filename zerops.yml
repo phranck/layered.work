@@ -40,6 +40,12 @@ zerops:
         # has no node_modules of its own and needs only these two.
         - packages/policy/dist
         - packages/policy/package.json
+        # Password hashing, which the sign-in route imports. Like the policy
+        # package it has no runtime dependency of its own, so two paths are
+        # enough. Without them the service exits on start with "Cannot find
+        # package '@layered/passwords'".
+        - packages/passwords/dist
+        - packages/passwords/package.json
         - node_modules
         - package.json
       cache: node_modules
@@ -132,6 +138,11 @@ zerops:
         # deployed a second time.
         - apps/website/dist
         - apps/website/package.json
+        # Astro leaves a dependency it did not bundle to be resolved at run
+        # time, and it resolves from beside the app rather than from the root.
+        # Zod is the first such dependency the site has, and without this the
+        # server exits with "Cannot find package 'zod'".
+        - apps/website/node_modules
         - node_modules
         - package.json
       cache: node_modules
