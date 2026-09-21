@@ -17,7 +17,7 @@
   background: var(--surface-raised);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--card-radius);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-2);
 }
 
 /* --- Media ------------------------------------------------------------------
@@ -105,14 +105,15 @@
   min-width: 0;
 }
 
+/* No weight here: the heading level sets it, in base.css. A card is read at a
+   glance, so its heading sits one step below the page's own text. */
 .card__title {
   display: flex;
   gap: var(--space-3);
   align-items: center;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
+  font-size: var(--text-base);
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-display);
   color: var(--text-primary);

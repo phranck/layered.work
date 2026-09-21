@@ -1,4 +1,6 @@
 /* Opt-in document defaults. Components themselves remain locally scoped. */
+@import url("focus.css");
+
 *,
 *::before,
 *::after {
@@ -12,6 +14,22 @@ h3,
 p,
 figure {
   margin: 0;
+}
+
+/* The level decides the weight, and nothing else states one. A heading's class
+   says how large it is and where it sits; whether it is set bold follows from
+   being the page's one first-level heading. Anything that wants a different
+   weight is not a heading. */
+h1 {
+  font-weight: var(--weight-bold);
+}
+
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--weight-regular);
 }
 
 body {

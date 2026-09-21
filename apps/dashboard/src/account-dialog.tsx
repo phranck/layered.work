@@ -86,12 +86,7 @@ export function AccountDialog({
                     <UserCircleIcon weight="duotone" />
                   </span>
                 )}
-                <Button
-                  type="button"
-                  size="small"
-                  onClick={() => setPickerOpen(true)}
-                  icon={<ImagesIcon weight="bold" />}
-                >
+                <Button type="button" onClick={() => setPickerOpen(true)} icon={<ImagesIcon weight="bold" />}>
                   {text("accountAvatar")}
                 </Button>
               </div>

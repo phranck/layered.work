@@ -10,8 +10,8 @@
   /* The padding is stated as two inputs and derived below, so that the label
      lift can be taken off the top and added to the bottom without a variant
      having to repeat the arithmetic. */
-  --button-padding-block: 11px;
-  --button-padding-inline: 18px;
+  --button-padding-block: 7px;
+  --button-padding-inline: 12px;
 
   display: inline-flex;
   gap: var(--space-2);
@@ -19,14 +19,14 @@
   justify-content: center;
   padding: calc(var(--button-padding-block) - var(--label-lift)) var(--button-padding-inline)
     calc(var(--button-padding-block) + var(--label-lift));
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   line-height: 1.2;
   letter-spacing: -0.01em;
   text-shadow: var(--text-emboss);
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-chip);
   transition:
     transform var(--duration-fast) var(--ease),
     background-color var(--duration-fast) var(--ease),
@@ -113,20 +113,30 @@
   border-color: var(--state-danger);
 }
 
-/* --- Sizes ------------------------------------------------------------------ */
-
-.button--small {
-  --button-padding-block: 7px;
-  --button-padding-inline: 12px;
-
-  font-size: var(--text-sm);
-  border-radius: var(--radius-chip);
+/* The compact treatment is the only size. SVGs are flex contents, so their
+   baseline cannot add descender space or change the button's height. */
+.button__icon {
+  display: inline-flex;
+  flex: none;
+  transform: translateY(var(--icon-cap-offset));
 }
 
-/* A glyph has no lowercase mass, so an icon button takes no lift. */
+.button__icon > svg {
+  display: block;
+}
+
+/* A lone glyph centres on the control, not on a label's cap line. Its square
+   uses the same line box and symmetric padding as a labelled button. */
 .button--icon {
-  padding: 9px;
-  border-radius: var(--radius-chip);
+  padding: var(--button-padding-block);
+}
+
+.button--icon .button__icon {
+  align-items: center;
+  justify-content: center;
+  width: 1lh;
+  height: 1lh;
+  transform: none;
 }
 
 /* --- Actions ------------------------------------------------------------------
