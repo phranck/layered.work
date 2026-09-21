@@ -32,7 +32,9 @@ LIGHT gives 15 build hours, 5 GB of backup storage and 100 GB of egress per mont
 
 One container each is the cheapest arrangement and right for a site with one author. The cost is a short gap during a deployment, because no second container takes over. Two containers double the CPU and the RAM in the bill.
 
-All five were created with `startWithoutCode`. Each of the three applications is connected to this repository through Zerops' own GitHub integration, so a push to `main` builds and deploys it from the pipeline in `zerops.yml`.
+All five were created with `startWithoutCode`. The three applications get theirs from the deploy workflow, which runs in GitHub Actions and pushes with an access token, building from the pipeline in `zerops.yml`.
+
+The repository is public, which is what makes that free: GitHub bills Actions minutes for private repositories and not for public ones. Zerops can also build from a connected repository itself, without Actions, which is the fallback if that ever stops being true. Nothing in the tree depends on which of the two runs, because both execute the same `zerops.yml`.
 
 ## Addresses
 
