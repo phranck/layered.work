@@ -53,7 +53,7 @@ This cost an hour on 13 September 2026. The process was healthy the whole time a
 
 ## The domain
 
-`layered.work` is attached to the `website` service and live since 13 September 2026. DNS is at world4you, and the zone holds exactly these two records for it:
+`layered.work` is attached to the `website` service and live since 13 September 2026. DNS is at world4you, and these two records point the name at Zerops:
 
 | Name | Type | Value |
 | --- | --- | --- |
@@ -71,6 +71,23 @@ Adding a name to a project makes Zerops re-issue that certificate, and for a min
 **A domain with a record pointing at something dead cannot get a certificate.** On 13 September the old host's A and AAAA records were still published alongside the new ones. Let's Encrypt validates over HTTP against whichever address it picks, so it kept hitting a host that answered 502 and 404, and no certificate was issued whilst the site was already down. Removing the two old records fixed it within minutes. The lesson for the remaining two hosts: one name points at one place, and the old record goes at the same moment the new one arrives, not before and not after.
 
 Lower the time to live before the next such change. It stood at 3125 seconds, so a mistake took the better part of an hour to undo.
+
+## Mail from this domain
+
+Read out of DNS on 21 September 2026, rather than from what anybody remembers entering:
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `layered.work` | MX | `10 mail.layered.work` |
+| `layered.work` | TXT | `v=spf1 mx include:spf.w4ymail.at include:spf.smtp2go.com -all` |
+| `_dmarc.layered.work` | TXT | `v=DMARC1; p=none;` |
+| `link.layered.work` | CNAME | `track.smtp2go.net` |
+
+The SPF record permits the domain's own mail host, world4you's senders and SMTP2GO's, and refuses everything else outright with `-all`. The CNAME is the link tracking SMTP2GO asks for, which is what shows the domain is set up there rather than only claimed.
+
+**The DKIM record was not found.** Eighteen selector names were asked for, including `s1` through `s5`, `smtp2go`, `em`, `default`, `selector1` and `k1`, and none answered as a TXT or a CNAME under `_domainkey.layered.work`. SMTP2GO reports the sender as verified, so either the selector is one of the names not tried or verification passed on SPF alone. The name it wants is in the SMTP2GO account under the sender domain, and reading it there settles this in a minute; without DKIM a message is signed by nothing, and a receiver that checks alignment has only SPF to go on.
+
+**DMARC is published but asks for nothing.** `p=none` tells a receiver to act on neither a failed SPF nor a failed DKIM, and no `rua=` address is named, so nobody receives the reports the policy exists to produce. That is the right first step and a poor resting place: add a reporting address, read what arrives for a few weeks, then raise the policy.
 
 ## What the start command may contain
 
