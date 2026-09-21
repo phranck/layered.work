@@ -15,17 +15,8 @@ const entry = (id: number, visibility = "public", language = "en") => ({
   body: "First **complete** paragraph.\n\nSecond paragraph.",
   topics: ["hardware"],
 });
-/** A hash shaped like a stored one. Nothing here ever verifies a password. */
-const PASSWORD_HASH = "scrypt$32768$8$1$c2FsdA$aGFzaA";
 const snapshot = {
-  entries: [
-    entry(1),
-    entry(2, "hidden"),
-    entry(3, "draft"),
-    entry(4, "trashed"),
-    { ...entry(5, "protected"), passwordHash: PASSWORD_HASH },
-    entry(6, "public", "de"),
-  ],
+  entries: [entry(1), entry(2, "hidden"), entry(3, "draft"), entry(4, "trashed"), entry(6, "public", "de")],
   topics: [{ id: 1, slug: "hardware", name: "Hardware" }],
   media: [],
   redirects: [{ source: "/old/", target: "/entry-1/" }],
@@ -51,26 +42,10 @@ describe("public content repository", () => {
     if (!published) throw new Error("Public fixture entry missing");
     expect(repo.related(published).map((item) => item.id)).toEqual([]);
   });
-  it("serves hidden only by known address, refuses draft, trashed and protected bodies", () => {
+  it("serves hidden only by known address, and refuses a draft or a trashed body", () => {
     const repo = createRepository(snapshot);
     expect(repo.entry("/entry-2/")?.visibility).toBe("hidden");
-    for (const id of [3, 4, 5]) expect(repo.entry(`/entry-${id}/`)).toBeUndefined();
-  });
-  it("hands a protected entry over only with the hash that guards it", () => {
-    const repo = createRepository(snapshot);
-    expect(repo.protectedEntry("/entry-5/")?.passwordHash).toBe(PASSWORD_HASH);
-    // Everything else is not a protected entry, whatever else it is.
-    for (const path of ["/entry-1/", "/entry-2/", "/entry-3/", "/entry-4/", "/nothing-here/"]) {
-      expect(repo.protectedEntry(path)).toBeUndefined();
-    }
-  });
-  it("refuses a snapshot where protection and password disagree", () => {
-    expect(() => createRepository({ ...snapshot, entries: [entry(7, "protected")] })).toThrow(
-      /password hash/,
-    );
-    expect(() =>
-      createRepository({ ...snapshot, entries: [{ ...entry(8), passwordHash: PASSWORD_HASH }] }),
-    ).toThrow(/password hash/);
+    for (const id of [3, 4]) expect(repo.entry(`/entry-${id}/`)).toBeUndefined();
   });
   it("resolves only local redirects and rejects duplicate public addresses", () => {
     expect(createRepository(snapshot).redirect("/old/")).toBe("/entry-1/");

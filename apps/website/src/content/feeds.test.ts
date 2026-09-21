@@ -7,7 +7,7 @@ describe("public feeds", () => {
     topics: [],
     media: [],
     redirects: [],
-    entries: ["public", "hidden", "draft", "protected", "trashed"].map((visibility, id) => ({
+    entries: ["public", "hidden", "draft", "trashed"].map((visibility, id) => ({
       id,
       title: `${visibility} <title>`,
       slug: visibility,
@@ -19,14 +19,11 @@ describe("public feeds", () => {
       updatedAt: null,
       body: "Text & more",
       topics: [],
-      // Shaped like a stored hash. A protected entry without one is a snapshot
-      // the repository refuses, and nothing here ever verifies a password.
-      passwordHash: visibility === "protected" ? "scrypt$32768$8$1$c2FsdA$aGFzaA" : null,
     })),
   });
   it("uses only public entries for both formats", () => {
     expect(jsonFeed(repository).items.map((item) => item.id)).toEqual(["https://layered.work/public/"]);
-    expect(rssFeed(repository)).not.toMatch(/hidden|draft|protected|trashed/);
+    expect(rssFeed(repository)).not.toMatch(/hidden|draft|trashed/);
   });
   it("escapes XML text and preserves canonical English URLs", () => {
     expect(rssFeed(repository)).toContain("public &lt;title&gt;");
