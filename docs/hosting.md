@@ -195,7 +195,9 @@ pnpm db:reset
 
 `db:generate` rewrites the one file from `src/db/schema/`, and `db:reset` removes the container together with its volume, brings it back, applies that file and seeds the account. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
 
-The deployed database carries the journal of the four migrations that came before this. It is emptied once, before the next deployment applies the new file. Until that happens, a deployment would fail on the first statement, which is the right way round: it stops rather than half-applying.
+The deployed database was emptied on 21 September 2026 by deleting the `postgres` service and importing it again from the same three lines of `zerops-project-import.yml`, which is why its identifier above differs from the one this document carried before. It holds no schema and no journal, so the next deployment applies the file above to an empty database and seeds the account.
+
+That route was taken because the database is reachable only from inside the project network: `zcli vpn up` needs a password that only phranck can give, and `zcli project env` prints the database password as a fixed-width placeholder like every other secret. Deleting and importing the service needs neither.
 
 **This ends at launch**, or sooner if anything reaches the database that the Publii export and the seed cannot produce again. From that day a schema change is a migration appended to what exists, the history starts being worth keeping, and `db:reset` becomes a local convenience rather than the way schemas move.
 
