@@ -82,10 +82,11 @@ Read out of DNS on 21 September 2026, rather than from what anybody remembers en
 | `layered.work` | TXT | `v=spf1 mx include:spf.w4ymail.at include:spf.smtp2go.com -all` |
 | `_dmarc.layered.work` | TXT | `v=DMARC1; p=none;` |
 | `link.layered.work` | CNAME | `track.smtp2go.net` |
+| `s758393._domainkey.layered.work` | CNAME | `dkim.smtp2go.net` |
 
 The SPF record permits the domain's own mail host, world4you's senders and SMTP2GO's, and refuses everything else outright with `-all`. The CNAME is the link tracking SMTP2GO asks for, which is what shows the domain is set up there rather than only claimed.
 
-**The DKIM record was not found.** Eighteen selector names were asked for, including `s1` through `s5`, `smtp2go`, `em`, `default`, `selector1` and `k1`, and none answered as a TXT or a CNAME under `_domainkey.layered.work`. SMTP2GO reports the sender as verified, so either the selector is one of the names not tried or verification passed on SPF alone. The name it wants is in the SMTP2GO account under the sender domain, and reading it there settles this in a minute; without DKIM a message is signed by nothing, and a receiver that checks alignment has only SPF to go on.
+**The DKIM selector carries an account-specific number**, `s758393`, and the record is a CNAME to SMTP2GO rather than the key itself, so the key can be rotated there without touching this zone. Resolving through it returns `v=DKIM1; k=rsa; p=…`. A selector like this cannot be guessed: it is in the SMTP2GO account under the sender domain, which is why it is written down here.
 
 **DMARC is published but asks for nothing.** `p=none` tells a receiver to act on neither a failed SPF nor a failed DKIM, and no `rua=` address is named, so nobody receives the reports the policy exists to produce. That is the right first step and a poor resting place: add a reporting address, read what arrives for a few weeks, then raise the policy.
 
