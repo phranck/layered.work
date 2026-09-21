@@ -1,16 +1,19 @@
 ---
 import { randomUUID } from "node:crypto";
 import { renderContent } from "@layered/content";
+import { MAX_PASSWORD_LENGTH } from "@layered/schemas";
 import { Button, ContentRenderer, Section } from "@layered/ui";
 import { MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
 import SiteLayout from "../layouts/SiteLayout.astro";
 import HomeContent from "../components/HomeContent.astro";
 import ListingContent from "../components/ListingContent.astro";
+import PasswordGate from "../components/PasswordGate.astro";
 import ModelViewer from "../components/ModelViewer.astro";
 import MermaidDiagrams from "../components/MermaidDiagrams.astro";
 import { EntryCard } from "../components/entry-card.js";
 import { LEGACY_REDIRECT_TARGETS } from "../content/legacy-redirects.js";
+import { attemptUnlock, ticketCookieOptions, ticketOpens, UNLOCK_COOKIE, type UnlockRefusal } from "../content/unlock.js";
 import { loadContent } from "../content/load.js";
 import { dateLabel, languageRoot, parseListingQuery, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
@@ -57,13 +60,51 @@ if(repository&&legacyPage){
   return Astro.redirect(target.pathname+target.search,308);
 }
 const listing=!!kind||!!topic||relative==="archive/"||search;
-const entry=!home&&!listing&&!topics?repository?.entry(path):undefined;
+const addressable=!home&&!listing&&!topics;
+
+// A protected entry answers its own address with a question. Nothing of the
+// entry is read until a ticket, or a password typed now, says it may be.
+const locked=addressable?repository?.protectedEntry(path):undefined;
+let unlocked=false;
+let refusal:UnlockRefusal|undefined;
+if(locked){
+  unlocked=ticketOpens(Astro.cookies.get(UNLOCK_COOKIE)?.value,path,locked.passwordHash);
+  if(!unlocked&&Astro.request.method==="POST"){
+    const form=await Astro.request.formData();
+    const typed=form.get("password");
+    const outcome=await attemptUnlock({
+      password:typeof typed==="string"?typed.slice(0,MAX_PASSWORD_LENGTH):"",
+      path,
+      passwordHash:locked.passwordHash,
+      forwardedFor:Astro.request.headers.get("x-forwarded-for"),
+    });
+    if("ticket" in outcome){
+      Astro.cookies.set(UNLOCK_COOKIE,outcome.ticket,ticketCookieOptions(path,import.meta.env.PROD));
+      // The response is built here rather than through Astro.redirect, which
+      // returns from the frontmatter before anything writes the cookie jar out:
+      // measured against the production build, that answer carried no
+      // Set-Cookie at all and the entry asked again straight away.
+      // 303 so that reloading the opened entry does not send the password again.
+      const headers=new Headers({Location:path,"Cache-Control":"no-store"});
+      for(const cookie of Astro.cookies.headers())headers.append("Set-Cookie",cookie);
+      return new Response(null,{status:303,headers});
+    }
+    refusal=outcome.refusal;
+  }
+  // Neither the question nor the answer is worth caching: one is personal to
+  // this visitor's ticket and the other is a form with an error on it.
+  Astro.response.headers.set("Cache-Control","no-store");
+  Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
+  if(!unlocked)Astro.response.status=refusal==="too-many"?429:refusal==="unavailable"?503:401;
+}
+const entry=unlocked?locked?.entry:addressable?repository?.entry(path):undefined;
 let page=1,query="",invalidQuery=false;
 if(listing){try{({page,query}=parseListingQuery(Astro.url.searchParams));}catch{invalidQuery=true;Astro.response.status=400;}}
-const found=home||listing||topics||!!entry;
+// A locked entry is found: the address exists and answers with its question.
+const found=home||listing||topics||!!entry||!!locked;
 if(repository&&!found)Astro.response.status=404;
-const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):listing?(de?"Archiv":"Archive"):(de?"Seite nicht gefunden":"Page not found")));
-const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
+const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):locked&&!unlocked?(de?"Geschützter Beitrag":"Protected entry"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):listing?(de?"Archiv":"Archive"):(de?"Seite nicht gefunden":"Page not found")));
+const translationPath=locked&&!unlocked?null:entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`},{label:de?"Themen":"Topics",href:`${root}topics/`},{label:de?"Archiv":"Archive",href:`${root}archive/`}];
 const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:navigation},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
 const nodes=entry?renderContent(entry.body):[];
@@ -75,8 +116,9 @@ const neighbours=entry?(project?repository?.otherEntries(entry)??[]:repository?.
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
 <SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry ? "full" : undefined}>
-  {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
+  {(entry?.visibility==="hidden"||locked)&&<meta slot="head" name="robots" content="noindex, nofollow" />}
   {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions"><Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
+    {locked&&!unlocked&&<PasswordGate {de} {refusal} />}
     {home&&<HomeContent {repository} {language} />}
     {listing&&<ListingContent {repository} {language} {title} {kind} topic={topicSlug} {page} {query} {search} />}
     {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>}

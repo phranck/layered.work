@@ -1,8 +1,8 @@
+import { unmatchableHash, verifyPassword } from "@layered/passwords";
 import { ErrorCode, type SignedInAs, signInBody } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { clearSessionCookie, getSessionCookie, setSessionCookie } from "../../auth/cookie.js";
-import { NO_SUCH_ACCOUNT, verifyPassword } from "../../auth/password.js";
 import { closeSession, openSession, type Principal } from "../../auth/session.js";
 import { database } from "../../db/connect.js";
 import { users } from "../../db/schema/index.js";
@@ -11,6 +11,15 @@ import { byAccount, byAddress, rateLimit } from "../rate-limit.js";
 import { withSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
+
+/**
+ * What a sign-in verifies against when the address names no account.
+ *
+ * Built once at start-up rather than per request, because building it per
+ * request would itself cost a hash and would make the unknown address the
+ * slower of the two answers, which is the question it exists to hide.
+ */
+const NO_SUCH_ACCOUNT = await unmatchableHash();
 
 /**
  * Signing in, signing out, and asking who is signed in.
