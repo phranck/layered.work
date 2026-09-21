@@ -1,0 +1,49 @@
+---
+import { Button, Card, Section } from "@layered/ui";
+import { ArticleIcon, StackSimpleIcon } from "@layered/ui/icons";
+import { createElement } from "react";
+import { EntryCard } from "./entry-card.js";
+import { dateLabel, languageRoot, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
+interface Props { repository:ContentRepository; language:Language; }
+const {repository,language}=Astro.props;
+const de=language==="de";
+const root=languageRoot(language);
+const entries=repository.publicEntries(language).filter(entry=>entry.onHomePage);
+const featured=entries.find(entry=>entry.featured)??entries.find(entry=>entry.kind!=="page");
+const hero=entries.find(entry=>entry.slug==="next-mini-replica-interest")??entries.find(entry=>entry.kind==="project"&&entry.featuredImage)??featured;
+const heroImage=hero?.featuredImage?repository.media(hero.featuredImage):undefined;
+const featureImage=featured?.featuredImage?repository.media(featured.featuredImage):undefined;
+---
+{repository.blocks().map(block=>block.type==="hero" ? (
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">Bregenz, Vorarlberg</p>
+      <h1 class="title-hero">{block.settings.title??(de?"Gehäuse, Platinen und Software, die Schicht für Schicht entsteht.":"Enclosures, circuit boards and software, made layer by layer.")}</h1>
+      <p class="lede">{block.settings.description??(de?"Nachbauten der NeXT-Hardware in klein, Raspberry-Pi-Gehäuse aus dem eigenen Drucker und das, was beim Bauen an Software anfällt. Alles dokumentiert, damit es jemand nachbauen kann.":"Small recreations of NeXT hardware, 3D-printed Raspberry Pi enclosures and the software made along the way. Documented so you can build them, too.")}</p>
+      <div class="actions">
+        <Button.Link href={`${root}projects/`} tone="primary" icon={createElement(StackSimpleIcon,{weight:"duotone"})}>{de?"Projekte ansehen":"Explore projects"}</Button.Link>
+        <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon,{weight:"duotone"})}>{de?"Beiträge lesen":"Read the posts"}</Button.Link>
+      </div>
+    </div>
+    {hero&&heroImage&&<a class="plate-stack" href={hero.path} aria-label={hero.title}>
+      <div class="plate plate--back"></div><div class="plate plate--middle"></div>
+      <div class="plate plate--front"><img src={heroImage.src} srcset={heroImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
+    </a>}
+  </section>
+) : block.type==="featured"&&featured ? (
+  <Section.Page>
+    <Section.Title eyebrow={de?"Im Vordergrund":"In focus"} title={block.settings.title??(de?"Woran gerade gearbeitet wird":"From the workbench")} />
+    <Card.Link href={featured.path}><div class="feature">
+      {featureImage&&<div class="feature__media"><img src={featureImage.src} srcset={featureImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={featureImage.width} height={featureImage.height} alt={featureImage.alt??""} loading="lazy" /></div>}
+      <div class="feature__body"><div class="meta"><time datetime={featured.publishedAt??undefined}>{dateLabel(featured)}</time><span>{readingTime(featured)} min</span></div><h3 class="title-page">{featured.title}</h3><p class="lede">{summaryOf(featured)}</p><Button.Inert icon={createElement(ArticleIcon,{weight:"duotone"})} tone="primary">{de?"Weiterlesen":"Read more"}</Button.Inert></div>
+    </div></Card.Link>
+  </Section.Page>
+) : block.type==="projects"||block.type==="posts" ? (
+  <Section.Page>
+    <Section.Title title={block.settings.title??(block.type==="projects"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${block.type}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
+    <div class="entry-grid">{entries.filter(entry=>entry.kind===(block.type==="projects"?"project":"post")).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+    {!entries.some(entry=>entry.kind===(block.type==="projects"?"project":"post"))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
+  </Section.Page>
+) : block.type==="topics" ? (
+  <Section.Page><Section.Title title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>
+) : null)}

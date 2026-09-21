@@ -1,0 +1,112 @@
+{
+  "databaseSha256": "4969375075b8aa47cf59fd599acd60e367353d2e5fee67a3f222a4e72677db72",
+  "reviewedAt": "2026-09-20",
+  "review": "Titles and source openings reviewed. Empty drafts use English titles; trash is excluded from publication.",
+  "entries": [
+    {
+      "id": 7,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 8,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 9,
+      "language": "en",
+      "basis": "draft-title-assumption"
+    },
+    {
+      "id": 11,
+      "language": "en",
+      "basis": "draft-title-assumption"
+    },
+    {
+      "id": 12,
+      "language": "en",
+      "basis": "draft-title-assumption"
+    },
+    {
+      "id": 14,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 15,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 16,
+      "language": "de",
+      "basis": "content"
+    },
+    {
+      "id": 17,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 18,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 19,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 20,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 22,
+      "language": "de",
+      "basis": "content"
+    },
+    {
+      "id": 23,
+      "language": "de",
+      "basis": "content"
+    },
+    {
+      "id": 24,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 25,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 26,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 29,
+      "language": "de",
+      "basis": "content"
+    },
+    {
+      "id": 30,
+      "language": "en",
+      "basis": "content"
+    },
+    {
+      "id": 31,
+      "language": "en",
+      "basis": "trashed-skip"
+    },
+    {
+      "id": 32,
+      "language": "en",
+      "basis": "content"
+    }
+  ]
+}

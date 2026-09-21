@@ -1,0 +1,59 @@
+---
+import "@layered/tokens/index.css";
+import "@layered/ui/base.css";
+import "@layered/ui/index.css";
+import "../styles/site.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import type { SiteFooterData, SiteNavigationItem } from "../components/site-navigation";
+
+interface Props {
+  title: string;
+  description?: string;
+  language?: "en" | "de";
+  canonicalPath?: string;
+  translationPath?: string | null;
+  readingWidth?: "narrow" | "normal" | "wide" | "full";
+  navigation?: SiteNavigationItem[];
+  footer?: SiteFooterData;
+  siteName?: string;
+}
+
+const {
+  title,
+  description,
+  language = "en",
+  canonicalPath = Astro.url.pathname,
+  translationPath = null,
+  readingWidth = "normal",
+  navigation = [],
+  footer = {},
+  siteName = "LAYERED.work",
+} = Astro.props;
+const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
+---
+
+<!doctype html>
+<html lang={language} data-reading-width={readingWidth}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang={language} href={canonical} />
+    {translationPath && <link rel="alternate" hreflang={language === "de" ? "en" : "de"} href={new URL(translationPath, canonical)} />}
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts.css" />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">{language === "de" ? "Zum Inhalt springen" : "Skip to content"}</a>
+    <SiteHeader {language} {siteName} {navigation} {translationPath} />
+    <main class="page" id="main-content" tabindex="-1"><slot /></main>
+    <SiteFooter {language} {siteName} {footer} />
+  </body>
+</html>

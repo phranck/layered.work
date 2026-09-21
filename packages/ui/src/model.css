@@ -1,0 +1,74 @@
+.content-model__stage {
+  aspect-ratio: var(--content-media-ratio);
+}
+.content-model__viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.content-model model-viewer {
+  /* Keep the app-owned keyboard indicator inside the viewer's clipped surface. */
+  --focus-offset: -3px;
+  display: block;
+  width: 100%;
+  /* The stage owns the normal aspect ratio; the dialog owns the expanded size. */
+  height: 100%;
+  background: var(--surface-sunken);
+  border-radius: var(--card-inner-radius);
+  /* The same height as the table, the code block and the diagram: a viewer is
+     one more surface the article sets apart from its prose. */
+  box-shadow: var(--lift-2);
+}
+/* Filling the window, it is the page rather than a surface on it. */
+.content-model__dialog[open] model-viewer {
+  box-shadow: none;
+}
+.content-model__zoom {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: var(--surface-floating);
+  border-color: var(--edge-hairline);
+}
+.content-model__zoom:disabled {
+  display: none;
+}
+.content-model__zoom .button__icon {
+  width: 24px;
+  height: 24px;
+}
+.content-model__zoom svg {
+  flex: none;
+  width: 100%;
+  height: 100%;
+}
+.content-model__zoom .content-model__collapse,
+.content-model__dialog[open] .content-model__expand {
+  display: none;
+}
+.content-model__dialog[open] .content-model__collapse {
+  display: block;
+}
+.content-model__dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--surface-sunken);
+  transform-origin: top left;
+}
+.content-model__dialog::backdrop {
+  background: transparent;
+}
+.content-model__dialog model-viewer {
+  border-radius: 0;
+}
+html:has(.content-model__dialog[open]) {
+  overflow: hidden;
+}

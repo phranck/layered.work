@@ -76,11 +76,11 @@ describe("prose", () => {
   });
 
   it("takes the marks off a heading and the space with them", () => {
-    expect(outline("## Ein Titel\n")).toBe(["h2", '  text "Ein Titel"'].join("\n"));
+    expect(outline("## Ein Titel\n")).toBe(['h2 id="ein-titel"', '  text "Ein Titel"'].join("\n"));
   });
 
   it("reads a heading written with a line under it", () => {
-    expect(outline("Titel\n=====\n")).toBe(["h1", '  text "Titel"'].join("\n"));
+    expect(outline("Titel\n=====\n")).toBe(['h1 id="titel"', '  text "Titel"'].join("\n"));
   });
 
   it("renders strong, struck out and inline code", () => {
@@ -388,7 +388,7 @@ describe("a run of prose beside a component", () => {
         'HStack → Stack {"align":"stretch","spacing":"5","wrap":true}',
         '  Image → Figure {"slug":"soundbox-front"}',
         '  VStack → Stack {"align":"stretch","spacing":"5"}',
-        "    h2",
+        '    h2 id="gehäuse"',
         '      text "Gehäuse"',
         "    p",
         '      text "Zwei Hälften."',
@@ -433,7 +433,7 @@ describe("the example the epic is written around", () => {
         'HStack → Stack {"align":"top","spacing":"6","wrap":true}',
         '  Image → Figure {"caption":"Die Front","slug":"soundbox-front"}',
         '  VStack → Stack {"align":"stretch","spacing":"5"}',
-        "    h2",
+        '    h2 id="gehäuse"',
         '      text "Gehäuse"',
         "    p",
         '      text "Zwei Hälften aus PETG."',

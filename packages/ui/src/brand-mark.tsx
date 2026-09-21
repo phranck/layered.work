@@ -1,8 +1,16 @@
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { join } from "./shared.js";
 
-/** Only brands used by the configured social accounts are shipped. */
-export type BrandName = "mastodon" | "github" | "youtube" | "instagram" | "xing";
+/** Only brands the interface actually shows are shipped: the social accounts, and the languages a code block names. */
+export type BrandName =
+  | "mastodon"
+  | "github"
+  | "youtube"
+  | "instagram"
+  | "xing"
+  | "swift"
+  | "gnubash"
+  | "html5";
 
 /** A decorative brand mark; its surrounding link supplies the accessible name. */
 export interface BrandMarkProps extends Omit<ComponentPropsWithoutRef<"span">, "children"> {

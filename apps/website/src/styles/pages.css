@@ -1,0 +1,612 @@
+/* Site compositions ported from prototype/schichtung. Shared surfaces remain in @layered/ui. */
+/* No weight here: the heading level sets it, in base.css. */
+.title-hero,
+.title-page,
+.title-section,
+.title-card {
+  font-family: var(--font-display);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  text-shadow: var(--text-emboss);
+  text-wrap: balance;
+}
+
+.title-hero {
+  font-size: var(--text-4xl);
+}
+
+.title-page {
+  font-size: var(--text-3xl);
+}
+
+/* A card is read at a glance rather than line by line, so it sits one step
+   below the page's own text. */
+.title-card {
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+}
+
+.lede {
+  max-width: var(--reading-measure);
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.eyebrow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.eyebrow::after {
+  flex: 1;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, var(--edge-hairline), transparent);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.meta__dot {
+  width: 3px;
+  height: 3px;
+  background: currentcolor;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Chips, badges, tags -------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: calc(5px - var(--label-lift)) 10px calc(5px + var(--label-lift));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+
+a.chip:hover {
+  color: var(--text-primary);
+  background: var(--hover-tint);
+  border-color: var(--edge-strong);
+}
+
+.chip[data-current] {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+}
+
+.chip__count {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+/*
+ * The chip that closes a card. It is a target rather than a label, so it is
+ * square, larger than a text chip and carries a larger mark inside it.
+ */
+.chip--action {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.0625rem;
+  color: var(--text-secondary);
+  border-radius: var(--radius-control);
+}
+
+.card--interactive:hover .chip--action {
+  color: var(--accent-300);
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+}
+
+/*
+ * Status is carried by a dot plus a word, never by colour alone, so the meaning
+ * survives a reader who cannot tell the two greens apart.
+ */
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  /* One pixel more above than below: at a line height of one the em box is
+     shorter than the glyph box, and the caps land a pixel above the centre.
+     Measured at 1.0px on 13px. */
+  padding: 5px 9px 3px 7px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-radius: var(--radius-chip);
+  color: var(--badge-colour, var(--text-muted));
+  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
+}
+
+.badge::before {
+  width: 5px;
+  height: 5px;
+  content: "";
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.badge[data-status="public"] {
+  --badge-colour: var(--state-success);
+}
+.badge[data-status="draft"] {
+  --badge-colour: var(--state-warning);
+}
+.badge[data-status="hidden"] {
+  --badge-colour: var(--state-info);
+}
+.badge[data-status="secret"] {
+  --badge-colour: var(--accent-400);
+}
+
+.lang-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border: 1px solid var(--edge-hairline);
+  border-radius: 5px;
+}
+
+.lang-tag[data-language="de"] {
+  color: var(--state-info);
+  border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
+}
+
+.hero {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  align-items: center;
+  padding-block: clamp(var(--space-8), 8vw, var(--space-10)) var(--section-gap);
+}
+
+.hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+  /* A heading above a card begins where the card's curve gives way to its
+     straight edge, rather than out at the page edge. */
+  padding-inline-start: var(--card-text-inset);
+}
+
+.hero__title em {
+  font-style: normal;
+  color: var(--accent-400);
+}
+
+/*
+ * The stack of physical layers. Each plate sits a little higher and a little
+ * further across than the one beneath it, which is the whole idea of the
+ * proposal shown once, large.
+ */
+.plate-stack {
+  position: relative;
+  aspect-ratio: 4 / 3.4;
+  perspective: 1400px;
+}
+
+.plate {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  transform-style: preserve-3d;
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.plate--back {
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+  transform: translate3d(-6%, -9%, 0) rotate(-2.4deg) scale(0.93);
+}
+
+.plate--middle {
+  background: var(--surface-floating);
+  box-shadow: var(--lift-2);
+  transform: translate3d(-2%, -4%, 0) rotate(-1.1deg) scale(0.965);
+}
+
+.plate--front {
+  background: var(--surface-overlay);
+  box-shadow: var(--lift-4);
+}
+
+.plate--front img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+.plate-stack:hover .plate--back {
+  transform: translate3d(-8.5%, -12%, 0) rotate(-3.4deg) scale(0.92);
+}
+
+.plate-stack:hover .plate--middle {
+  transform: translate3d(-3.5%, -6%, 0) rotate(-1.7deg) scale(0.958);
+}
+
+.plate-stack:hover .plate--front {
+  transform: translate3d(1%, 1.5%, 0) scale(1.012);
+}
+
+.plate__caption {
+  position: absolute;
+  inset-inline: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--scrim-soft);
+  border: 1px solid var(--edge-hairline);
+  border-radius: max(calc(var(--card-radius) - var(--space-4)), 0px);
+  backdrop-filter: blur(14px);
+}
+
+.plate__caption strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.plate__caption span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* The featured post gets a wide card whose media runs the full height beside
+   the text, so it reads as the one thing on the page that is not a list item. */
+/*
+ * The featured post: a card whose picture sits beside its text rather than above
+ * it. It is a layout inside the card, not a second kind of card, so it brings no
+ * surface, border or radius of its own.
+ */
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.feature__media {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  min-height: 320px;
+}
+
+.feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.feature:hover .feature__media img {
+  transform: scale(1.04);
+}
+
+.feature__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: center;
+
+  padding: var(--space-6);
+}
+
+.tag-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-inline-start: var(--card-text-inset);
+}
+
+.article-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+  max-width: var(--reading-measure);
+  padding-block: var(--space-8) var(--space-6);
+}
+
+.article-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-block-end: var(--section-gap);
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
+  gap: var(--gap);
+}
+.entry-card {
+  min-width: 0;
+}
+.entry-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.entry-card__summary {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.entry-card .card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+/* --- The project hero ------------------------------------------------------
+   A project opens with its picture, and the title sits inside it. Ported from
+   prototype/schichtung, whose geometry this keeps: a 21 / 9 card, a scrim that
+   only begins a third of the way down so the picture stays visible, and the
+   copy at the bottom left. */
+.project-hero {
+  position: relative;
+  margin-block: var(--space-6) var(--space-8);
+  overflow: hidden;
+  aspect-ratio: 21 / 9;
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-3);
+}
+.project-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Two stops and nothing between them, so the darkening is even the whole way
+   down. A middle stop near the scrim's own strength reads as a flat block
+   rather than as a gradient, because the last stretch from there to full cover
+   is a difference the eye cannot see. It ends on the page colour itself, which
+   is what makes it darker than the scrim token without bending the curve. */
+.project-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 32%, var(--surface-page) 100%);
+}
+/* The lines in the hero belong to one another rather than being three stacked
+   blocks, so they sit closer than the page's usual rhythm. */
+.project-hero__copy {
+  position: absolute;
+  inset-inline: var(--space-7);
+  bottom: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  max-width: var(--reading-wide);
+}
+/* The hero is the emphasis here, and the stripes are drawn for a heading on the
+   page surface rather than over a picture that may be light at that corner. */
+.project-hero__copy h1 {
+  padding-inline-start: 0;
+}
+.project-hero__copy h1::before {
+  content: none;
+}
+.project-hero__summary {
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+@media (width < 720px) {
+  .project-hero {
+    aspect-ratio: 4 / 3;
+  }
+  .project-hero__copy {
+    inset-inline: var(--space-5);
+    bottom: var(--space-5);
+  }
+}
+/* The specification band. One row of cells on a wide screen, wrapping into more
+   rows as it narrows. The hairline between them is the grid's own background
+   showing through a one-pixel gap, so there is one rule to keep in step rather
+   than a border on every cell. */
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--spec-column-min), 1fr));
+  gap: var(--line-width);
+  margin-block-end: var(--space-8);
+  overflow: hidden;
+  background: var(--edge-hairline);
+  border: var(--line-width) solid var(--edge-hairline);
+  border-radius: var(--card-radius);
+  box-shadow: var(--lift-1);
+}
+.spec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+}
+.spec__label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.spec__value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+.article-cover {
+  overflow: hidden;
+  border-radius: var(--card-radius);
+}
+.article-cover img {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: cover;
+}
+.article-body .content-prose {
+  width: 100%;
+  max-width: var(--reading-measure);
+}
+.hero__copy .actions {
+  align-self: stretch;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.feature__body .title-page {
+  font-size: var(--text-2xl);
+}
+.feature__body .lede {
+  font-size: var(--text-base);
+}
+.feature__body .button {
+  align-self: flex-end;
+}
+.empty-state {
+  padding: var(--space-5) var(--card-text-inset);
+  color: var(--text-secondary);
+}
+.listing-toolbar,
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.listing-toolbar[hidden] {
+  display: none;
+}
+.listing-toolbar [aria-pressed="true"],
+.pagination [aria-current] {
+  color: var(--text-accent);
+  border-color: var(--accent-line);
+}
+.entry-grid[data-layout="list"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.entry-grid[data-layout="list"] .entry-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+}
+.entry-grid[data-layout="list"] .card__media {
+  grid-row: span 2;
+}
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.search-form__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.search-form input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+@media (width < 1040px) {
+  .hero,
+  .feature {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero {
+    gap: var(--space-7);
+  }
+}
+@media (width < 720px) {
+  .feature__body {
+    padding: var(--space-5);
+  }
+  .entry-grid[data-layout="list"] .entry-card {
+    display: flex;
+  }
+  .hero__copy .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hero__copy .button {
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero__copy,
+  .plate-stack {
+    animation: page-arrive var(--duration-reveal) var(--ease) both;
+  }
+  .plate-stack {
+    animation-delay: 120ms;
+  }
+}
+@keyframes page-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--travel));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

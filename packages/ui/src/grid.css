@@ -1,0 +1,21 @@
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(
+      auto-fit,
+      minmax(
+        min(
+          100%,
+          max(
+            var(--content-column-min),
+            calc((100% - (var(--content-columns, 2) - 1) * var(--content-gap)) / var(--content-columns, 2))
+          )
+        ),
+        1fr
+      )
+    );
+  gap: var(--content-gap);
+  min-width: 0;
+}
+.content-grid > * {
+  min-width: 0;
+}
