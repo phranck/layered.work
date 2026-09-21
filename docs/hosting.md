@@ -88,7 +88,7 @@ The SPF record permits the domain's own mail host, world4you's senders and SMTP2
 
 **The DKIM selector carries an account-specific number**, `s758393`, and the record is a CNAME to SMTP2GO rather than the key itself, so the key can be rotated there without touching this zone. Resolving through it returns `v=DKIM1; k=rsa; p=…`. A selector like this cannot be guessed: it is in the SMTP2GO account under the sender domain, which is why it is written down here.
 
-**DMARC is published but asks for nothing.** `p=none` tells a receiver to act on neither a failed SPF nor a failed DKIM, and no `rua=` address is named, so nobody receives the reports the policy exists to produce. That is the right first step and a poor resting place: add a reporting address, read what arrives for a few weeks, then raise the policy.
+**DMARC carries no reporting address, and that is decided rather than missing.** `rua=` would bring one aggregate report per reporting receiver per day, as gzipped XML, which is a daily stream of mail nobody reads. phranck decided against it on 21 September 2026. The policy therefore stays at `p=none`: receivers act on neither a failed SPF nor a failed DKIM, and nothing observes what is being sent in this domain's name. Raising it to `quarantine` without reports would throw mail away unobserved, which is worse than the current state rather than better.
 
 ## What the start command may contain
 
