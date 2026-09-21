@@ -145,6 +145,10 @@ A service that imports one of this repository's own packages reaches it through 
 
 The third cost a deployment on 13 September 2026. The container started and exited immediately with `Cannot find package 'zod' imported from /var/www/packages/schemas/dist/errors.js`. Nothing went down, because the readiness check kept it out of rotation, which is what the section below is for.
 
+A package with no runtime dependency of its own needs only the first two, which is why `policy` and `passwords` are listed with two paths each and `schemas` with three.
+
+**The same rule reaches an application's own `node_modules`.** Astro leaves any dependency it did not bundle to be resolved at run time, from beside the app rather than from the repository root. The site ran for weeks without that path because everything it used was bundled; adding Zod to it made the server exit on start with `Cannot find package 'zod'`, on 21 September 2026. The backend already carried `apps/backend/node_modules` for the same reason.
+
 ## The two checks, and which question each one asks
 
 Zerops has both, they are configured in different sections, and giving one the other's job takes the site down.
