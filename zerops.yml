@@ -137,6 +137,7 @@ zerops:
         # typefaces and the sharing image are all in there, so public/ is not
         # deployed a second time.
         - apps/website/dist
+        - apps/website/content
         - apps/website/package.json
         # Astro leaves a dependency it did not bundle to be resolved at run
         # time, and it resolves from beside the app rather than from the root.
@@ -171,6 +172,10 @@ zerops:
         # itself. Set it to `countdown` to put the notice back up without moving
         # the date and without a deployment, or to `site` to open early.
         WEBSITE_MODE: auto
+        # What the deployed site reads until it reads the database. The file is
+        # committed and carries only what a reader may reach, which a test in
+        # the website enforces.
+        WEBSITE_CONTENT_FILE: /var/www/apps/website/content/site.json
       # Nothing but the command. This line is handed to `exec`, not to a shell,
       # so `PORT=3000 node …` here is read as the name of a program to run and
       # fails with "not found": the service then restarts in a loop and the site

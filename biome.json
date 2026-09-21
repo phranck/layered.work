@@ -9,6 +9,7 @@
       "!**/drizzle",
       "!prototype",
       "!.issues",
+      "!apps/website/content",
       "!migration-out"
     ]
   },
