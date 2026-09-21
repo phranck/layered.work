@@ -15,6 +15,7 @@ export { GearIcon } from "@phosphor-icons/react/dist/ssr/Gear";
 export { ImagesIcon } from "@phosphor-icons/react/dist/ssr/Images";
 export { ListIcon } from "@phosphor-icons/react/dist/ssr/List";
 export { ListDashesIcon } from "@phosphor-icons/react/dist/ssr/ListDashes";
+export { LockKeyIcon } from "@phosphor-icons/react/dist/ssr/LockKey";
 export { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/ssr/MagnifyingGlass";
 export { PaperPlaneTiltIcon } from "@phosphor-icons/react/dist/ssr/PaperPlaneTilt";
 export { PlusIcon } from "@phosphor-icons/react/dist/ssr/Plus";

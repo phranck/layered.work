@@ -1,6 +1,6 @@
+import { hashPassword } from "@layered/passwords";
 import { ErrorCode, readApiError } from "@layered/schemas";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { hashPassword } from "../auth/password.js";
 import { users } from "../db/schema/index.js";
 import {
   closeTestDatabase,

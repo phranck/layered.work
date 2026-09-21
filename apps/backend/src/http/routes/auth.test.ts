@@ -1,8 +1,8 @@
+import { hashPassword } from "@layered/passwords";
 import { readApiError, type SignedInAs } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SESSION_COOKIE } from "../../auth/cookie.js";
-import { hashPassword } from "../../auth/password.js";
 import { sessions, users } from "../../db/schema/index.js";
 import {
   closeTestDatabase,

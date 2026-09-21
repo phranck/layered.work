@@ -19,6 +19,9 @@ describe("public feeds", () => {
       updatedAt: null,
       body: "Text & more",
       topics: [],
+      // Shaped like a stored hash. A protected entry without one is a snapshot
+      // the repository refuses, and nothing here ever verifies a password.
+      passwordHash: visibility === "protected" ? "scrypt$32768$8$1$c2FsdA$aGFzaA" : null,
     })),
   });
   it("uses only public entries for both formats", () => {

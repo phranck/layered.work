@@ -170,3 +170,48 @@ function styleSources(nonce: string): Record<string, string[]> {
     "style-src-attr": ["'unsafe-inline'"],
   };
 }
+
+/**
+ * How far from the end of a forwarded chain the caller is.
+ *
+ * Not a count of proxies to believe in: a figure read off the deployed service.
+ * Measured on 13 September 2026 by sending a spoofed header and reading the
+ * chain back out of the log, Zerops appends the address it saw the connection
+ * come from and one more internal hop appends its own, so whatever a caller
+ * prepends, they are two from the end.
+ *
+ * A CDN in front would add one more entry and make this three. Whoever changes
+ * the infrastructure changes this number, and the rate limiters that read it
+ * log the chain on a refusal so that the change is visible rather than silent.
+ */
+const CLIENT_FROM_END = 2;
+
+/** What a source is called when the chain says nothing. */
+const UNKNOWN_SOURCE = "unknown";
+
+/**
+ * The address to hold responsible for a request, from its forwarded chain.
+ *
+ * **A forwarded header is attacker input.** Anybody can send
+ * `X-Forwarded-For: 1.2.3.4`, so reading the first entry means a per-source
+ * limit is per-whatever-the-caller-typed, which is no limit at all. Reading the
+ * last entry instead puts everybody into one bucket, because that entry is the
+ * same Zerops hop for every caller, which turns a per-source limit into a
+ * global one.
+ *
+ * Both applications count against this, which is why it lives here rather than
+ * in either of them: the site's password gate and the API's sign-in limit must
+ * not disagree about who is asking.
+ *
+ * @param forwardedFor - The `X-Forwarded-For` header as it arrived, or null.
+ * @returns The address, or `unknown` when nothing said. `unknown` is one bucket
+ *   shared by everything that arrives without a chain, which is the safe
+ *   direction: it limits more, not less.
+ */
+export function callerAddress(forwardedFor: string | null | undefined): string {
+  const chain = (forwardedFor ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return chain[chain.length - CLIENT_FROM_END] ?? UNKNOWN_SOURCE;
+}
