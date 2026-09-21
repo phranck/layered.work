@@ -91,6 +91,11 @@ zerops:
         S3_BUCKET: ${assets_bucketName}
         S3_ACCESS_KEY_ID: ${assets_accessKeyId}
         S3_SECRET_ACCESS_KEY: ${assets_secretAccessKey}
+        # Who mail comes from. An address rather than a secret, so it stands
+        # here where a diff shows it, whilst the key that sends it is a secret
+        # variable on the service. SMTP2GO has to have this sender verified, and
+        # the domain has to carry the SPF and DKIM records it asks for.
+        EMAIL_FROM: phranck@layered.work
       # Every migration that has not run, before the service starts answering.
       # It refuses to run as a superuser and stops the deployment when it does,
       # so a schema is never created by a role that bypasses every grant.
