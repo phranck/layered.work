@@ -1,7 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!**/.astro", "!**/*.astro", "!**/drizzle", "!prototype", "!.issues"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.astro",
+      "!**/*.astro",
+      "!**/drizzle",
+      "!prototype",
+      "!.issues",
+      "!migration-out"
+    ]
   },
   "formatter": {
     "enabled": true,
