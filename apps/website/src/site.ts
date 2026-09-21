@@ -88,7 +88,7 @@ export const PAGE_COLOR_SRGB = "#14171b";
  * dot or there is nothing before it at all. Without that, `notlayered.work`
  * would match a suffix of `layered.work`.
  */
-export const PREVIEW_HOSTS = [".zerops.app", "localhost", "127.0.0.1"];
+export const PREVIEW_HOSTS = ["new.layered.work", ".zerops.app", "localhost", "127.0.0.1"];
 
 /**
  * Whether a host is one of those the finished site answers on before the
