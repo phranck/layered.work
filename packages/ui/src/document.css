@@ -1,0 +1,5 @@
+.content-document {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}

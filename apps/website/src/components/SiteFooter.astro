@@ -1,0 +1,50 @@
+---
+import { BrandMark, Logo } from "@layered/ui";
+import type { SiteFooterData } from "./site-navigation";
+
+interface Props {
+  language: "en" | "de";
+  siteName: string;
+  footer: SiteFooterData;
+}
+
+const { language, siteName, footer } = Astro.props;
+---
+
+<footer class="site-footer">
+  <div class="page site-footer__row">
+    <div class="site-footer__brand">
+      <Logo href={language === "de" ? "/de/" : "/"} label={siteName} inkHeight="var(--logo-ink-height-large)" />
+      {footer.description && <p class="site-footer__note">{footer.description}</p>}
+      {!!footer.social?.length && (
+        <ul class="social-row" aria-label={language === "de" ? "Social-Media-Konten" : "Social accounts"}>
+          {footer.social.map((account) => (
+            <li>
+              <a class:list={["social-row__link", { "social-row__link--text": !account.brand }]} href={account.href} rel="me noopener" aria-label={account.name} title={account.name}>
+                {account.brand ? <BrandMark brand={account.brand} /> : account.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+    {!!footer.navigation?.length && (
+      <div class="footer-navs">
+        {footer.navigation.map((navigation) => (
+          <nav class="footer-nav" aria-label={navigation.title}>
+            <p class="footer-nav__title">{navigation.title}</p>
+            <ul>{navigation.items.map((item) => <li><a href={item.href}>{item.label}</a></li>)}</ul>
+          </nav>
+        ))}
+      </div>
+    )}
+  </div>
+  {(footer.baseline || footer.note) && (
+    <div class="page">
+      <div class="site-footer__baseline">
+        {footer.baseline && <span>{footer.baseline}</span>}
+        {footer.note && <span>{footer.note}</span>}
+      </div>
+    </div>
+  )}
+</footer>

@@ -13,5 +13,6 @@ declare namespace App {
      * permits inline by nonce rather than by `unsafe-inline`.
      */
     nonce: string;
+    siteVisible: boolean;
   }
 }

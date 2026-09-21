@@ -1,0 +1,35 @@
+---
+import { Button, Section } from "@layered/ui";
+import { ListIcon, SquaresFourIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
+import { createElement } from "react";
+import { EntryCard } from "./entry-card.js";
+import { type ContentRepository,type Entry,type Language } from "../content/repository.js";
+interface Props { repository:ContentRepository; language:Language; title:string; kind?:Entry['kind']; topic?:string; query?:string; page:number; search?:boolean; }
+const {repository,language,title,kind,topic,query="",page,search=false}=Astro.props;
+const de=language==="de";
+const result=repository.list({language,kind,topic,query,page});
+if(page>1&&page>result.pages) Astro.response.status=404;
+const pageUrl=(number:number)=>{const url=new URL(Astro.url);url.searchParams.set("page",String(number));return url.pathname+url.search;};
+---
+<Section.Page>
+  <Section.Lead title={title} />
+  {search&&<form class="search-form" method="get"><label for="site-search">{de?"Suchbegriff":"Search for"}</label><div class="search-form__row"><input id="site-search" class="field" type="search" name="q" maxlength="120" value={query} /><Button type="submit" icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Suchen":"Search"}</Button></div></form>}
+  <div class="listing-toolbar" hidden data-view-toolbar>
+    <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon,{weight:"duotone"})}>{de?"Raster":"Grid"}</Button>
+    <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon,{weight:"duotone"})}>{de?"Liste":"List"}</Button>
+  </div>
+  <div class="entry-grid" data-entry-list>{result.entries.map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+  {result.total===0&&<p class="empty-state">{de?"Keine passenden Einträge gefunden.":"No matching entries found."}</p>}
+  {result.pages>1&&<nav class="pagination" aria-label={de?"Seitennavigation":"Pagination"}>{Array.from({length:result.pages},(_,i)=>i+1).map(number=><Button.Link href={pageUrl(number)} aria-current={number===page?"page":undefined}>{number}</Button.Link>)}</nav>}
+</Section.Page>
+<script>
+  const list=document.querySelector<HTMLElement>('[data-entry-list]');
+  const toolbar=document.querySelector<HTMLElement>('[data-view-toolbar]');
+  const controls=document.querySelectorAll<HTMLButtonElement>('[data-view]');
+  const setView=(view:string)=>{if(!list)return;list.dataset.layout=view;controls.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));};
+  if(list&&toolbar){
+    toolbar.hidden=false;
+    try {setView(localStorage.getItem('layered:listing-view')==='list'?'list':'grid');}catch{setView('grid');}
+    controls.forEach(button=>button.addEventListener('click',()=>{const view=button.dataset.view??'grid';setView(view);try{localStorage.setItem('layered:listing-view',view);}catch{/* The choice still works for this page when storage is unavailable. */}}));
+  }
+</script>

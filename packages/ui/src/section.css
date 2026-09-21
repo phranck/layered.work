@@ -55,10 +55,10 @@
   min-width: 0;
 }
 
+/* No weight here: the heading level sets it, in base.css. */
 .section__name {
   font-family: var(--font-display);
   font-size: var(--section-name-size, var(--text-2xl));
-  font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-display);
   color: var(--text-primary);
