@@ -75,6 +75,12 @@ services:
     enableSubdomainAccess: true
     minContainers: 1
     maxContainers: 1
+    envSecrets:
+      # Signs the ticket that says somebody answered a protected entry's
+      # question. Generated here so it never exists in a file anybody could
+      # commit. Without it a protected entry stays shut, which is the safe
+      # direction and the one the site takes.
+      WEBSITE_UNLOCK_SECRET: <@generateRandomString(<64>)>
     priority: 1
 
   - hostname: dashboard

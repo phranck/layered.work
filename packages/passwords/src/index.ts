@@ -11,9 +11,15 @@ import { promisify } from "node:util";
  * the stored value, so raising the cost later leaves every existing hash
  * verifiable. Nothing about the other two would be better here.
  *
- * **One copy.** An escaping, comparing or hashing function that exists twice is
- * the failure `code-quality.md` names first, because a change reaching one copy
- * leaves the other doing the old thing and nothing reports it.
+ * **One copy, in a package of its own.** A hashing or comparing function that
+ * exists twice is the failure `code-quality.md` names first, because a change
+ * reaching one copy leaves the other doing the old thing and nothing reports
+ * it. The account sign-in and the password a protected entry asks for are two
+ * callers of the same primitive, in two applications, which is why this is a
+ * package rather than a file in either of them.
+ *
+ * **Server only.** It reads `node:crypto` and it spends 32 MiB per call, so it
+ * belongs nowhere a browser bundle can reach.
  */
 
 /**
@@ -38,6 +44,10 @@ const scrypt = promisify(scryptCallback) as (
  * what makes a graphics card a poor tool for guessing them. These are the
  * parameters a hash is written with; the stored value carries them, so raising
  * them later leaves every old hash verifiable.
+ *
+ * The same figure is why every caller needs a limit in front of it: an attempt
+ * costs the server 32 MiB, and nothing about the algorithm makes that cheaper
+ * for whoever is asking.
  */
 const SCRYPT = { N: 2 ** 15, r: 8, p: 1, keyLength: 64, saltBytes: 16 } as const;
 
@@ -72,7 +82,7 @@ export async function hashPassword(password: string): Promise<string> {
  * Checks a password against a stored hash, in constant time.
  *
  * @param password - What was typed now.
- * @param stored - What was written when the account was made.
+ * @param stored - What was written when the account or the entry was made.
  * @returns Whether they are the same, without revealing where they first differ.
  */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
@@ -90,18 +100,19 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 /**
- * A hash of nothing anybody knows, to be verified against when no account
- * matched.
+ * A hash of a value nobody knows, to be verified against when nothing matched.
  *
- * **This is what makes an unknown address indistinguishable from a wrong
- * password.** Returning early on "no such account" skips the scrypt work, and
+ * **This is what makes an absent record indistinguishable from a wrong
+ * password.** Returning early on "no such thing" skips the scrypt work, and
  * scrypt at this cost takes long enough to measure over a network, so the early
- * return answers the question "does this address have an account here" to
- * anybody with a stopwatch. Verifying against this instead spends the same time
- * and reaches the same answer.
+ * return answers the question "does this exist here" to anybody with a
+ * stopwatch. Verifying against this instead spends the same time and reaches
+ * the same answer.
  *
- * Built once at start-up rather than per request, because building it per
- * request would itself cost a hash and would make the unknown case the slower
- * of the two.
+ * Built by the caller at start-up and held, rather than per request: building
+ * it per request would itself cost a hash and would make the absent case the
+ * slower of the two.
  */
-export const NO_SUCH_ACCOUNT = await hashPassword(randomBytes(32).toString("base64url"));
+export function unmatchableHash(): Promise<string> {
+  return hashPassword(randomBytes(32).toString("base64url"));
+}

@@ -610,3 +610,28 @@ a.chip:hover {
     transform: translateY(0);
   }
 }
+
+/* --- The password gate ------------------------------------------------------
+   A protected entry shows one card and nothing else, so the card is held to a
+   readable width and centred rather than filling the page measure. */
+.password-gate {
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+.password-gate__lead {
+  margin-block-end: var(--space-5);
+  color: var(--text-secondary);
+}
+
+.password-gate__error {
+  margin-block-end: var(--space-5);
+  color: var(--state-danger);
+}
+
+.password-gate__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
