@@ -4,13 +4,14 @@ The project runs on [Zerops](https://zerops.io) in the `LAYERED` organisation, a
 
 Nothing in this file is a secret. `zcli project env` prints the database password and the generated session secret in clear text, so no value from that output is ever copied into this repository.
 
+**Nor is any Zerops identifier.** A service's id is the whole of the address Zerops exposes its build trigger at, `…/api/rest/public/service-stack/<id>/github-webhook`, and that endpoint answers a request carrying no signature: posting an empty body to it returns a validation error about the branch name rather than a refusal. Whoever knows the id can therefore reach the trigger. The ids are in the Zerops interface and in `zcli service list`, and they stay out of this repository.
+
 ## The project
 
 | | |
 | --- | --- |
 | Name | `layered.work` |
-| Id | `6CcLPes1S02Ry7fSp6PDlw` |
-| Organisation | `LAYERED`, id `wJ3cRBNaQvm9LISkfdcH2A` |
+| Organisation | `LAYERED` |
 | Core package | LIGHT |
 | Location | `eu-central`, which resolves to `prg1` |
 | Created | 13 September 2026, from `zerops-project-import.yml` |
@@ -21,17 +22,17 @@ LIGHT gives 15 build hours, 5 GB of backup storage and 100 GB of egress per mont
 
 ## The services
 
-| Hostname | Id | Type | Containers |
-| --- | --- | --- | --- |
-| `postgres` | `wnwVmkgBT6uzP4hulb7d9g` | `postgresql:single@18` | one, by definition |
-| `assets` | `ikkCgA69RhKX81PqljCH6Q` | `object-storage`, 5 GB, `public-read`, CDN on | not applicable |
-| `backend` | `cljrA4w8QyaBbxtY1wJDlg` | `alpine/nodejs@22` | 1 |
-| `website` | `g19Ma4n9SNyHDjE6ehd6mw` | `alpine/nodejs@22` | 1 |
-| `dashboard` | `U18wZgxpQ7CbW1LBjI1mCQ` | `alpine/nginx@1.22` | 1 |
+| Hostname | Type | Containers |
+| --- | --- | --- |
+| `postgres` | `postgresql:single@18` | one, by definition |
+| `assets` | `object-storage`, 5 GB, `public-read`, CDN on | not applicable |
+| `backend` | `alpine/nodejs@22` | 1 |
+| `website` | `alpine/nodejs@22` | 1 |
+| `dashboard` | `alpine/nginx@1.22` | 1 |
 
 One container each is the cheapest arrangement and right for a site with one author. The cost is a short gap during a deployment, because no second container takes over. Two containers double the CPU and the RAM in the bill.
 
-All five were created with `startWithoutCode`, so they hold no application yet. They get one from the deploy workflow, which runs in GitHub Actions and pushes with an access token. The repository stays private, and `buildFromGit` is not used.
+All five were created with `startWithoutCode`. Each of the three applications is connected to this repository through Zerops' own GitHub integration, so a push to `main` builds and deploys it from the pipeline in `zerops.yml`.
 
 ## Addresses
 
@@ -251,7 +252,7 @@ Repository secrets and variables the deploy workflow reads.
 
 | Name | Kind | What it is |
 | --- | --- | --- |
-| `ZEROPS_BACKEND_SERVICE_ID` | secret | The service id from the table above |
+| `ZEROPS_BACKEND_SERVICE_ID` | secret | The service id, which `zcli service list` prints and this repository does not |
 | `ZEROPS_WEBSITE_SERVICE_ID` | secret | " |
 | `ZEROPS_DASHBOARD_SERVICE_ID` | secret | " |
 | `ZEROPS_TOKEN` | secret | A Zerops personal access token. Set, and deploying since 13 September 2026. |

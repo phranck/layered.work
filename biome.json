@@ -19,15 +19,25 @@
     "lineWidth": 110
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "trailingCommas": "all", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "correctness": { "recommended": true },
-      "suspicious": { "recommended": true },
-      "a11y": { "recommended": true }
+      "correctness": {
+        "recommended": true
+      },
+      "suspicious": {
+        "recommended": true
+      },
+      "a11y": {
+        "recommended": true
+      }
     }
   }
 }
