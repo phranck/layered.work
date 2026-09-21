@@ -1,0 +1,40 @@
+<script>
+  import { initializeModelViewports } from '@layered/ui/model-viewport';
+  import focusStyles from '@layered/ui/focus.css?inline';
+  initializeModelViewports();
+  if(navigator.clipboard){
+    document.querySelectorAll<HTMLButtonElement>('button[data-copy-code]').forEach(button=>{
+      button.disabled=false;
+      button.addEventListener('click',async()=>{
+        const source=button.closest('[data-code-block]')?.querySelector('code')?.textContent;
+        if(source===undefined||source===null)return;
+        try{
+          await navigator.clipboard.writeText(source);
+          button.dataset.copied='true';
+          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopiert':'Copied');
+          button.title=document.documentElement.lang==='de'?'Kopiert':'Copied';
+        }catch{
+          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopieren fehlgeschlagen':'Copy failed');
+        }
+      });
+    });
+  }
+  const models=document.querySelectorAll('model-viewer');
+  if(models.length){
+    const observer=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)){
+        observer.disconnect();
+        import('@google/model-viewer').then(() => {
+          const sheet = new CSSStyleSheet();
+          sheet.replaceSync(focusStyles);
+          models.forEach(model => {
+            if (model.shadowRoot) {
+              model.shadowRoot.adoptedStyleSheets = [...model.shadowRoot.adoptedStyleSheets, sheet];
+            }
+          });
+        });
+      }
+    },{rootMargin:'200px'});
+    models.forEach(model=>observer.observe(model));
+  }
+</script>
