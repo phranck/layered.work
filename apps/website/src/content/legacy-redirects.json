@@ -1,0 +1,32 @@
+[
+  {
+    "source": "/pandadock/",
+    "target": "/projects/pandadock/",
+    "reason": "The project moved under /projects/ before the site was retired. Archived 200 on 27 April 2025."
+  },
+  {
+    "source": "/touch-magic/",
+    "target": "/projects/touch-magic/",
+    "reason": "The project moved under /projects/ before the site was retired. Archived 200 on 27 April 2025."
+  },
+  {
+    "source": "/nextcube-mini-subscribe/",
+    "target": "/next-mini-replica-interest/",
+    "reason": "The same interest page under its first slug, renamed when the machine was. Archived 200 on 27 April 2025."
+  },
+  {
+    "source": "/tags/3d-printing/",
+    "target": "/topics/3dprint/",
+    "reason": "The topic kept its subject and lost its hyphens. Archived 200 on 20 December 2024."
+  },
+  {
+    "source": "/tags/hardware/",
+    "target": "/topics/",
+    "reason": "The topic was dissolved into others rather than renamed, so the overview is the honest destination. Archived 200 on 20 December 2024."
+  },
+  {
+    "source": "/bambu-labs-new-authorization-system/",
+    "target": "/posts/",
+    "reason": "The post was deleted from the source database, so no page corresponds to it. The list of posts is what the reader was after. Archived 200 on 20 December 2024."
+  }
+]

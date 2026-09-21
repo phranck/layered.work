@@ -10,6 +10,7 @@ import ListingContent from "../components/ListingContent.astro";
 import ModelViewer from "../components/ModelViewer.astro";
 import MermaidDiagrams from "../components/MermaidDiagrams.astro";
 import { EntryCard } from "../components/entry-card.js";
+import { LEGACY_REDIRECT_TARGETS } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
 import { dateLabel, languageRoot, parseListingQuery, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
@@ -28,6 +29,11 @@ try{repository=await loadContent();}catch(error){
   Astro.response.headers.set("Cache-Control","no-store");
 }
 if(repository?.redirect(path)) return Astro.redirect(repository.redirect(path)!,308);
+// Addresses the old site dropped before its final export, so the snapshot has
+// no record of them and only the archive does. They answer without a snapshot
+// because their targets are fixed.
+const legacy=LEGACY_REDIRECT_TARGETS.get(path);
+if(legacy)return Astro.redirect(legacy,308);
 if(path==="/en/")return Astro.redirect("/",308);
 if(repository&&path==="/tags/")return Astro.redirect("/topics/",308);
 const legacyTopic=/^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
