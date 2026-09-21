@@ -14,12 +14,14 @@
     "preview:website": "pnpm --filter @layered/website... build && node apps/website/tools/render-preview.mjs",
     "preview:refresh": "pnpm --filter @layered/website... build && node apps/website/tools/refresh-preview.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --if-present test && pnpm test:migration",
+    "test:migration": "node --test scripts/publii/*.test.mjs && python3 -m unittest discover -s scripts/publii -p 'test_*.py'",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
     "@biomejs/biome": "2.4.8",
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3"
