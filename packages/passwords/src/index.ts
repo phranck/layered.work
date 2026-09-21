@@ -14,9 +14,8 @@ import { promisify } from "node:util";
  * **One copy, in a package of its own.** A hashing or comparing function that
  * exists twice is the failure `code-quality.md` names first, because a change
  * reaching one copy leaves the other doing the old thing and nothing reports
- * it. The account sign-in and the password a protected entry asks for are two
- * callers of the same primitive, in two applications, which is why this is a
- * package rather than a file in either of them.
+ * it. It had been written twice in the backend alone, in the sign-in route and
+ * in the seed, which is why it is a package rather than a file in either.
  *
  * **Server only.** It reads `node:crypto` and it spends 32 MiB per call, so it
  * belongs nowhere a browser bundle can reach.

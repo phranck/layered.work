@@ -18,12 +18,15 @@ export const entryKind = pgEnum("entry_kind", ["post", "page"]);
  *
  * `public` appears everywhere. `draft` exists only in the dashboard. `hidden`
  * answers at its own address and appears in no listing, feed, sitemap or search
- * result. `protected` asks for a password before it shows its body.
+ * result.
+ *
+ * Three states, and nothing between them: an entry is either readable by
+ * whoever holds its address or it is not published.
  *
  * Per translation rather than per entry, because an English post can be public
  * whilst its German version is still being written.
  */
-export const publicationState = pgEnum("publication_state", ["public", "draft", "hidden", "protected"]);
+export const publicationState = pgEnum("publication_state", ["public", "draft", "hidden"]);
 
 /**
  * The two languages the site is written in.
