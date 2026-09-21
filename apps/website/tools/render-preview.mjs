@@ -10,6 +10,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { rewritePreloadHelper } from "./preview-assets.mjs";
 
+// The same table the route redirects from, read rather than repeated, because a
+// second copy here would pass its own check whilst the site answered 404.
+const LEGACY_REDIRECTS = JSON.parse(
+  await readFile(new URL("../src/content/legacy-redirects.json", import.meta.url), "utf8"),
+);
+
 const { values } = parseArgs({
   options: {
     out: { type: "string" },
@@ -58,6 +64,9 @@ for (const language of ["en", "de"]) {
 }
 for (const entry of available) routes.add(entry.path);
 for (const redirect of snapshot.redirects) routes.add(redirect.source);
+// Addresses the old site stopped generating before its final export, which the
+// legacy output below therefore cannot contain.
+for (const { source } of LEGACY_REDIRECTS) routes.add(source);
 const legacyRoutes = [];
 if (values["legacy-output"]) {
   const legacyDirectory = resolve(values["legacy-output"]);
