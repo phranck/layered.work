@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
-  check,
   index,
   pgTable,
   primaryKey,
@@ -81,9 +80,6 @@ export const entryTranslations = pgTable(
     /** When it first became public. Null whilst it never has been. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
 
-    /** The hash of the password a protected entry asks for. Never the password. */
-    passwordHash: text("password_hash"),
-
     /**
      * The picture that stands for this translation: on its card, at the top of
      * the page, and on a social card.
@@ -97,17 +93,6 @@ export const entryTranslations = pgTable(
   },
   (table) => [
     unique("entry_translations_one_per_language").on(table.entryId, table.language),
-
-    /**
-     * A protected translation has a password, and one that is not protected has
-     * none. Without this, choosing the state and setting the password are two
-     * steps, and an entry that is protected with nothing to ask for shows its
-     * body to anyone.
-     */
-    check(
-      "entry_translations_protected_has_password",
-      sql`(${table.state} = 'protected') = (${table.passwordHash} is not null)`,
-    ),
 
     index("entry_translations_by_state").on(table.state, table.language),
   ],

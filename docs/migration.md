@@ -148,9 +148,9 @@ Before cutover, run against the final stable source copy, review languages and a
 
 ## Local website review
 
-The website now renders the exported content through the shared content-language renderer. It includes language-aware entry pages, configurable ordered home blocks, projects/posts/topic/archive collections, GET-based search and pagination, persistent grid/list choice, feeds and a sitemap. Hidden entries answer at their own addresses but do not enter collections or feeds. Drafts, trash and protected entries fail closed.
+The website now renders the exported content through the shared content-language renderer. It includes language-aware entry pages, configurable ordered home blocks, projects/posts/topic/archive collections, GET-based search and pagination, persistent grid/list choice, feeds and a sitemap. Hidden entries answer at their own addresses but do not enter collections or feeds. Drafts and trash fail closed.
 
-Set `WEBSITE_CONTENT_FILE` to the absolute private snapshot filename when running the website. There is no implicit empty-content fallback. A missing or invalid snapshot returns 503 with an error identifier. This is a migration-preview source, not yet the final database-backed publishing path. Dashboard navigation, home-block and reading-width editors are not wired to it. Password entry for protected content remains a separate unfinished acceptance criterion.
+Set `WEBSITE_CONTENT_FILE` to the absolute private snapshot filename when running the website. There is no implicit empty-content fallback. A missing or invalid snapshot returns 503 with an error identifier. This is a migration-preview source, not yet the final database-backed publishing path. Dashboard navigation, home-block and reading-width editors are not wired to it.
 
 The production build can also be rendered without starting a server:
 

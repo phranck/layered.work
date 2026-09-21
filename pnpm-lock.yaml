@@ -142,15 +142,9 @@ importers:
       '@layered/content':
         specifier: workspace:*
         version: link:../../packages/content
-      '@layered/passwords':
-        specifier: workspace:*
-        version: link:../../packages/passwords
       '@layered/policy':
         specifier: workspace:*
         version: link:../../packages/policy
-      '@layered/schemas':
-        specifier: workspace:*
-        version: link:../../packages/schemas
       '@layered/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
