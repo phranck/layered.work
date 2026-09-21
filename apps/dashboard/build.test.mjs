@@ -28,9 +28,27 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
       await readFile(join(workspace, "dist/logo.svg")),
       await readFile(new URL("../../prototype/assets/logo.svg", import.meta.url)),
     );
-    const brandFiles = ["github.svg", "instagram.svg", "mastodon.svg", "xing.svg", "youtube.svg"];
+    // Every mark ships exactly as it was downloaded, and the five carried over
+    // from the prototype are additionally checked against it, so neither copy
+    // can drift from the other unnoticed.
+    const brandFiles = [
+      "github.svg",
+      "gnubash.svg",
+      "html5.svg",
+      "instagram.svg",
+      "mastodon.svg",
+      "swift.svg",
+      "xing.svg",
+      "youtube.svg",
+    ];
     assert.deepEqual((await readdir(join(workspace, "dist/brands"))).sort(), brandFiles);
     for (const brandFile of brandFiles) {
+      assert.deepEqual(
+        await readFile(join(workspace, "dist/brands", brandFile)),
+        await readFile(new URL(`../../packages/ui/assets/brands/${brandFile}`, import.meta.url)),
+      );
+    }
+    for (const brandFile of ["github.svg", "instagram.svg", "mastodon.svg", "xing.svg", "youtube.svg"]) {
       assert.deepEqual(
         await readFile(join(workspace, "dist/brands", brandFile)),
         await readFile(new URL(`../../prototype/assets/brands/${brandFile}`, import.meta.url)),

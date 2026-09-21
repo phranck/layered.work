@@ -1,0 +1,7 @@
+.content-video video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--card-inner-radius);
+  background: var(--surface-sunken);
+}

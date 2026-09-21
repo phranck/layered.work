@@ -24,3 +24,12 @@
 .brand-mark[data-brand="xing"] {
   --brand: url("/brands/xing.svg");
 }
+.brand-mark[data-brand="swift"] {
+  --brand: url("/brands/swift.svg");
+}
+.brand-mark[data-brand="gnubash"] {
+  --brand: url("/brands/gnubash.svg");
+}
+.brand-mark[data-brand="html5"] {
+  --brand: url("/brands/html5.svg");
+}

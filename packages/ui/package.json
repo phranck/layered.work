@@ -14,6 +14,11 @@
     },
     "./*.css": "./src/*.css",
     "./copy-assets": "./copy-assets.mjs",
+    "./model-viewport": {
+      "types": "./src/model-viewport.ts",
+      "development": "./src/model-viewport.ts",
+      "default": "./dist/model-viewport.js"
+    },
     "./icons": {
       "types": "./src/icons.ts",
       "development": "./src/icons.ts",
@@ -29,8 +34,10 @@
     "react": "^19.3.0"
   },
   "dependencies": {
+    "@layered/content": "workspace:*",
     "@layered/tokens": "workspace:*",
-    "@phosphor-icons/react": "2.1.10"
+    "@phosphor-icons/react": "2.1.10",
+    "shiki": "4.4.3"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

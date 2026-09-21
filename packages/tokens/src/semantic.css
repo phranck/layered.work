@@ -126,6 +126,33 @@
      monospace family, rather than repeated at every code block. */
   --mono-ligatures: "calt" 1, "liga" 1;
 
+  /* Content composition names the registered spacing scale semantically. */
+  --content-space-1: var(--space-1);
+  --content-space-2: var(--space-2);
+  --content-space-3: var(--space-3);
+  --content-space-4: var(--space-4);
+  --content-space-5: var(--space-5);
+  --content-space-6: var(--space-6);
+  --content-space-7: var(--space-7);
+  --content-space-8: var(--space-8);
+  --content-space-9: var(--space-9);
+  --content-space-10: var(--space-10);
+  --content-gap: var(--gap);
+  /* A heading starts a section, so it stands further from what came before than
+     one paragraph does from the next. Added to the gap the prose already
+     carries rather than replacing it, so the two move together. */
+  --content-heading-gap: var(--space-4);
+  --content-caption-gap: var(--gap-tight);
+  --content-column-min: calc(var(--reading-measure) / 3);
+  --content-rule-width: 1px;
+  --content-note-edge: var(--space-1);
+  --content-media-ratio: 16 / 10;
+  --content-icon-size: var(--text-xl);
+  --content-note-info: var(--state-info);
+  --content-note-success: var(--state-success);
+  --content-note-warning: var(--state-warning);
+  --content-note-danger: var(--state-danger);
+
   /* --- Wordmark ----------------------------------------------------------- */
   --logo-height: calc(var(--logo-ink-height) / var(--logo-ink-ratio));
 
