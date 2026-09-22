@@ -25,11 +25,12 @@
       if(entries.some(entry=>entry.isIntersecting)){
         observer.disconnect();
         import('@google/model-viewer').then(({ ModelViewerElement }) => {
-          // The decoder for Draco-compressed geometry, served from this site.
-          // Left alone, model-viewer fetches it from gstatic.com, which means a
-          // request to Google on every model and that origin in connect-src.
-          // prepare-assets.mjs puts the files under /draco/.
+          // The two decoders, served from this site: Draco for the geometry and
+          // Basis for the textures. Left alone, model-viewer fetches both from
+          // gstatic.com, which means a request to Google on every model and that
+          // origin in connect-src. prepare-assets.mjs puts the files there.
           ModelViewerElement.dracoDecoderLocation = '/draco/';
+          ModelViewerElement.ktx2TranscoderLocation = '/basis/';
           // The viewer's own controls sit in its shadow root, which the page's
           // stylesheet does not reach, so they would show the browser default
           // focus ring instead of this site's.
