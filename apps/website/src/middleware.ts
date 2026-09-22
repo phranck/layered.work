@@ -49,13 +49,17 @@ function issueNonce(): string {
  *
  * @param response - What the route produced.
  * @param nonce - The one issued for this response.
+ * @param rendersModel - What the page said about itself whilst it rendered.
+ *   Read here rather than decided here, because the answer is in the body and
+ *   nothing has read the body when the request arrives.
  */
-function withSafety(response: Response, nonce: string): Response {
+function withSafety(response: Response, nonce: string, rendersModel = false): Response {
   for (const [name, value] of Object.entries(SAFETY_HEADERS)) {
     response.headers.set(name, value);
   }
   if (ENFORCE_POLICY) {
-    response.headers.set("content-security-policy", sitePolicy(nonce, [MODEL_VIEWER_STYLE_HASH]));
+    const policy = sitePolicy(nonce, { styleHashes: [MODEL_VIEWER_STYLE_HASH], rendersModel });
+    response.headers.set("content-security-policy", policy);
   }
   return response;
 }
@@ -121,9 +125,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // through every component that might.
   context.locals.nonce = nonce;
   context.locals.siteVisible = showSite;
+  context.locals.rendersModel = false;
 
   if (showSite) {
-    return withSafety(await next(), nonce);
+    const response = await next();
+    return withSafety(response, nonce, context.locals.rendersModel);
   }
 
   if (path === "/") {
