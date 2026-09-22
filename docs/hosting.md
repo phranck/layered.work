@@ -125,6 +125,10 @@ All three send `Content-Security-Policy`, `Referrer-Policy`, `X-Content-Type-Opt
 
 Styling is split, because a `<style>` element and `element.style.setProperty(…)` are the same directive to CSP and not the same risk. `style-src-elem` takes the nonce; `style-src-attr` permits attributes, which only a script can reach and no script runs without the nonce; `style-src` stays as the fallback for a browser that knows neither, carrying no nonce so that `'unsafe-inline'` still applies there.
 
+**A page with a three-dimensional model gets one permission the rest of the site does not.** The viewer decodes compressed textures with an Emscripten build that constructs its functions from strings, in a worker built from a blob, which inherits the document's policy, so that page carries `'unsafe-eval'`. No build of that transcoder exists without it. The page decides this about itself whilst it renders, by asking its own body whether a `Model` is in it, and the middleware reads the answer when it writes the header. Every other response is unchanged, and a model exported without Basis-compressed textures would need none of it.
+
+The viewer's own stylesheet is a `<style>` block inside its template, which this server never touches and therefore cannot give a nonce. It is permitted by its hash, computed from the installed package whilst assets are prepared, so a new release of the viewer cannot leave a stale value behind. Its two decoders are copied out of `three` into `public/draco/` and `public/basis/` and served from this origin, because otherwise the viewer fetches them from `gstatic.com`.
+
 **The policy is not sent in development.** The dev server injects its own scripts and styles without nonces, so any policy loose enough for those has stopped saying anything, and one tight enough fills the console with violations about Vite. It is checked against the built output instead:
 
 ```bash

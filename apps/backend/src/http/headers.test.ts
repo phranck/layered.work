@@ -143,6 +143,17 @@ describe("the policies the other hosts send", () => {
     }
   });
 
+  it("gives a page with a model the eval it needs, and takes it back on every other", () => {
+    // The transcoder for compressed textures builds its functions from strings,
+    // and no build of it exists that does not. The permission is therefore real
+    // and the only question is how far it reaches, which is one page.
+    expect(sourcesOf(sitePolicy("abc123", { rendersModel: true }), "script-src")).toContain("'unsafe-eval'");
+    expect(sourcesOf(sitePolicy("abc123", { rendersModel: false }), "script-src")).not.toContain(
+      "'unsafe-eval'",
+    );
+    expect(sourcesOf(sitePolicy("abc123"), "script-src")).not.toContain("'unsafe-eval'");
+  });
+
   it("lets the site compile the model decoder and read back its own blobs", () => {
     // Both of these are what a Draco-compressed model needs: the decoder is
     // WebAssembly, and the loader hands each texture to the page as a blob and
@@ -166,7 +177,8 @@ describe("the policies the other hosts send", () => {
     // A `<style>` block that comes out of a package cannot be given a nonce,
     // and a directive carrying one ignores `'unsafe-inline'`, so a hash is the
     // only exact way to permit it.
-    const withHash = sourcesOf(sitePolicy("abc123", ["'sha256-Zm9vYmFy'"]), "style-src-elem");
+    const hashed = sitePolicy("abc123", { styleHashes: ["'sha256-Zm9vYmFy'"] });
+    const withHash = sourcesOf(hashed, "style-src-elem");
     expect(withHash).toContain("'nonce-abc123'");
     expect(withHash).toContain("'sha256-Zm9vYmFy'");
     expect(sourcesOf(sitePolicy("abc123"), "style-src-elem")).toEqual(["'self'", "'nonce-abc123'"]);

@@ -1,6 +1,6 @@
 ---
 import { randomUUID } from "node:crypto";
-import { renderContent } from "@layered/content";
+import { renderContent, rendersComponent } from "@layered/content";
 import { Button, ContentRenderer, Section } from "@layered/ui";
 import { MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
@@ -67,6 +67,10 @@ const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\
 const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`},{label:de?"Themen":"Topics",href:`${root}topics/`},{label:de?"Archiv":"Archive",href:`${root}archive/`}];
 const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:navigation},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
 const nodes=entry?renderContent(entry.body):[];
+// Read by the middleware once this response exists. A model needs a permission
+// in the content policy that no other page is given, and this is the only place
+// that knows whether there is one, because the answer is in the body.
+Astro.locals.rendersModel=rendersComponent(nodes,"Model");
 const feature=entry?.featuredImage?repository?.media(entry.featuredImage):undefined;
 // A project opens with its picture and closes with the other projects; a post
 // keeps the head it has and closes with what shares its topics.

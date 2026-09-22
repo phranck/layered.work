@@ -127,6 +127,27 @@ export function dashboardPolicy(apiOrigin?: string): string {
 }
 
 /**
+ * What one response needs beyond what every page on the site gets.
+ *
+ * @property styleHashes - Hashes of `<style>` blocks that arrive with a
+ *   dependency rather than with this server, so no nonce can be put on them.
+ *   Each entry is a complete source expression such as `'sha256-…'`, quotes
+ *   included, and is computed from the installed package at build time so that
+ *   it cannot drift from what ships.
+ * @property rendersModel - Whether this page draws a three-dimensional model.
+ *   It is the one thing on the site that needs `'unsafe-eval'`, because the
+ *   transcoder for compressed textures is an Emscripten build that constructs
+ *   its functions from strings, and it runs in a worker built from a blob,
+ *   which inherits this document's policy. No build of that transcoder exists
+ *   without it, so the choice is between this permission on the pages that
+ *   carry a model and no model at all. Every other page is unaffected.
+ */
+export type SitePolicyOptions = {
+  styleHashes?: readonly string[];
+  rendersModel?: boolean;
+};
+
+/**
  * The site's policy.
  *
  * The one page that exists today carries its styles and two of its scripts
@@ -138,20 +159,24 @@ export function dashboardPolicy(apiOrigin?: string): string {
  *
  * @param nonce - Freshly generated for this one response, and written on every
  *   inline element the page carries.
- * @param styleHashes - Hashes of `<style>` blocks that arrive with a dependency
- *   rather than with this server, so no nonce can be put on them. Each entry is
- *   a complete source expression such as `'sha256-…'`, quotes included, and is
- *   computed from the installed package at build time so that it cannot drift
- *   from what ships.
+ * @param options - What this one response needs beyond the common policy.
  */
-export function sitePolicy(nonce: string, styleHashes: readonly string[] = []): string {
+export function sitePolicy(nonce: string, options: SitePolicyOptions = {}): string {
+  const { styleHashes = [], rendersModel = false } = options;
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     // `wasm-unsafe-eval` because the geometry arrives Draco-compressed and the
     // decoder is WebAssembly, which counts as evaluated script. It permits
     // compiling a module and nothing else: `eval` of a string stays refused,
-    // which is what the plain `unsafe-eval` would have opened.
-    "script-src": ["'self'", "'wasm-unsafe-eval'", `'nonce-${nonce}'`, ANALYTICS_ORIGIN],
+    // which is what the plain `unsafe-eval` would have opened, and which only
+    // a page with a model gets.
+    "script-src": [
+      "'self'",
+      "'wasm-unsafe-eval'",
+      ...(rendersModel ? ["'unsafe-eval'"] : []),
+      `'nonce-${nonce}'`,
+      ANALYTICS_ORIGIN,
+    ],
     // The model viewer transcodes compressed textures in a worker it builds
     // from a blob of its own decoder. Unset, `worker-src` falls back to
     // `script-src`, where `blob:` has no business being: that would permit any
