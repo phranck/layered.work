@@ -18,6 +18,23 @@ import { ALLOWED_ORIGINS } from "./headers.js";
 /** The four the issue asks every host to send. */
 const REQUIRED = ["content-security-policy", "referrer-policy", "x-content-type-options", "x-frame-options"];
 
+/**
+ * The sources one directive lists, as separate tokens.
+ *
+ * A token comparison is what keeps these tests about the permission rather than
+ * about the order the directive happens to be written in, and it is the only way
+ * to tell `'wasm-unsafe-eval'` apart from `'unsafe-eval'`, since one contains the
+ * other as text.
+ *
+ * @param policy - A complete Content-Security-Policy header value.
+ * @param directive - The directive name to read, such as `script-src`.
+ * @returns Its sources, or an empty list where the policy carries no such directive.
+ */
+function sourcesOf(policy: string, directive: string): string[] {
+  const entry = policy.split("; ").find((candidate) => candidate.startsWith(`${directive} `));
+  return entry === undefined ? [] : entry.slice(directive.length + 1).split(" ");
+}
+
 describe("every response", () => {
   it.each([
     ["a route that exists", "/health"],
@@ -110,18 +127,29 @@ describe("who may call this from a browser", () => {
 describe("the policies the other hosts send", () => {
   it("puts the site's nonce on the scripts and on the style element", () => {
     const policy = sitePolicy("abc123");
-    expect(policy).toContain("script-src 'self' 'nonce-abc123'");
+    expect(sourcesOf(policy, "script-src")).toContain("'nonce-abc123'");
     expect(policy).toContain("style-src-elem 'self' 'nonce-abc123'");
   });
 
-  it("never permits an inline script anywhere", () => {
+  it("never permits an inline script anywhere, and never a string passed to eval", () => {
     // A nonce in a directive makes `unsafe-inline` ignored, so the two together
-    // would read as careful and behave as neither.
+    // would read as careful and behave as neither. The site does carry
+    // `'wasm-unsafe-eval'`, which permits compiling a WebAssembly module and
+    // leaves `eval` of a string refused, so what is forbidden here is the plain
+    // token on its own.
     for (const policy of [API_POLICY, sitePolicy("abc123"), dashboardPolicy("https://api.example")]) {
-      const scriptSrc = policy.split("; ").find((directive) => directive.startsWith("script-src"));
-      expect(scriptSrc ?? "").not.toContain("unsafe-inline");
-      expect(policy).not.toContain("unsafe-eval");
+      expect(sourcesOf(policy, "script-src")).not.toContain("'unsafe-inline'");
+      expect(policy.split(/[;\s]+/)).not.toContain("'unsafe-eval'");
     }
+  });
+
+  it("lets the site compile the model decoder and read back its own blobs", () => {
+    // Both of these are what a Draco-compressed model needs: the decoder is
+    // WebAssembly, and the loader hands each texture to the page as a blob and
+    // fetches it back. Without them the viewer shows an empty box.
+    const policy = sitePolicy("abc123");
+    expect(sourcesOf(policy, "script-src")).toContain("'wasm-unsafe-eval'");
+    expect(sourcesOf(policy, "connect-src")).toContain("blob:");
   });
 
   it("denies framing on all three, since nothing here is meant to be framed", () => {
@@ -137,9 +165,8 @@ describe("the policies the other hosts send", () => {
   });
 
   it("lets the dashboard reach the API it is given and nowhere else unnamed", () => {
-    const policy = dashboardPolicy("https://api.example");
-    const connect = policy.split("; ").find((directive) => directive.startsWith("connect-src")) ?? "";
+    const connect = sourcesOf(dashboardPolicy("https://api.example"), "connect-src");
     expect(connect).toContain("https://api.example");
-    expect(connect).not.toContain("*");
+    expect(connect.join(" ")).not.toContain("*");
   });
 });
