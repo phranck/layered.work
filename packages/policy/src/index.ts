@@ -142,12 +142,20 @@ export function dashboardPolicy(apiOrigin?: string): string {
 export function sitePolicy(nonce: string): string {
   return contentSecurityPolicy({
     "default-src": ["'none'"],
-    "script-src": ["'self'", `'nonce-${nonce}'`, ANALYTICS_ORIGIN],
+    // `wasm-unsafe-eval` because the geometry arrives Draco-compressed and the
+    // decoder is WebAssembly, which counts as evaluated script. It permits
+    // compiling a module and nothing else: `eval` of a string stays refused,
+    // which is what the plain `unsafe-eval` would have opened.
+    "script-src": ["'self'", "'wasm-unsafe-eval'", `'nonce-${nonce}'`, ANALYTICS_ORIGIN],
     ...styleSources(nonce),
     "img-src": ["'self'", "data:", "blob:", MEDIA_ORIGIN],
     "media-src": ["'self'", MEDIA_ORIGIN],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", ANALYTICS_ORIGIN, MEDIA_ORIGIN],
+    // `blob:` because a glTF file carries its textures inside it, and the
+    // loader hands each one to the page as a blob and then fetches it back. One
+    // refusal per texture, and the model renders empty. A blob address can only
+    // name something this page itself made.
+    "connect-src": ["'self'", "blob:", ANALYTICS_ORIGIN, MEDIA_ORIGIN],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'self'"],
