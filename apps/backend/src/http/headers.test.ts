@@ -152,6 +152,26 @@ describe("the policies the other hosts send", () => {
     expect(sourcesOf(policy, "connect-src")).toContain("blob:");
   });
 
+  it("lets the viewer transcode textures in a worker, without opening the page to blobs", () => {
+    // The transcoder runs in a worker the viewer builds from a blob of its own
+    // decoder. Unset, `worker-src` falls back to `script-src`, and the tempting
+    // repair is to put `blob:` there, which would permit any blob as ordinary
+    // page script.
+    const policy = sitePolicy("abc123");
+    expect(sourcesOf(policy, "worker-src")).toEqual(["'self'", "blob:"]);
+    expect(sourcesOf(policy, "script-src")).not.toContain("blob:");
+  });
+
+  it("names a dependency's stylesheet by hash, beside the nonce", () => {
+    // A `<style>` block that comes out of a package cannot be given a nonce,
+    // and a directive carrying one ignores `'unsafe-inline'`, so a hash is the
+    // only exact way to permit it.
+    const withHash = sourcesOf(sitePolicy("abc123", ["'sha256-Zm9vYmFy'"]), "style-src-elem");
+    expect(withHash).toContain("'nonce-abc123'");
+    expect(withHash).toContain("'sha256-Zm9vYmFy'");
+    expect(sourcesOf(sitePolicy("abc123"), "style-src-elem")).toEqual(["'self'", "'nonce-abc123'"]);
+  });
+
   it("denies framing on all three, since nothing here is meant to be framed", () => {
     for (const policy of [API_POLICY, sitePolicy("abc123"), dashboardPolicy("https://api.example")]) {
       expect(policy).toContain("frame-ancestors 'none'");

@@ -138,8 +138,13 @@ export function dashboardPolicy(apiOrigin?: string): string {
  *
  * @param nonce - Freshly generated for this one response, and written on every
  *   inline element the page carries.
+ * @param styleHashes - Hashes of `<style>` blocks that arrive with a dependency
+ *   rather than with this server, so no nonce can be put on them. Each entry is
+ *   a complete source expression such as `'sha256-…'`, quotes included, and is
+ *   computed from the installed package at build time so that it cannot drift
+ *   from what ships.
  */
-export function sitePolicy(nonce: string): string {
+export function sitePolicy(nonce: string, styleHashes: readonly string[] = []): string {
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     // `wasm-unsafe-eval` because the geometry arrives Draco-compressed and the
@@ -147,7 +152,13 @@ export function sitePolicy(nonce: string): string {
     // compiling a module and nothing else: `eval` of a string stays refused,
     // which is what the plain `unsafe-eval` would have opened.
     "script-src": ["'self'", "'wasm-unsafe-eval'", `'nonce-${nonce}'`, ANALYTICS_ORIGIN],
-    ...styleSources(nonce),
+    // The model viewer transcodes compressed textures in a worker it builds
+    // from a blob of its own decoder. Unset, `worker-src` falls back to
+    // `script-src`, where `blob:` has no business being: that would permit any
+    // blob as ordinary page script. Named separately, it permits one kind of
+    // worker and changes nothing about what the page itself may run.
+    "worker-src": ["'self'", "blob:"],
+    ...styleSources(nonce, styleHashes),
     "img-src": ["'self'", "data:", "blob:", MEDIA_ORIGIN],
     "media-src": ["'self'", MEDIA_ORIGIN],
     "font-src": ["'self'"],
@@ -183,12 +194,19 @@ export function sitePolicy(nonce: string): string {
  * `'unsafe-inline'` entirely and such a browser would then block the
  * attributes it was meant to permit.
  *
+ * A hash joins the nonce on `style-src-elem` for a `<style>` block that comes
+ * out of a dependency, which this server never touches and so cannot mark. The
+ * same rule about `'unsafe-inline'` is why a hash is the only way: a directive
+ * carrying a nonce ignores it, so there is no loose setting to fall back on
+ * short of giving up the nonce for every page.
+ *
  * @param nonce - The one this response was issued.
+ * @param styleHashes - Complete source expressions such as `'sha256-…'`.
  */
-function styleSources(nonce: string): Record<string, string[]> {
+function styleSources(nonce: string, styleHashes: readonly string[]): Record<string, string[]> {
   return {
     "style-src": ["'self'", "'unsafe-inline'"],
-    "style-src-elem": ["'self'", `'nonce-${nonce}'`],
+    "style-src-elem": ["'self'", `'nonce-${nonce}'`, ...styleHashes],
     "style-src-attr": ["'unsafe-inline'"],
   };
 }

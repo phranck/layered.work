@@ -2,6 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 import { randomBytes } from "node:crypto";
 import { NO_FRAMING, SHARED_HEADERS, sitePolicy } from "@layered/policy";
 import { countdownPage } from "./countdown/page.js";
+import { MODEL_VIEWER_STYLE_HASH } from "./generated/model-viewer.js";
 import { hasOpened, isPreviewHost, websiteMode } from "./site.js";
 
 /**
@@ -54,7 +55,7 @@ function withSafety(response: Response, nonce: string): Response {
     response.headers.set(name, value);
   }
   if (ENFORCE_POLICY) {
-    response.headers.set("content-security-policy", sitePolicy(nonce));
+    response.headers.set("content-security-policy", sitePolicy(nonce, [MODEL_VIEWER_STYLE_HASH]));
   }
   return response;
 }

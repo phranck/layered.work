@@ -9,7 +9,7 @@
     "build": "node tools/prepare-assets.mjs && astro build",
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
-    "typecheck": "astro check",
+    "typecheck": "node tools/prepare-assets.mjs && astro check",
     "test": "vitest run && node --test tools/preview-assets.test.mjs"
   },
   "dependencies": {
