@@ -18,6 +18,7 @@ build/
 /apps/website/public/brands/
 /apps/website/public/icon-licenses/
 /apps/website/public/ICON_NOTICES.md
+/apps/website/public/draco/
 
 # Environment
 .env

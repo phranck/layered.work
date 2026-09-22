@@ -10,6 +10,7 @@
       "!prototype",
       "!.issues",
       "!apps/website/content",
+      "!apps/website/public/draco",
       "!migration-out"
     ]
   },

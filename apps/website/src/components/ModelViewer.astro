@@ -24,7 +24,15 @@
     const observer=new IntersectionObserver(entries=>{
       if(entries.some(entry=>entry.isIntersecting)){
         observer.disconnect();
-        import('@google/model-viewer').then(() => {
+        import('@google/model-viewer').then(({ ModelViewerElement }) => {
+          // The decoder for Draco-compressed geometry, served from this site.
+          // Left alone, model-viewer fetches it from gstatic.com, which means a
+          // request to Google on every model and that origin in connect-src.
+          // prepare-assets.mjs puts the files under /draco/.
+          ModelViewerElement.dracoDecoderLocation = '/draco/';
+          // The viewer's own controls sit in its shadow root, which the page's
+          // stylesheet does not reach, so they would show the browser default
+          // focus ring instead of this site's.
           const sheet = new CSSStyleSheet();
           sheet.replaceSync(focusStyles);
           models.forEach(model => {
