@@ -8,7 +8,6 @@ import SiteLayout from "../layouts/SiteLayout.astro";
 import HomeContent from "../components/HomeContent.astro";
 import ListingContent from "../components/ListingContent.astro";
 import ModelViewer from "../components/ModelViewer.astro";
-import MermaidDiagrams from "../components/MermaidDiagrams.astro";
 import { EntryCard } from "../components/entry-card.js";
 import { LEGACY_REDIRECT_TARGETS } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
@@ -97,7 +96,6 @@ if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noind
       </article>
       {neighbours.length>0&&<Section.Page><Section.Title title={project?(de?"Andere Projekte":"Other projects"):(de?"Verwandte Beiträge":"Related entries")}/><div class="entry-grid">{neighbours.map(related=><EntryCard entry={related} image={related.featuredImage?repository.media(related.featuredImage):undefined} />)}</div></Section.Page>}
       <ModelViewer />
-      <MermaidDiagrams />
     </>}
   </>}
 </SiteLayout>

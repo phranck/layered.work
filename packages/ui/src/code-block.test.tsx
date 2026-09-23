@@ -15,7 +15,6 @@ describe("code block highlighting", () => {
     ["sh", 'echo "$HOME" # home'],
     ["swift", 'let name = "World" // greeting'],
     ["ini", "[section]\nenabled=true\n; comment"],
-    ["mermaid", "graph TD\n A[Start] --> B[End]"],
     ["html", '<div class="example">Hi</div>'],
     ["js", 'const name = "World"; // greeting'],
     ["ts", "const count: number = 1;"],

@@ -10,10 +10,6 @@ await copyFile(
   resolve(dirname(require.resolve("@google/model-viewer/package.json")), "LICENSE"),
   new URL("../public/model-viewer-license.txt", import.meta.url),
 );
-await copyFile(
-  resolve(dirname(require.resolve("mermaid/package.json")), "LICENSE"),
-  new URL("../public/mermaid-license.txt", import.meta.url),
-);
 
 /**
  * Asked through model-viewer, because that is what declares `three` as a

@@ -39,11 +39,11 @@ export type ElementNode = {
 };
 
 /**
- * A block of code, or a diagram waiting to be one.
+ * A block of code.
  *
  * Its own node rather than a `pre` holding a `code`, because its content is a
- * string rather than nodes and because the language decides what happens to it:
- * highlighting, or a diagram where the language is `mermaid` (#37).
+ * string rather than nodes and because the language decides how it is
+ * highlighted.
  */
 export type CodeNode = {
   kind: "code";
