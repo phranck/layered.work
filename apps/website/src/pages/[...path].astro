@@ -49,22 +49,27 @@ const topicSlug=/^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
 const topic=repository?.data.topics.find(topic=>topic.slug===topicSlug);
 const topics=relative==="topics/";
 const search=relative==="search/";
+// Publii paginated the home page's post list at /page/<n>/, so the posts listing
+// is where those addresses belong. The query is where the page number lives now.
 const legacyPage=/^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
 if(repository&&legacyPage){
-  const target=new URL(`${root}archive/`,Astro.site);
+  const target=new URL(`${root}posts/`,Astro.site);
   target.searchParams.set("page",legacyPage);
   return Astro.redirect(target.pathname+target.search,308);
 }
-const listing=!!kind||!!topic||relative==="archive/"||search;
+const listing=!!kind||!!topic||search;
 const entry=!home&&!listing&&!topics?repository?.entry(path):undefined;
 let page=1,query="",invalidQuery=false;
 if(listing){try{({page,query}=parseListingQuery(Astro.url.searchParams));}catch{invalidQuery=true;Astro.response.status=400;}}
 const found=home||listing||topics||!!entry;
 if(repository&&!found)Astro.response.status=404;
-const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):listing?(de?"Archiv":"Archive"):(de?"Seite nicht gefunden":"Page not found")));
+const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):(de?"Seite nicht gefunden":"Page not found")));
 const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
-const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`},{label:de?"Themen":"Topics",href:`${root}topics/`},{label:de?"Archiv":"Archive",href:`${root}archive/`}];
-const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:navigation},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
+// The two things this site is: what was built and what was written about it.
+// Topics is a way through those rather than a third kind of thing, so it sits in
+// the footer, where it still answers the /tags/ addresses the old site published.
+const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`}];
+const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:[...navigation,{label:de?"Themen":"Topics",href:`${root}topics/`}]},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
 const nodes=entry?renderContent(entry.body):[];
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place

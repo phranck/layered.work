@@ -49,7 +49,7 @@ const routes = new Set([
 ]);
 for (const language of ["en", "de"]) {
   const root = language === "de" ? "/de/" : "/";
-  for (const path of ["posts/", "projects/", "topics/", "archive/", "search/"]) routes.add(`${root}${path}`);
+  for (const path of ["posts/", "projects/", "topics/", "search/"]) routes.add(`${root}${path}`);
   for (const topic of snapshot.topics) {
     if (
       snapshot.entries.some(
@@ -280,10 +280,10 @@ try {
       // introduced through this crawl; only listing query variants are added.
       for (const match of result.body.matchAll(/(?<=\s)href=["']([^"']+)["']/g)) {
         const url = localUrl(match[1], path);
-        if (url?.search && /\/(?:posts|projects|topics(?:\/[^/]+)?|archive|search)\/$/.test(url.pathname))
+        if (url?.search && /\/(?:posts|projects|topics(?:\/[^/]+)?|search)\/$/.test(url.pathname))
           routes.add(routeKey(url));
       }
-      const isCollection = /^\/(?:de\/)?(?:posts|projects|topics(?:\/[^/]+)?|archive|search)?\/?$/.test(
+      const isCollection = /^\/(?:de\/)?(?:posts|projects|topics(?:\/[^/]+)?|search)?\/?$/.test(
         new URL(path, origin).pathname,
       );
       if (isCollection || /\/(?:feed\.(?:xml|json)|sitemap\.xml)$/.test(path)) {

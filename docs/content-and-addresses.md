@@ -33,7 +33,7 @@ That output cannot contain an address the site stopped generating earlier, and s
 | `/tags/` | 308 to `/topics/` | The section is called Topics now. |
 | `/tags/<slug>/` | 308 to `/topics/<slug>/` | Same subject, new prefix, for every topic the snapshot still carries. |
 | `/authors/frank-gregor/` | 308 to `/` | There is one author and the new site has no author page, so the home page is the nearest real answer. |
-| `/page/<number>/` | 308 to `/archive/?page=<number>` | Pagination moved from the path into the query, where the archive reads it. |
+| `/page/<number>/` | 308 to `/posts/?page=<number>` | Publii paginated the home page's post list at these addresses, so the posts listing is where they belong. Pagination moved from the path into the query, where the listing reads it. |
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
 | `/feed.xml`, `/feed.json`, `/sitemap.xml`, `/robots.txt` | 200 | These keep their addresses exactly. |
 | The six addresses in `legacy-redirects.json` | 308 | Observed in the Internet Archive, absent from the final output. Each row carries its own reason. |
