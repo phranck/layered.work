@@ -80,6 +80,24 @@ describe("loading the site's content", () => {
     expect(repository.data.entries[0]?.title).toBe(snapshot.entries[0].title);
   });
 
+  it("reads the file when the backend answers with nothing", async () => {
+    vi.stubEnv("API_URL", "http://backend.test:3000");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ entries: [], topics: [], media: [], redirects: [] }), {
+            status: 200,
+          }),
+      ),
+    );
+
+    const repository = await loadContent();
+
+    expect(repository.data.entries).not.toHaveLength(0);
+    expect(repository.data.entries[0]?.title).toBe(snapshot.entries[0].title);
+  });
+
   it("refuses when there is no source at all", async () => {
     vi.stubEnv("WEBSITE_CONTENT_FILE", "");
 
