@@ -6,7 +6,7 @@
   "description": "The public site on layered.work",
   "scripts": {
     "dev": "node tools/prepare-assets.mjs && astro dev",
-    "build": "node tools/prepare-assets.mjs && astro build",
+    "build": "node tools/prepare-assets.mjs && astro build && node tools/check-client-bytes.mjs",
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
     "typecheck": "node tools/prepare-assets.mjs && astro check",
