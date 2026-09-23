@@ -1,5 +1,5 @@
 {
-  "id": "a0557c0d-a750-4afa-8abf-dcdc8207d959",
+  "id": "3acf11f3-81c9-4da6-804c-768428ee2bfb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1829,7 +1829,8 @@
       "schema": "public",
       "values": [
         "post",
-        "page"
+        "page",
+        "project"
       ]
     },
     "public.home_block_type": {

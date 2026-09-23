@@ -10,6 +10,7 @@
     "dev": "tsx --env-file-if-exists=../../.env.local --watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
+    "db:import": "tsx --env-file-if-exists=../../.env.local src/db/import.ts",
     "db:migrate": "tsx --env-file-if-exists=../../.env.local src/db/migrate.ts",
     "db:reset": "node ../../scripts/reset-database.mjs",
     "db:seed": "tsx --env-file-if-exists=../../.env.local src/db/seed.ts",

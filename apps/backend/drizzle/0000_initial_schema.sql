@@ -1,4 +1,4 @@
-CREATE TYPE "public"."entry_kind" AS ENUM('post', 'page');--> statement-breakpoint
+CREATE TYPE "public"."entry_kind" AS ENUM('post', 'page', 'project');--> statement-breakpoint
 CREATE TYPE "public"."home_block_type" AS ENUM('hero', 'featured_entry', 'project_grid', 'post_grid', 'topic_bar');--> statement-breakpoint
 CREATE TYPE "public"."image_format" AS ENUM('avif', 'webp', 'jpeg', 'png');--> statement-breakpoint
 CREATE TYPE "public"."language" AS ENUM('en', 'de');--> statement-breakpoint

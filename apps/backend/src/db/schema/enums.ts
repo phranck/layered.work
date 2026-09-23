@@ -11,8 +11,15 @@ import { pgEnum } from "drizzle-orm/pg-core";
  * navigation item and a topic are written in a language just as an entry is.
  */
 
-/** What an entry is. A post appears in listings by date; a page stands alone. */
-export const entryKind = pgEnum("entry_kind", ["post", "page"]);
+/**
+ * What an entry is.
+ *
+ * A post appears in listings by date. A page stands alone. A project is neither:
+ * it is a piece of work with its own listing at `/projects/`, which is why it is
+ * a kind rather than a page carrying a label. The site already sorts all three
+ * apart, and the migration read the old site the same way.
+ */
+export const entryKind = pgEnum("entry_kind", ["post", "page", "project"]);
 
 /**
  * How far a translation has got, and who may read it.
