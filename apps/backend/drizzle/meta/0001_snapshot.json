@@ -1,6 +1,6 @@
 {
-  "id": "a0557c0d-a750-4afa-8abf-dcdc8207d959",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "887a2466-b229-41fb-85d8-dbb3a1a0abc3",
+  "prevId": "a0557c0d-a750-4afa-8abf-dcdc8207d959",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1829,7 +1829,8 @@
       "schema": "public",
       "values": [
         "post",
-        "page"
+        "page",
+        "project"
       ]
     },
     "public.home_block_type": {
