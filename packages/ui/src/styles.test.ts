@@ -56,4 +56,11 @@ describe("article content styles", () => {
     expect(source).toMatch(/\.content-table thead\s*\{[^}]*background:\s*var\(--surface-raised\)/s);
     expect(source).toMatch(/\.content-table tbody tr:hover\s*\{[^}]*background:\s*var\(--hover-tint\)/s);
   });
+
+  it("reads a column heading whole and still breaks a cell anywhere", () => {
+    const source = readCss("./content-renderer.css");
+    expect(source).toMatch(/\.content-table th\s*\{[^}]*white-space:\s*nowrap/s);
+    expect(source).toMatch(/\.content-table th\s*\{[^}]*overflow-wrap:\s*normal/s);
+    expect(source).toMatch(/\.content-table :where\(th, td\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+  });
 });

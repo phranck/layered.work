@@ -167,8 +167,15 @@
   color: var(--text-primary);
   background: var(--surface-raised);
 }
+/* A heading is a label, and a reader scans along it to find the column. Breaking
+   one leaves a stack of letters where a word was, and the permission above is
+   what allows that: without it a word carrying no hyphen cannot break at all.
+   The cells keep it, because a body cell may hold an address nothing shortens.
+   Where the headings then outgrow the container, `.content-table` scrolls. */
 .content-table th {
   font-weight: var(--weight-semibold);
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 .content-table thead th,
 .content-table tbody tr + tr > * {
