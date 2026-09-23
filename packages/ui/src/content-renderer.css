@@ -1,7 +1,26 @@
+/* The rhythm of an article is a set of fractions of the line its body text is
+   set on, derived here rather than taken from the spacing scale, so that
+   changing the reading size or the leading moves every distance in an article
+   with it.
+
+   The line is stated in `rem`, never in `em`. A custom property holding a
+   relative unit is inherited unresolved and computed where it is used, so `em`
+   would make every gap scale with whatever element carries it, and a chapter
+   heading at twice the body size would take twice the space above it. One line
+   for the whole article is the point of a rhythm.
+
+   The four are 1 : 2 : 4 : 6. A heading sits closest to the text it introduces,
+   because proximity is what binds the two, and furthest from the section it
+   closes off. */
 .content-prose {
+  --prose-line: calc(var(--text-lg) * var(--leading-normal));
+  --prose-lead: calc(var(--prose-line) * 0.4);
+  --prose-gap: calc(var(--prose-line) * 0.8);
+  --prose-heading-gap: calc(var(--prose-line) * 1.6);
+  --prose-section-gap: calc(var(--prose-line) * 2.4);
+
   display: flex;
   flex-direction: column;
-  gap: var(--content-gap);
   min-width: 0;
   font-size: var(--text-lg);
   line-height: var(--leading-normal);
@@ -11,16 +30,42 @@
 .content-prose :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre) {
   margin-block: 0;
 }
+/* The rhythm itself, in order of increasing distance. Each rule overrides the
+   one above it for the case it names, so the order here is the hierarchy: a
+   heading following another heading is spaced as a heading, not as the text
+   that would otherwise follow one. */
+.content-prose > * + * {
+  margin-block-start: var(--prose-gap);
+}
+.content-prose > :where(h1, h2, h3, h4, h5, h6) + * {
+  margin-block-start: var(--prose-lead);
+}
+.content-prose > :where(h3, h4, h5, h6) {
+  margin-block-start: var(--prose-heading-gap);
+}
+.content-prose > :where(h1, h2) {
+  margin-block-start: var(--prose-section-gap);
+}
+/* Whatever opens the body has the page above it rather than a block, and that
+   space is already there. */
+.content-prose > :first-child {
+  margin-block-start: 0;
+}
+/* Text meets a card's rounded edge with nothing in between, so it steps in by
+   half the radius. Anything carrying an edge of its own keeps the full measure:
+   a card, a table, a code block, a figure, and a paragraph holding nothing but
+   a picture. */
+.content-prose > :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote) {
+  margin-inline: var(--card-text-inset);
+}
+.content-prose > p:has(> img:only-child) {
+  margin-inline: 0;
+}
 /* No weight here: the heading level sets it, in base.css. */
 .content-prose :where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--font-display);
   line-height: var(--leading-snug);
   color: var(--text-primary);
-}
-/* Not the first one: a heading opening the body has the page above it rather
-   than a paragraph, and the space is already there. */
-.content-prose :where(h1, h2, h3, h4, h5, h6):not(:first-child) {
-  margin-block-start: var(--content-heading-gap);
 }
 .content-prose h1 {
   font-size: var(--text-3xl);
@@ -74,7 +119,6 @@
   padding-inline-start: var(--content-gap);
 }
 .content-prose blockquote {
-  margin-inline: 0;
   padding-inline-start: var(--content-gap);
   border-inline-start: var(--content-note-edge) solid var(--edge-strong);
 }
