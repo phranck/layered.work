@@ -13,7 +13,11 @@
   background-size: cover;
   border-radius: var(--card-inner-radius);
 }
+/* The picture above it carries its own edge and takes the full measure, but a
+   caption is text, so it steps in by half the card radius like the prose it is
+   read with. */
 .content-figure__caption {
+  margin-inline: var(--card-text-inset);
   font-size: var(--text-sm);
   color: var(--text-muted);
   line-height: var(--leading-normal);
