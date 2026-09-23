@@ -27,14 +27,14 @@ describe("content renderer", () => {
     expect(wrapper?.querySelector("th")?.textContent).toBe("Name");
     expect(wrapper?.querySelector("td")?.textContent).toBe("Item");
   });
-  it("renders Mermaid as a diagram target without showing a source-code box", () => {
+  it("shows a fenced block as code whatever language it names", () => {
+    // Nothing turns a code fence into anything but code. A diagram is a picture
+    // in the content, so no language is treated specially here.
     const source = "flowchart LR\n A[USB Input] --> B[USB DAC]";
     const template = document.createElement("template");
     template.innerHTML = draw(`\`\`\`mermaid\n${source}\n\`\`\``);
-    expect(template.content.querySelector("[data-mermaid-diagram]")).not.toBeNull();
-    expect(template.content.querySelector("[data-code-block]")).toBeNull();
-    const saved = template.content.querySelector<HTMLTemplateElement>("template[data-mermaid-source]");
-    expect(saved?.content.textContent?.trim()).toBe(source);
+    expect(template.content.querySelector("[data-code-block]")).not.toBeNull();
+    expect(template.content.querySelector("code")?.textContent).toBe(source);
   });
   it("exports and maps every renderer the register declares", () => {
     const names = [...new Set(Object.values(components).map((entry) => entry.renders))].sort();

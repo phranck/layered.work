@@ -4,7 +4,6 @@ import { CodeBlock } from "./code-block.js";
 import { CONTENT_RENDERERS } from "./content-adapters.js";
 import { ContentPlaceholder } from "./content-placeholder.js";
 import { contentUrl, type MediaResolver } from "./content-shared.js";
-import { MermaidDiagram } from "./mermaid-diagram.js";
 
 const proseTags = new Set([
   "p",
@@ -60,9 +59,6 @@ function renderNode(node: RenderNode, media: MediaResolver): ReactNode {
     case "placeholder":
       return createElement(ContentPlaceholder, { name: node.name });
     case "code":
-      if (node.language?.trim().toLowerCase() === "mermaid") {
-        return createElement(MermaidDiagram, { source: node.source });
-      }
       return createElement(CodeBlock, { source: node.source, language: node.language });
     case "element":
       return renderElement(node, media);

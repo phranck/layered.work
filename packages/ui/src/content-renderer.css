@@ -78,16 +78,20 @@
   padding-inline-start: var(--content-gap);
   border-inline-start: var(--content-note-edge) solid var(--edge-strong);
 }
+/* A picture written straight into the prose is a figure, so it takes the
+   measure of the text the way every picture from the library does. Anything
+   that should stay at its own size belongs in the library and comes through
+   `Image`, which decides its own width. */
 .content-prose img {
+  width: 100%;
   max-width: 100%;
   height: auto;
 }
-/* The three surfaces an article sets apart from its prose. They state what makes
+/* The two surfaces an article sets apart from its prose. They state what makes
    them one family here, and each block below states only what distinguishes it,
-   so the edge, the fill and the height move for all three at once. */
+   so the edge, the fill and the height move for both at once. */
 .content-table,
-.content-code,
-.content-diagram {
+.content-code {
   border: var(--content-rule-width) solid var(--edge-hairline);
   background: var(--surface-sunken);
   box-shadow: var(--lift-2);
@@ -223,16 +227,4 @@
 .content-action {
   display: flex;
   justify-content: flex-end;
-}
-.content-diagram {
-  min-width: 0;
-  margin: 0;
-  padding: var(--space-4);
-  overflow-x: auto;
-  border-radius: var(--card-inner-radius);
-}
-.content-diagram__output img {
-  display: block;
-  width: 100%;
-  height: auto;
 }
