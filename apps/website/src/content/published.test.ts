@@ -38,7 +38,7 @@ describe("the published snapshot", () => {
       // sections. Anything else is a redirect into a 404.
       const reachable =
         repository.entry(redirect.target) !== undefined ||
-        /^\/(de\/)?(posts|projects|topics|archive|search)?\/$/.test(redirect.target);
+        /^\/(de\/)?(posts|projects|topics|search)?\/$/.test(redirect.target);
       expect(reachable, `${redirect.source} points at ${redirect.target}`).toBe(true);
     }
   });
