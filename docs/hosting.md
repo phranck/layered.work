@@ -213,22 +213,20 @@ Until 13 September 2026 the container on this machine came from a compose file i
 
 ## The schema is one file, and the database is thrown away
 
-`apps/backend/drizzle/` holds a single generated file describing the schema as it stands. There is no migration history, because nothing in either database cannot be rebuilt: the local one holds the seeded account and whatever a preview run put there, and the deployed one holds the same.
-
-A schema change is therefore two commands, neither of them written by hand:
+`apps/backend/drizzle/` holds `0000_initial_schema.sql` and every change made since. A schema change is one command, and it is never written by hand:
 
 ```sh
-pnpm --filter @layered/backend db:generate --name=initial_schema
+pnpm --filter @layered/backend db:generate --name=<what_changed>
 pnpm db:reset
 ```
 
-`db:generate` rewrites the one file from `src/db/schema/`, and `db:reset` removes the container together with its volume, brings it back, applies that file and seeds the account. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
+`db:generate` writes a new file describing the difference, and `db:reset` removes the container together with its volume, brings it back, applies every file in order and seeds the account. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
 
-The deployed database was emptied on 21 September 2026 by deleting the `postgres` service and importing it again from the same three lines of `zerops-project-import.yml`, which is why its identifier above differs from the one this document carried before. It holds no schema and no journal, so the next deployment applies the file above to an empty database and seeds the account.
+**A file that has been applied anywhere is never edited again.** The deployment runs `node apps/backend/dist/db/migrate.js` before the service starts, and the runner records a hash of each file it applies. Rewriting `0000_initial_schema.sql` therefore produces a file the deployed database has no record of, whose statements describe a schema it already has, and the deployment fails at the first `CREATE TYPE`.
 
-That route was taken because the database is reachable only from inside the project network: `zcli vpn up` needs a password that only phranck can give, and `zcli project env` prints the database password as a fixed-width placeholder like every other secret. Deleting and importing the service needs neither.
+That happened on 23 September 2026. `entry_kind` gained a third value, the one file was regenerated as the note here used to instruct, and `deploy-backend` failed whilst the site went on serving its previous build. The answer was to put `0000_initial_schema.sql` back exactly as the deployed database had applied it and let `db:generate` write `0001_add_project_kind.sql` beside it, which is one line: `ALTER TYPE "public"."entry_kind" ADD VALUE 'project';`.
 
-**This ends at launch**, or sooner if anything reaches the database that the Publii export and the seed cannot produce again. From that day a schema change is a migration appended to what exists, the history starts being worth keeping, and `db:reset` becomes a local convenience rather than the way schemas move.
+So the history starts here, earlier than #180 expected, and for a plainer reason than the one it named. Rewriting the first file only works whilst every database that has applied it can be thrown away, and the deployed one cannot: it is reachable only from inside the project network, because `zcli vpn up` needs a password only phranck can give. Emptying it means deleting the `postgres` service and importing it again, which was done on 21 September 2026 and is not a step to put in front of every schema change.
 
 ## How another service reaches the database and the bucket
 

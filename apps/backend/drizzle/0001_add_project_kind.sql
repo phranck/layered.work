@@ -1,0 +1,1 @@
+ALTER TYPE "public"."entry_kind" ADD VALUE 'project';
