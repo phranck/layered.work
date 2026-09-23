@@ -20,4 +20,5 @@ export * from "./account.js";
 export * from "./auth.js";
 export * from "./dashboard.js";
 export * from "./errors.js";
+export * from "./home-blocks.js";
 export * from "./request.js";

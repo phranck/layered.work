@@ -1,3 +1,4 @@
+import { homeBlockTypes } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
 import { createRepository, parseListingQuery, summaryOf } from "./repository.js";
 
@@ -27,12 +28,30 @@ describe("public content repository", () => {
     const repo = createRepository({
       ...snapshot,
       homeBlocks: [
-        { type: "posts", enabled: true, sortOrder: 2 },
+        { type: "post_grid", enabled: true, sortOrder: 2 },
         { type: "hero", enabled: true, sortOrder: 1 },
-        { type: "projects", enabled: false, sortOrder: 0 },
+        { type: "project_grid", enabled: false, sortOrder: 0 },
       ],
     });
-    expect(repo.blocks().map((block) => block.type)).toEqual(["hero", "posts"]);
+    expect(repo.blocks().map((block) => block.type)).toEqual(["hero", "post_grid"]);
+    expect(repo.unknownBlocks()).toEqual([]);
+  });
+  it("skips a block type it cannot render and names it instead", () => {
+    const repo = createRepository({
+      ...snapshot,
+      homeBlocks: [
+        { type: "hero", enabled: true, sortOrder: 0 },
+        { type: "newsletter_signup", enabled: true, sortOrder: 1 },
+        { type: "newsletter_signup", enabled: false, sortOrder: 2 },
+      ],
+    });
+    expect(repo.blocks().map((block) => block.type)).toEqual(["hero"]);
+    expect(repo.unknownBlocks()).toEqual(["newsletter_signup"]);
+  });
+  it("offers every block type on its defaults when the snapshot carries none", () => {
+    const repo = createRepository(snapshot);
+    expect(repo.blocks().map((block) => block.type)).toEqual([...homeBlockTypes]);
+    expect(repo.unknownBlocks()).toEqual([]);
   });
   it("excludes non-public states and other languages from every collection", () => {
     const repo = createRepository(snapshot);

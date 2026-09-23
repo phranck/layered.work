@@ -1,3 +1,4 @@
+import { homeBlockTypes } from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
 
 /**
@@ -105,10 +106,4 @@ export const navigationPlacement = pgEnum("navigation_placement", ["main", "foot
  * enum therefore costs nothing and keeps a block that nothing can render out of
  * the table.
  */
-export const homeBlockType = pgEnum("home_block_type", [
-  "hero",
-  "featured_entry",
-  "project_grid",
-  "post_grid",
-  "topic_bar",
-]);
+export const homeBlockType = pgEnum("home_block_type", homeBlockTypes);
