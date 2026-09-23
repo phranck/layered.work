@@ -10,6 +10,7 @@ import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
 import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
+import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
 
 /**
@@ -62,6 +63,7 @@ app.route("/health", health);
 app.route("/auth", auth);
 app.route("/account", account);
 app.route("/dashboard", dashboard);
+app.route("/content", content);
 
 /** An address that is not here, in the same shape as every other failure. */
 app.notFound((c) => fail(c, ErrorCode.NotFound, "There is nothing at this address."));
