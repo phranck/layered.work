@@ -50,7 +50,21 @@ async function fromBackend(): Promise<unknown | undefined> {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) return undefined;
-    return await response.json();
+
+    const snapshot = await response.json();
+
+    // A database holding no entries is a database nothing has been written into
+    // yet, not a site with nothing on it. Answering with it empties every page
+    // whilst every check stays green, because the response was a success and the
+    // shape was right, which is exactly what happened on 23 September 2026: the
+    // site went live against an empty production database and served a home page
+    // with no hero, no feature and no cards.
+    //
+    // The file is the better answer for as long as it has more to say. This
+    // stops applying on its own once the database carries the content.
+    if (!Array.isArray(snapshot?.entries) || snapshot.entries.length === 0) return undefined;
+
+    return snapshot;
   } catch {
     return undefined;
   }
