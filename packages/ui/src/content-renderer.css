@@ -185,9 +185,10 @@
   border-block-start: 0;
   border-block-end: var(--content-rule-width) solid var(--edge-hairline);
 }
-.content-table tbody tr {
-  transition: background-color var(--duration-fast) var(--ease);
-}
+/* No transition on the row tint. A pointer crossing a table lights and leaves
+   rows faster than any duration can follow, so the fade lags behind the cursor
+   and the table feels heavy. The tint is feedback about where the pointer is,
+   and feedback about the present arrives at once. */
 .content-table tbody tr:hover {
   background: var(--hover-tint);
 }

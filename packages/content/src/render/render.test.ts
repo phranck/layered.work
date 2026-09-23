@@ -158,6 +158,52 @@ describe("a table", () => {
       ].join("\n"),
     );
   });
+
+  it("keeps a column whose cell is empty, so the rest stay in their own", () => {
+    expect(outline("| a | b | c |\n| --- | --- | --- |\n| 1 | | 3 |\n")).toBe(
+      [
+        "table",
+        "  thead",
+        "    tr",
+        "      th",
+        '        text "a"',
+        "      th",
+        '        text "b"',
+        "      th",
+        '        text "c"',
+        "  tbody",
+        "    tr",
+        "      td",
+        '        text "1"',
+        "      td",
+        "      td",
+        '        text "3"',
+      ].join("\n"),
+    );
+  });
+
+  it("counts the columns of a row written without outer bars", () => {
+    expect(outline("a | b | c\n--- | --- | ---\n1 | | 3\n")).toBe(
+      [
+        "table",
+        "  thead",
+        "    tr",
+        "      th",
+        '        text "a"',
+        "      th",
+        '        text "b"',
+        "      th",
+        '        text "c"',
+        "  tbody",
+        "    tr",
+        "      td",
+        '        text "1"',
+        "      td",
+        "      td",
+        '        text "3"',
+      ].join("\n"),
+    );
+  });
 });
 
 describe("a link", () => {

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { renderContent } from "@layered/content";
 import { describe, expect, it } from "vitest";
 import { createRepository } from "./repository.js";
 
@@ -39,6 +40,25 @@ describe("the published snapshot", () => {
         repository.entry(redirect.target) !== undefined ||
         /^\/(de\/)?(posts|projects|topics|archive|search)?\/$/.test(redirect.target);
       expect(reachable, `${redirect.source} points at ${redirect.target}`).toBe(true);
+    }
+  });
+
+  // A cell with nothing in it is what this catches. It leaves no node behind, so
+  // a renderer counting nodes drops the column and everything right of it moves
+  // one place left, which reads as a table whose figures belong to the wrong
+  // heading rather than as something broken.
+  it("gives every row of every table as many cells as its heading has", async () => {
+    type Node = { kind: string; tag?: string; children?: Node[] };
+    const tablesIn = (nodes: Node[]): Node[] =>
+      nodes.flatMap((node) => (node.tag === "table" ? [node] : tablesIn(node.children ?? [])));
+
+    for (const entry of snapshot.entries as { slug: string; body: string }[]) {
+      if (!entry.body.includes("|")) continue;
+      for (const [index, table] of tablesIn(await renderContent(entry.body)).entries()) {
+        const rows = (table.children ?? []).flatMap((part) => part.children ?? []);
+        const widths = [...new Set(rows.map((row) => (row.children ?? []).length))];
+        expect(widths, `${entry.slug}, table ${index + 1}`).toHaveLength(1);
+      }
     }
   });
 });
