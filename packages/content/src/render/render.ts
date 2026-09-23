@@ -498,10 +498,43 @@ function tableNode(node: SyntaxNode, context: Context): RenderNode {
 }
 
 /** The cells of one row. */
+/**
+ * One row's cells, counted by the bars rather than by what stands between them.
+ *
+ * A cell with nothing in it produces no `TableCell` node at all, only two
+ * delimiters side by side, so reading the nodes loses the column and everything
+ * to its right slides one place left. The bars are what separate the columns, so
+ * they are what decides how many there are.
+ *
+ * Leading and trailing bars open and close the row rather than separating
+ * anything, which is why they come off before the count.
+ *
+ * @param row - A `TableHeader` or `TableRow` node.
+ * @param tag - `th` for the header, `td` for a body row.
+ * @returns One element per column, empty where the source had nothing.
+ */
 function cellsOf(row: SyntaxNode, tag: string, context: Context): RenderNode[] {
-  return childrenOf(row)
-    .filter((cell) => cell.name === "TableCell")
-    .map((cell) => element(tag, inlineChildren(cell, cell.from, cell.to, context)));
+  const children = childrenOf(row);
+  if (children.length === 0) return [];
+
+  const inner = [...children];
+  if (inner[0]?.name === "TableDelimiter") inner.shift();
+  if (inner.at(-1)?.name === "TableDelimiter") inner.pop();
+
+  const cells: RenderNode[] = [];
+  let content: SyntaxNode | undefined;
+  const take = () => {
+    cells.push(element(tag, content ? inlineChildren(content, content.from, content.to, context) : []));
+    content = undefined;
+  };
+
+  for (const child of inner) {
+    if (child.name === "TableDelimiter") take();
+    else if (child.name === "TableCell") content = child;
+  }
+  take();
+
+  return cells;
 }
 
 /** The highest code point a character can have. */
