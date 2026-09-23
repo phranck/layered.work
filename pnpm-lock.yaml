@@ -145,6 +145,9 @@ importers:
       '@layered/policy':
         specifier: workspace:*
         version: link:../../packages/policy
+      '@layered/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
       '@layered/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens

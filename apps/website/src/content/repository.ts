@@ -1,4 +1,11 @@
 import { COMPONENT_NAMES } from "@layered/content";
+import {
+  type HomeBlock,
+  homeBlockSchema,
+  homeBlockTypes,
+  isKnownHomeBlock,
+  unknownHomeBlocks,
+} from "@layered/schemas";
 import { z } from "zod";
 
 /** Only canonical site-relative paths can be stored or used as redirects. */
@@ -63,30 +70,18 @@ const mediaSchema = z.object({
     .regex(/^data:image\/(?:webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/)
     .optional(),
 });
-const blockSchema = z.object({
-  type: z.string(),
-  enabled: z.boolean().default(true),
-  sortOrder: z.number().int(),
-  settings: z
-    .object({
-      title: z.string().optional(),
-      description: z.string().optional(),
-      limit: z.number().int().min(1).max(24).optional(),
-    })
-    .default({}),
-});
 const snapshotSchema = z.object({
   entries: z.array(entrySchema),
   topics: z.array(z.object({ id: z.union([z.number(), z.string()]), slug, name: z.string() })),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),
-  homeBlocks: z.array(blockSchema).optional(),
+  homeBlocks: z.array(homeBlockSchema).optional(),
 });
 export type Language = z.infer<typeof language>;
 export type Entry = z.infer<typeof entrySchema>;
 export type Media = z.infer<typeof mediaSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
-export type HomeBlock = z.infer<typeof blockSchema>;
+export type { HomeBlock };
 
 /** All collection readers share this publication predicate. */
 export function isListed(entry: Entry, locale: Language): boolean {
@@ -243,6 +238,15 @@ export function createRepository(input: unknown) {
     `${entry.title} ${summaryOf(entry)} ${entry.body} ${entry.topics
       .map((slug) => topicNames.get(slug) ?? slug)
       .join(" ")}`;
+  /**
+   * Every block the snapshot declares, known or not, enabled or not.
+   *
+   * Read by `blocks` and by `unknownBlocks`, so the page and the report are
+   * always talking about the same set.
+   */
+  const declaredBlocks = (): HomeBlock[] =>
+    data.homeBlocks ??
+    homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
   return {
     data,
     media: (name: string) => {
@@ -332,18 +336,28 @@ export function createRepository(input: unknown) {
         }))
         .filter((topic) => topic.count > 0);
     },
+    /**
+     * The home page's blocks, enabled and in order, and only the ones this build renders.
+     *
+     * A snapshot carrying no blocks at all is a site nobody has arranged in the
+     * dashboard yet, so every type appears once on its defaults. That is the
+     * current state, and the reason this is never empty.
+     */
     blocks(): HomeBlock[] {
-      return (
-        data.homeBlocks ??
-        ["hero", "featured", "projects", "posts", "topics"].map((type, sortOrder) => ({
-          type,
-          sortOrder,
-          enabled: true,
-          settings: {},
-        }))
-      )
-        .filter((block) => block.enabled)
+      return declaredBlocks()
+        .filter((block) => block.enabled && isKnownHomeBlock(block))
         .sort((a, b) => a.sortOrder - b.sortOrder);
+    },
+    /**
+     * The block types in the snapshot that this build cannot render, each once.
+     *
+     * Empty in the ordinary case. Anything in it means the snapshot names a block
+     * this site has never heard of, and the page is quietly shorter than whoever
+     * arranged it expects. Returned rather than logged, because only the caller
+     * knows where a report belongs.
+     */
+    unknownBlocks(): string[] {
+      return unknownHomeBlocks(declaredBlocks());
     },
   };
 }

@@ -13,6 +13,14 @@ const featured=entries.find(entry=>entry.featured)??entries.find(entry=>entry.ki
 const hero=entries.find(entry=>entry.slug==="next-mini-replica-interest")??entries.find(entry=>entry.kind==="project"&&entry.featuredImage)??featured;
 const heroImage=hero?.featuredImage?repository.media(hero.featuredImage):undefined;
 const featureImage=featured?.featuredImage?repository.media(featured.featuredImage):undefined;
+// A grid block's type is not its listing's address, and the two were only ever equal by
+// accident: renaming the block to match the database turned "View all" into /project_grid/.
+const gridKind=(type:string)=>type==="project_grid"?"project":"post";
+const gridPath=(type:string)=>type==="project_grid"?"projects":"posts";
+// A block this build cannot render leaves a shorter page and no other trace, so it is said
+// once here, where it is known that the home page is what came out short.
+const unknown=repository.unknownBlocks();
+if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN",operation:"render_home_blocks",result:"skipped",types:unknown}));
 ---
 {repository.blocks().map(block=>block.type==="hero" ? (
   <section class="hero">
@@ -30,7 +38,7 @@ const featureImage=featured?.featuredImage?repository.media(featured.featuredIma
       <div class="plate plate--front"><img src={heroImage.src} srcset={heroImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
     </a>}
   </section>
-) : block.type==="featured"&&featured ? (
+) : block.type==="featured_entry"&&featured ? (
   <Section.Page>
     <Section.Title eyebrow={de?"Im Vordergrund":"In focus"} title={block.settings.title??(de?"Woran gerade gearbeitet wird":"From the workbench")} />
     <Card.Link href={featured.path}><div class="feature">
@@ -38,12 +46,12 @@ const featureImage=featured?.featuredImage?repository.media(featured.featuredIma
       <div class="feature__body"><div class="meta"><time datetime={featured.publishedAt??undefined}>{dateLabel(featured)}</time><span>{readingTime(featured)} min</span></div><h3 class="title-page">{featured.title}</h3><p class="lede">{summaryOf(featured)}</p><Button.Inert icon={createElement(ArticleIcon,{weight:"duotone"})} tone="primary">{de?"Weiterlesen":"Read more"}</Button.Inert></div>
     </div></Card.Link>
   </Section.Page>
-) : block.type==="projects"||block.type==="posts" ? (
+) : block.type==="project_grid"||block.type==="post_grid" ? (
   <Section.Page>
-    <Section.Title title={block.settings.title??(block.type==="projects"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${block.type}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{entries.filter(entry=>entry.kind===(block.type==="projects"?"project":"post")).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
-    {!entries.some(entry=>entry.kind===(block.type==="projects"?"project":"post"))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
+    <Section.Title title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
+    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+    {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
   </Section.Page>
-) : block.type==="topics" ? (
+) : block.type==="topic_bar" ? (
   <Section.Page><Section.Title title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>
 ) : null)}
