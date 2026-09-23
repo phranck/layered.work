@@ -16,7 +16,7 @@ Existing English paths come from the generated Publii output and remain unchange
 
 Topics expose `id`, `slug`, and `name`. Media expose `slug`, `src`, `mime`, `filename`, `source`, `bytes`, and `sha256`; images also receive dimensions, responsive `srcSet`, and a WebP data-URL placeholder when variants are generated. Existing alt text is preserved. Missing alt text is reported rather than invented.
 
-Media slugs come from filenames. Collisions receive the owning entry ID or containing directory, then a stable path hash if necessary. Every source file except the two ISOs is copied byte-for-byte and verified. Responsive variants are generated separately with the Sharp version already supplied by Astro; originals are never resized or replaced. Existing Publii responsive images and thumbnails are preserved but do not spawn further variants.
+Media slugs come from filenames. Collisions receive the owning entry ID or containing directory, then a stable path hash if necessary. Every source file except the two ISOs is copied byte-for-byte and verified. The two NeXTSTEP images those ISOs held are 740 MB that exist elsewhere, so the two posts offering them link to the Internet Archive item `NeXTSTEP33CISC` instead. The pipeline carries that mapping from ISO filename to external address and applies it without being asked, because a run that misses it writes dead download links and says so only in its own report. Responsive variants are generated separately with the Sharp version already supplied by Astro; originals are never resized or replaced. Existing Publii responsive images and thumbnails are preserved but do not spawn further variants.
 
 ## Addresses and redirects
 
