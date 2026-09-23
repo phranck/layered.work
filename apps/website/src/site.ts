@@ -13,9 +13,9 @@
  *
  * Written with its offset rather than as a bare local time, because a countdown
  * whose target depends on the reader's own clock counts to a different moment
- * for every reader. Bregenz is UTC+2 in September.
+ * for every reader. Bregenz is UTC+2 until the last Sunday in October.
  */
-export const LAUNCH = "2026-09-25T21:21:00+02:00";
+export const LAUNCH = "2026-10-01T10:01:00+02:00";
 
 /**
  * The zone the site keeps time in.
