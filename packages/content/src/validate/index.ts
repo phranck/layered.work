@@ -7,4 +7,5 @@
  */
 export * from "./findings.js";
 export * from "./position.js";
+export * from "./references.js";
 export * from "./validate.js";

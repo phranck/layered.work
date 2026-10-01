@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { mediaReferences } from "@layered/content";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -8,7 +9,7 @@ import {
   hasTestDatabase,
   testDatabase,
 } from "../test-support/database.js";
-import { importContent, type Snapshot } from "./import-content.js";
+import { importContent, type Snapshot, withDrafts } from "./import-content.js";
 import { entries, entryTopics, entryTranslations, media, paths, topics } from "./schema/index.js";
 
 /**
@@ -24,6 +25,42 @@ const runs = hasTestDatabase ? describe : describe.skip;
 const snapshot = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../website/content/site.json", import.meta.url)), "utf8"),
 ) as Snapshot;
+
+/**
+ * A fuller snapshot standing in for the migration output, which never leaves
+ * the machine that produced it. One published entry carries a stale body, as
+ * the migration output does after an editorial correction, and two entries
+ * exist only here: a draft and one in the bin.
+ */
+function migrationOutput(): Snapshot {
+  const [first, ...rest] = snapshot.entries;
+  if (!first) throw new Error("The published snapshot holds no entries");
+  return {
+    ...snapshot,
+    entries: [
+      { ...first, body: "The text before the correction." },
+      ...rest,
+      { ...first, id: "draft-fixture", slug: "draft-fixture", path: "/draft-fixture/", visibility: "draft" },
+      { ...first, id: "bin-fixture", slug: "bin-fixture", path: "/bin-fixture/", visibility: "trashed" },
+    ],
+  };
+}
+
+describe("taking the drafts from the migration output", () => {
+  it("adds the drafts and nothing else", () => {
+    const merged = withDrafts(snapshot, migrationOutput());
+
+    expect(merged.entries).toHaveLength(snapshot.entries.length + 1);
+    expect(merged.entries.at(-1)?.path).toBe("/draft-fixture/");
+    expect(merged.entries.some((entry) => entry.visibility === "trashed")).toBe(false);
+  });
+
+  it("keeps the published text where both files hold an entry", () => {
+    const merged = withDrafts(snapshot, migrationOutput());
+
+    expect(merged.entries[0]?.body).toBe(snapshot.entries[0]?.body);
+  });
+});
 
 runs("importing a snapshot", () => {
   beforeAll(async () => {
@@ -61,10 +98,11 @@ runs("importing a snapshot", () => {
 
   it("gives a translation the state the snapshot gave it", async () => {
     const database = await testDatabase();
-    await importContent(database, snapshot);
+    const merged = withDrafts(snapshot, migrationOutput());
+    await importContent(database, merged);
 
-    for (const wanted of ["public", "hidden"] as const) {
-      const source = snapshot.entries.find((entry) => entry.visibility === wanted);
+    for (const wanted of ["public", "hidden", "draft"] as const) {
+      const source = merged.entries.find((entry) => entry.visibility === wanted);
       if (!source) continue;
       const [row] = await database
         .select({ state: entryTranslations.state, title: entryTranslations.title })
@@ -74,6 +112,23 @@ runs("importing a snapshot", () => {
       expect(row?.state, `${source.slug} should be ${wanted}`).toBe(wanted);
       expect(row?.title).toBe(source.title);
     }
+  });
+
+  it("leaves no body naming a file the library does not hold", async () => {
+    const database = await testDatabase();
+    await importContent(database, snapshot);
+
+    // Publii copied files between post directories and the migration gave each
+    // copy a slug. The library holds the file once, so a body naming a second
+    // copy has to name the one that was kept.
+    const slugs = new Set((await database.select({ slug: media.slug }).from(media)).map((row) => row.slug));
+    const bodies = await database.select({ body: entryTranslations.body }).from(entryTranslations);
+    const unresolved = bodies
+      .flatMap((row) => mediaReferences(row.body))
+      .map((reference) => reference.slug)
+      .filter((slug) => !slugs.has(slug));
+
+    expect(unresolved).toEqual([]);
   });
 
   it("holds a file once however many slugs name it", async () => {

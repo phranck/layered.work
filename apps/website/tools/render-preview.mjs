@@ -3,12 +3,13 @@
  * The destination must be new or empty. Private migration data is never copied.
  */
 import assert from "node:assert/strict";
-import { createHash, randomUUID } from "node:crypto";
-import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { rewritePreloadHelper } from "./preview-assets.mjs";
+import { loadProductionApp } from "./production-app.mjs";
 
 // The same table the route redirects from, read rather than repeated, because a
 // second copy here would pass its own check whilst the site answered 404.
@@ -184,30 +185,8 @@ async function save(pathname, data) {
   await writeFile(filename, data, { flag: "wx" });
 }
 
-const entryFilename = join(serverDirectory, "entry.mjs");
-const productionEntry = await readFile(entryFilename, "utf8");
-// Astro 7's standalone adapter bundles App and the manifest into entry.mjs, but
-// exports only its Node handler. Expose that existing App in an isolated copy;
-// its routes, renderer and middleware are byte-for-byte the production build.
-assert(
-  /\b(?:var|const|let) app = createApp\(/.test(productionEntry),
-  "Unsupported Astro adapter bundle: expected its production App instance",
-);
-assert(
-  productionEntry.includes('process.env.ASTRO_NODE_AUTOSTART !== "disabled"'),
-  "Unsupported Astro adapter: no explicit autostart switch",
-);
-process.env.ASTRO_NODE_AUTOSTART = "disabled";
-process.env.ASTRO_NODE_LOGGING = "disabled";
 process.env.WEBSITE_MODE = "site";
-const temporaryEntry = join(serverDirectory, `.preview-${randomUUID()}.mjs`);
-let app;
-try {
-  await writeFile(temporaryEntry, `${productionEntry}\nexport { app as previewApp };\n`, { flag: "wx" });
-  ({ previewApp: app } = await import(pathToFileURL(temporaryEntry).href));
-} finally {
-  await rm(temporaryEntry, { force: true });
-}
+const app = await loadProductionApp(serverDirectory);
 
 const rendered = new Map();
 const redirects = new Map();
