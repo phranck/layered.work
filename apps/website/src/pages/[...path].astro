@@ -9,7 +9,7 @@ import HomeContent from "../components/HomeContent.astro";
 import ListingContent from "../components/ListingContent.astro";
 import ModelViewer from "../components/ModelViewer.astro";
 import { EntryCard } from "../components/entry-card.js";
-import { LEGACY_REDIRECT_TARGETS } from "../content/legacy-redirects.js";
+import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
 import { dateLabel, languageRoot, parseListingQuery, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
@@ -50,11 +50,13 @@ const topic=repository?.data.topics.find(topic=>topic.slug===topicSlug);
 const topics=relative==="topics/";
 const search=relative==="search/";
 // Publii paginated the home page's post list at /page/<n>/, so the posts listing
-// is where those addresses belong. The query is where the page number lives now.
+// is where those addresses belong. The query is where the page number lives now,
+// and it is the page holding the same posts rather than the same number.
 const legacyPage=/^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
 if(repository&&legacyPage){
   const target=new URL(`${root}posts/`,Astro.site);
-  target.searchParams.set("page",legacyPage);
+  const listingPage=legacyPostsPage(Number(legacyPage));
+  if(listingPage>1)target.searchParams.set("page",String(listingPage));
   return Astro.redirect(target.pathname+target.search,308);
 }
 const listing=!!kind||!!topic||search;

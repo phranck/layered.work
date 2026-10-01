@@ -1,4 +1,5 @@
 import table from "./legacy-redirects.json" with { type: "json" };
+import { LISTING_PAGE_SIZE } from "./repository.js";
 
 /**
  * Addresses the old site answered that its last generated output no longer contains.
@@ -31,3 +32,25 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = table;
 export const LEGACY_REDIRECT_TARGETS: ReadonlyMap<string, string> = new Map(
   LEGACY_REDIRECTS.map((redirect) => [redirect.source, redirect.target]),
 );
+
+/**
+ * How many posts each numbered page of the old home page listed.
+ *
+ * Read off the final Publii output: eight post cards on `/` and one on
+ * `/page/2/`.
+ */
+const LEGACY_POSTS_PER_PAGE = 8;
+
+/**
+ * The page of the posts listing that holds what an old numbered page showed.
+ *
+ * Publii paginated the home page at `/page/<n>/`. This site lists more posts on
+ * a page, so the same number would point past the end of the listing and answer
+ * 404. The first post the old page showed decides where it lands.
+ *
+ * @param oldPage - The number in the old address, from 1.
+ * @returns The listing page, from 1.
+ */
+export function legacyPostsPage(oldPage: number): number {
+  return Math.floor(((oldPage - 1) * LEGACY_POSTS_PER_PAGE) / LISTING_PAGE_SIZE) + 1;
+}
