@@ -33,7 +33,7 @@ That output cannot contain an address the site stopped generating earlier, and s
 | `/tags/` | 308 to `/topics/` | The section is called Topics now. |
 | `/tags/<slug>/` | 308 to `/topics/<slug>/` | Same subject, new prefix, for every topic the snapshot still carries. |
 | `/authors/frank-gregor/` | 308 to `/` | There is one author and the new site has no author page, so the home page is the nearest real answer. |
-| `/page/<number>/` | 308 to `/posts/?page=<number>` | Publii paginated the home page's post list at these addresses, so the posts listing is where they belong. Pagination moved from the path into the query, where the listing reads it. |
+| `/page/<number>/` | 308 to the posts listing page holding the same posts | Publii paginated the home page's post list at these addresses, eight posts to a page, so the posts listing is where they belong. It shows twelve to a page, so the number is converted rather than kept: `/page/2/` lands on `/posts/`. Pagination moved from the path into the query, where the listing reads it. |
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
 | `/feed.xml`, `/feed.json`, `/sitemap.xml`, `/robots.txt` | 200 | These keep their addresses exactly. |
 | The six addresses in `legacy-redirects.json` | 308 | Observed in the Internet Archive, absent from the final output. Each row carries its own reason. |
@@ -43,4 +43,70 @@ Two things are deliberately outside this list. Static assets such as the favicon
 
 The trashed entry `happy-birthday` needs no redirect. Publii does not generate a trashed entry, so `/happy-birthday/` is absent from the final output, and the Internet Archive has no record of that address at all. It never answered, so nothing points at it.
 
-Verified on 21 September 2026: the preview renderer checked 42 legacy addresses and the six archived ones, and reported 36 redirect targets returning 200, four private entries returning 404 and no other status.
+Verified on 2 October 2026: the preview renderer checked 42 legacy addresses and the six archived ones, and reported 36 redirect targets returning 200, four private entries returning 404 and no other status. Rendering from the database's snapshot gives the same 36 redirect targets.
+
+## Getting the content into a database
+
+`db:import` writes the published snapshot into the database `DATABASE_URL` names. That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the published file are taken from there, so every editorial correction made since the cutover stands.
+
+```bash
+pnpm --filter @layered/backend db:import --drafts-from ../../migration-out/site.json
+```
+
+Publii copied some files into several post directories, and the migration gave each copy its own slug. The database holds a file once, by checksum. The import therefore keeps the first slug and rewrites every body that names another copy to name the kept one, so no picture goes missing when the site reads from the database. Running the import again leaves the same rows.
+
+## Proving nothing was lost
+
+Two checks compare the old site with the new one, and both read everything rather than a sample. Neither writes anything, and neither sends a request off the machine.
+
+```bash
+pnpm --filter @layered/backend db:verify --snapshot-out /tmp/database-snapshot.json
+pnpm --filter "@layered/website..." build
+WEBSITE_CONTENT_FILE=/tmp/database-snapshot.json node apps/website/tools/verify-migration.mjs
+```
+
+`db:verify` reads the Publii database at `~/Documents/Publii/sites/layeredwork/input` and the database `DATABASE_URL` names. It compares the counts, and for every post its address, state, title, date and topics. It also writes what the site would read from that database. `verify-migration.mjs` renders every public and hidden entry from that file through the production build, and compares its text with the page the old site served. It also checks every internal link and every file the page names. Both exit with a non-zero status when something differs that is not a text difference.
+
+### The counts
+
+Measured on 2 October 2026 against the local database after the import above.
+
+| What | Publii | Database |
+| --- | ---: | ---: |
+| Entries, public | 15 | 15 |
+| Entries, hidden | 2 | 2 |
+| Entries, draft | 3 | 3 |
+| Entries in the bin | 1 | 0 |
+| Topics | 23 | 23 |
+| Topic assignments | 30 | 30 |
+| Media, distinct contents | 205 | 202 |
+
+The entry in the bin, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 are copies of a file already counted, which leaves 205 distinct files. Three of them are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
+
+Every one of the 20 migrated entries has the state, title, date and topics it had in Publii, at the address the rules above give it.
+
+### The text of every entry
+
+The 17 entries a reader can open, compared word by word with the old page. Every internal link in them resolves, and no page shows a placeholder for a missing file. All 75 files they name exist in the build, and each one the database records has the checksum the database holds for it.
+
+| Entry | Words before | Words after | What differs |
+| --- | ---: | ---: | --- |
+| `/projects/next-soundbox/` | 902 | 717 | The old page printed the Mermaid source of the signal chain as text, which is the picture `schematic-7` now. It printed the parts table as raw Markdown, so its bars and link syntax are gone and the part numbers remain as link text. The model's description is new text. |
+| `/projects/` | 18 | 0 | The address is the projects listing now, which does not show the page's two introductory sentences. |
+| `/swift-dont-use-nested-ternary-operators/` | 587 | 587 | Nothing. |
+| `/de/gimli/` | 372 | 372 | Nothing. |
+| `/next-mini-replica-interest/` | 376 | 281 | The interest form is not on the page. The site renders no forms yet. |
+| `/projects/pandadock/` | 1054 | 1011 | The old page printed both tables as raw Markdown, which are tables now. The embedded YouTube video is a link carrying the video's title. |
+| `/mastodon-a-new-love/` | 437 | 437 | Nothing. |
+| `/projects/touch-magic/` | 428 | 444 | The model's description is new text. |
+| `/de/website-design-die-zweite/` | 783 | 793 | The embedded font overview is a link carrying its title, and the model's description is new text. |
+| `/de/nextstep-on-rpi5-de/` | 1656 | 1661 | The link to the English version is the language switch. The copy command names the disk image's real file name, corrected after the migration. The embedded video is a link carrying its title. |
+| `/nextstep-on-rpi5-en/` | 1672 | 1677 | The same three differences as its German counterpart. |
+| `/rpi5-with-external-leds/` | 719 | 722 | The embedded YouTube video is a link carrying the video's title. |
+| `/de/ki-bedienungsanleitung/` | 488 | 485 | The link to the English version is the language switch. |
+| `/ai-operating-guide/` | 530 | 527 | The link to the German version is the language switch. |
+| `/nextstep-naming/` | 271 | 272 | A table cell held a line break, which a Markdown table cannot, so the two names in it are separated by a slash. |
+| `/editor-cheat-sheets/` | 383 | 403 | The old tables had no header row. A Markdown table needs one, so each of the ten carries `Action` and `Keys`. |
+| `/swiftui-platform-viewmodifier/` | 514 | 514 | Nothing. |
+
+The comparison reads curled and straight quotation marks as the same character. Publii curled the straight marks its authors typed when it rendered a page, so the difference belongs to the old renderer and not to what was written. A code block's language label and line numbers are not counted either, because the author did not write them.

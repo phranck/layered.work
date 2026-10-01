@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { LEGACY_REDIRECT_TARGETS, LEGACY_REDIRECTS } from "./legacy-redirects.js";
+import { LEGACY_REDIRECT_TARGETS, LEGACY_REDIRECTS, legacyPostsPage } from "./legacy-redirects.js";
+
+describe("the old home page's numbered pages", () => {
+  it("land on the listing page that holds the posts they showed", () => {
+    // Eight posts a page then, twelve now: the old second page began with the
+    // ninth post, which is on the first page here.
+    expect(legacyPostsPage(1)).toBe(1);
+    expect(legacyPostsPage(2)).toBe(1);
+    expect(legacyPostsPage(3)).toBe(2);
+    expect(legacyPostsPage(4)).toBe(3);
+  });
+});
 
 describe("addresses the archive remembers", () => {
   it("states each source once, as a local path with its trailing slash", () => {

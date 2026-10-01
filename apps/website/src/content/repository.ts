@@ -83,6 +83,9 @@ export type Media = z.infer<typeof mediaSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type { HomeBlock };
 
+/** How many entries one page of a listing shows. */
+export const LISTING_PAGE_SIZE = 12;
+
 /** All collection readers share this publication predicate. */
 export function isListed(entry: Entry, locale: Language): boolean {
   return entry.visibility === "public" && entry.language === locale;
@@ -285,9 +288,9 @@ export function createRepository(input: unknown) {
           (!query || searchText(entry).toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))),
       );
       return {
-        entries: matches.slice((page - 1) * 12, page * 12),
+        entries: matches.slice((page - 1) * LISTING_PAGE_SIZE, page * LISTING_PAGE_SIZE),
         total: matches.length,
-        pages: Math.ceil(matches.length / 12),
+        pages: Math.ceil(matches.length / LISTING_PAGE_SIZE),
         page,
       };
     },

@@ -1,3 +1,4 @@
+import { mediaReferences } from "@layered/content";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -86,9 +87,8 @@ export interface ImportReport {
   /**
    * Slugs that name a file another slug already named.
    *
-   * Not an error and not something the import can settle: a body referring to
-   * the second slug will not find it once the site reads its media from the
-   * database, and what should happen then is a decision about content.
+   * Only the first slug becomes a row, so every body naming the second one is
+   * written naming the first. The list says which names were folded together.
    */
   aliased: { slug: string; sameFileAs: string }[];
 }
@@ -123,7 +123,7 @@ async function importMedia(
   report: ImportReport,
 ): Promise<Map<string, string>> {
   const byslug = new Map<string, string>();
-  const bychecksum = new Map<string, string>();
+  const bychecksum = new Map<string, { id: string; slug: string }>();
 
   for (const asset of snapshot.media) {
     const kind = mediaKindOf(asset.mime);
@@ -135,16 +135,13 @@ async function importMedia(
     // Publii copied the same file into several post directories, so the
     // migration gave each copy its own slug. The table holds a file once, by
     // checksum, which is the stricter and the truer of the two: what the second
-    // slug names is the first file. Both slugs are answered from the one row,
-    // and the alias is reported rather than written, because nothing here can
-    // decide what a body referring to the second one should do.
+    // slug names is the first file. Only the first slug is written, so the
+    // alias is reported and `importContent` rewrites every body naming the
+    // second one to name the first.
     const seen = bychecksum.get(asset.sha256);
     if (seen) {
-      byslug.set(asset.slug, seen);
-      report.aliased.push({
-        slug: asset.slug,
-        sameFileAs: [...byslug].find(([, id]) => id === seen)?.[0] ?? "",
-      });
+      byslug.set(asset.slug, seen.id);
+      report.aliased.push({ slug: asset.slug, sameFileAs: seen.slug });
       continue;
     }
 
@@ -175,7 +172,7 @@ async function importMedia(
 
     if (!row) continue;
     byslug.set(asset.slug, row.id);
-    bychecksum.set(asset.sha256, row.id);
+    bychecksum.set(asset.sha256, { id: row.id, slug: asset.slug });
     report.media += 1;
 
     // The alt text the migration preserved. English, because that is the
@@ -283,6 +280,38 @@ async function entryAt(database: Database, path: string): Promise<string | undef
   return row?.entryId;
 }
 
+/** What the import has already written, by the key the snapshot uses for it. */
+interface Lookups {
+  /** Media row ids by slug, every alias included. */
+  mediaBySlug: Map<string, string>;
+  /** Topic ids by slug. */
+  topicsBySlug: Map<string, string>;
+  /** Former addresses by the address they redirect to. */
+  redirectsByTarget: Map<string, string[]>;
+  /** The slug kept for each one folded into it because it named the same file. */
+  keptMedia: ReadonlyMap<string, string>;
+}
+
+/**
+ * A body with every file it names written under the slug the library keeps.
+ *
+ * Which values are files is the content language's answer rather than a
+ * pattern's, so a caption that reads like a slug is left alone. References are
+ * replaced from the end backwards, which keeps the earlier positions valid.
+ *
+ * @param body - The body as the snapshot holds it.
+ * @param kept - The slug kept for each one that was folded into it.
+ * @returns The body, naming only slugs the library answers to.
+ */
+function withKeptMedia(body: string, kept: ReadonlyMap<string, string>): string {
+  let result = body;
+  for (const reference of mediaReferences(body).reverse()) {
+    const slug = kept.get(reference.slug);
+    if (slug) result = `${result.slice(0, reference.from)}"${slug}"${result.slice(reference.to)}`;
+  }
+  return result;
+}
+
 /**
  * Writes one piece of writing: its entry row, its translations, their addresses
  * and their topics.
@@ -290,11 +319,10 @@ async function entryAt(database: Database, path: string): Promise<string | undef
 async function importEntry(
   database: Database,
   group: SnapshotEntry[],
-  mediaBySlug: Map<string, string>,
-  topicsBySlug: Map<string, string>,
-  redirectsByTarget: Map<string, string[]>,
+  lookups: Lookups,
   report: ImportReport,
 ): Promise<void> {
+  const { mediaBySlug, topicsBySlug, redirectsByTarget, keptMedia } = lookups;
   // The English one leads where there is a pair, because the site's own English
   // paths are the ones that survived the migration unchanged.
   const lead = group.find((entry) => entry.language === "en") ?? group[0];
@@ -325,7 +353,7 @@ async function importEntry(
       language: entry.language,
       title: entry.title,
       summary: entry.summary,
-      body: entry.body,
+      body: withKeptMedia(entry.body, keptMedia),
       state: entry.visibility as "public" | "draft" | "hidden",
       readingWidth: entry.readingWidth,
       publishedAt: entry.publishedAt ? new Date(entry.publishedAt) : null,
@@ -385,6 +413,36 @@ async function importEntry(
 }
 
 /**
+ * The published snapshot, with the drafts the migration output still holds.
+ *
+ * Neither file is the whole migration on its own. The published one carries
+ * every editorial correction made since the cutover and no drafts, because it
+ * sits in a public repository. The migration output carries the drafts and the
+ * text as it was before those corrections. So the published file decides every
+ * entry it holds, and the other contributes only what is a draft and absent
+ * from it. An entry in the bin is not a draft and is not taken.
+ *
+ * @param published - The snapshot the site publishes.
+ * @param migrationOutput - The pipeline's full output, drafts included.
+ * @returns The published snapshot with the missing drafts appended.
+ */
+export function withDrafts(published: Snapshot, migrationOutput: Snapshot): Snapshot {
+  const known = new Set(published.entries.map((entry) => entry.path));
+  const drafts = migrationOutput.entries.filter(
+    (entry) => entry.visibility === "draft" && !known.has(entry.path),
+  );
+
+  const slugs = new Set(published.media.map((asset) => asset.slug));
+  const media = migrationOutput.media.filter((asset) => !slugs.has(asset.slug));
+
+  return {
+    ...published,
+    entries: [...published.entries, ...drafts],
+    media: [...published.media, ...media],
+  };
+}
+
+/**
  * Writes a whole snapshot.
  *
  * @param database - The database to write to, already connected.
@@ -413,6 +471,13 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
     ]);
   }
 
+  const lookups: Lookups = {
+    mediaBySlug,
+    topicsBySlug,
+    redirectsByTarget,
+    keptMedia: new Map(report.aliased.map((alias) => [alias.slug, alias.sameFileAs])),
+  };
+
   for (const group of groupTranslations(snapshot)) {
     // A trashed entry is not a state the schema has, and it is not one anybody
     // asked for: the old site had one, it was in the bin, and it stays out.
@@ -422,7 +487,7 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
     }
     if (live.length === 0) continue;
 
-    await importEntry(database, live, mediaBySlug, topicsBySlug, redirectsByTarget, report);
+    await importEntry(database, live, lookups, report);
   }
 
   return report;

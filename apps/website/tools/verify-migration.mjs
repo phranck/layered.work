@@ -1,0 +1,247 @@
+/**
+ * Compares every entry the site renders with the page the old Publii site
+ * served for it, and checks every link and every file the rendered page names.
+ *
+ * WEBSITE_CONTENT_FILE=/absolute/snapshot.json node tools/verify-migration.mjs [--legacy-output <dir>]
+ *
+ * The snapshot is the one `pnpm --filter @layered/backend db:verify
+ * --snapshot-out` writes from the database, so what is rendered is what the
+ * database holds. Rendering goes through the production build in this process,
+ * with no listener and no request leaving the machine, and media are checked
+ * against the files the build serves.
+ *
+ * It prints a table per entry and every run of words found on one side only.
+ * Unresolved links, missing files and pages that do not answer 200 fail the
+ * run. A text difference does not, because some are intended, and each one is
+ * explained where the result is recorded.
+ */
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
+import { Window } from "happy-dom";
+import { visibleText, wordRuns, words } from "./migration-text.mjs";
+import { loadProductionApp } from "./production-app.mjs";
+
+const { values } = parseArgs({
+  options: {
+    "legacy-output": {
+      type: "string",
+      default: join(homedir(), "Documents/Publii/sites/layeredwork/output"),
+    },
+  },
+});
+assert(process.env.WEBSITE_CONTENT_FILE, "WEBSITE_CONTENT_FILE must name the snapshot to render");
+
+/** How many redirects a link may pass through before it counts as a loop. */
+const MAX_REDIRECTS = 10;
+
+/** Where the old site's body sat, and where this site's sits. */
+const LEGACY_BODY = ".content__entry";
+const RENDERED_BODY = ".content-prose";
+const RENDERED_ARTICLE = ".article-body";
+
+/** What `packages/ui/src/content-placeholder.tsx` renders for a file it cannot find. */
+const UNAVAILABLE = ".content-placeholder";
+
+/**
+ * Whether a rendered element belongs to the page rather than to the entry.
+ *
+ * A code block here carries a bar naming its language and a gutter of line
+ * numbers, and neither was ever written by the author. The gutter is hidden
+ * from assistive technology already, so that is the test for it; the bar is the
+ * code block's caption.
+ */
+function isFurniture(element) {
+  return element.getAttribute("aria-hidden") === "true" || element.matches(".content-code > figcaption");
+}
+
+/** Old directories that hold listings rather than entries. */
+const LEGACY_LISTINGS = new Set(["tags", "page", "authors"]);
+
+const origin = "https://layered.work";
+const appDirectory = fileURLToPath(new URL("../", import.meta.url));
+const clientDirectory = join(appDirectory, "dist/client");
+
+// The file and nothing else: an API_URL would make the site read whatever
+// backend it names, and a MEDIA_ORIGIN would point every file at a bucket.
+delete process.env.API_URL;
+delete process.env.MEDIA_ORIGIN;
+process.env.WEBSITE_MODE = "site";
+
+const snapshot = JSON.parse(await readFile(resolve(process.env.WEBSITE_CONTENT_FILE), "utf8"));
+const app = await loadProductionApp(join(appDirectory, "dist/server"));
+const window = new Window({
+  settings: {
+    disableJavaScriptEvaluation: true,
+    disableJavaScriptFileLoading: true,
+    disableCSSFileLoading: true,
+  },
+});
+
+/** Parses a page without running anything in it. */
+function parse(html) {
+  return new window.DOMParser().parseFromString(html, "text/html");
+}
+
+/** Renders one address, following redirects, and says where it ended. */
+async function resolveAddress(address) {
+  let current = address;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Each hop depends on the previous response's Location.
+    const response = await app.render(new Request(new URL(current, origin)), {
+      prerenderedErrorPageFetch: () => Promise.resolve(new Response("Not found", { status: 404 })),
+    });
+    const location = response.headers.get("location");
+    if (response.status >= 300 && response.status < 400 && location) {
+      const next = new URL(location, new URL(current, origin));
+      if (next.origin !== origin) return { status: response.status, path: next.href, body: "" };
+      current = `${next.pathname}${next.search}`;
+      continue;
+    }
+    return { status: response.status, path: current, body: await response.text() };
+  }
+  return { status: 0, path: current, body: "" };
+}
+
+/** Whether the build serves a file at this `/media/` path, and its checksum if so. */
+async function mediaFile(pathname) {
+  try {
+    const bytes = await readFile(join(clientDirectory, decodeURIComponent(pathname)));
+    return createHash("sha256").update(bytes).digest("hex");
+  } catch (error) {
+    if (error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/** Every old page that shows one entry, by the last segment of its address. */
+async function legacyPages(root, directory = root, found = new Map()) {
+  for (const item of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, item.name);
+    const segments = relative(root, path).split(sep);
+    if (item.isDirectory() && !LEGACY_LISTINGS.has(segments[0] ?? "")) await legacyPages(root, path, found);
+    else if (item.name === "index.html" && segments.length > 1) found.set(segments.at(-2), path);
+  }
+  return found;
+}
+
+const legacy = await legacyPages(resolve(values["legacy-output"]));
+const shaBySource = new Map(snapshot.media.map((asset) => [asset.src, asset.sha256]));
+// Sorted, because a database returns rows in no promised order and two runs
+// over the same content should print the same report.
+const readable = snapshot.entries
+  .filter((entry) => ["public", "hidden"].includes(entry.visibility))
+  .sort((one, other) => one.path.localeCompare(other.path));
+const results = [];
+
+for (const entry of readable) {
+  const problems = [];
+  // eslint-disable-next-line react-doctor/async-await-in-loop -- One page at a time keeps the production renderer's memory bounded.
+  const page = await resolveAddress(entry.path);
+  if (page.status !== 200) problems.push(`answers ${page.status}`);
+  const document = parse(page.body);
+  const prose = document.querySelector(RENDERED_BODY);
+  const article = document.querySelector(RENDERED_ARTICLE) ?? document.body;
+
+  const legacyFile = legacy.get(entry.slug);
+  const legacyBody = legacyFile
+    ? parse(await readFile(legacyFile, "utf8")).querySelector(LEGACY_BODY)
+    : undefined;
+
+  const before = legacyBody ? words(visibleText(legacyBody)) : [];
+  const after = prose ? words(visibleText(prose, isFurniture)) : [];
+  const runs = legacyBody && prose ? wordRuns(before, after) : [];
+
+  // Links in the body. An anchor on the page must exist on it, an internal
+  // address must end at 200, and a file must be one the build serves.
+  let linksChecked = 0;
+  for (const anchor of prose?.querySelectorAll("a[href]") ?? []) {
+    const href = anchor.getAttribute("href");
+    const url = new URL(href, new URL(entry.path, origin));
+    if (url.origin !== origin) continue;
+    linksChecked++;
+    if (url.pathname.startsWith("/media/")) {
+      // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
+      if (!(await mediaFile(url.pathname))) problems.push(`link to a missing file ${url.pathname}`);
+      continue;
+    }
+    const samePage = url.pathname === new URL(entry.path, origin).pathname;
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential renders keep the report in reading order.
+    const target = samePage
+      ? { status: 200, body: page.body }
+      : await resolveAddress(`${url.pathname}${url.search}`);
+    if (target.status !== 200) problems.push(`link ${href} answers ${target.status}`);
+    else if (url.hash && !parse(target.body).getElementById(decodeURIComponent(url.hash.slice(1)))) {
+      problems.push(`link ${href} names an anchor the page does not have`);
+    }
+  }
+
+  // A component whose file the library does not hold renders a placeholder
+  // rather than failing the page, so the placeholder is what gives it away.
+  for (const placeholder of article.querySelectorAll(UNAVAILABLE)) {
+    problems.push(`renders a placeholder: ${placeholder.textContent.trim()}`);
+  }
+
+  // Every file the article names, from the cover to the last figure, whatever
+  // attribute carries it: `src`, `srcset`, `poster`, or a model's source.
+  const mediaPaths = new Set();
+  for (const element of article.querySelectorAll("*")) {
+    for (const attribute of element.attributes) {
+      for (const candidate of attribute.value.split(/[\s,]+/)) {
+        if (!candidate.includes("/media/")) continue;
+        const url = new URL(candidate, new URL(entry.path, origin));
+        if (url.origin === origin && url.pathname.startsWith("/media/")) mediaPaths.add(url.pathname);
+      }
+    }
+  }
+  for (const path of mediaPaths) {
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
+    const sha256 = await mediaFile(path);
+    if (!sha256) problems.push(`missing file ${path}`);
+    else if (shaBySource.has(path) && shaBySource.get(path) !== sha256) problems.push(`changed file ${path}`);
+  }
+
+  results.push({
+    slug: entry.slug,
+    path: entry.path,
+    legacy: legacyFile
+      ? `/${relative(resolve(values["legacy-output"]), legacyFile).replace(/index\.html$/, "")}`
+      : null,
+    renderedBody: Boolean(prose),
+    wordsBefore: before.length,
+    wordsAfter: after.length,
+    missing: runs.filter((run) => run.kind === "missing").reduce((total, run) => total + run.words.length, 0),
+    added: runs.filter((run) => run.kind === "added").reduce((total, run) => total + run.words.length, 0),
+    imagesBefore: legacyBody?.querySelectorAll("img").length ?? 0,
+    imagesAfter: prose?.querySelectorAll("img").length ?? 0,
+    linksChecked,
+    mediaChecked: mediaPaths.size,
+    runs,
+    problems,
+  });
+}
+
+console.log(
+  "| Entry | Old page | Words before | Words after | Missing | Added | Images before | Images after | Links | Files | Problems |",
+);
+console.log("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |");
+for (const result of results) {
+  console.log(
+    `| \`${result.path}\` | ${result.legacy ? `\`${result.legacy}\`` : "none"} | ${result.wordsBefore} | ${result.wordsAfter} | ${result.missing} | ${result.added} | ${result.imagesBefore} | ${result.imagesAfter} | ${result.linksChecked} | ${result.mediaChecked} | ${result.problems.join("; ") || (result.renderedBody ? "" : "no rendered body")} |`,
+  );
+}
+for (const result of results.filter((item) => item.runs.length > 0)) {
+  console.log(`\n### ${result.path}\n`);
+  for (const run of result.runs) console.log(`- ${run.kind}: ${run.words.join(" ")}`);
+}
+
+const failed = results.filter((result) => result.problems.length > 0);
+console.log(
+  `\n${results.length} entries rendered, ${results.reduce((total, item) => total + item.linksChecked, 0)} internal links and ${results.reduce((total, item) => total + item.mediaChecked, 0)} files checked, ${failed.length} with problems.`,
+);
+process.exitCode = failed.length > 0 ? 1 : 0;
+await app.logger?.close();
