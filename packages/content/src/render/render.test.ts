@@ -238,9 +238,21 @@ describe("a link", () => {
     );
   });
 
-  it("is words alone when nothing says where it goes", () => {
+  it("is what was written, brackets included, when nothing says where it goes", () => {
     expect(outline("Ein [Wort][fehlt] hier.\n")).toBe(
-      ["p", '  text "Ein "', '  text "Wort"', '  text " hier."'].join("\n"),
+      ["p", '  text "Ein "', '  text "["', '  text "Wort"', '  text "][fehlt]"', '  text " hier."'].join(
+        "\n",
+      ),
+    );
+  });
+
+  it("keeps a bracketed name that was never meant as a link", () => {
+    // `[pi5]` is a section of a configuration file. Without a definition it
+    // is not a link, and the brackets are part of what it says.
+    expect(outline("Under the [pi5] section.\n")).toBe(
+      ["p", '  text "Under the "', '  text "["', '  text "pi5"', '  text "]"', '  text " section."'].join(
+        "\n",
+      ),
     );
   });
 

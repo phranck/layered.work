@@ -411,11 +411,20 @@ function codeNode(node: SyntaxNode, context: Context): CodeNode {
  *
  * A reference whose definition is missing is not an anchor at all: a link to
  * nowhere is worse than the words on their own, because it looks like it works.
+ * It is what was written, brackets included, which is how Markdown reads it
+ * and the only reading that keeps `[pi5]` meaning a section of a file.
  */
 function linkNodes(node: SyntaxNode, context: Context): RenderNode[] {
   const label = labelOf(node, context);
   const href = hrefOf(node, context);
-  return href ? [element("a", label, { href })] : label;
+  if (href) return [element("a", label, { href })];
+
+  // Not a link, so what was written: the brackets around the label, and a
+  // second label where there was one, stay text.
+  const marks = childrenOf(node).filter((child) => child.name === "LinkMark");
+  const opening = context.text.slice(node.from, marks[0]?.to ?? node.from);
+  const closing = context.text.slice(marks[1]?.from ?? node.to, node.to);
+  return [text(opening), ...label, text(closing)].filter((item) => item.kind !== "text" || item.value !== "");
 }
 
 /** The words between a link's first two marks, which is what it says. */
