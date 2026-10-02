@@ -27,7 +27,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
-import { HeaderStart } from "./app-bar-slots.js";
+import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -45,8 +45,8 @@ import { useSaveShortcut } from "./save-shortcut.js";
  * beside the text.
  *
  * The list is gone whilst an entry is open, because nobody edits a post whilst
- * looking at a table of all the others. The way back stands where the list's
- * heading stood, so the heading of the entry does not move when it opens.
+ * looking at a table of all the others. The way back stands at the start of the
+ * dashboard's bar, and the state and the saving at its end.
  */
 
 /** How long typing has to pause before a draft is saved by itself, in milliseconds. */
@@ -268,9 +268,42 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   return (
     <>
       <BackToList area={area} />
-      <Section.Title title={draft.title.trim() || text("editorTitleMissing")} level={1} />
+      {/* What the entry's state is and what can be done with it, at the end of
+          the bar, where they stay in view however far the text is scrolled. */}
+      <HeaderEnd>
+        <span className="entry-editor__status" role="status">
+          {status}
+        </span>
+        <Button
+          tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
+          disabled={!dirty || save.isPending}
+          icon={<FloppyDiskIcon />}
+          onClick={() => save.mutate({ value: draft, automatic: false })}
+        >
+          {text("save")}
+        </Button>
+        {!(saved.state === "public" && draft.state === "public") && (
+          <Button
+            tone="primary"
+            disabled={save.isPending}
+            icon={<GlobeIcon />}
+            onClick={() => {
+              // The draft takes the new state as well, so what is shown and
+              // what is stored agree once the save returns.
+              const value: SaveEntryBody = { ...draft, state: "public" };
+              setDraft(value);
+              save.mutate({ value, automatic: false });
+            }}
+          >
+            {save.isPending ? text("publishPending") : text("publish")}
+          </Button>
+        )}
+      </HeaderEnd>
       <Editor>
         <Editor.Main>
+          {/* The heading leads the writing column rather than the whole page,
+              so the panel beside it starts at the top of the content. */}
+          <Section.Title title={draft.title.trim() || text("editorTitleMissing")} level={1} />
           <Field label={text("editorTitle")} htmlFor="entry-title">
             <Input
               id="entry-title"
@@ -353,38 +386,6 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               onChange={(body) => update({ body })}
             />
           </Editor.Surface>
-          <Editor.Actions
-            destructive={
-              <span className="entry-editor__status" role="status">
-                {status}
-              </span>
-            }
-          >
-            <Button
-              tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
-              disabled={!dirty || save.isPending}
-              icon={<FloppyDiskIcon weight="duotone" />}
-              onClick={() => save.mutate({ value: draft, automatic: false })}
-            >
-              {text("save")}
-            </Button>
-            {!(saved.state === "public" && draft.state === "public") && (
-              <Button
-                tone="primary"
-                disabled={save.isPending}
-                icon={<GlobeIcon weight="duotone" />}
-                onClick={() => {
-                  // The draft takes the new state as well, so what is shown and
-                  // what is stored agree once the save returns.
-                  const value: SaveEntryBody = { ...draft, state: "public" };
-                  setDraft(value);
-                  save.mutate({ value, automatic: false });
-                }}
-              >
-                {save.isPending ? text("publishPending") : text("publish")}
-              </Button>
-            )}
-          </Editor.Actions>
         </Editor.Main>
         <Editor.Panel title={text("editorPublication")}>
           <Field label={text("editorState")}>

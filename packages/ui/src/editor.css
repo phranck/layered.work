@@ -24,17 +24,9 @@
   min-width: 0;
 }
 
-/* The panel stays in view whilst the main side scrolls. Offset by the same step
-   the workbench pads its main area with, so it stops where the content starts.
-   A panel taller than the window would stick with its foot below the edge, so
-   it is held to the window's height and scrolls within itself. The sticky
-   offset counts from inside the main area's padding, so the panel stands two
-   steps below the window's top, and it keeps the same two steps above the
-   bottom. */
+/* A panel taller than the room it is given scrolls within itself, and does not
+   hand the scroll on to the page when it reaches its end. */
 .editor__panel {
-  position: sticky;
-  top: var(--space-6);
-  max-height: calc(100dvh - 4 * var(--space-6));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -123,9 +115,12 @@
 
 /* --- Surface ---------------------------------------------------------------- */
 
+/* No padding of its own: the editor mounted inside pads its scrolling area, so
+   the text scrolls to the edge and the scrollbar sits at it. */
 .editor__surface {
+  display: flex;
+  flex-direction: column;
   min-height: 340px;
-  padding: var(--space-5);
   font-family: var(--font-mono);
   font-feature-settings: var(--mono-ligatures);
   font-size: var(--text-code);
@@ -152,16 +147,40 @@
   box-shadow: none;
 }
 
+/* --- Wide viewports --------------------------------------------------------
+   Whilst the panel stands beside the text, the editor fills the content area's
+   height and no more: the writing surface takes what the column leaves and its
+   text scrolls inside it, and the panel scrolls inside itself, so the page
+   never grows taller than the window. The surface keeps its least height, so a
+   very short window scrolls the page rather than squeezing the text away. */
+
+@media (width >= 1100px) {
+  .editor {
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .editor__main {
+    min-height: 0;
+  }
+
+  .editor__surface {
+    flex: 1;
+  }
+
+  .editor__panel {
+    align-self: start;
+    max-height: 100%;
+  }
+}
+
 /* --- Narrow viewports ------------------------------------------------------
-   The panel goes under the main side, and stops sticking, because a sticky
-   panel under the content would cover what it belongs to. */
+   The panel goes under the main side, and the page scrolls as a whole. */
 
 @media (width < 1100px) {
   .editor {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .editor__panel {
-    position: static;
   }
 }

@@ -593,6 +593,15 @@ dialog.account-dialog::backdrop {
   color: var(--text-faint);
 }
 
+/* The element CodeMirror is mounted in fills the writing surface, so the editor
+   inside it can scroll within the surface's height. */
+.content-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* Whether the text is saved, at the left of the row the save buttons end. */
 .entry-editor__status {
   font-size: var(--text-sm);

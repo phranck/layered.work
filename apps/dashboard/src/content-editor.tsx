@@ -49,9 +49,22 @@ export function contentLanguage(): LanguageSupport {
  */
 const surfaceTheme = EditorView.theme(
   {
-    "&": { color: "inherit", backgroundColor: "transparent", fontSize: "inherit" },
+    // The editor fills the surface and scrolls inside it, padded where the
+    // surface used to be, so the text runs to the edge as it scrolls.
+    "&": {
+      flex: "1",
+      minHeight: "0",
+      color: "inherit",
+      backgroundColor: "transparent",
+      fontSize: "inherit",
+    },
     "&.cm-focused": { outline: "none" },
-    ".cm-scroller": { fontFamily: "inherit", lineHeight: "inherit", overflow: "visible" },
+    ".cm-scroller": {
+      padding: "var(--space-5)",
+      fontFamily: "inherit",
+      lineHeight: "inherit",
+      overflow: "auto",
+    },
     ".cm-content": { padding: "0", caretColor: "var(--text-accent)" },
     ".cm-line": { padding: "0" },
     ".cm-cursor": { borderLeftColor: "var(--text-accent)" },

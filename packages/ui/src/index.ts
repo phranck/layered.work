@@ -22,7 +22,6 @@ export { Divider } from "./divider.js";
 export { Document, type DocumentProps } from "./document.js";
 export {
   Editor,
-  type EditorActionsProps,
   type EditorPanelProps,
   type EditorToolbarProps,
   type EditorToolProps,

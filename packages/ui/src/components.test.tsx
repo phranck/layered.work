@@ -104,7 +104,6 @@ describe("static compounds", () => {
               ]}
             />
             <Editor.Surface>S</Editor.Surface>
-            <Editor.Actions destructive="Delete">Save</Editor.Actions>
           </Editor.Main>
           <Editor.Panel title="Panel">Fields</Editor.Panel>
         </Editor>

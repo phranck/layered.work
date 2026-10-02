@@ -11,10 +11,6 @@ export interface EditorToolProps extends Omit<ComponentPropsWithoutRef<"button">
   label: string;
   icon?: ReactNode;
 }
-/** Props for editor actions. */
-export interface EditorActionsProps extends DivProps {
-  destructive?: ReactNode;
-}
 /** Props for an editor side panel. */
 export interface EditorPanelProps extends Omit<DivProps, "title"> {
   eyebrow?: ReactNode;
@@ -64,15 +60,6 @@ const EditorTool = forwardRef<HTMLButtonElement, EditorToolProps>(
 const EditorSurface = forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
   <div ref={ref} className={join("editor__surface", className)} {...props} />
 ));
-/** Actions beneath the editing surface. */
-const EditorActions = forwardRef<HTMLDivElement, EditorActionsProps>(
-  ({ children, className, destructive, ...props }, ref) => (
-    <div ref={ref} className={join("actions", className)} {...props}>
-      {destructive && <span className="actions__aside">{destructive}</span>}
-      {children}
-    </div>
-  ),
-);
 /** The editor properties panel. */
 const EditorPanel = forwardRef<HTMLDivElement, EditorPanelProps>(
   ({ actions, children, className, eyebrow, note, title, ...props }, ref) => (
@@ -91,6 +78,5 @@ export const Editor = Object.assign(EditorRoot, {
   Toolbar: EditorToolbar,
   Tool: EditorTool,
   Surface: EditorSurface,
-  Actions: EditorActions,
   Panel: EditorPanel,
 });
