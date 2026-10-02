@@ -45,6 +45,14 @@
   color: var(--text-muted);
 }
 
+/* All capitals take no lift, so the glyph is centred on the box. It is a step
+   larger than the letters, because a duotone mark at cap height reads as a
+   smudge rather than a picture. */
+.eyebrow__icon {
+  flex: none;
+  font-size: var(--text-base);
+}
+
 .eyebrow::after {
   flex: 1;
   height: 1px;
@@ -197,7 +205,11 @@ a.chip:hover {
   border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
 }
 
+/* The first band opens a shade lighter than the page and sinks into it, so the
+   first screen has a horizon rather than an edge. It ends on the page's own
+   colour, which is what makes the join with the band beneath invisible. */
 .hero {
+  --band-fill: linear-gradient(180deg, var(--surface-raised), var(--surface-page));
   display: grid;
   gap: var(--space-8);
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);

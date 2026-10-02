@@ -1,7 +1,7 @@
 ---
 import { Button, Card, Section } from "@layered/ui";
-import { ArticleIcon, StackSimpleIcon } from "@layered/ui/icons";
-import { createElement } from "react";
+import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
+import { createElement, Fragment as ReactFragment } from "react";
 import { EntryCard } from "./entry-card.js";
 import { dateLabel, languageRoot, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 interface Props { repository:ContentRepository; language:Language; }
@@ -17,13 +17,17 @@ const featureImage=featured?.featuredImage?repository.media(featured.featuredIma
 // accident: renaming the block to match the database turned "View all" into /project_grid/.
 const gridKind=(type:string)=>type==="project_grid"?"project":"post";
 const gridPath=(type:string)=>type==="project_grid"?"projects":"posts";
+// Each band opens with a kicker naming what it holds, in the words the navigation
+// uses for the same thing, so the page and the menu call it one name.
+const kicker=(icon:typeof StarIcon,label:string)=>createElement(ReactFragment,null,createElement(icon,{weight:"duotone","aria-hidden":true,className:"eyebrow__icon"}),label);
+const gridKicker=(type:string)=>type==="project_grid"?kicker(StackSimpleIcon,de?"Projekte":"Projects"):kicker(ArticleIcon,de?"Beiträge":"Posts");
 // A block this build cannot render leaves a shorter page and no other trace, so it is said
 // once here, where it is known that the home page is what came out short.
 const unknown=repository.unknownBlocks();
 if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN",operation:"render_home_blocks",result:"skipped",types:unknown}));
 ---
 {repository.blocks().map(block=>block.type==="hero" ? (
-  <section class="hero">
+  <section class="hero section--band">
     <div class="hero__copy">
       <p class="eyebrow">Bregenz, Vorarlberg</p>
       <h1 class="title-hero">{block.settings.title??(de?"Gehäuse, Platinen und Software, die Schicht für Schicht entsteht.":"Enclosures, circuit boards and software, made layer by layer.")}</h1>
@@ -39,19 +43,19 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
     </a>}
   </section>
 ) : block.type==="featured_entry"&&featured ? (
-  <Section.Page>
-    <Section.Title eyebrow={de?"Im Vordergrund":"In focus"} title={block.settings.title??(de?"Woran gerade gearbeitet wird":"From the workbench")} />
+  <Section.Band>
+    <Section.Title eyebrow={kicker(StarIcon,de?"Im Vordergrund":"In focus")} title={block.settings.title??(de?"Woran gerade gearbeitet wird":"From the workbench")} />
     <Card.Link href={featured.path}><div class="feature">
       {featureImage&&<div class="feature__media"><img src={featureImage.src} srcset={featureImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={featureImage.width} height={featureImage.height} alt={featureImage.alt??""} loading="lazy" /></div>}
       <div class="feature__body"><div class="meta"><time datetime={featured.publishedAt??undefined}>{dateLabel(featured)}</time><span>{readingTime(featured)} min</span></div><h3 class="title-page">{featured.title}</h3><p class="lede">{summaryOf(featured)}</p><Button.Inert icon={createElement(ArticleIcon,{weight:"duotone"})} tone="primary">{de?"Weiterlesen":"Read more"}</Button.Inert></div>
     </div></Card.Link>
-  </Section.Page>
+  </Section.Band>
 ) : block.type==="project_grid"||block.type==="post_grid" ? (
-  <Section.Page>
-    <Section.Title title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
+  <Section.Band>
+    <Section.Title eyebrow={gridKicker(block.type)} title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
     <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
     {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
-  </Section.Page>
+  </Section.Band>
 ) : block.type==="topic_bar" ? (
-  <Section.Page><Section.Title title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>
+  <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Band>
 ) : null)}
