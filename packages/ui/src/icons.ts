@@ -43,6 +43,7 @@ export { SignOutIcon } from "@phosphor-icons/react/dist/ssr/SignOut";
 export { SquaresFourIcon } from "@phosphor-icons/react/dist/ssr/SquaresFour";
 export { StackSimpleIcon } from "@phosphor-icons/react/dist/ssr/StackSimple";
 export { StarIcon } from "@phosphor-icons/react/dist/ssr/Star";
+export { TableIcon } from "@phosphor-icons/react/dist/ssr/Table";
 export { TagIcon } from "@phosphor-icons/react/dist/ssr/Tag";
 export { TextBIcon } from "@phosphor-icons/react/dist/ssr/TextB";
 export { TextboxIcon } from "@phosphor-icons/react/dist/ssr/Textbox";

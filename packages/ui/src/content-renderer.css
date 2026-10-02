@@ -163,6 +163,27 @@
   text-align: start;
   overflow-wrap: anywhere;
 }
+/* A column's alignment, as a `Table` states it. `numeric` is SwiftUI's name for
+   figures that line up: right-aligned, and every digit the same width, so a
+   column of counts reads as a column of numbers. */
+.content-table :where(th, td)[data-align="center"] {
+  text-align: center;
+}
+.content-table :where(th, td):where([data-align="trailing"], [data-align="numeric"]) {
+  text-align: end;
+}
+.content-table [data-align="numeric"] {
+  font-variant-numeric: tabular-nums;
+}
+/* The caption names the table above its head, as a label rather than a heading,
+   so it stands inside the frame and takes the head's colour. */
+.content-table caption {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: start;
+  caption-side: top;
+}
 .content-table thead {
   color: var(--text-primary);
   background: var(--surface-raised);
@@ -177,13 +198,14 @@
   overflow-wrap: normal;
   white-space: nowrap;
 }
-.content-table thead th,
-.content-table tbody tr + tr > * {
-  border-block-start: var(--content-rule-width) solid var(--edge-hairline);
-}
-.content-table thead:first-child th {
-  border-block-start: 0;
+/* A rule under the head, between body rows, and between a caption and the head
+   it names. The frame draws the outer edge, so nothing here draws it twice. */
+.content-table thead th {
   border-block-end: var(--content-rule-width) solid var(--edge-hairline);
+}
+.content-table tbody tr + tr > *,
+.content-table caption + thead th {
+  border-block-start: var(--content-rule-width) solid var(--edge-hairline);
 }
 /* No transition on the row tint. A pointer crossing a table lights and leaves
    rows faster than any duration can follow, so the fade lags behind the cursor

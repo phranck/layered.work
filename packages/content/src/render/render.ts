@@ -56,6 +56,20 @@ const SIDE_BY_SIDE = "HStack";
 const COLUMN = "VStack";
 
 /**
+ * The component that becomes a table, and its two parts.
+ *
+ * It is drawn as the same element a Markdown table becomes, so the two look
+ * alike and share one set of styles, which is why it is built here as prose
+ * rather than handed to a renderer as a component.
+ */
+const TABLE = "Table";
+const TABLE_COLUMN = "TableColumn";
+const TABLE_ROW = "TableRow";
+
+/** The alignment a column has when it says nothing, which carries no attribute. */
+const DEFAULT_ALIGNMENT = "leading";
+
+/**
  * Renders a document.
  *
  * @param text - The document as written.
@@ -252,6 +266,7 @@ function componentNode(node: SyntaxNode, context: Context): RenderNode {
   if (!resolution.found) return { kind: "placeholder", name: written };
 
   const body = childOf(node, NODE.ComponentBody);
+  if (resolution.name === TABLE) return tableComponentNode(node, body, resolution.definition, context);
   const children = body ? blockChildren(body, context) : [];
 
   return {
@@ -267,6 +282,116 @@ function componentNode(node: SyntaxNode, context: Context): RenderNode {
 function placeholderNode(node: SyntaxNode, context: Context): RenderNode {
   const nameNode = childOf(node, NODE.ComponentName);
   return { kind: "placeholder", name: nameNode ? source(nameNode, context) : "" };
+}
+
+/**
+ * A `Table`, as a table: its caption, a head of column titles, and one body row
+ * per `TableRow`, each cell the row's field for that column.
+ *
+ * A row without the field a column shows gets an empty cell rather than a
+ * shifted one, because the validator is what refuses it and a preview has to
+ * keep drawing. Anything in the body that is not a part is left out for the same
+ * reason.
+ *
+ * @param node - The `Table` component node.
+ * @param body - Its body, which holds the columns and rows.
+ * @param definition - What the register says a table is.
+ * @param context - The document and the register.
+ */
+function tableComponentNode(
+  node: SyntaxNode,
+  body: SyntaxNode | null,
+  definition: ComponentDefinition,
+  context: Context,
+): RenderNode {
+  const caption = propsOf(node, definition, context).caption;
+  const columns: { title: string; field: string; alignment: string }[] = [];
+  const rows: Map<string, string>[] = [];
+
+  for (const part of body ? childrenOf(body) : []) {
+    if (part.name !== NODE.Component) continue;
+    const nameNode = childOf(part, NODE.ComponentName);
+    const resolution = resolveComponent(nameNode ? source(nameNode, context) : "", context.register);
+    if (!resolution.found) continue;
+
+    if (resolution.name === TABLE_COLUMN) {
+      const props = propsOf(part, resolution.definition, context);
+      columns.push({
+        title: String(props.title ?? ""),
+        field: String(props.value ?? ""),
+        alignment: String(props.alignment ?? DEFAULT_ALIGNMENT),
+      });
+    } else if (resolution.name === TABLE_ROW) {
+      rows.push(fieldsOf(part, context));
+    }
+  }
+
+  const aligned = (alignment: string): Record<string, string> =>
+    alignment === DEFAULT_ALIGNMENT ? {} : { "data-align": alignment };
+
+  const parts: RenderNode[] = [];
+  if (typeof caption === "string" && caption !== "") {
+    parts.push(element("caption", inlineMarkdown(caption, context)));
+  }
+  parts.push(
+    element("thead", [
+      element(
+        "tr",
+        columns.map((column) => element("th", [text(column.title)], aligned(column.alignment))),
+      ),
+    ]),
+  );
+  if (rows.length > 0) {
+    parts.push(
+      element(
+        "tbody",
+        rows.map((row) =>
+          element(
+            "tr",
+            columns.map((column) =>
+              element("td", inlineMarkdown(row.get(column.field) ?? "", context), aligned(column.alignment)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  return element("table", parts);
+}
+
+/**
+ * The fields of one `TableRow`, by the names they were written under.
+ *
+ * @param node - A `TableRow` component node.
+ * @param context - The document.
+ * @returns Each field's value, unquoted.
+ */
+function fieldsOf(node: SyntaxNode, context: Context): Map<string, string> {
+  const fields = new Map<string, string>();
+  for (const argument of argumentsOf(node)) {
+    const nameChild = childOf(argument, NODE.ArgumentName);
+    const valueNode = writtenValueOf(argument);
+    if (!nameChild || !valueNode) continue;
+    const raw = source(valueNode, context);
+    fields.set(source(nameChild, context), writtenKindOf(valueNode) === "string" ? unquote(raw) : raw);
+  }
+  return fields;
+}
+
+/**
+ * A short piece of Markdown, rendered as the inline content of one paragraph.
+ *
+ * A value written in quotes is a separate text from the document around it, so
+ * it is parsed on its own. A paragraph is what a line of text becomes, and its
+ * wrapper is taken off because a cell or a caption is already the block.
+ *
+ * @param markdown - What was written between the quotes.
+ * @param context - The register to render with.
+ */
+function inlineMarkdown(markdown: string, context: Context): RenderNode[] {
+  const nodes = renderContent(markdown, { register: context.register });
+  return nodes.flatMap((node) => (node.kind === "element" && node.tag === "p" ? node.children : [node]));
 }
 
 /**

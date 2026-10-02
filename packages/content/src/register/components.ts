@@ -253,6 +253,57 @@ export const components = {
     },
     renders: "Card",
   },
+
+  Table: {
+    description: "Rows of model objects shown in columns, the way SwiftUI's Table shows them.",
+    example: `Table(caption: "Parts for one enclosure") {\n  TableColumn("Part", value: part)\n  TableColumn("Count", value: count, alignment: numeric)\n\n  TableRow(part: "M3 screw, 8 mm", count: "12", supplier: "Bossard")\n  TableRow(part: "**Front panel**", count: "1", supplier: "JLCPCB")\n}`,
+    body: "required",
+    parameters: {
+      caption: { kind: "text", description: "Says what the table shows, above it." },
+    },
+    holds: ["TableColumn", "TableRow"],
+    // Drawn as the same table a Markdown table becomes, so the two look alike
+    // and share one set of styles.
+    renders: "table",
+  },
+
+  TableColumn: {
+    description: "One column of a table: its title, and which field of each row it shows.",
+    example: 'TableColumn("Count", value: count, alignment: numeric)',
+    body: "never",
+    unnamed: "title",
+    parameters: {
+      title: { kind: "text", description: "The heading of the column.", required: true },
+      value: {
+        kind: "field",
+        description: "Which field of each row the column shows, as a key path names a property.",
+        required: true,
+      },
+      alignment: {
+        kind: "keyword",
+        description: "How the values line up. numeric sets figures right-aligned and of equal width.",
+        // SwiftUI's TableColumnAlignment, without `automatic`, which on a page
+        // would only ever mean leading.
+        values: ["leading", "center", "trailing", "numeric"],
+        default: "leading",
+      },
+    },
+    within: "Table",
+    renders: "table",
+  },
+
+  TableRow: {
+    description: "One model object of a table, with a value for each field its columns show.",
+    example: 'TableRow(part: "M3 screw, 8 mm", count: "12", supplier: "Bossard")',
+    body: "never",
+    parameters: {},
+    fields: {
+      kind: "text",
+      description: "A value of the row, under a name of your choosing. Inline Markdown works in it.",
+    },
+    within: "Table",
+    renders: "table",
+  },
 } as const satisfies Register;
 
 /** Every component name, as a type. */

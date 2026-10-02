@@ -2,10 +2,10 @@ import type { SyntaxNode, Tree } from "@lezer/common";
 import { nearestName } from "../nearest.js";
 import { parseContent } from "../parser/index.js";
 import { NODE } from "../parser/nodes.js";
-import { argumentsOf, childOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
+import { argumentsOf, childOf, childrenOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
 import { scanComponent } from "../parser/scan.js";
 import { SPACE_STEPS } from "../register/components.js";
-import { accepts } from "../register/describe.js";
+import { accepts, either } from "../register/describe.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
 import { resolveComponent, unnamedParameter } from "../register/lookup.js";
 import { FINDING, type Finding, type Validation } from "./findings.js";
@@ -159,6 +159,170 @@ function checkComponent(node: SyntaxNode, context: Context): void {
 
   checkBody(node, nameNode, subject, context);
   checkArguments(node, nameNode, subject, context);
+  checkPlacement(node, nameNode, subject, context);
+  if (subject.definition.holds) checkParts(node, subject, context);
+}
+
+/**
+ * Checks that a part stands in the body of the component it is a part of.
+ *
+ * @param node - The component node.
+ * @param nameNode - Its name, which is what a misplaced part is reported against.
+ * @param subject - What the register says this component is.
+ * @param context - The document and where to report.
+ */
+function checkPlacement(node: SyntaxNode, nameNode: SyntaxNode, subject: Subject, context: Context): void {
+  const within = subject.definition.within;
+  if (!within) return;
+
+  const container = enclosingComponent(node, context);
+  if (container === within) return;
+
+  context.report({
+    code: FINDING.MisplacedComponent,
+    severity: "error",
+    message: `${subject.name} belongs inside ${within}.`,
+    from: nameNode.from,
+    to: nameNode.to,
+    component: subject.name,
+  });
+}
+
+/**
+ * The name of the component whose body a node stands in directly, if any.
+ *
+ * @param node - A component node.
+ * @param context - The document.
+ */
+function enclosingComponent(node: SyntaxNode, context: Context): string | undefined {
+  const body = node.parent;
+  if (body?.name !== NODE.ComponentBody || !body.parent) return undefined;
+  const nameNode = childOf(body.parent, NODE.ComponentName);
+  return nameNode ? context.text.slice(nameNode.from, nameNode.to) : undefined;
+}
+
+/**
+ * Checks the body of a component that holds a list of parts rather than
+ * Markdown: that it holds only those parts, and that the fields its columns
+ * name are fields its rows have.
+ *
+ * @param node - The component node.
+ * @param subject - What the register says this component is.
+ * @param context - The document and where to report.
+ */
+function checkParts(node: SyntaxNode, subject: Subject, context: Context): void {
+  const body = childOf(node, NODE.ComponentBody);
+  if (!body) return;
+
+  const held = subject.definition.holds ?? [];
+  const parts: { node: SyntaxNode; nameNode: SyntaxNode; definition: ComponentDefinition }[] = [];
+
+  for (const child of childrenOf(body)) {
+    // A part that could not be read is reported as that, once, by the walk.
+    if (child.name === NODE.ComponentError) continue;
+
+    const nameNode = child.name === NODE.Component ? childOf(child, NODE.ComponentName) : null;
+    if (!nameNode) {
+      context.report({
+        code: FINDING.ContentNotAccepted,
+        severity: "error",
+        message: `${subject.name} holds only ${either(held)}.`,
+        from: child.from,
+        to: child.to,
+        component: subject.name,
+      });
+      continue;
+    }
+
+    const written = context.text.slice(nameNode.from, nameNode.to);
+    const resolution = resolveComponent(written, context.register);
+    if (!resolution.found) continue;
+
+    if (!held.includes(resolution.name)) {
+      context.report({
+        code: FINDING.MisplacedComponent,
+        severity: "error",
+        message: `${subject.name} holds only ${either(held)}, not ${resolution.name}.`,
+        from: nameNode.from,
+        to: nameNode.to,
+        component: resolution.name,
+      });
+      continue;
+    }
+
+    parts.push({ node: child, nameNode, definition: resolution.definition });
+  }
+
+  checkFields(parts, context);
+}
+
+/**
+ * Checks that every field a column shows is a field every row has.
+ *
+ * A field no row has at all is reported once, at the column, with the nearest
+ * name the rows do use, because that is a misspelling far more often than it is
+ * a column without data. A field only some rows lack is reported at each of
+ * those rows, because there the row is what is incomplete.
+ *
+ * @param parts - The parts of one container, in the order they were written.
+ * @param context - The document and where to report.
+ */
+function checkFields(
+  parts: readonly { node: SyntaxNode; nameNode: SyntaxNode; definition: ComponentDefinition }[],
+  context: Context,
+): void {
+  const rows = parts
+    .filter((part) => part.definition.fields)
+    .map((part) => ({ ...part, fields: new Set(writtenNames(part.node, context)) }));
+  const known = new Set(rows.flatMap((row) => [...row.fields]));
+
+  for (const part of parts) {
+    for (const argument of argumentsOf(part.node)) {
+      const nameChild = childOf(argument, NODE.ArgumentName);
+      const valueNode = writtenValueOf(argument);
+      if (!nameChild || !valueNode) continue;
+
+      const parameter = part.definition.parameters[context.text.slice(nameChild.from, nameChild.to)];
+      if (parameter?.kind !== "field" || writtenKindOf(valueNode) !== "keyword") continue;
+
+      const field = context.text.slice(valueNode.from, valueNode.to);
+      if (!known.has(field)) {
+        const suggestion = nearestName(field, known);
+        context.report({
+          code: FINDING.UnknownField,
+          severity: "error",
+          message: suggestion
+            ? `No row has a field called ${field}. Did you mean ${suggestion}?`
+            : `No row has a field called ${field}.`,
+          from: valueNode.from,
+          to: valueNode.to,
+          parameter: field,
+          suggestion,
+        });
+        continue;
+      }
+
+      for (const row of rows) {
+        if (row.fields.has(field)) continue;
+        context.report({
+          code: FINDING.MissingField,
+          severity: "error",
+          message: `This row has no ${field}, which a column shows.`,
+          from: row.nameNode.from,
+          to: row.nameNode.to,
+          parameter: field,
+        });
+      }
+    }
+  }
+}
+
+/** The names a component's arguments were written under, in order. */
+function writtenNames(node: SyntaxNode, context: Context): string[] {
+  return argumentsOf(node).flatMap((argument) => {
+    const nameChild = childOf(argument, NODE.ArgumentName);
+    return nameChild ? [context.text.slice(nameChild.from, nameChild.to)] : [];
+  });
 }
 
 /**
@@ -250,7 +414,9 @@ function bindByName(
   context: Context,
 ): Bound | null {
   const written = context.text.slice(nameChild.from, nameChild.to);
-  const parameter = subject.definition.parameters[written];
+  // A field of a row is any name the author chose, and what it means is decided
+  // by the columns that name it, which `checkFields` compares.
+  const parameter = subject.definition.parameters[written] ?? subject.definition.fields;
 
   if (!parameter) {
     const suggestion = nearestName(written, Object.keys(subject.definition.parameters));
@@ -421,6 +587,11 @@ function checkValue(bound: Bound, valueNode: SyntaxNode, subject: Subject, conte
       // Only that it is a bare word. The icon families are not in the
       // repository yet (#18); when they are, this reads their names exactly as
       // `keyword` reads the list the register gives it.
+      if (written !== "keyword") refuse();
+      return;
+
+    case "field":
+      // Whether a row has it is the container's question, asked in `checkFields`.
       if (written !== "keyword") refuse();
       return;
   }

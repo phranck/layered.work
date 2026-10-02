@@ -206,6 +206,79 @@ describe("a table", () => {
   });
 });
 
+describe("a Table", () => {
+  it("shows each row's field under the column that names it, with the caption and the alignment", () => {
+    const text = [
+      'Table(caption: "Teile für ein Gehäuse") {',
+      '  TableColumn("Teil", value: part)',
+      '  TableColumn("Anzahl", value: count, alignment: numeric)',
+      "",
+      '  TableRow(part: "**Frontplatte**", count: "1", supplier: "JLCPCB")',
+      '  TableRow(count: "12", part: "Schraube M3")',
+      "}",
+    ].join("\n");
+
+    expect(outline(text)).toBe(
+      [
+        "table",
+        "  caption",
+        '    text "Teile für ein Gehäuse"',
+        "  thead",
+        "    tr",
+        "      th",
+        '        text "Teil"',
+        '      th data-align="numeric"',
+        '        text "Anzahl"',
+        "  tbody",
+        "    tr",
+        "      td",
+        "        strong",
+        '          text "Frontplatte"',
+        '      td data-align="numeric"',
+        '        text "1"',
+        "    tr",
+        "      td",
+        '        text "Schraube M3"',
+        '      td data-align="numeric"',
+        '        text "12"',
+      ].join("\n"),
+    );
+  });
+
+  it("keeps a cell empty where a row lacks the field, so the rest stay in their columns", () => {
+    const text = [
+      "Table {",
+      '  TableColumn("A", value: a)',
+      '  TableColumn("B", value: b)',
+      '  TableRow(b: "2")',
+      "}",
+    ].join("\n");
+    expect(outline(text)).toBe(
+      [
+        "table",
+        "  thead",
+        "    tr",
+        "      th",
+        '        text "A"',
+        "      th",
+        '        text "B"',
+        "  tbody",
+        "    tr",
+        "      td",
+        "      td",
+        '        text "2"',
+      ].join("\n"),
+    );
+  });
+
+  it("renders HTML in a cell as the text somebody typed", () => {
+    const nodes = renderContent(
+      'Table {\n  TableColumn("A", value: a)\n  TableRow(a: "<script>x</script>")\n}',
+    );
+    expect(JSON.stringify(nodes)).toContain('"value":"<script>x</script>"');
+  });
+});
+
 describe("a link", () => {
   it("becomes an anchor", () => {
     expect(outline("[Wort](https://x.invalid)\n")).toBe(
@@ -424,6 +497,27 @@ describe("every component the register declares", () => {
       'Card(title: "Titel") {\n  Inhalt.\n}',
       ['Card → Card {"title":"Titel"}', "  p", '    text "Inhalt."'],
     ],
+    Table: [
+      'Table {\n  TableColumn("Teil", value: part)\n  TableRow(part: "Schraube")\n}',
+      [
+        "table",
+        "  thead",
+        "    tr",
+        "      th",
+        '        text "Teil"',
+        "  tbody",
+        "    tr",
+        "      td",
+        '        text "Schraube"',
+      ],
+    ],
+    // Outside a table a part stays a component nothing on the site draws, and
+    // the validator is what refuses it.
+    TableColumn: [
+      'TableColumn("Teil", value: part)',
+      ['TableColumn → table {"alignment":"leading","title":"Teil","value":"part"}'],
+    ],
+    TableRow: ['TableRow(part: "Schraube")', ["TableRow → table {}"]],
   };
 
   it("has an example of each of them", () => {

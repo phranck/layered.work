@@ -41,7 +41,7 @@ HTML is not. A tag written in a document reaches the page as the characters that
 
 ## The components
 
-There are 13 of them, and this list is generated from the register, so it is what the parser actually accepts.
+There are 16 of them, and this list is generated from the register, so it is what the parser actually accepts.
 
 ### VStack
 
@@ -270,6 +270,54 @@ Card(title: "The enclosure", image: "enclosure") {
   Two halves in PETG.
 }
 ```
+
+### Table
+
+Rows of model objects shown in columns, the way SwiftUI's Table shows them.
+
+Needs a body. The body holds `TableColumn` and `TableRow` lines, and no Markdown. Rendered by `table`.
+
+| Parameter | What it is for | Takes | Default |
+| --- | --- | --- | --- |
+| `caption` | Says what the table shows, above it. | text in quotes |  |
+
+```
+Table(caption: "Parts for one enclosure") {
+  TableColumn("Part", value: part)
+  TableColumn("Count", value: count, alignment: numeric)
+
+  TableRow(part: "M3 screw, 8 mm", count: "12", supplier: "Bossard")
+  TableRow(part: "**Front panel**", count: "1", supplier: "JLCPCB")
+}
+```
+
+### TableColumn
+
+One column of a table: its title, and which field of each row it shows.
+
+Only inside `Table`. Takes no body. Rendered by `table`.
+
+| Parameter | What it is for | Takes | Default |
+| --- | --- | --- | --- |
+| `title` (required) | The heading of the column. | text in quotes |  |
+| `value` (required) | Which field of each row the column shows, as a key path names a property. | the name of a field its rows have, written bare |  |
+| `alignment` | How the values line up. numeric sets figures right-aligned and of equal width. | one of leading, center, trailing, or numeric | `leading` |
+
+`title` may be written first without its name.
+
+`TableColumn("Count", value: count, alignment: numeric)` is one line of the example under `Table`.
+
+### TableRow
+
+One model object of a table, with a value for each field its columns show.
+
+Only inside `Table`. Takes no body. Rendered by `table`.
+
+| Parameter | What it is for | Takes | Default |
+| --- | --- | --- | --- |
+| any name | A value of the row, under a name of your choosing. Inline Markdown works in it. | text in quotes |  |
+
+`TableRow(part: "M3 screw, 8 mm", count: "12", supplier: "Bossard")` is one line of the example under `Table`.
 
 ## What the language deliberately lacks
 

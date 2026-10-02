@@ -30,7 +30,13 @@ export type ParameterKind =
   /** The name of a file in the media library, written in quotes. */
   | "slug"
   /** An icon, written bare. The set is large and lives in the icon package. */
-  | "icon";
+  | "icon"
+  /**
+   * The name of a field the author gave the rows of the same container, written
+   * bare. Which names exist is decided by the document rather than the
+   * register, so it is checked against the rows rather than against a list.
+   */
+  | "field";
 
 /** One parameter of one component. */
 export type Parameter = {
@@ -84,10 +90,39 @@ export type ComponentDefinition = {
    * A name rather than an import, because this package is read by the parser
    * and the validator as well, and neither of those should pull a renderer in
    * to find out what a component is called.
+   *
+   * A capitalised name is a component the site draws. A name in lower case is
+   * an HTML element the content renderer builds as prose itself, the way it
+   * builds a Markdown table, so there is no component of that name to look up.
    */
   renders: string;
   /** Names this component has been called before. */
   aliases?: readonly Alias[];
+  /**
+   * The component whose body this one belongs in, and nowhere else.
+   *
+   * A part of something larger, such as a column of a table, means nothing on
+   * its own, so writing it anywhere else is refused rather than rendered.
+   */
+  within?: string;
+  /**
+   * The only components its body may hold, where it is not Markdown at all.
+   *
+   * A body is Markdown by default. A component whose body is a list of parts
+   * says which parts, and prose written between them is refused rather than
+   * silently dropped.
+   */
+  holds?: readonly string[];
+  /**
+   * What it takes under names the author chooses, beside its declared
+   * parameters.
+   *
+   * A row of a table is a model object with whatever fields its table needs, the
+   * way a Swift memberwise initialiser takes them, so its parameter names belong
+   * to the document. Every one of them is described by this, and a column naming
+   * a field is what gives it a meaning.
+   */
+  fields?: Parameter;
 };
 
 /** Every component, by name. */
