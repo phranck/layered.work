@@ -8,6 +8,7 @@ import { AppBarSlotsProvider } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
+import { NotificationProvider } from "./notifications.js";
 import { dashboardGroups } from "./routes.js";
 import { SaveShortcutProvider } from "./save-shortcut.js";
 import { SearchProvider } from "./search.js";
@@ -176,26 +177,30 @@ function DashboardLayout() {
           workbench's tokens as the account dialog does. */}
       <SearchProvider>
         <SaveShortcutProvider>
-          <DashboardSidebar
-            accountOpen={accountOpen}
-            onOpenAccount={() => setAccountOpen(true)}
-            handle={handle}
-          />
-          {/* The bar stands above the content and stays put; only the content
-              below it scrolls. */}
+          {/* The bar's places and what is said in it reach the whole frame,
+              the sidebar and the account dialog included. */}
           <AppBarSlotsProvider>
             {(bar) => (
-              <div className="workbench__column">
-                {bar}
-                <main className="workbench__main dashboard-main">
-                  <Outlet />
-                </main>
-              </div>
+              <NotificationProvider>
+                <DashboardSidebar
+                  accountOpen={accountOpen}
+                  onOpenAccount={() => setAccountOpen(true)}
+                  handle={handle}
+                />
+                {/* The bar stands above the content and stays put; only the
+                    content below it scrolls. */}
+                <div className="workbench__column">
+                  {bar}
+                  <main className="workbench__main dashboard-main">
+                    <Outlet />
+                  </main>
+                </div>
+                {accountOpen && account.data && (
+                  <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
+                )}
+              </NotificationProvider>
             )}
           </AppBarSlotsProvider>
-          {accountOpen && account.data && (
-            <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
-          )}
         </SaveShortcutProvider>
       </SearchProvider>
     </div>

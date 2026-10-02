@@ -231,6 +231,9 @@ const de = {
   save: "Speichern",
   savePending: "Speichern…",
   cancel: "Abbrechen",
+  close: "Schließen",
+  saved: "Gespeichert",
+  translationCreated: (language: string) => `Fassung auf ${language} angelegt`,
   nextPage: "Weiter",
   previousPage: "Zurück",
 
@@ -460,6 +463,9 @@ const en: Catalogue = {
   save: "Save",
   savePending: "Saving…",
   cancel: "Cancel",
+  close: "Close",
+  saved: "Saved",
+  translationCreated: (language) => `The ${language} version was created`,
   nextPage: "Next",
   previousPage: "Previous",
 

@@ -21,6 +21,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { CardDialog } from "./modal.js";
+import { useNotify } from "./notifications.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSignOut } from "./session-queries.js";
 
@@ -28,6 +29,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
+  const { notify } = useNotify();
   const [draft, setDraft] = useState<UpdateAccountBody>({
     displayName: account.displayName,
     email: account.email,
@@ -80,6 +82,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
     savingRef.current = true;
     try {
       await save.mutateAsync(draft);
+      notify({ tone: "success", message: text("saved") });
       onClose();
     } catch {
       // The mutation retains the structured error for the alert.

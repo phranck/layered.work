@@ -548,6 +548,62 @@ describe("dashboard shell", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
   });
 
+  it("says in the bar that a save by hand worked, and lets it go by itself", async () => {
+    const published = { ...draftDetail, state: "public", publishedAt: "2025-09-02T00:00:00.000Z" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === "PUT"
+            ? json({ data: { ...published, ...JSON.parse(String(init.body)) } })
+            : String(input).endsWith(`/entries/${draftDetail.id}`)
+              ? json({ data: published })
+              : successfulGet(input),
+        ),
+      ),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "By hand" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const centre = document.querySelector(".app-bar__center") as HTMLElement;
+    const shown = await within(centre).findByText("Gespeichert", { selector: ".notification__message" });
+    expect(shown.closest(".notification")?.getAttribute("data-tone")).toBe("success");
+    expect(centre.querySelector('[aria-live="polite"]')?.textContent).toBe("Gespeichert");
+    expect(within(centre).queryByRole("button", { name: "Schließen" })).toBeNull();
+    await waitFor(() => expect(centre.querySelector(".notification")).toBeNull(), { timeout: 5000 });
+  }, 10_000);
+
+  it("keeps a failed save in the bar, with its id, until it is closed", async () => {
+    const published = { ...draftDetail, state: "public", publishedAt: "2025-09-02T00:00:00.000Z" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === "PUT"
+            ? json({ error: { code: "internal", message: "Database gone.", id: "save-7" } }, 500)
+            : String(input).endsWith(`/entries/${draftDetail.id}`)
+              ? json({ data: published })
+              : successfulGet(input),
+        ),
+      ),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "Will fail" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const centre = document.querySelector(".app-bar__center") as HTMLElement;
+    await within(centre).findByText("Auf dem Server ist ein Fehler aufgetreten.", {
+      selector: ".notification__message",
+    });
+    expect(within(centre).getByText("Fehler-ID: save-7")).toBeTruthy();
+    expect(centre.querySelector('[aria-live="assertive"]')?.textContent).toContain("save-7");
+    fireEvent.click(within(centre).getByRole("button", { name: "Schließen" }));
+    await waitFor(() => expect(centre.querySelector(".notification")).toBeNull());
+  });
+
   it("saves a draft by itself once typing pauses, and says when", async () => {
     const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
       Promise.resolve(
@@ -570,6 +626,8 @@ describe("dashboard shell", () => {
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toMatch(/^Automatisch gespeichert um /),
     );
+    // A save the editor made by itself is not news.
+    expect(document.querySelector(".app-bar__center .notification")).toBeNull();
   });
 
   it("never saves a change to a public entry by itself, and asks before leaving it unsaved", async () => {

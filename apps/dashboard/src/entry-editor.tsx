@@ -36,6 +36,7 @@ import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
+import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 
@@ -156,6 +157,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
+  const { notify, notifyError } = useNotify();
   const editor = useRef<ContentEditorHandle>(null);
   const [saved, setSaved] = useState(() => draftOf(entry));
   const [draft, setDraft] = useState(saved);
@@ -165,7 +167,11 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 
   const save = useMutation({
     mutationFn: ({ value }: { value: SaveEntryBody; automatic: boolean }) => api.saveEntry(entry.id, value),
+    // A save by hand is news; one the editor made by itself is not, and the
+    // state beside the Save button already says when it happened.
+    onError: (error) => notifyError(error),
     onSuccess: (stored, { automatic }) => {
+      if (!automatic) notify({ tone: "success", message: text("saved") });
       const now = draftOf(stored);
       setSaved(now);
       setSavedAt({ at: new Date(), automatic });
@@ -207,7 +213,12 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const navigate = useNavigate();
   const translate = useMutation({
     mutationFn: () => api.createTranslation(entry.id),
+    onError: (error) => notifyError(error),
     onSuccess: (created) => {
+      notify({
+        tone: "success",
+        message: text("translationCreated", text(LANGUAGE_TEXT[otherLanguage(entry.language)])),
+      });
       queryClient.setQueryData(entryKey(created.id), created);
       void queryClient.invalidateQueries({ queryKey: entryKey(entry.id) });
       void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
@@ -235,7 +246,10 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
         window.open(url, "_blank", "noopener");
       }
     },
-    onError: (_error, { target }) => target?.close(),
+    onError: (error, { target }) => {
+      target?.close();
+      notifyError(error);
+    },
   });
   const openPreview = () => preview.mutate({ value: draft, target: window.open("", "_blank") });
 
@@ -339,7 +353,6 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               onChange={(body) => update({ body })}
             />
           </Editor.Surface>
-          {save.isError && <ErrorNotice error={save.error} />}
           <Editor.Actions
             destructive={
               <span className="entry-editor__status" role="status">
@@ -397,7 +410,6 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
             <Button icon={<EyeIcon weight="duotone" />} disabled={preview.isPending} onClick={openPreview}>
               {preview.isPending ? text("previewPending") : text("preview")}
             </Button>
-            {preview.isError && <ErrorNotice error={preview.error} />}
           </div>
           <Field label={text("editorLanguage")}>
             <span className="entry-editor__value">
@@ -432,7 +444,6 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                     ? text("editorCreateCounterpartPending")
                     : text("editorCreateCounterpart", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
                 </Button>
-                {translate.isError && <ErrorNotice error={translate.error} />}
               </>
             )}
           </Field>

@@ -18,6 +18,7 @@ import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
+import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
@@ -91,9 +92,14 @@ function SettingsCard<Group extends keyof SettingsGroups>({
   const editable = account.data?.role === "owner";
   const [draft, setDraft] = useState(saved);
   const [problems, setProblems] = useState<DashboardStringKey[]>([]);
+  const { notify, notifyError } = useNotify();
   const save = useMutation({
     mutationFn: (value: SettingsGroups[Group]) => api.saveSettings(group, value),
-    onSuccess: (view) => queryClient.setQueryData(SETTINGS_KEY, view),
+    onError: (error) => notifyError(error),
+    onSuccess: (view) => {
+      queryClient.setQueryData(SETTINGS_KEY, view);
+      notify({ tone: "success", message: text("saved") });
+    },
   });
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const formId = `settings-${group}`;
@@ -136,7 +142,6 @@ function SettingsCard<Group extends keyof SettingsGroups>({
               ))}
             </ul>
           )}
-          {save.isError && <ErrorNotice error={save.error} />}
         </form>
       </Card.Body>
       <Card.Footer
