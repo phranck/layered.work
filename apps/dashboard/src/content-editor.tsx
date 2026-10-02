@@ -8,6 +8,7 @@ import { CONTENT_SYNTAX } from "@layered/content";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 import { contentAutocompletion } from "./content-completion.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
+import { tableSync } from "./table-sync.js";
 
 /**
  * The writing surface for an entry's body.
@@ -109,6 +110,7 @@ function surfaceExtensions(label: string): Extension[] {
     contentLanguage(),
     contentHighlighting(),
     contentAutocompletion(),
+    tableSync(),
     history(),
     drawSelection(),
     EditorState.allowMultipleSelections.of(true),
