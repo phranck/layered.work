@@ -60,6 +60,13 @@ export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
   integrations: [react(), bundleReactIntoBuild()],
+  vite: {
+    // The model viewer is imported only once a model scrolls into view, so the
+    // development server would discover it then, re-bundle its dependencies,
+    // and answer the page's request for the old bundle with 504. Bundling it
+    // at start-up means there is nothing left to discover.
+    optimizeDeps: { include: ["@google/model-viewer"] },
+  },
   build: {
     // Kept out of the way of public/, which holds the wordmark, the typefaces
     // and the sharing image, and which zerops.yml deploys as its own directory.

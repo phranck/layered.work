@@ -86,7 +86,10 @@ const kindNames = language === "de"
 </dialog>
 
 <script>
-  import { returnFocusQuietly } from "@layered/ui";
+  // The subpath rather than the package root: the root carries every React
+  // component, and a browser script that loads them runs them without the
+  // React preamble, which stops the development server's client code.
+  import { returnFocusQuietly } from "@layered/ui/focus-return";
   import { findEntries, type SearchIndexEntry } from "../search/overlay.js";
 
   const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]');

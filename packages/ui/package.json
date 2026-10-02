@@ -19,6 +19,11 @@
       "development": "./src/model-viewport.ts",
       "default": "./dist/model-viewport.js"
     },
+    "./focus-return": {
+      "types": "./src/focus-return.ts",
+      "development": "./src/focus-return.ts",
+      "default": "./dist/focus-return.js"
+    },
     "./icons": {
       "types": "./src/icons.ts",
       "development": "./src/icons.ts",
