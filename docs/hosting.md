@@ -205,7 +205,9 @@ A CDN in front would add one more entry and make the caller three from the end. 
 | Application role | `layered_app`, deliberately not a superuser, and the owner of the database, the schema, every table and every type |
 | Administrative role | `layered`, for creating roles and looking around, and used by nothing that runs |
 
-Copy `.env.example` to `.env.local`. The services read it themselves through Node's `--env-file-if-exists`, so nothing has to be exported into a shell before `grat start` works. Neither password is a secret: the database listens on one laptop's loopback address and holds nothing that is not reproducible from the Publii export.
+Copy `.env.example` to `.env.local`. The services read it themselves, so nothing has to be exported into a shell before `grat start` works. The backend does it through Node's `--env-file-if-exists`. The website does it with `process.loadEnvFile` at the top of `apps/website/astro.config.mjs`, because `astro dev` reads no file at the repository's root, and without `API_URL` every page answers 503.
+
+**React is bundled into the website's built server and only there.** Zerops deploys `dist` without the app's dependency links, so `astro build` puts React inside the standalone server. The development server must not do the same: Vite's module runner would then load React's CommonJS entry itself and stop with "module is not defined". The small integration `bundleReactIntoBuild` in `astro.config.mjs` adds the line for builds alone, and `tools/bundle-react-into-build.test.mjs` holds it there. Neither password is a secret: the database listens on one laptop's loopback address and holds nothing that is not reproducible from the Publii export.
 
 **The volume mounts `/var/lib/postgresql`, not the `data` directory inside it.** From version 18 the image puts its cluster in a version-named subdirectory so a later `pg_upgrade --link` does not cross a mount boundary, and it refuses to start when it finds a mount one level too deep.
 

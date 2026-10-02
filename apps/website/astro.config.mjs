@@ -1,7 +1,48 @@
 // @ts-check
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import node from "@astrojs/node";
 import react from "@astrojs/react";
 import { defineConfig } from "astro/config";
+
+/**
+ * The project's local environment file, which says where the site's content
+ * comes from (`API_URL`, `WEBSITE_CONTENT_FILE`).
+ *
+ * Astro does not read a file at the repository's root, and the pages read
+ * `process.env` at request time, so without this the development server has no
+ * content source and answers every page with 503. The backend loads the same
+ * file through `--env-file-if-exists` in its scripts. A variable the
+ * environment already sets wins, so the `PORT` grat starts this with stays, and
+ * a deployment, which has no such file, is untouched.
+ */
+const ENV_FILE = fileURLToPath(new URL("../../.env.local", import.meta.url));
+if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
+
+/**
+ * Puts React inside the built server, and only there.
+ *
+ * Zerops deploys `dist` without the app's pnpm dependency links, so the React
+ * server renderer has to travel inside the standalone output, which
+ * `ssr.noExternal` does. The development server must not get the same line:
+ * there Vite's module runner would load React's CommonJS entry itself, which has
+ * no `module`, and the server stops with "module is not defined". Locally React
+ * is in `node_modules`, so Node resolves it as it resolves everything else.
+ *
+ * @returns An integration that adds the line for `astro build` alone.
+ */
+export function bundleReactIntoBuild() {
+  return {
+    name: "layered:bundle-react-into-build",
+    hooks: {
+      /** @param {{ command: string, updateConfig: (config: object) => unknown }} options */
+      "astro:config:setup": ({ command, updateConfig }) => {
+        if (command !== "build") return;
+        updateConfig({ vite: { ssr: { noExternal: ["react", "react-dom", "@phosphor-icons/react"] } } });
+      },
+    },
+  };
+}
 
 /**
  * Server-rendered, on Node.
@@ -18,12 +59,7 @@ export default defineConfig({
   site: "https://layered.work",
   output: "server",
   adapter: node({ mode: "standalone" }),
-  integrations: [react()],
-  vite: {
-    // Zerops deploys dist without the app's pnpm dependency links. Keep the
-    // React server renderer inside that standalone output.
-    ssr: { noExternal: ["react", "react-dom", "@phosphor-icons/react"] },
-  },
+  integrations: [react(), bundleReactIntoBuild()],
   build: {
     // Kept out of the way of public/, which holds the wordmark, the typefaces
     // and the sharing image, and which zerops.yml deploys as its own directory.
