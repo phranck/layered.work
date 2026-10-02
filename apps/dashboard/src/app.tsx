@@ -74,7 +74,7 @@ function DashboardSidebar({
   return (
     <Sidebar ref={sidebar}>
       <Sidebar.Header>
-        <Logo href="/posts" inkHeight="26px" onClick={handleLogoClick} />
+        <Logo href="/posts" inkHeight="32px" onClick={handleLogoClick} />
       </Sidebar.Header>
       <Sidebar.Body>
         {session.isError && <ErrorNotice error={session.error} />}
