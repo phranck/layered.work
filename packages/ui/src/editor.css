@@ -103,13 +103,11 @@
 .editor__surface {
   min-height: 340px;
   padding: var(--space-5);
-  overflow-x: auto;
   font-family: var(--font-mono);
   font-feature-settings: var(--mono-ligatures);
   font-size: var(--text-code);
   line-height: 1.7;
   color: var(--text-secondary);
-  white-space: pre-wrap;
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -123,6 +121,12 @@
 .editor__surface:focus-within {
   border-color: var(--focus-edge);
   box-shadow: var(--focus-halo);
+}
+
+/* The surface is what shows focus, so whatever takes the focus inside it draws
+   no ring of its own, which would stand as a second frame within the first. */
+.editor__surface :focus-visible {
+  box-shadow: none;
 }
 
 /* --- Narrow viewports ------------------------------------------------------
