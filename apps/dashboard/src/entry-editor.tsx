@@ -1,5 +1,4 @@
 import {
-  type ContentLanguage,
   type EntryDetail,
   type EntryKind,
   MaxLength,
@@ -17,6 +16,7 @@ import {
   GlobeIcon,
   LinkIcon,
   ListBulletsIcon,
+  PlusIcon,
   QuotesIcon,
   TextBIcon,
   TextHTwoIcon,
@@ -25,12 +25,12 @@ import {
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBlocker, useLinkClickHandler, useParams } from "react-router";
+import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
-import { entryListKey } from "./entry-list.js";
+import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
@@ -79,9 +79,6 @@ const STATE_OPTIONS: Record<
   draft: { label: "stateDraft", note: "stateDraftNote", tone: "warning" },
   hidden: { label: "stateHidden", note: "stateHiddenNote", tone: "info" },
 };
-
-/** The name of each language, in the interface language. */
-const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = { en: "languageEn", de: "languageDe" };
 
 /** What the editor changes, taken out of what it opened. */
 function draftOf(entry: EntryDetail): SaveEntryBody {
@@ -190,6 +187,19 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname,
   );
+
+  // The other language is created as a draft and opened at once, because that
+  // is where its writing happens. Leaving with unsaved changes still asks first.
+  const navigate = useNavigate();
+  const translate = useMutation({
+    mutationFn: () => api.createTranslation(entry.id),
+    onSuccess: (created) => {
+      queryClient.setQueryData(entryKey(created.id), created);
+      void queryClient.invalidateQueries({ queryKey: entryKey(entry.id) });
+      void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+      navigate(`/${area.path}/${created.id}`);
+    },
+  });
 
   const update = (change: Partial<SaveEntryBody>) => setDraft((current) => ({ ...current, ...change }));
   const counterpartPath = entry.counterpart ? `/${area.path}/${entry.counterpart.id}` : undefined;
@@ -379,7 +389,19 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                 {text("editorOpenCounterpart", entry.counterpart.title)}
               </a>
             ) : (
-              <span className="entry-editor__note">{text("editorTranslationNone")}</span>
+              <>
+                <span className="entry-editor__note">{text("editorTranslationNone")}</span>
+                <Button
+                  icon={<PlusIcon weight="duotone" />}
+                  disabled={translate.isPending}
+                  onClick={() => translate.mutate()}
+                >
+                  {translate.isPending
+                    ? text("editorCreateCounterpartPending")
+                    : text("editorCreateCounterpart", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
+                </Button>
+                {translate.isError && <ErrorNotice error={translate.error} />}
+              </>
             )}
           </Field>
           <Field label={text("editorTopics")}>

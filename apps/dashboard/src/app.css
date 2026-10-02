@@ -194,6 +194,17 @@ dialog.account-dialog::backdrop {
   border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
 }
 
+/* The other language of the same entry, beside a row's own: present, and
+   quieter than the language the row is. */
+.lang-tag--counterpart {
+  opacity: 0.5;
+}
+
+.lang-tags {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
 /* --- Entry lists -----------------------------------------------------------
    The figures above a list, each compared against the one beside it, which is
    what right alignment and a tabular face are for. */

@@ -285,3 +285,124 @@ export async function saveEntry(
   });
   return readEntry(db, id);
 }
+
+/** How many numbered alternatives an address tries before a new translation is refused. */
+const ADDRESS_ATTEMPTS = 9;
+
+/**
+ * The German letters an address spells out rather than strips, because "Lötkolben"
+ * reads as "loetkolben" to a German reader and as nothing at all as "lotkolben".
+ */
+const GERMAN_TRANSCRIPTIONS: Readonly<Record<string, string>> = { ä: "ae", ö: "oe", ü: "ue", ß: "ss" };
+
+/**
+ * The last segment of an address, written from a title: lower case, German
+ * letters spelt out, other accents taken off, and every run of anything else
+ * turned into one hyphen.
+ *
+ * @param title - The title to write it from.
+ * @returns A segment matching the site's path rule, or `entry` where nothing is left.
+ */
+export function slugFromTitle(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[äöüß]/g, (letter) => GERMAN_TRANSCRIPTIONS[letter] ?? letter)
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/, "");
+  return slug || "entry";
+}
+
+/**
+ * Creates the other language of an entry, or opens it where it already exists.
+ *
+ * The new translation starts as a draft holding the source's title, summary,
+ * text, reading width and picture, because a translation is written by
+ * rewriting what is there, and it stays a draft until somebody publishes it.
+ * The topics and the kind belong to the entry and are shared without copying.
+ *
+ * Its address carries its language, `/de/…` or `/en/…`, as everything written
+ * after the migration does. The segment is the source's own where it has an
+ * address and otherwise one written from its title; a segment already taken is
+ * numbered, and after `ADDRESS_ATTEMPTS` the request is refused rather than
+ * given an address nobody chose.
+ *
+ * @param db - The database.
+ * @param id - The translation it is made from.
+ * @param actorUserId - The account that asked for it, for the audit log.
+ * @returns The other language, as the editor opens it.
+ * @throws `not_found` where the source does not exist, `conflict` where no address is free.
+ */
+export async function createTranslation(db: Database, id: string, actorUserId: string): Promise<EntryDetail> {
+  const created = await db.transaction(async (tx) => {
+    const [source] = await tx
+      .select({
+        entryId: entryTranslations.entryId,
+        language: entryTranslations.language,
+        title: entryTranslations.title,
+        summary: entryTranslations.summary,
+        body: entryTranslations.body,
+        readingWidth: entryTranslations.readingWidth,
+        featuredMediaId: entryTranslations.featuredMediaId,
+      })
+      .from(entryTranslations)
+      .where(eq(entryTranslations.id, id))
+      .limit(1);
+    if (!source) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
+
+    const language = source.language === "en" ? "de" : "en";
+    const [existing] = await tx
+      .select({ id: entryTranslations.id })
+      .from(entryTranslations)
+      .where(and(eq(entryTranslations.entryId, source.entryId), eq(entryTranslations.language, language)))
+      .limit(1);
+    if (existing) return existing.id;
+
+    const [sourcePath] = await tx
+      .select({ path: paths.path })
+      .from(paths)
+      .where(and(eq(paths.translationId, id), eq(paths.isCurrent, true)))
+      .limit(1);
+    const segment = sourcePath?.path.split("/").filter(Boolean).at(-1) ?? slugFromTitle(source.title);
+    const candidates = Array.from(
+      { length: ADDRESS_ATTEMPTS },
+      (_, attempt) => `/${language}/${attempt === 0 ? segment : `${segment}-${attempt + 1}`}/`,
+    );
+    const taken = new Set(
+      (await tx.select({ path: paths.path }).from(paths).where(inArray(paths.path, candidates))).map(
+        (row) => row.path,
+      ),
+    );
+    const path = candidates.find((candidate) => !taken.has(candidate));
+    if (!path) throw new HttpError(ErrorCode.Conflict, "Every address for this translation is taken.");
+
+    const [translation] = await tx
+      .insert(entryTranslations)
+      .values({
+        entryId: source.entryId,
+        language,
+        title: source.title,
+        summary: source.summary,
+        body: source.body,
+        readingWidth: source.readingWidth,
+        featuredMediaId: source.featuredMediaId,
+        state: "draft",
+      })
+      .returning({ id: entryTranslations.id });
+    if (!translation) throw new Error("The translation was not written.");
+    await tx.insert(paths).values({ translationId: translation.id, path });
+    await tx.update(entries).set({ modifiedAt: new Date() }).where(eq(entries.id, source.entryId));
+    await tx.insert(auditLog).values({
+      actorUserId,
+      action: "entry.translated",
+      subjectType: "entry_translations",
+      subjectId: translation.id,
+      detail: { from: id, language },
+    });
+    return translation.id;
+  });
+  return readEntry(db, created);
+}

@@ -84,6 +84,8 @@ export interface DashboardApi {
   fetchEntry(id: string): Promise<EntryDetail>;
   /** Stores what the editor holds for one translation, and returns it as it now stands. */
   saveEntry(id: string, value: SaveEntryBody): Promise<EntryDetail>;
+  /** Creates the other language of a translation's entry as a draft, or returns it where it exists. */
+  createTranslation(id: string): Promise<EntryDetail>;
   /** Entries by title and topic, and media by slug and alt text. */
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
@@ -192,6 +194,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async saveEntry(id, value) {
       const sent = jsonBody("PUT", saveEntryBody.parse(value));
       return dataOf(await request(`/entries/${encodeURIComponent(id)}`, sent, true), entryDetail);
+    },
+    async createTranslation(id) {
+      const path = `/entries/${encodeURIComponent(id)}/translation`;
+      return dataOf(await request(path, { method: "POST" }, true), entryDetail);
     },
     async search(text) {
       const params = new URLSearchParams({ q: text });

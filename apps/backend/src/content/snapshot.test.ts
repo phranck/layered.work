@@ -148,6 +148,26 @@ runs("the public snapshot", () => {
     expect(german?.translationPath).toBe("/english/");
   });
 
+  it("offers no other language whilst that language is still a draft", async () => {
+    const database = await testDatabase();
+    const { entryId } = await writeEntry(database, {
+      title: "In English",
+      path: "/english/",
+      state: "public",
+    });
+    const [german] = await database
+      .insert(entryTranslations)
+      .values({ entryId, language: "de", title: "Noch nicht fertig", body: "", state: "draft" })
+      .returning({ id: entryTranslations.id });
+    if (!german) throw new Error("no translation");
+    await database.insert(paths).values({ translationId: german.id, path: "/de/noch-nicht/" });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.entries.map((entry) => entry.translationPath)).toEqual([null]);
+    expect(JSON.stringify(snapshot)).not.toContain("/de/noch-nicht/");
+  });
+
   it("carries only the files published content names, however it names them", async () => {
     const database = await testDatabase();
     const files = await database

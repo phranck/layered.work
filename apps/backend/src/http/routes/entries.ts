@@ -1,7 +1,7 @@
 import { entryIdParam, entryListQuery, saveEntryBody } from "@layered/schemas";
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
-import { listEntries, readEntry, saveEntry } from "../../entries/repository.js";
+import { createTranslation, listEntries, readEntry, saveEntry } from "../../entries/repository.js";
 import { principalOf, requireSession } from "../require-session.js";
 import { ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -24,6 +24,11 @@ entriesRoutes.get("/", validate("query", entryListQuery), async (c) =>
 
 entriesRoutes.get("/:id", validate("param", entryIdParam), async (c) =>
   ok(c, await readEntry(database(), c.req.valid("param").id)),
+);
+
+// The other language of the entry, created as a draft or opened where it exists.
+entriesRoutes.post("/:id/translation", validate("param", entryIdParam), async (c) =>
+  ok(c, await createTranslation(database(), c.req.valid("param").id, principalOf(c).userId)),
 );
 
 entriesRoutes.put("/:id", validate("param", entryIdParam), validate("json", saveEntryBody), async (c) =>

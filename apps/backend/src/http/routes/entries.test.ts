@@ -1,7 +1,8 @@
 import { type EntryList, entryDetail, entryList, readApiError } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { auditLog } from "../../db/schema/index.js";
+import { auditLog, paths } from "../../db/schema/index.js";
+import { slugFromTitle } from "../../entries/repository.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";
@@ -13,6 +14,14 @@ import { app } from "../app.js";
  */
 
 const runs = hasTestDatabase ? describe : describe.skip;
+
+describe("the address segment written from a title", () => {
+  it("spells out German letters, drops other accents and joins words with one hyphen", () => {
+    expect(slugFromTitle("Über Lötkolben & Straßen")).toBe("ueber-loetkolben-strassen");
+    expect(slugFromTitle("  Café -- Résumé!  ")).toBe("cafe-resume");
+    expect(slugFromTitle("???")).toBe("entry");
+  });
+});
 
 async function list(kind: string, cookie: string): Promise<EntryList> {
   const response = await app.request(`/entries?kind=${kind}`, { headers: { cookie } });
@@ -162,6 +171,69 @@ runs("the entry list", () => {
       });
       expect(response.status).toBe(400);
     }
+  });
+
+  it("creates the other language as a linked draft, and opens it when asked again", async () => {
+    const cookie = await signedInCookie();
+    const draft = (await list("post", cookie)).find((row) => row.title === "A draft");
+    const translate = () =>
+      app.request(`/entries/${draft?.id}/translation`, { method: "POST", headers: { cookie } });
+
+    const first = await translate();
+    expect(first.status).toBe(200);
+    const german = entryDetail.parse(((await first.json()) as { data: unknown }).data);
+    expect(german).toMatchObject({
+      language: "de",
+      title: "A draft",
+      state: "draft",
+      path: "/de/a-draft/",
+      publishedAt: null,
+      counterpart: { id: draft?.id, language: "en", title: "A draft" },
+    });
+    expect(german.topics.map((topic) => topic.name)).toEqual(["Soldering"]);
+
+    const again = entryDetail.parse(((await (await translate()).json()) as { data: unknown }).data);
+    expect(again.id).toBe(german.id);
+
+    const rows = await list("post", cookie);
+    expect(rows.filter((row) => row.entryId === draft?.entryId).map((row) => row.translated)).toEqual([
+      true,
+      true,
+    ]);
+
+    const database = await testDatabase();
+    const logged = await database
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.subjectId, german.id));
+    expect(logged.map((row) => row.action)).toEqual(["entry.translated"]);
+  });
+
+  it("numbers the address of a new translation when the plain one is taken", async () => {
+    const cookie = await signedInCookie();
+    const rows = await list("post", cookie);
+    const draft = rows.find((row) => row.title === "A draft");
+    const german = rows.find((row) => row.language === "de");
+    const database = await testDatabase();
+    await database
+      .insert(paths)
+      .values({ translationId: german?.id ?? "", path: "/de/a-draft/", isCurrent: false });
+
+    const response = await app.request(`/entries/${draft?.id}/translation`, {
+      method: "POST",
+      headers: { cookie },
+    });
+    expect(entryDetail.parse(((await response.json()) as { data: unknown }).data).path).toBe(
+      "/de/a-draft-2/",
+    );
+  });
+
+  it("answers not found when asked to translate a translation that does not exist", async () => {
+    const response = await app.request("/entries/0199f064-43b7-79a8-917f-eefc8c852400/translation", {
+      method: "POST",
+      headers: { cookie: await signedInCookie() },
+    });
+    expect(response.status).toBe(404);
   });
 
   it("refuses a request without a session", async () => {

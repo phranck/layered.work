@@ -86,6 +86,17 @@ const STATE_TEXT: Record<PublicationState, DashboardStringKey> = {
   hidden: "stateHidden",
 };
 
+/** The name of each language, in the interface language. */
+export const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = {
+  en: "languageEn",
+  de: "languageDe",
+};
+
+/** The other of the site's two languages. */
+export function otherLanguage(language: ContentLanguage): ContentLanguage {
+  return language === "en" ? "de" : "en";
+}
+
 /** The query key every entry list is cached under, so a later screen can read or refresh it. */
 export const entryListKey = (kind: EntryKind) => ["entries", kind] as const;
 
@@ -275,8 +286,19 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                     </span>
                   </td>
                   <td>
-                    <span className="lang-tag" data-language={row.language} lang={row.language}>
-                      {row.language}
+                    <span className="lang-tags">
+                      <span className="lang-tag" data-language={row.language} lang={row.language}>
+                        {row.language}
+                      </span>
+                      {row.translated && (
+                        <span
+                          className="lang-tag lang-tag--counterpart"
+                          data-language={otherLanguage(row.language)}
+                          title={text("alsoIn", text(LANGUAGE_TEXT[otherLanguage(row.language)]))}
+                        >
+                          {otherLanguage(row.language)}
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="align-end">

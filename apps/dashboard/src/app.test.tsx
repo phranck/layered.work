@@ -284,6 +284,8 @@ describe("dashboard shell", () => {
     const figures = () =>
       Array.from(document.querySelectorAll(".stat__value"), (figure) => figure.textContent).join(" ");
     expect(figures()).toBe("1 1 1 2");
+    expect(within(table).getAllByTitle("Auch auf Deutsch")).toHaveLength(1);
+    expect(within(table).getAllByTitle("Auch auf Englisch")).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "DE" }));
     expect(within(table).getAllByRole("row")).toHaveLength(2);
@@ -604,6 +606,32 @@ describe("dashboard shell", () => {
     });
     expect(screen.getByRole("radio", { name: /Öffentlich/ }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByRole("status").textContent).toMatch(/^Gespeichert um /);
+  });
+
+  it("creates the other language from the panel and opens it", async () => {
+    const german = {
+      ...draftDetail,
+      id: "6e7f8091-a2b3-4c4d-9e5f-6a7b8c9d0e1f",
+      language: "de",
+      path: "/de/a-draft-about-soldering/",
+      counterpart: { id: draftDetail.id, language: "en", title: draftDetail.title },
+    };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(`/entries/${draftDetail.id}/translation`) && init?.method === "POST")
+        return Promise.resolve(json({ data: german }));
+      if (url.endsWith(`/entries/${german.id}`)) return Promise.resolve(json({ data: german }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard(`/posts/${draftDetail.id}`);
+
+    expect(await screen.findByText("Gibt es noch nicht.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Fassung auf Deutsch anlegen" }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/posts/${german.id}`));
+    expect(await screen.findByRole("link", { name: /„A draft about soldering“ öffnen/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /anlegen/ })).toBeNull();
   });
 
   it("shows the real API counts and omits unavailable badges", async () => {
