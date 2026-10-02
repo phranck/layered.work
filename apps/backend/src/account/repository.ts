@@ -2,6 +2,7 @@ import type { AccountMediaPage, AccountProfile, UpdateAccountBody } from "@layer
 import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, asc, eq, ilike, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
+import { containing } from "../db/like.js";
 import { auditLog, media, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
@@ -104,7 +105,7 @@ export async function listAccountMedia(
   query: { search: string; page: number },
 ): Promise<AccountMediaPage> {
   const filters = [eq(media.kind, "image"), inArray(media.mimeType, RASTER_MIME_TYPES)];
-  if (query.search) filters.push(ilike(media.slug, `%${query.search}%`));
+  if (query.search) filters.push(ilike(media.slug, containing(query.search)));
 
   const rows = await db
     .select({ id: media.id, slug: media.slug, width: media.width, height: media.height })
