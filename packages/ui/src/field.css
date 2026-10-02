@@ -154,9 +154,15 @@
    Every option visible. With three of them a dropdown hides more than it saves,
    and the reader cannot see what they are choosing between without opening it. */
 
+/* A grid of equal columns rather than a row of flex items: a `1fr` column in a
+   grid sized by its content takes the width of the widest option, so every
+   option is as wide as the longest label and none is shortened, whereas equal
+   flex items share the width of the sum and cut the longest one. */
 .segmented {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   padding: 2px;
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
@@ -169,8 +175,8 @@
  * one that travels reads as the same thing moving, which is what it is.
  *
  * Only `transform` moves, so the work stays on the compositor. The options are
- * `flex: 1` and therefore all the same width, which is what lets the position be
- * an index rather than a measurement.
+ * equal grid columns and therefore all the same width, which is what lets the
+ * position be an index rather than a measurement.
  */
 .segmented::before {
   position: absolute;
@@ -186,24 +192,26 @@
 }
 
 /* The options sit above the pill and bring no fill of their own: the pill is the
-   fill, and two of them would show as a double edge whilst it travels. */
+   fill, and two of them would show as a double edge whilst it travels.
+
+   An option is never shortened. Where a place is too narrow for every label,
+   the segmented control is the wrong control there, and an overflow shows that
+   where an ellipsis would hide it.
+
+   The text colour changes on hover as well as on selection, so it carries no
+   transition: hover appears at once, and the pill is what travels. */
 .segmented button {
   position: relative;
   z-index: 1;
-  flex: 1;
-  min-width: 0;
   padding: 6px 10px;
-  overflow: hidden;
   font: inherit;
   font-size: var(--text-sm);
   color: var(--text-muted);
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
   background: transparent;
   border: 0;
   border-radius: var(--radius-chip);
-  transition: color var(--duration) var(--ease);
 }
 
 .segmented button:hover {
