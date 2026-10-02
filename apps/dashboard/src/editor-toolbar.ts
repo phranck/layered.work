@@ -1,4 +1,21 @@
 import { type ComponentName, components, type Parameter } from "@layered/content";
+import {
+  ArrowsOutLineVerticalIcon,
+  CardsIcon,
+  ColumnsIcon,
+  CubeIcon,
+  CursorClickIcon,
+  FilePdfIcon,
+  GridFourIcon,
+  type IconProps,
+  ImageIcon,
+  ImagesIcon,
+  MinusIcon,
+  NoteIcon,
+  RowsIcon,
+  VideoCameraIcon,
+} from "@layered/ui/icons";
+import type { ComponentType } from "react";
 
 /**
  * What the toolbar above the writing surface inserts.
@@ -61,3 +78,24 @@ export const COMPONENT_GROUPS: readonly (readonly ComponentName[])[] = [
   ["Note", "Card", "Button"],
   ["VStack", "HStack", "Grid", "Spacer", "Divider"],
 ];
+
+/**
+ * The icon each component's tool shows in place of its name, which stays the
+ * tool's accessible label and its tooltip. Keyed by every register name, so a
+ * component added to the register without an icon fails the type check.
+ */
+export const COMPONENT_ICONS: Readonly<Record<ComponentName, ComponentType<IconProps>>> = {
+  Image: ImageIcon,
+  Gallery: ImagesIcon,
+  Model: CubeIcon,
+  Video: VideoCameraIcon,
+  Pdf: FilePdfIcon,
+  Note: NoteIcon,
+  Card: CardsIcon,
+  Button: CursorClickIcon,
+  VStack: RowsIcon,
+  HStack: ColumnsIcon,
+  Grid: GridFourIcon,
+  Spacer: ArrowsOutLineVerticalIcon,
+  Divider: MinusIcon,
+};

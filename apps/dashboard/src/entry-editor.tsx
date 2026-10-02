@@ -29,7 +29,7 @@ import { useBlocker, useLinkClickHandler, useParams } from "react-router";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { COMPONENT_GROUPS, componentSnippet } from "./editor-toolbar.js";
+import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { entryListKey } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -272,13 +272,17 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                 />,
               ],
               ...COMPONENT_GROUPS.map((group) =>
-                group.map((name) => (
-                  <Editor.Tool
-                    key={name}
-                    label={name}
-                    onClick={() => editor.current?.insertBlock(componentSnippet(name))}
-                  />
-                )),
+                group.map((name) => {
+                  const Icon = COMPONENT_ICONS[name];
+                  return (
+                    <Editor.Tool
+                      key={name}
+                      label={name}
+                      icon={<Icon />}
+                      onClick={() => editor.current?.insertBlock(componentSnippet(name))}
+                    />
+                  );
+                }),
               ),
             ]}
           />
