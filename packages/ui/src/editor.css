@@ -66,10 +66,7 @@
   place-items: center;
   min-width: var(--control-height);
   height: var(--control-height);
-  /* Two pixels above and none below: the lettering is set in Fira Code, whose
-     ascent outweighs its descent, and a line box centred on the em box hangs
-     the caps a pixel high. Measured at 0.9px on 15px. */
-  padding-block: 2px 0;
+  padding-block: 0;
   padding-inline: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -80,6 +77,12 @@
   border-radius: var(--radius-chip);
 }
 
+.editor__tool svg {
+  display: block;
+  width: var(--tool-icon, 1.4em);
+  height: var(--tool-icon, 1.4em);
+}
+
 .editor__tool:hover {
   color: var(--text-primary);
   background: var(--hover-tint);
@@ -88,6 +91,10 @@
 /* Lettering wider than a glyph gets more air at its sides, or the word touches
    the edge of its own hover shape. */
 .editor__tool--text {
+  /* Two pixels above and none below: the lettering is set in Fira Code, whose
+     ascent outweighs its descent, and a line box centred on the em box hangs
+     the caps a pixel high. Measured at 0.9px on 15px. */
+  padding-block: 2px 0;
   padding-inline: var(--space-3);
 }
 

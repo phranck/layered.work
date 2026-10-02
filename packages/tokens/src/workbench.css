@@ -40,6 +40,10 @@
      on the element that declares the control height. */
   --input-height: calc(var(--control-height) + 4px);
 
+  /* The icon on an editor tool. A tool is nothing but its icon, so the icon fills
+     most of the control's height rather than sitting at text size inside it. */
+  --tool-icon: 22px;
+
   /* --- Geometry -----------------------------------------------------------
      The site's card geometry at workbench scale. Both numbers are chosen and
      everything else derives from them, exactly as on the site, so the two stay
