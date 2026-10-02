@@ -12,14 +12,21 @@ import { componentSyntax } from "./extension.js";
  */
 
 /**
- * Markdown, plus what GitHub added to it, plus the component syntax.
+ * What the language adds to CommonMark: what GitHub added to Markdown, and the
+ * component syntax.
  *
  * GFM is here because the epic promises that tables stay Markdown, and a table
  * is not Markdown as the specification wrote it. Strikethrough, task lists and
  * bare links come in the same bundle, which is what anybody writing Markdown
  * today expects of it; taking the table alone would leave three surprises.
+ *
+ * The dashboard's editor configures its parser from this same list, which is
+ * what makes the editor's tree the server's tree.
  */
-export const parser: MarkdownParser = markdown.configure([GFM, componentSyntax]);
+export const CONTENT_SYNTAX = [GFM, componentSyntax];
+
+/** The parser the server, the renderer and the validator use. */
+export const parser: MarkdownParser = markdown.configure(CONTENT_SYNTAX);
 
 /**
  * Parses a document.

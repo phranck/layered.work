@@ -98,6 +98,16 @@
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+/* Being written in looks like a text field being written in, whatever is
+   mounted inside the surface. */
+.editor__surface:focus-within {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }
 
 .editor__surface .md {
