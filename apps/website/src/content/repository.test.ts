@@ -53,6 +53,13 @@ describe("public content repository", () => {
     expect(repo.blocks().map((block) => block.type)).toEqual([...homeBlockTypes]);
     expect(repo.unknownBlocks()).toEqual([]);
   });
+  it("offers the same defaults when the database answers with an empty list", () => {
+    // The backend reads the home_blocks table and sends what it holds. Nothing
+    // arranged yet is an empty table, and a block switched off is a row, so an
+    // empty list can only mean that nobody has arranged the page.
+    const repo = createRepository({ ...snapshot, homeBlocks: [] });
+    expect(repo.blocks().map((block) => block.type)).toEqual([...homeBlockTypes]);
+  });
   it("excludes non-public states and other languages from every collection", () => {
     const repo = createRepository(snapshot);
     expect(repo.list({ language: "en" }).entries.map((item) => item.id)).toEqual([1]);

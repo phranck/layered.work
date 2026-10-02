@@ -248,8 +248,9 @@ export function createRepository(input: unknown) {
    * always talking about the same set.
    */
   const declaredBlocks = (): HomeBlock[] =>
-    data.homeBlocks ??
-    homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
+    data.homeBlocks?.length
+      ? data.homeBlocks
+      : homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
   return {
     data,
     media: (name: string) => {
