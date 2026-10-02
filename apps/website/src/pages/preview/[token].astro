@@ -37,6 +37,7 @@ Astro.locals.rendersModel = rendersComponent(nodes, "Model");
   navigation={siteNavigation(language)}
   footer={siteFooter(language)}
   canonicalPath={entry?.path ?? "/"}
+  readingWidth={entry?.readingWidth}
   description={entry ? summaryOf(entry) : undefined}
 >
   <meta slot="head" name="robots" content="noindex, nofollow" />

@@ -76,7 +76,7 @@ const nodes=entry?renderContent(entry.body):[];
 Astro.locals.rendersModel=rendersComponent(nodes,"Model");
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
-<SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry ? "full" : undefined}>
+<SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
   {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
   {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions"><Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
     {home&&<HomeContent {repository} {language} />}
