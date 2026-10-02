@@ -10,11 +10,23 @@
  * its contents keep arithmetic from a padding they do not use.
  */
 
+/*
+ * A card's header and footer are a shade darker than its body, so the
+ * announcement and the actions read as the frame around the content. The shade
+ * is derived from whatever surface the card stands on, so an overlay card,
+ * which is a step higher, keeps the same difference. Two inputs decide it: the
+ * tone the surface is mixed towards and how much of it.
+ */
 .card {
+  --card-surface: var(--surface-raised);
+  --card-band-tone: black;
+  --card-band-strength: 10%;
+  --card-band-fill: color-mix(in oklab, var(--card-surface), var(--card-band-tone) var(--card-band-strength));
+
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--surface-raised);
+  background: var(--card-surface);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--lift-2);
@@ -97,6 +109,10 @@
   justify-content: space-between;
   padding: var(--card-padding);
   border-block-end: 1px solid var(--edge-hairline);
+  background: var(--card-band-fill);
+  /* The inner edge of the card's corner, inside its one-pixel border. */
+  border-start-start-radius: calc(var(--card-radius) - 1px);
+  border-start-end-radius: calc(var(--card-radius) - 1px);
 }
 
 .card__heading {
@@ -164,6 +180,9 @@
   justify-content: space-between;
   padding: var(--card-padding);
   border-block-start: 1px solid var(--edge-hairline);
+  background: var(--card-band-fill);
+  border-end-start-radius: calc(var(--card-radius) - 1px);
+  border-end-end-radius: calc(var(--card-radius) - 1px);
 }
 
 .card__footer .actions {
@@ -207,7 +226,7 @@
   width: min(520px, 100%);
   max-height: calc(100dvh - 2 * var(--page-gutter));
   overflow: auto;
-  background: var(--surface-floating);
+  --card-surface: var(--surface-floating);
   border-color: var(--edge-strong);
   box-shadow: var(--lift-4);
   transform: translateY(var(--travel)) scale(0.98);
