@@ -121,6 +121,10 @@
      padded card does not take this as well. */
   --card-text-inset: calc(var(--card-radius) / 2);
 
+  /* The same rule for a control: a label standing over a text field begins
+     where the field's curve gives way to its straight edge. */
+  --control-text-inset: calc(var(--radius-control) / 2);
+
   /* Ligatures are off by default in most browsers for monospace, so they are
      asked for explicitly. Stated once here and applied by whatever sets the
      monospace family, rather than repeated at every code block. */

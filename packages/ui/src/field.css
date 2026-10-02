@@ -35,6 +35,14 @@
   text-wrap: pretty;
 }
 
+/* In a stacked field the label stands over a rounded control and the hint
+   under it, so both begin where the control's curve gives way to its straight
+   edge. An inline field's label stands beside its control and meets no curve,
+   so it keeps the edge. */
+.field:not(.field--inline) > :where(.field__label, .field__hint) {
+  padding-inline-start: var(--control-text-inset);
+}
+
 /* --- Input ----------------------------------------------------------------- */
 
 .input {
