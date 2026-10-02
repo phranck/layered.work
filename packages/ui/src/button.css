@@ -23,6 +23,9 @@
   font-weight: var(--weight-semibold);
   line-height: 1.2;
   letter-spacing: -0.01em;
+  /* A button rendered as a link is a button, so it drops the line a link
+     takes by default; the face and the edge already say it can be pressed. */
+  text-decoration: none;
   text-shadow: var(--text-emboss);
   cursor: pointer;
   border: 1px solid transparent;
