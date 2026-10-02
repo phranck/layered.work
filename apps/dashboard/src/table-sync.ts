@@ -164,16 +164,27 @@ export function rowChanges(tables: readonly Table[], before: readonly Before[]):
 
   for (const table of tables) {
     const shown = new Set(table.columns.flatMap((column) => (column.field ? [column.field] : [])));
-    const added: { field: string; after: string | null }[] = [];
+    const added: { field: string; after: string[] }[] = [];
     const renamed = new Map<string, string>();
     const removed = new Set<string>();
 
+    // A field takes the place its column has: after the field of the column
+    // before it. That holds for a new column and for a column whose field
+    // changed to one the rows do not carry yet, which a rename can only become
+    // where the old field is the column's own and a row has it.
+    const renamedAfter = new Map<string, string[]>();
     table.columns.forEach((column, index) => {
       if (!column.field) return;
       const previous = before.find((entry) => entry.at === column.at);
-      if (!previous) added.push({ field: column.field, after: fieldBefore(table.columns, index) });
-      else if (previous.field !== column.field && !shown.has(previous.field))
-        renamed.set(previous.field, column.field);
+      const after = fieldBefore(table.columns, index);
+      if (!previous) added.push({ field: column.field, after });
+      else if (previous.field !== column.field) {
+        if (shown.has(previous.field)) added.push({ field: column.field, after });
+        else {
+          renamed.set(previous.field, column.field);
+          renamedAfter.set(column.field, after);
+        }
+      }
     });
 
     // A deleted column has no position of its own any more, so it is placed by
@@ -190,7 +201,7 @@ export function rowChanges(tables: readonly Table[], before: readonly Before[]):
         const argument = row.arguments.find((candidate) => candidate.name === from);
         if (has.has(to)) continue;
         if (argument) changes.push({ from: argument.nameFrom, to: argument.nameTo, insert: to });
-        else missing.push({ field: to, after: null });
+        else missing.push({ field: to, after: renamedAfter.get(to) ?? [] });
       }
       for (const field of removed) if (has.has(field)) changes.push(removal(row, field));
       for (const { field, after } of missing) if (!has.has(field)) changes.push(insertion(row, field, after));
@@ -199,22 +210,23 @@ export function rowChanges(tables: readonly Table[], before: readonly Before[]):
   return changes;
 }
 
-/** The field the column before this one shows, where there is one. */
-function fieldBefore(columns: readonly Column[], index: number): string | null {
-  for (let at = index - 1; at >= 0; at -= 1) {
-    const field = columns[at]?.field;
-    if (field) return field;
-  }
-  return null;
+/** The fields the columns before this one show, the nearest first. */
+function fieldBefore(columns: readonly Column[], index: number): string[] {
+  return columns
+    .slice(0, index)
+    .flatMap((column) => (column.field ? [column.field] : []))
+    .reverse();
 }
 
 /**
- * Adds a field to a row, after the field of the column before it where the row
- * has that one, and first otherwise.
+ * Adds a field to a row, after the nearest field of a column before it that the
+ * row has, and first where it has none of them.
  */
-function insertion(row: Row, field: string, after: string | null): ChangeSpec {
+function insertion(row: Row, field: string, after: readonly string[]): ChangeSpec {
   const text = `${field}: ""`;
-  const anchor = after ? row.arguments.find((argument) => argument.name === after) : undefined;
+  const anchor = after
+    .map((name) => row.arguments.find((argument) => argument.name === name))
+    .find((argument) => argument !== undefined);
   if (anchor) return { from: anchor.to, insert: `, ${text}` };
   const first = row.arguments[0];
   if (first) return { from: first.from, insert: `${text}, ` };

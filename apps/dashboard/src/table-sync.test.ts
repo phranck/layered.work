@@ -117,6 +117,40 @@ describe("a table's rows", () => {
     expect(state.doc.toString()).toBe(start.doc.toString());
   });
 
+  it("gain a new last column's field last, even when it starts out as another column's field", () => {
+    const two = TABLE.replace("value: part)", 'value: part)\n  TableColumn("Count", value: count)').replace(
+      /TableRow\(part: "(\w+)"\)/g,
+      'TableRow(part: "$1", count: "1")',
+    );
+    // A column whose field begins as one another column shows, then is typed
+    // over letter by letter, as a placeholder in a snippet is.
+    let state = replace(
+      stateOf(two),
+      "value: count)\n",
+      'value: count)\n  TableColumn("Year", value: part)\n',
+    );
+    const at = () => state.doc.toString().lastIndexOf("value: part)") + "value: ".length;
+    state = edit(state, { changes: { from: at(), to: at() + 4, insert: "y" } });
+    for (const letter of "ear") {
+      const end = state.doc.toString().indexOf(")", state.doc.toString().indexOf('"Year"'));
+      state = edit(state, { changes: { from: end, insert: letter } });
+    }
+    expect(state.doc.toString()).toContain('TableColumn("Year", value: year)');
+    expect(state.doc.toString()).toContain('TableRow(part: "Screw", count: "1", year: "")');
+    expect(state.doc.toString()).toContain('TableRow(part: "Panel", count: "1", year: "")');
+  });
+
+  it("place a new field after the nearest earlier field a row has", () => {
+    const start = stateOf(
+      TABLE.replace("value: part)", 'value: part)\n  TableColumn("Count", value: count)').replace(
+        /TableRow\(part: "(\w+)"\)/g,
+        'TableRow(part: "$1", supplier: "S")',
+      ),
+    );
+    const state = replace(start, "value: count)\n", 'value: count)\n  TableColumn("Year", value: year)\n');
+    expect(state.doc.toString()).toContain('TableRow(part: "Screw", year: "", supplier: "S")');
+  });
+
   it("are not touched by prose written outside a table", () => {
     const state = edit(stateOf(`Some words.\n\n${TABLE}`), { changes: { from: 4, insert: " more" } });
     expect(state.doc.toString()).toBe(`Some more words.\n\n${TABLE}`);

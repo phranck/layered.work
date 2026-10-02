@@ -93,6 +93,32 @@ function componentOption(name: ComponentName): Completion {
 }
 
 /**
+ * A part of a container, as the list offers it inside that container.
+ *
+ * A row arrives with every field its table's columns show, in the columns'
+ * order, so it is complete the moment it is written. A column arrives with its
+ * field left open rather than with a placeholder name, which could be a field
+ * another column already shows.
+ *
+ * @param name - The part.
+ * @param shown - The fields the container's columns show, in their order.
+ */
+function partOption(name: ComponentName, shown: readonly string[]): Completion {
+  const definition = components[name] as ComponentDefinition;
+  const template =
+    definition.fields && shown.length > 0
+      ? `${name}(${shown.map((field) => `${field}: "\${}"`).join(", ")})`
+      : // biome-ignore lint/suspicious/noTemplateCurlyInString: `${}` is CodeMirror's snippet field syntax.
+        componentSnippet(name, { ...WITH_STOPS, field: "${}" });
+  return snippetCompletion(template, {
+    label: name,
+    detail: definition.body === "never" ? "()" : "{ }",
+    info: definition.description,
+    type: "class",
+  });
+}
+
+/**
  * The fields of the rows and columns in one container, as two sets: the names
  * the rows carry and the names the columns show.
  *
@@ -204,9 +230,12 @@ export function contentCompletions(context: CompletionContext): CompletionResult
   if (start) {
     const typed = start[1] ?? "";
     if (typed === "" && !context.explicit) return null;
+    const shown = container ? [...fieldsIn(state, container).shown] : [];
     return {
       from: position - typed.length,
-      options: componentsAllowedIn(containerName).map(componentOption),
+      options: componentsAllowedIn(containerName).map((name) =>
+        container ? partOption(name, shown) : componentOption(name),
+      ),
       validFor: /^[A-Z][A-Za-z0-9]*$/,
     };
   }
