@@ -9,12 +9,12 @@ import { Button, Card, Row, Section, Segmented, Select } from "@layered/ui";
 import { MagnifyingGlassIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "react-router";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import type { DashboardArea } from "./routes.js";
+import { type DashboardArea, groupOf } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
 
 /** What the reader narrowed the list to. `all` leaves that dimension open. */
@@ -130,6 +130,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
   const title = text(area.labelKey);
+  const group = groupOf(area);
 
   const { fieldRef, returnFocus } = useSearchField();
   const field = useRef<HTMLInputElement | null>(null);
@@ -166,7 +167,9 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
 
   return (
     <>
-      <Section.Title title={title} level={1} />
+      {/* The group's name stands where an open entry shows its way back, so
+          the heading below stays put when an entry opens. */}
+      <Section.Title eyebrow={group ? text(group.labelKey) : undefined} title={title} level={1} />
       <div className="stat-row">
         <Stat label={text("statPublished")} value={counts.published} note={text("statPublishedNote")} />
         <Stat label={text("statDrafts")} value={counts.drafts} note={text("statDraftsNote")} />
@@ -299,34 +302,5 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         )}
       </Card>
     </>
-  );
-}
-
-/**
- * Where a row of the list leads until the entry editor exists.
- *
- * It names the entry, so the reader can see that the row they chose is the one
- * that opened, and says plainly that editing is still to come.
- */
-export function EntryScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
-  const { id } = useParams();
-  const api = useDashboardApi();
-  const { text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: entryListKey(kind), queryFn: () => api.fetchEntries(kind) });
-  const entry = list.data?.find((row) => row.id === id);
-  return (
-    <Section>
-      <Section.Title
-        eyebrow={text(area.labelKey)}
-        title={entry?.title ?? (list.isSuccess ? text("entryNotFound") : "")}
-        level={1}
-      />
-      <Section.Body>
-        {list.isError && <ErrorNotice error={list.error} />}
-        {list.isSuccess && (
-          <p className="unfinished">{entry ? text("unfinished") : text("entryNotFoundBody")}</p>
-        )}
-      </Section.Body>
-    </Section>
   );
 }

@@ -1,4 +1,10 @@
-import { CONTENT_LANGUAGES, ENTRY_KINDS, homeBlockTypes, PUBLICATION_STATES } from "@layered/schemas";
+import {
+  CONTENT_LANGUAGES,
+  ENTRY_KINDS,
+  homeBlockTypes,
+  PUBLICATION_STATES,
+  READING_WIDTHS,
+} from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
 
 /**
@@ -52,7 +58,7 @@ export const language = pgEnum("language", CONTENT_LANGUAGES);
  * Chosen per translation, because a German text of the same article is longer
  * and may want a different one.
  */
-export const readingWidth = pgEnum("reading_width", ["narrow", "normal", "wide", "full"]);
+export const readingWidth = pgEnum("reading_width", READING_WIDTHS);
 
 /**
  * What an account may do.

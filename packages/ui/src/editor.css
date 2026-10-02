@@ -25,10 +25,18 @@
 }
 
 /* The panel stays in view whilst the main side scrolls. Offset by the same step
-   the workbench pads its main area with, so it stops where the content starts. */
+   the workbench pads its main area with, so it stops where the content starts.
+   A panel taller than the window would stick with its foot below the edge, so
+   it is held to the window's height and scrolls within itself. The sticky
+   offset counts from inside the main area's padding, so the panel stands two
+   steps below the window's top, and it keeps the same two steps above the
+   bottom. */
 .editor__panel {
   position: sticky;
   top: var(--space-6);
+  max-height: calc(100dvh - 4 * var(--space-6));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* --- Toolbar --------------------------------------------------------------- */

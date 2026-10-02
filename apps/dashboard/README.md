@@ -8,7 +8,11 @@ The sidebar keeps its width and the order of its groups between visits, in local
 
 ## Entry lists
 
-Posts, pages and projects are one screen with a different kind. It reads `GET /entries?kind=…`, which returns one row per translation, newest first. The search field and the state and language filters narrow that list in the browser, and the figures above it are counted from the rows the table shows. A row opens the entry at `/<area>/<translation id>`. That address shows the entry's title until the editor exists.
+Posts, pages and projects are one screen with a different kind. It reads `GET /entries?kind=…`, which returns one row per translation, newest first. The search field and the state and language filters narrow that list in the browser, and the figures above it are counted from the rows the table shows. A row opens the entry at `/<area>/<translation id>`.
+
+## Entry editor
+
+An open entry is written in CodeMirror 6 (`src/content-editor.tsx`), which parses with the content language's own Lezer extension, so the editor's tree is the server's tree. The toolbar inserts Markdown, and it inserts every component of the register (`src/editor-toolbar.ts`). The panel beside the text holds the state, the language, the reading width, the linked translation and the topics, and it stays in view whilst the text scrolls. `GET /entries/:id` opens a translation and `PUT /entries/:id` saves it, and each save is written to the audit log. A draft saves itself two seconds after typing stops. A public or hidden entry is saved by hand, because a save there changes what readers see. Leaving with unsaved changes asks first, both inside the dashboard and when the tab closes.
 
 ## Search
 

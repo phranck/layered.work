@@ -5,7 +5,8 @@ import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
-import { EntryListScreen, EntryScreen } from "./entry-list.js";
+import { EntryEditorScreen } from "./entry-editor.js";
+import { EntryListScreen } from "./entry-list.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 
@@ -72,7 +73,7 @@ export function dashboardRouteObjects({
             path: area.path,
             children: [
               { index: true, element: <EntryListScreen area={area} kind={kind} /> },
-              { path: ":id", element: <EntryScreen area={area} kind={kind} /> },
+              { path: ":id", element: <EntryEditorScreen area={area} kind={kind} /> },
             ],
           };
         }),

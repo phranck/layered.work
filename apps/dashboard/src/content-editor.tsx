@@ -2,10 +2,10 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { commonmarkLanguage, markdown } from "@codemirror/lang-markdown";
 import type { LanguageSupport } from "@codemirror/language";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
-import { EditorState, type Extension } from "@codemirror/state";
+import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX } from "@layered/content";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 
 /**
  * The writing surface for an entry's body.
@@ -75,8 +75,31 @@ function surfaceExtensions(label: string): Extension[] {
   ];
 }
 
+/**
+ * What the toolbar can ask of the surface. Every command acts on every
+ * selection, so the several cursors the surface allows are all served, and
+ * every one gives the focus back to the text.
+ */
+export interface ContentEditorHandle {
+  /**
+   * Puts markup around each selection, or around a placeholder that is left
+   * selected where nothing was.
+   */
+  wrap(before: string, after: string, placeholder: string): void;
+  /** Starts every line a selection touches with the prefix, such as `## ` or `> `. */
+  prefixLines(prefix: string): void;
+  /**
+   * Inserts a block on lines of its own, with a blank line before it where the
+   * cursor stands in text. The cursor goes to the first empty quotes in the
+   * block, or into an empty body, or to its end.
+   */
+  insertBlock(text: string): void;
+}
+
 /** Props for the writing surface. */
 export interface ContentEditorProps {
+  /** Receives the commands the toolbar uses. */
+  editorRef?: Ref<ContentEditorHandle>;
   /** The body, as plain text. */
   value: string;
   /** Called with the whole body, as plain text, after every change the author makes. */
@@ -94,9 +117,71 @@ export interface ContentEditorProps {
  * replaces the document; a `value` that is only the echo of the author's own
  * typing is recognised and left alone, so the cursor does not jump.
  */
-export function ContentEditor({ value, onChange, label }: ContentEditorProps) {
+export function ContentEditor({ value, onChange, label, editorRef }: ContentEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
+
+  useImperativeHandle(
+    editorRef,
+    () => ({
+      wrap(before, after, placeholder) {
+        const current = view.current;
+        if (!current) return;
+        current.dispatch(
+          current.state.changeByRange((range) => {
+            const inner = range.empty ? placeholder : current.state.sliceDoc(range.from, range.to);
+            return {
+              changes: { from: range.from, to: range.to, insert: `${before}${inner}${after}` },
+              range: EditorSelection.range(
+                range.from + before.length,
+                range.from + before.length + inner.length,
+              ),
+            };
+          }),
+        );
+        current.focus();
+      },
+      prefixLines(prefix) {
+        const current = view.current;
+        if (!current) return;
+        const starts = new Set<number>();
+        for (const range of current.state.selection.ranges) {
+          for (let at = range.from; at <= range.to; ) {
+            const line = current.state.doc.lineAt(at);
+            if (!line.text.startsWith(prefix)) starts.add(line.from);
+            at = line.to + 1;
+          }
+        }
+        current.dispatch({ changes: [...starts].map((from) => ({ from, insert: prefix })) });
+        current.focus();
+      },
+      insertBlock(text) {
+        const current = view.current;
+        if (!current) return;
+        current.dispatch(
+          current.state.changeByRange((range) => {
+            // A component is a block, so it never splits a line of prose: on
+            // an empty line it replaces the selection, and in text it goes
+            // after the line, a blank line apart.
+            const line = current.state.doc.lineAt(range.from);
+            const inText = line.text.trim() !== "";
+            const from = inText ? line.to : range.from;
+            const to = inText ? line.to : range.to;
+            const lead = inText ? "\n\n" : "";
+            const quotes = text.indexOf('""');
+            const body = text.indexOf("{\n  \n}");
+            const cursor = quotes >= 0 ? quotes + 1 : body >= 0 ? body + "{\n  ".length : text.length;
+            return {
+              changes: { from, to, insert: `${lead}${text}` },
+              range: EditorSelection.cursor(from + lead.length + cursor),
+            };
+          }),
+        );
+        current.focus();
+      },
+    }),
+    [],
+  );
   const changed = useEffectEvent((text: string) => onChange(text));
   const initialValue = useRef(value);
   const initialLabel = useRef(label);

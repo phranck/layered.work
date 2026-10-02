@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { body, MaxLength, text } from "./request.js";
 
 /**
  * Entries as the dashboard lists them.
@@ -19,6 +20,13 @@ export type PublicationState = (typeof PUBLICATION_STATES)[number];
 /** The languages the site is written in. */
 export const CONTENT_LANGUAGES = ["en", "de"] as const;
 export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
+
+/**
+ * How wide the text of a translation is set: `narrow` 56ch, `normal` 68ch,
+ * `wide` 82ch, and `full` the page's own measure.
+ */
+export const READING_WIDTHS = ["narrow", "normal", "wide", "full"] as const;
+export type ReadingWidth = (typeof READING_WIDTHS)[number];
 
 /** Which entries a list asks for. */
 export const entryListQuery = z.strictObject({ kind: z.enum(ENTRY_KINDS) });
@@ -59,3 +67,57 @@ export type EntryListItem = z.infer<typeof entryListItem>;
 /** The entry list, newest first. */
 export const entryList = z.array(entryListItem);
 export type EntryList = z.infer<typeof entryList>;
+
+/** The translation an address names, as a path parameter. */
+export const entryIdParam = z.strictObject({ id: z.uuid() });
+
+/**
+ * One translation of one entry, as the editor opens it.
+ *
+ * Everything the editor shows or changes: the text, the properties in its
+ * panel, the address it answers at, and the other language of the same entry
+ * where there is one.
+ */
+export const entryDetail = z.object({
+  /** The translation. */
+  id: z.uuid(),
+  /** The entry it is one language of. */
+  entryId: z.uuid(),
+  kind: z.enum(ENTRY_KINDS),
+  language: z.enum(CONTENT_LANGUAGES),
+  title: z.string(),
+  summary: z.string().nullable(),
+  body: z.string(),
+  state: z.enum(PUBLICATION_STATES),
+  readingWidth: z.enum(READING_WIDTHS),
+  /** When it first became public, or null whilst it never has been. */
+  publishedAt: z.iso.datetime().nullable(),
+  /** When anything about the entry last changed. */
+  modifiedAt: z.iso.datetime(),
+  /** The address it answers at, or null where it has none. */
+  path: z.string().nullable(),
+  /** Its picture, where it has one the dashboard can show. */
+  pictureUrl: z.string().nullable(),
+  /** The topics of the entry, named in this translation's language where they can be. */
+  topics: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  /** The other language of the same entry, or null where there is none yet. */
+  counterpart: z.object({ id: z.uuid(), language: z.enum(CONTENT_LANGUAGES), title: z.string() }).nullable(),
+});
+export type EntryDetail = z.infer<typeof entryDetail>;
+
+/**
+ * What saving a translation sends.
+ *
+ * The whole of what the editor changes, every time, so a save is one statement
+ * of the translation rather than a patch that depends on what came before. The
+ * entry's kind, its language and its address are not here: none of them is
+ * changed by writing.
+ */
+export const saveEntryBody = body({
+  title: text(MaxLength.Line),
+  summary: z.string().trim().max(MaxLength.Paragraph).nullable(),
+  body: z.string().max(MaxLength.Body),
+  state: z.enum(PUBLICATION_STATES),
+  readingWidth: z.enum(READING_WIDTHS),
+});
+export type SaveEntryBody = z.infer<typeof saveEntryBody>;

@@ -479,6 +479,69 @@ dialog.account-dialog::backdrop {
   white-space: nowrap;
 }
 
+/* --- Entry editor -----------------------------------------------------------
+   The way back out stands where the list's eyebrow stood and takes the
+   eyebrow's lettering, so the heading below it does not move when an entry
+   opens. A link resets the inherited case and spacing, so both are asked for
+   again. The colour changes on hover at once. */
+
+/* A flex box of its own rather than an inline one: an inline box sits on the
+   eyebrow's baseline and makes that line taller than the text alone, which
+   moved the heading below by 1.8 pixels. */
+.workbench-back {
+  display: flex;
+  width: fit-content;
+  gap: var(--space-2);
+  align-items: center;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.workbench-back:hover {
+  color: var(--text-accent);
+}
+
+/* Whether the text is saved, at the left of the row the save buttons end. */
+.entry-editor__status {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.entry-editor__value,
+.entry-editor__link {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.entry-editor__link {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+/* A value that is only words, where a field would hold a control, begins where
+   the label's words begin rather than where a control's edge would. */
+.entry-editor__note {
+  padding-inline-start: var(--control-text-inset);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.entry-editor__link:hover {
+  text-decoration: underline;
+}
+
+.entry-editor__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* --- Settings ---------------------------------------------------------------
    One card per group, its fields in a column, with the two languages of one
    value side by side so a reader compares them as a pair. */

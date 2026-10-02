@@ -94,8 +94,28 @@ const settings = {
   analytics: { umamiWebsiteId: "3e266ac6-8103-4bef-bedb-7d127ed75cc4" },
 };
 
+/** The draft from the list, as the editor opens it. */
+const draftDetail = {
+  id: "3a4b5c6d-7e8f-4901-b2c3-d4e5f6a7b8c9",
+  entryId: "4c5d6e7f-8091-4a2b-bc3d-4e5f6a7b8c9d",
+  kind: "post",
+  language: "en",
+  title: "A draft about soldering",
+  summary: null,
+  body: "First line of the draft.",
+  state: "draft",
+  readingWidth: "normal",
+  publishedAt: null,
+  modifiedAt: "2025-09-01T00:00:00.000Z",
+  path: "/a-draft-about-soldering/",
+  pictureUrl: null,
+  topics: [{ id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e", name: "Electronics" }],
+  counterpart: null,
+};
+
 function successfulGet(input: RequestInfo | URL) {
   const url = String(input);
+  if (url.endsWith(`/entries/${draftDetail.id}`)) return json({ data: draftDetail });
   if (url.endsWith("/settings")) return json({ data: settings });
   if (url.endsWith("/dashboard/counts")) return json({ data: counts });
   if (url.includes("/entries?kind=post")) return json({ data: posts });
@@ -497,8 +517,93 @@ describe("dashboard shell", () => {
     fireEvent.keyDown(row, { key: "Enter" });
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/posts/${posts[2]?.id}`));
-    expect(await screen.findByRole("heading", { name: "A draft about soldering" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "A draft about soldering", level: 1 })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Beiträge 12" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByLabelText("Titel")).toHaveProperty("value", "A draft about soldering");
+    expect(document.querySelector(".cm-content")?.textContent).toBe("First line of the draft.");
+    expect(screen.getByRole("radio", { name: /Entwurf/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("Electronics")).toBeTruthy();
+  });
+
+  it("saves a draft by itself once typing pauses, and says when", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({ data: { ...draftDetail, ...JSON.parse(String(init.body)) } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "A finished thought" } });
+    expect(screen.getByRole("status").textContent).toBe("Ungespeicherte Änderungen");
+
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true), {
+      timeout: 3500,
+    });
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({ title: "A finished thought", state: "draft" });
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toMatch(/^Automatisch gespeichert um /),
+    );
+  });
+
+  it("never saves a change to a public entry by itself, and asks before leaving it unsaved", async () => {
+    const published = { ...draftDetail, state: "public", publishedAt: "2025-09-02T00:00:00.000Z" };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith(`/entries/${draftDetail.id}`) && !init?.method
+          ? json({ data: published })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "Changed live" } });
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+    expect(screen.queryByRole("button", { name: "Veröffentlichen" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("link", { name: "Beiträge" }));
+    const dialog = await screen.findByRole("dialog", { name: "Ungespeicherte Änderungen" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Bleiben" }));
+    expect(router.state.location.pathname).toBe(`/posts/${draftDetail.id}`);
+
+    fireEvent.click(screen.getByRole("link", { name: "Beiträge" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Verwerfen" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
+  });
+
+  it("publishes a draft with what is written, and then shows it as public", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({
+              data: {
+                ...draftDetail,
+                ...JSON.parse(String(init.body)),
+                publishedAt: "2026-10-02T12:00:00.000Z",
+              },
+            })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Veröffentlichen" }));
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Veröffentlichen" })).toBeNull());
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({
+      state: "public",
+      title: "A draft about soldering",
+    });
+    expect(screen.getByRole("radio", { name: /Öffentlich/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("status").textContent).toMatch(/^Gespeichert um /);
   });
 
   it("shows the real API counts and omits unavailable badges", async () => {

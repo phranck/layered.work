@@ -7,17 +7,21 @@ import {
   createUploadBody,
   type DashboardCounts,
   dashboardCounts,
+  type EntryDetail,
   type EntryKind,
   type EntryList,
   type ErrorCode,
+  entryDetail,
   entryList,
   type MailSettings,
   readApiError,
+  type SaveEntryBody,
   type SearchResults,
   type SettingsView,
   type SignedInAs,
   type SignInBody,
   type SiteSettings,
+  saveEntryBody,
   searchResults,
   settingsView,
   signedInAs,
@@ -76,6 +80,10 @@ export interface DashboardApi {
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
+  /** One translation, as the editor opens it. */
+  fetchEntry(id: string): Promise<EntryDetail>;
+  /** Stores what the editor holds for one translation, and returns it as it now stands. */
+  saveEntry(id: string, value: SaveEntryBody): Promise<EntryDetail>;
   /** Entries by title and topic, and media by slug and alt text. */
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
@@ -177,6 +185,13 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchEntries(kind) {
       const params = new URLSearchParams({ kind });
       return dataOf(await request(`/entries?${params}`, undefined, true), entryList);
+    },
+    async fetchEntry(id) {
+      return dataOf(await request(`/entries/${encodeURIComponent(id)}`, undefined, true), entryDetail);
+    },
+    async saveEntry(id, value) {
+      const sent = jsonBody("PUT", saveEntryBody.parse(value));
+      return dataOf(await request(`/entries/${encodeURIComponent(id)}`, sent, true), entryDetail);
     },
     async search(text) {
       const params = new URLSearchParams({ q: text });
