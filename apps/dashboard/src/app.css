@@ -515,6 +515,11 @@ dialog.account-dialog::backdrop {
    leaves, so news is seen the moment it happens and does not snap away. The
    tone is carried by the icon as well as the colour. */
 .notification {
+  /* The message and the icon share one ink, so the two read as one sign: the
+     tone lightened towards the text colour until it reads on the tinted pill,
+     because the pure status colours fall short of 4.5:1 there. */
+  --notification-ink: color-mix(in oklab, var(--notification-tone) 70%, var(--text-primary));
+
   display: flex;
   gap: var(--space-3);
   align-items: center;
@@ -551,7 +556,7 @@ dialog.account-dialog::backdrop {
   flex: none;
   width: var(--row-icon-size, 19px);
   height: var(--row-icon-size, 19px);
-  color: var(--notification-tone);
+  color: var(--notification-ink);
 }
 
 .notification__text {
@@ -565,6 +570,10 @@ dialog.account-dialog::backdrop {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.notification__message {
+  color: var(--notification-ink);
 }
 
 .notification__detail {
