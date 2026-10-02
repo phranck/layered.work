@@ -5,9 +5,10 @@
  * dimmed version of that same colour as its fill. A reader who has seen green
  * beside "public" once knows what a green panel means without reading it again.
  *
- * Choosing an option animates its colour and its edge, because a state that
- * snaps reads as the interface redrawing itself. The fill is also what hover
- * changes, and hover feedback is immediate, so the fill does not travel.
+ * Choosing an option animates its colour, its edge, its mark and its fill,
+ * because a state that snaps reads as the interface redrawing itself. Hover
+ * feedback is immediate, so hover owns the option's background and the chosen
+ * fill is a layer of its own that fades in and out above it.
  */
 
 .choice {
@@ -21,6 +22,8 @@
 }
 
 .choice__option {
+  position: relative;
+  isolation: isolate;
   display: flex;
   gap: var(--space-3);
   align-items: center;
@@ -47,10 +50,24 @@
  * read off the element rather than written per option, so a new status is a new
  * entry in the data and needs no rule here.
  */
+.choice__option::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background: color-mix(in oklab, var(--choice-tone, transparent) 16%, transparent);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
 .choice__option[aria-checked="true"] {
   color: var(--text-primary);
-  background: color-mix(in oklab, var(--choice-tone) 16%, transparent);
   border-color: color-mix(in oklab, var(--choice-tone) 34%, transparent);
+}
+
+.choice__option[aria-checked="true"]::before {
+  opacity: 1;
 }
 
 /* --- Tones ------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jsonFeed, rssFeed } from "./feeds.js";
+import { jsonFeed, rssFeed, sitemap, sitemapPaths } from "./feeds.js";
 import { createRepository } from "./repository.js";
 
 describe("public feeds", () => {
@@ -29,5 +29,9 @@ describe("public feeds", () => {
     expect(rssFeed(repository)).toContain("public &lt;title&gt;");
     expect(rssFeed(repository)).toContain("Text &amp; more");
     expect(rssFeed(repository)).toContain("<link>https://layered.work/public/</link>");
+  });
+  it("lists only public entries in the sitemap", () => {
+    expect(sitemapPaths(repository)).toEqual(["/", "/de/", "/public/"]);
+    expect(sitemap(sitemapPaths(repository))).not.toMatch(/hidden|draft|trashed/);
   });
 });
