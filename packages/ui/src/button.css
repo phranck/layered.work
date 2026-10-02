@@ -162,7 +162,11 @@
  * anywhere else.
  */
 @media (width < 720px) {
+  /* The row takes the whole line as well. Where it is itself an item of a
+     flex row, as in a card's footer, it would otherwise shrink to its buttons
+     and a full-width button would fill nothing wider than itself. */
   .actions {
+    flex-basis: 100%;
     flex-direction: column;
     align-items: stretch;
   }

@@ -40,21 +40,15 @@
   --spec-column-min: 160px;
 }
 
-/* The site's reading scale. The names are the workbench's, so a component reads
-   the same token on either surface; the values are the site's own, taken from
-   the Previously page so the two sites read at one size. Body text is 17px,
-   and every step is a size that page uses, except the first-level heading,
-   which sits a little below its 56px. */
+/* The site's large type steps. The small ones are shared with the workbench in
+   scale.css. These three are the site's own, at the sizes the Previously page
+   uses for its lead, its section titles and its page title, which sits a
+   little below that page's 56px. The workbench keeps fluid values for them,
+   because its headings stand over working panels rather than over a page. */
 :root {
-  --text-xs: 0.8125rem;
-  --text-sm: 0.9375rem;
-  --text-base: 1.0625rem;
-  --text-body: var(--text-base);
-  --text-lg: 1.3125rem;
   --text-xl: 1.6875rem;
   --text-2xl: 2.25rem;
   --text-3xl: 3.25rem;
-  --text-code: 0.9375rem;
 }
 /* A phone takes the three large steps down, so a heading still fits a line. */
 @media (width <= 720px) {

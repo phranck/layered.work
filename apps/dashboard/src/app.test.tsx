@@ -98,7 +98,9 @@ describe("dashboard shell", () => {
     expect(input.getAttribute("type")).toBe("email");
     fireEvent.change(input, { target: { value: "phranck" } });
     fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "phranck" } });
-    const form = screen.getByRole("button", { name: "Anmelden" }).closest("form");
+    // The button stands in the card's footer, outside the form, and submits it
+    // through its `form` attribute, which is what `.form` follows.
+    const form = (screen.getByRole("button", { name: "Anmelden" }) as HTMLButtonElement).form;
     if (!form) throw new Error("Missing login form");
     fireEvent.submit(form);
     expect(await screen.findByRole("alert")).toBeTruthy();
@@ -342,7 +344,9 @@ describe("dashboard shell", () => {
 
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), { target: { value: "frank@example.com" } });
     fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "secret" } });
-    const form = screen.getByRole("button", { name: "Anmelden" }).closest("form");
+    // The button stands in the card's footer, outside the form, and submits it
+    // through its `form` attribute, which is what `.form` follows.
+    const form = (screen.getByRole("button", { name: "Anmelden" }) as HTMLButtonElement).form;
     if (!form) throw new Error("Login form was not rendered.");
     fireEvent.submit(form);
     fireEvent.submit(form);

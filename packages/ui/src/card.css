@@ -105,15 +105,15 @@
   min-width: 0;
 }
 
-/* No weight here: the heading level sets it, in base.css. A card is read at a
-   glance, so its heading sits one step below the page's own text. */
+/* No weight here: the heading level sets it, in base.css. A card's heading is
+   one step above the text in it, which is how the Previously page sets a card. */
 .card__title {
   display: flex;
   gap: var(--space-3);
   align-items: center;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-display);
   color: var(--text-primary);

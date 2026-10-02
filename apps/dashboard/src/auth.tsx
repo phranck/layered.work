@@ -8,6 +8,9 @@ import { DashboardApiError } from "./api.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { useDashboardApi } from "./dashboard-context.js";
 
+/** The sign-in form's id, which the footer's button names to submit it. */
+const LOGIN_FORM = "login-form";
+
 export interface LoginScreenProps {
   /** An explicitly injected alias for isolated local previews, never an auth bypass. */
   loginAlias?: { username: string; email: string };
@@ -81,7 +84,7 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
       <Card className="login-card">
         <Card.Header title="Anmelden" />
         <Card.Body>
-          <form className="login-form" onSubmit={submit}>
+          <form id={LOGIN_FORM} className="login-form" onSubmit={submit}>
             {expired && <p role="status">Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.</p>}
             {error && (
               <p className="dashboard-error" role="alert">
@@ -110,18 +113,22 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
                 required
               />
             </Field>
-            <div className="actions">
-              <Button
-                type="submit"
-                tone="primary"
-                disabled={mutation.isPending}
-                icon={<SignInIcon weight="bold" />}
-              >
-                {mutation.isPending ? "Anmeldung läuft…" : "Anmelden"}
-              </Button>
-            </div>
           </form>
         </Card.Body>
+        {/* The button that submits the form ends the card, at its right edge,
+            rather than standing among the fields. The `form` attribute is what
+            keeps it submitting a form it no longer sits inside. */}
+        <Card.Footer>
+          <Button
+            type="submit"
+            form={LOGIN_FORM}
+            tone="primary"
+            disabled={mutation.isPending}
+            icon={<SignInIcon weight="duotone" />}
+          >
+            {mutation.isPending ? "Anmeldung läuft…" : "Anmelden"}
+          </Button>
+        </Card.Footer>
       </Card>
     </main>
   );

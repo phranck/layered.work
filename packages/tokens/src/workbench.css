@@ -4,8 +4,7 @@
  * The dashboard takes its colours and its shapes from the site, so it overrides
  * nothing about them and simply inherits. What it does state is density: a page
  * is read once and a workbench is worked in for hours, so the spacing steps are
- * tighter, everything clickable shares one height, and the content reads a
- * little larger.
+ * tighter and everything clickable shares one height.
  *
  * Those are properties of the task rather than of the design, which is why they
  * are the only things here. Anything that would change how the product looks
@@ -102,24 +101,10 @@
   --sidebar-icon: 17px;
 }
 
-/*
- * The content area and everything shown over it read two pixels above the
- * site's steps. A page is read once at reading distance; a workbench is worked
- * in for hours, and the site's sizes run a shade small there. The sidebar keeps
- * the sizes stated above.
- *
- * The values mirror scale.css and are restated rather than derived, because a
- * property declared on the root cannot be nudged from a scope: the nudge would
- * resolve on the root, where it is not set.
- */
+/* The icon at the front of a content row, two pixels above the row default,
+   in the content area and everything shown over it. The sidebar keeps the
+   default. */
 .workbench__main,
 .workbench .card-overlay {
-  --text-xs: calc(0.6875rem + 2px);
-  --text-sm: calc(0.8125rem + 2px);
-  --text-base: calc(0.9375rem + 2px);
-  --text-lg: calc(1.1875rem + 2px);
-  --text-code: calc(0.875rem + 2px);
-
-  /* The icon at the front of a content row, two pixels above the row default. */
   --row-icon-size: 19px;
 }
