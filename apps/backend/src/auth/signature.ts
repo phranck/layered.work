@@ -13,5 +13,9 @@ import { timingSafeEqual } from "node:crypto";
 export function sameSignature(claimed: string, expected: string): boolean {
   const presented = Buffer.from(claimed, "base64url");
   const computed = Buffer.from(expected, "base64url");
+  // Only the one way of writing those bytes. The last character of a 32-byte
+  // value carries two bits that decoding ignores, so without this four
+  // different strings would pass as the same signature.
+  if (presented.toString("base64url") !== claimed) return false;
   return presented.length === computed.length && timingSafeEqual(presented, computed);
 }

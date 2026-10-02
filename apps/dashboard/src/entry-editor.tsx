@@ -12,6 +12,7 @@ import { Button, Card, Choice, Editor, Field, Input, Section, Segmented } from "
 import {
   ArrowLeftIcon,
   CodeIcon,
+  EyeIcon,
   FloppyDiskIcon,
   GlobeIcon,
   LinkIcon,
@@ -201,6 +202,30 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
     },
   });
 
+  // The preview shows what the editor holds, saved or not. The window opens on
+  // the click itself, because Safari blocks one opened after a request returns,
+  // and is sent to the preview's address once the API has made it. It is cut
+  // loose from this page, so the preview cannot reach back into the dashboard.
+  const preview = useMutation({
+    mutationFn: ({ value }: { value: SaveEntryBody; target: Window | null }) =>
+      api.createPreview(entry.id, {
+        title: value.title,
+        summary: value.summary,
+        body: value.body,
+        readingWidth: value.readingWidth,
+      }),
+    onSuccess: ({ url }, { target }) => {
+      if (target) {
+        target.opener = null;
+        target.location.href = url;
+      } else {
+        window.open(url, "_blank", "noopener");
+      }
+    },
+    onError: (_error, { target }) => target?.close(),
+  });
+  const openPreview = () => preview.mutate({ value: draft, target: window.open("", "_blank") });
+
   const update = (change: Partial<SaveEntryBody>) => setDraft((current) => ({ ...current, ...change }));
   const counterpartPath = entry.counterpart ? `/${area.path}/${entry.counterpart.id}` : undefined;
   const openCounterpart = useLinkClickHandler(counterpartPath ?? `/${area.path}`);
@@ -356,6 +381,14 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               ))}
             </Choice>
           </Field>
+          {/* Under the state, because what a reader would see is the question the
+              state raises, whichever state it is. */}
+          <div className="entry-editor__preview">
+            <Button icon={<EyeIcon weight="duotone" />} disabled={preview.isPending} onClick={openPreview}>
+              {preview.isPending ? text("previewPending") : text("preview")}
+            </Button>
+            {preview.isError && <ErrorNotice error={preview.error} />}
+          </div>
           <Field label={text("editorLanguage")}>
             <span className="entry-editor__value">
               <span className="lang-tag" data-language={entry.language}>

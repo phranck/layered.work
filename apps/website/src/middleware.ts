@@ -116,7 +116,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const mode = websiteMode();
   const path = context.url.pathname;
 
+  // A preview is the author's, opened through a signed link, so it answers
+  // whether or not the site is open yet.
+  const isEntryPreview = path.startsWith("/preview/");
   const showSite =
+    isEntryPreview ||
     mode === "site" ||
     (mode !== "countdown" && (hasOpened() || isPreviewHost(context.request.headers.get("host"))));
 
@@ -128,8 +132,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.rendersModel = false;
 
   if (showSite) {
-    const response = await next();
-    return withSafety(response, nonce, context.locals.rendersModel);
+    const response = withSafety(await next(), nonce, context.locals.rendersModel);
+    // The address carries the token that opens the preview, so not even its
+    // origin travels on with a link followed from it. Set after the shared
+    // headers, which would otherwise put the site's usual policy back.
+    if (isEntryPreview) response.headers.set("referrer-policy", "no-referrer");
+    return response;
   }
 
   if (path === "/") {

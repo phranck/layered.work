@@ -1,6 +1,7 @@
-import { entryIdParam, entryListQuery, saveEntryBody } from "@layered/schemas";
+import { entryIdParam, entryListQuery, previewEntryBody, saveEntryBody } from "@layered/schemas";
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
+import { createPreview } from "../../entries/preview.js";
 import { createTranslation, listEntries, readEntry, saveEntry } from "../../entries/repository.js";
 import { principalOf, requireSession } from "../require-session.js";
 import { ok } from "../response.js";
@@ -24,6 +25,18 @@ entriesRoutes.get("/", validate("query", entryListQuery), async (c) =>
 
 entriesRoutes.get("/:id", validate("param", entryIdParam), async (c) =>
   ok(c, await readEntry(database(), c.req.valid("param").id)),
+);
+
+// What the editor holds, kept as a preview, answered with the address that shows it.
+entriesRoutes.post(
+  "/:id/previews",
+  validate("param", entryIdParam),
+  validate("json", previewEntryBody),
+  async (c) =>
+    ok(
+      c,
+      await createPreview(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId),
+    ),
 );
 
 // The other language of the entry, created as a draft or opened where it exists.

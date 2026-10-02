@@ -634,6 +634,37 @@ describe("dashboard shell", () => {
     expect(screen.queryByRole("button", { name: /anlegen/ })).toBeNull();
   });
 
+  it("opens a preview of the unsaved text in a window opened by the click", async () => {
+    const url = "https://layered.work/preview/abc.def/";
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith(`/entries/${draftDetail.id}/previews`) && init?.method === "POST"
+          ? json({ data: { url, expiresAt: "2026-10-02T13:00:00.000Z" } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    const target = { opener: {} as unknown, location: { href: "" }, close: vi.fn() };
+    const open = vi.spyOn(window, "open").mockReturnValue(target as unknown as Window);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "Not saved yet" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vorschau" }));
+
+    // Opened at once, before anything was asked of the API, so Safari lets it.
+    expect(open).toHaveBeenCalledWith("", "_blank");
+    await waitFor(() => expect(target.location.href).toBe(url));
+    expect(target.opener).toBeNull();
+    const post = request.mock.calls.find(([input]) => String(input).endsWith("/previews"));
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+      title: "Not saved yet",
+      summary: null,
+      body: "First line of the draft.",
+      readingWidth: "normal",
+    });
+    expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+
   it("shows the real API counts and omits unavailable badges", async () => {
     vi.stubGlobal(
       "fetch",

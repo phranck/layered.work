@@ -121,3 +121,33 @@ export const saveEntryBody = body({
   readingWidth: z.enum(READING_WIDTHS),
 });
 export type SaveEntryBody = z.infer<typeof saveEntryBody>;
+
+/**
+ * What asking for a preview sends: what the editor holds, saved or not.
+ *
+ * The state is not here, because a preview shows the entry as a reader would
+ * see it whatever its state, and the address is not here, because a preview
+ * has its own.
+ */
+export const previewEntryBody = body({
+  title: text(MaxLength.Line),
+  summary: z.string().trim().max(MaxLength.Paragraph).nullable(),
+  body: z.string().max(MaxLength.Body),
+  readingWidth: z.enum(READING_WIDTHS),
+});
+export type PreviewEntryBody = z.infer<typeof previewEntryBody>;
+
+/** Where a preview can be opened, and until when. */
+export const entryPreview = z.object({ url: z.url(), expiresAt: z.iso.datetime() });
+export type EntryPreview = z.infer<typeof entryPreview>;
+
+/**
+ * A preview token as a path parameter: a signed payload, base64url on both sides
+ * of one dot, and bounded, because it reaches a decoder.
+ */
+export const previewTokenParam = z.strictObject({
+  token: z
+    .string()
+    .max(512)
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/),
+});

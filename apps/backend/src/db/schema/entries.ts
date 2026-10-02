@@ -13,6 +13,7 @@ import {
 import { identifier, instant } from "./columns.js";
 import { entryKind, language, publicationState, readingWidth } from "./enums.js";
 import { media } from "./media.js";
+import { users } from "./people.js";
 
 /**
  * Everything an author writes, and the addresses it answers at.
@@ -226,4 +227,36 @@ export const entryTopics = pgTable(
     primaryKey({ columns: [table.entryId, table.topicId] }),
     index("entry_topics_by_topic").on(table.topicId),
   ],
+);
+
+/**
+ * What the editor held when somebody asked to see it as a reader would.
+ *
+ * A preview shows the text being written, unsaved changes included, because
+ * saving first would put a public entry's half-finished change live. So the
+ * editor's state is kept here for as long as the preview link lasts, and
+ * nowhere is it mistaken for the translation itself: the site's snapshot never
+ * reads this table.
+ *
+ * Rows past their expiry are removed whenever a new preview is made, so the
+ * table holds the previews of the last hour and nothing older.
+ */
+export const entryPreviews = pgTable(
+  "entry_previews",
+  {
+    id: identifier(),
+    translationId: uuid("translation_id")
+      .notNull()
+      .references(() => entryTranslations.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    summary: text(),
+    body: text().notNull(),
+    readingWidth: readingWidth("reading_width").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: instant("created_at"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("entry_previews_by_expiry").on(table.expiresAt)],
 );

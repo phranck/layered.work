@@ -1,0 +1,44 @@
+---
+import type { RenderNode } from "@layered/content";
+import { ContentRenderer, Section } from "@layered/ui";
+import ModelViewer from "./ModelViewer.astro";
+import { EntryCard } from "./entry-card.js";
+import { dateLabel, readingTime, summaryOf, topicPath, type ContentRepository, type Entry } from "../content/repository.js";
+
+/**
+ * One entry as a reader sees it: its head, its specification, its body, and
+ * what it closes with.
+ *
+ * The published page and the preview both render this, so a preview cannot show
+ * anything the published page would not. The body arrives already rendered,
+ * because the page has to know before anything streams whether it holds a
+ * model, which its content policy depends on.
+ */
+interface Props {
+  repository: ContentRepository;
+  entry: Entry;
+  nodes: RenderNode[];
+}
+
+const { repository, entry, nodes } = Astro.props;
+const language = entry.language;
+const de = language === "de";
+const feature = entry.featuredImage ? repository.media(entry.featuredImage) : undefined;
+// A project opens with its picture and closes with the other projects; a post
+// keeps the head it has and closes with what shares its topics.
+const project = entry.kind === "project";
+const neighbours = project ? repository.otherEntries(entry) : repository.related(entry);
+const topicName = (slug: string) => repository.data.topics.find((topic) => topic.slug === slug)?.name ?? slug;
+---
+<article>
+  {project && feature
+    ? <header class="project-hero"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entry.topics.map((slug) => <a class="chip" href={topicPath(language, slug)}>{topicName(slug)}</a>)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
+    : <header class="article-head"><div class="cluster">{entry.topics.map((slug) => <a class="chip" href={topicPath(language, slug)}>{topicName(slug)}</a>)}</div><h1 class="title-page">{entry.title}</h1><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></header>}
+  {project && entry.specs.length > 0 && <div class="spec-grid">{entry.specs.map((spec) => <div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
+  <div class="article-body">
+    {feature && !project && <figure class="article-cover"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /></figure>}
+    <ContentRenderer {nodes} media={repository.media} />
+  </div>
+</article>
+{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} image={related.featuredImage ? repository.media(related.featuredImage) : undefined} />)}</div></Section.Page>}
+<ModelViewer />

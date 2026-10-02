@@ -521,6 +521,19 @@ dialog.account-dialog::backdrop {
   color: var(--text-muted);
 }
 
+/* The preview stands across the panel's width under the state, as the one
+   action in a column of fields, so it reads as belonging to all of them. */
+.entry-editor__preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.entry-editor__preview .button {
+  justify-content: center;
+  width: 100%;
+}
+
 .entry-editor__value,
 .entry-editor__link {
   display: inline-flex;

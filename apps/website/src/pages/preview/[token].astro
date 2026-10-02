@@ -1,0 +1,65 @@
+---
+import { renderContent, rendersComponent } from "@layered/content";
+import { Note, Section } from "@layered/ui";
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import EntryArticle from "../../components/EntryArticle.astro";
+import { siteFooter, siteNavigation } from "../../components/site-navigation.js";
+import { loadPreview } from "../../content/preview.js";
+import { summaryOf } from "../../content/repository.js";
+import "../../styles/pages.css";
+
+/**
+ * An entry as the editor holds it, rendered as the published page renders it.
+ *
+ * Reached through the signed link the dashboard's Preview button opens. It is
+ * never indexed and never cached. The middleware keeps its address from being
+ * sent on as a referrer, because the address carries the token that opens it.
+ */
+
+const token = Astro.params.token ?? "";
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const repository = await loadPreview(token);
+const first = repository?.data.entries[0];
+const entry = first ? repository?.entry(first.path) : undefined;
+if (!entry) Astro.response.status = 404;
+
+const language = entry?.language ?? "en";
+const de = language === "de";
+const nodes = entry ? renderContent(entry.body) : [];
+// Read by the middleware once this response exists, as on the published page.
+Astro.locals.rendersModel = rendersComponent(nodes, "Model");
+---
+<SiteLayout
+  title={entry ? `${de ? "Vorschau" : "Preview"}: ${entry.title}` : de ? "Vorschau nicht verfügbar" : "Preview unavailable"}
+  {language}
+  navigation={siteNavigation(language)}
+  footer={siteFooter(language)}
+  canonicalPath={entry?.path ?? "/"}
+  description={entry ? summaryOf(entry) : undefined}
+>
+  <meta slot="head" name="robots" content="noindex, nofollow" />
+  <meta slot="head" name="referrer" content="no-referrer" />
+  {entry && repository ? (
+    <>
+      <Section.Page>
+        <Note tone="warning" title={de ? "Vorschau" : "Preview"}>
+          {de
+            ? "So sieht dieser Eintrag mit dem Stand aus, den der Editor beim Öffnen der Vorschau hatte. Der Link gilt eine Stunde und ist nirgends verlinkt."
+            : "This is the entry as the editor held it when the preview was opened. The link lasts an hour and is linked from nowhere."}
+        </Note>
+      </Section.Page>
+      <EntryArticle {repository} {entry} {nodes} />
+    </>
+  ) : (
+    <Section.Page>
+      <Section.Lead title={de ? "Vorschau nicht verfügbar" : "Preview unavailable"} />
+      <p class="empty-state">
+        {de
+          ? "Diese Vorschau ist abgelaufen oder existiert nicht. Öffne sie im Editor neu."
+          : "This preview has expired or does not exist. Open it again from the editor."}
+      </p>
+    </Section.Page>
+  )}
+</SiteLayout>

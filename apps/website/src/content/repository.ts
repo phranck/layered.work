@@ -4,6 +4,7 @@ import {
   homeBlockSchema,
   homeBlockTypes,
   isKnownHomeBlock,
+  READING_WIDTHS,
   unknownHomeBlocks,
 } from "@layered/schemas";
 import { z } from "zod";
@@ -37,7 +38,7 @@ const entrySchema = z.object({
   translationPath: path.nullish(),
   featured: z.boolean().default(false),
   onHomePage: z.boolean().default(true),
-  readingWidth: z.enum(["narrow", "normal", "wide"]).default("normal"),
+  readingWidth: z.enum(READING_WIDTHS).default("normal"),
   /**
    * What an entry states about itself beside its prose, as the author's own
    * pairs rather than as fixed fields.

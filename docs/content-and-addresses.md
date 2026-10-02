@@ -45,6 +45,12 @@ The trashed entry `happy-birthday` needs no redirect. Publii does not generate a
 
 Verified on 2 October 2026: the preview renderer checked 42 legacy addresses and the six archived ones, and reported 36 redirect targets returning 200, four private entries returning 404 and no other status. Rendering from the database's snapshot gives the same 36 redirect targets.
 
+## Previews
+
+`/preview/<token>/` shows one entry as the editor held it when its Preview button was pressed, unsaved changes included, in whatever state the entry is. The dashboard sends the editor's title, summary, text and reading width to `POST /entries/:id/previews`, which keeps them in `entry_previews` for an hour and answers with the address. The site asks `GET /previews/<token>` for the entry and renders it with `EntryArticle`, the same component the published page renders.
+
+The token names one preview and is signed with a key derived from `SESSION_SECRET` for this purpose alone. A forged, altered or expired token gets the same 404 page. A preview answers before the launch as well. It is sent with `X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, because its address carries the token, and it never appears in the snapshot, the sitemap, a feed or a listing.
+
 ## Getting the content into a database
 
 `db:import` writes the published snapshot into the database `DATABASE_URL` names. That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the published file are taken from there, so every editorial correction made since the cutover stands.

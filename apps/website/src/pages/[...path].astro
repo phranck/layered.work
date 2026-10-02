@@ -1,17 +1,17 @@
 ---
 import { randomUUID } from "node:crypto";
 import { renderContent, rendersComponent } from "@layered/content";
-import { Button, ContentRenderer, Section } from "@layered/ui";
+import { Button, Section } from "@layered/ui";
 import { MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
 import SiteLayout from "../layouts/SiteLayout.astro";
+import EntryArticle from "../components/EntryArticle.astro";
 import HomeContent from "../components/HomeContent.astro";
 import ListingContent from "../components/ListingContent.astro";
-import ModelViewer from "../components/ModelViewer.astro";
-import { EntryCard } from "../components/entry-card.js";
+import { siteFooter, siteNavigation } from "../components/site-navigation.js";
 import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
-import { dateLabel, languageRoot, parseListingQuery, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
+import { languageRoot, parseListingQuery, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
 
 const language:Language=Astro.url.pathname.startsWith("/de/")?"de":"en";
@@ -67,21 +67,13 @@ const found=home||listing||topics||!!entry;
 if(repository&&!found)Astro.response.status=404;
 const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):(de?"Seite nicht gefunden":"Page not found")));
 const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
-// The two things this site is: what was built and what was written about it.
-// Topics is a way through those rather than a third kind of thing, so it sits in
-// the footer, where it still answers the /tags/ addresses the old site published.
-const navigation=[{label:de?"Projekte":"Projects",href:`${root}projects/`},{label:de?"Beiträge":"Posts",href:`${root}posts/`}];
-const footer={description:de?"Gehäuse, Platinen und Software, Schicht für Schicht.":"Enclosures, circuit boards and software, made layer by layer.",navigation:[{title:de?"Entdecken":"Explore",items:[...navigation,{label:de?"Themen":"Topics",href:`${root}topics/`}]},{title:de?"Abonnieren":"Subscribe",items:[{label:"RSS",href:"/feed.xml"},{label:"JSON Feed",href:"/feed.json"}]}],baseline:"LAYERED.work · Bregenz, Austria"};
+const navigation=siteNavigation(language);
+const footer=siteFooter(language);
 const nodes=entry?renderContent(entry.body):[];
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.
 Astro.locals.rendersModel=rendersComponent(nodes,"Model");
-const feature=entry?.featuredImage?repository?.media(entry.featuredImage):undefined;
-// A project opens with its picture and closes with the other projects; a post
-// keeps the head it has and closes with what shares its topics.
-const project=entry?.kind==="project";
-const neighbours=entry?(project?repository?.otherEntries(entry)??[]:repository?.related(entry)??[]):[];
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
 <SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry ? "full" : undefined}>
@@ -90,19 +82,6 @@ if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noind
     {home&&<HomeContent {repository} {language} />}
     {listing&&<ListingContent {repository} {language} {title} {kind} topic={topicSlug} {page} {query} {search} />}
     {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>}
-    {entry&&<>
-      <article>
-        {project&&feature
-          ? <header class="project-hero"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt??""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entry.topics.map(slug=><a class="chip" href={topicPath(language,slug)}>{repository.data.topics.find(topic=>topic.slug===slug)?.name??slug}</a>)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt??undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
-          : <header class="article-head"><div class="cluster">{entry.topics.map(slug=><a class="chip" href={topicPath(language,slug)}>{repository.data.topics.find(topic=>topic.slug===slug)?.name??slug}</a>)}</div><h1 class="title-page">{entry.title}</h1><div class="meta"><time datetime={entry.publishedAt??undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></header>}
-        {project&&entry.specs.length>0&&<div class="spec-grid">{entry.specs.map(spec=><div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
-        <div class="article-body">
-          {feature&&!project&&<figure class="article-cover"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt??""} fetchpriority="high" /></figure>}
-          <ContentRenderer {nodes} media={repository.media} />
-        </div>
-      </article>
-      {neighbours.length>0&&<Section.Page><Section.Title title={project?(de?"Andere Projekte":"Other projects"):(de?"Verwandte Beiträge":"Related entries")}/><div class="entry-grid">{neighbours.map(related=><EntryCard entry={related} image={related.featuredImage?repository.media(related.featuredImage):undefined} />)}</div></Section.Page>}
-      <ModelViewer />
-    </>}
+    {entry&&<EntryArticle {repository} {entry} {nodes} />}
   </>}
 </SiteLayout>

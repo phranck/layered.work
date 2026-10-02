@@ -17,6 +17,7 @@ export { CubeIcon } from "@phosphor-icons/react/dist/ssr/Cube";
 export { CursorClickIcon } from "@phosphor-icons/react/dist/ssr/CursorClick";
 export { DotsSixVerticalIcon } from "@phosphor-icons/react/dist/ssr/DotsSixVertical";
 export { EnvelopeSimpleIcon } from "@phosphor-icons/react/dist/ssr/EnvelopeSimple";
+export { EyeIcon } from "@phosphor-icons/react/dist/ssr/Eye";
 export { FilePdfIcon } from "@phosphor-icons/react/dist/ssr/FilePdf";
 export { FilesIcon } from "@phosphor-icons/react/dist/ssr/Files";
 export { FloppyDiskIcon } from "@phosphor-icons/react/dist/ssr/FloppyDisk";

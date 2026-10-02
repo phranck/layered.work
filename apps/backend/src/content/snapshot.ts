@@ -85,12 +85,6 @@ type Database = PostgresJsDatabase<Record<string, unknown>>;
 const READABLE = ["public", "hidden"] as const;
 
 /**
- * Reads the published content.
- *
- * @param database - The database to read from.
- * @returns Everything the site may show, and nothing else.
- */
-/**
  * The files that published content names, by id.
  *
  * Only these leave the database. The library also holds what nobody has
@@ -126,6 +120,64 @@ function namedFiles(
   return named;
 }
 
+/**
+ * The files some translations name, in the shape the site parses, and every
+ * file's slug by id for the pictures that stand for a translation.
+ *
+ * Shared by the snapshot and the preview, so a preview names its pictures
+ * exactly as the published page will.
+ *
+ * @param database - The database to read from.
+ * @param translations - What is being shown: its bodies and its pictures.
+ */
+export async function publicMedia(
+  database: Database,
+  translations: readonly { body: string; featuredMediaId: string | null }[],
+): Promise<{ media: PublicMedia[]; slugById: Map<string, string> }> {
+  const assets = await database
+    .select({
+      id: media.id,
+      slug: media.slug,
+      mimeType: media.mimeType,
+      storageKey: media.storageKey,
+      byteSize: media.byteSize,
+      checksum: media.checksum,
+      width: media.width,
+      height: media.height,
+      altText: mediaTranslations.altText,
+    })
+    .from(media)
+    .leftJoin(
+      mediaTranslations,
+      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
+    );
+
+  const named = namedFiles(translations, assets);
+  return {
+    slugById: new Map(assets.map((asset) => [asset.id, asset.slug])),
+    media: assets
+      .filter((asset) => named.has(asset.id))
+      .map((asset) => ({
+        slug: asset.slug,
+        src: `/${asset.storageKey}`,
+        mime: asset.mimeType,
+        filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
+        source: asset.storageKey,
+        bytes: asset.byteSize,
+        sha256: asset.checksum,
+        ...(asset.width === null ? {} : { width: asset.width }),
+        ...(asset.height === null ? {} : { height: asset.height }),
+        ...(asset.altText ? { alt: asset.altText } : {}),
+      })),
+  };
+}
+
+/**
+ * Reads the published content.
+ *
+ * @param database - The database to read from.
+ * @returns Everything the site may show, and nothing else.
+ */
 export async function readPublicSnapshot(database: Database): Promise<PublicSnapshot> {
   const translations = await database
     .select({
@@ -187,26 +239,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.slug]);
   }
 
-  const assets = await database
-    .select({
-      id: media.id,
-      slug: media.slug,
-      mimeType: media.mimeType,
-      storageKey: media.storageKey,
-      byteSize: media.byteSize,
-      checksum: media.checksum,
-      width: media.width,
-      height: media.height,
-      altText: mediaTranslations.altText,
-    })
-    .from(media)
-    .leftJoin(
-      mediaTranslations,
-      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
-    );
-
-  const slugById = new Map(assets.map((asset) => [asset.id, asset.slug]));
-  const named = namedFiles(reachable, assets);
+  const { media: publishedMedia, slugById } = await publicMedia(database, reachable);
 
   // Which translation each one is the counterpart of, so the site can offer the
   // other language. Both directions, because either page may be the one open.
@@ -256,20 +289,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   return {
     entries: publicEntries,
     topics: publicTopics,
-    media: assets
-      .filter((asset) => named.has(asset.id))
-      .map((asset) => ({
-        slug: asset.slug,
-        src: `/${asset.storageKey}`,
-        mime: asset.mimeType,
-        filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
-        source: asset.storageKey,
-        bytes: asset.byteSize,
-        sha256: asset.checksum,
-        ...(asset.width === null ? {} : { width: asset.width }),
-        ...(asset.height === null ? {} : { height: asset.height }),
-        ...(asset.altText ? { alt: asset.altText } : {}),
-      })),
+    media: publishedMedia,
     redirects: former,
     homeBlocks: blocks.map((block) => ({
       type: block.type,

@@ -10,10 +10,14 @@ import {
   type EntryDetail,
   type EntryKind,
   type EntryList,
+  type EntryPreview,
   type ErrorCode,
   entryDetail,
   entryList,
+  entryPreview,
   type MailSettings,
+  type PreviewEntryBody,
+  previewEntryBody,
   readApiError,
   type SaveEntryBody,
   type SearchResults,
@@ -86,6 +90,8 @@ export interface DashboardApi {
   saveEntry(id: string, value: SaveEntryBody): Promise<EntryDetail>;
   /** Creates the other language of a translation's entry as a draft, or returns it where it exists. */
   createTranslation(id: string): Promise<EntryDetail>;
+  /** Keeps what the editor holds as a preview, and returns the address that shows it. */
+  createPreview(id: string, value: PreviewEntryBody): Promise<EntryPreview>;
   /** Entries by title and topic, and media by slug and alt text. */
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
@@ -194,6 +200,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async saveEntry(id, value) {
       const sent = jsonBody("PUT", saveEntryBody.parse(value));
       return dataOf(await request(`/entries/${encodeURIComponent(id)}`, sent, true), entryDetail);
+    },
+    async createPreview(id, value) {
+      const sent = jsonBody("POST", previewEntryBody.parse(value));
+      return dataOf(await request(`/entries/${encodeURIComponent(id)}/previews`, sent, true), entryPreview);
     },
     async createTranslation(id) {
       const path = `/entries/${encodeURIComponent(id)}/translation`;

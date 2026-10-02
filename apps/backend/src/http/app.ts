@@ -14,6 +14,7 @@ import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
 import { entriesRoutes } from "./routes/entries.js";
 import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
+import { previewsRoutes } from "./routes/previews.js";
 import { searchRoutes } from "./routes/search.js";
 import { settingsRoutes } from "./routes/settings.js";
 
@@ -76,6 +77,7 @@ app.route("/search", searchRoutes);
 app.route("/settings", settingsRoutes);
 app.route("/media", media);
 app.route("/content", content);
+app.route("/previews", previewsRoutes);
 
 /** An address that is not here, in the same shape as every other failure. */
 app.notFound((c) => fail(c, ErrorCode.NotFound, "There is nothing at this address."));
