@@ -1,7 +1,7 @@
 import { analyticsSettings, ErrorCode, mailSettings, siteSettings } from "@layered/schemas";
 import { Hono } from "hono";
-import { config } from "../../config.js";
 import { getAccountProfile } from "../../account/repository.js";
+import { config } from "../../config.js";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
@@ -46,7 +46,8 @@ settingsRoutes.put("/analytics", requireOwner, validate("json", analyticsSetting
  */
 settingsRoutes.post("/mail/test", requireOwner, async (c) => {
   const apiKey = config.SMTP2GO_API_KEY;
-  if (!apiKey) throw new HttpError(ErrorCode.Conflict, "No SMTP2GO key is configured, so nothing can be sent.");
+  if (!apiKey)
+    throw new HttpError(ErrorCode.Conflict, "No SMTP2GO key is configured, so nothing can be sent.");
   const { mail } = await readSettings(database());
   if (!mail.senderAddress) {
     throw new HttpError(ErrorCode.Conflict, "Save a sender address before sending a test message.");

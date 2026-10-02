@@ -47,7 +47,10 @@ const GROUPS: {
 };
 
 /** One group's stored value, or its default where it has none or one that no longer fits. */
-function readGroup<Group extends SettingsGroup>(group: Group, stored: Map<string, unknown>): GroupValue[Group] {
+function readGroup<Group extends SettingsGroup>(
+  group: Group,
+  stored: Map<string, unknown>,
+): GroupValue[Group] {
   const { schema, fallback } = GROUPS[group];
   const parsed = schema.safeParse(stored.get(group));
   return parsed.success ? parsed.data : fallback;

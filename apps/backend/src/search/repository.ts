@@ -45,7 +45,10 @@ export async function searchEverything(db: Database, text: string): Promise<Sear
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
     .where(or(ilike(entryTranslations.title, pattern), topicMatches))
-    .orderBy(desc(sql`coalesce(${entryTranslations.publishedAt}, ${entries.createdAt})`), desc(entryTranslations.id))
+    .orderBy(
+      desc(sql`coalesce(${entryTranslations.publishedAt}, ${entries.createdAt})`),
+      desc(entryTranslations.id),
+    )
     .limit(SEARCH_HIT_LIMIT);
 
   const altMatches = sql`exists (

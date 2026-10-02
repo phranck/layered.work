@@ -40,8 +40,18 @@ export async function seedEditorialLibrary(): Promise<void> {
   const database = await testDatabase();
   await emptyTestDatabase();
   await database.insert(users).values([
-    { email: EDITOR.email, passwordHash: await hashPassword(EDITOR.password), displayName: "Editor", role: "editor" },
-    { email: OWNER.email, passwordHash: await hashPassword(OWNER.password), displayName: "Owner", role: "owner" },
+    {
+      email: EDITOR.email,
+      passwordHash: await hashPassword(EDITOR.password),
+      displayName: "Editor",
+      role: "editor",
+    },
+    {
+      email: OWNER.email,
+      passwordHash: await hashPassword(OWNER.password),
+      displayName: "Owner",
+      role: "owner",
+    },
   ]);
 
   const [picture, document] = await database

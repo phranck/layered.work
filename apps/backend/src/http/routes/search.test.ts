@@ -1,7 +1,7 @@
 import { readApiError, type SearchResults, searchResults } from "@layered/schemas";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeTestDatabase, hasTestDatabase } from "../../test-support/database.js";
-import { signedInCookie, seedEditorialLibrary } from "../../test-support/editorial.js";
+import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";
 
 /**
@@ -35,7 +35,10 @@ runs("the dashboard's search", () => {
     const cookie = await signedInCookie();
     for (const text of ["retro computing", "Retro-Computer"]) {
       const found = await search(text, cookie);
-      expect(found.entries.map((hit) => hit.title).sort()).toEqual(["Auf Deutsch versteckt", "Published in English"]);
+      expect(found.entries.map((hit) => hit.title).sort()).toEqual([
+        "Auf Deutsch versteckt",
+        "Published in English",
+      ]);
     }
   });
 
@@ -53,7 +56,9 @@ runs("the dashboard's search", () => {
 
   it("finds entries and files with the same word, and names the kind of each entry", async () => {
     const found = await search("solder", await signedInCookie());
-    expect(found.entries).toEqual([expect.objectContaining({ title: "A draft", kind: "post", state: "draft" })]);
+    expect(found.entries).toEqual([
+      expect.objectContaining({ title: "A draft", kind: "post", state: "draft" }),
+    ]);
     expect(found.media.map((hit) => hit.slug)).toEqual(["soldering-iron"]);
   });
 
@@ -65,7 +70,9 @@ runs("the dashboard's search", () => {
   it("refuses an empty search, an overlong one and one without a session", async () => {
     const cookie = await signedInCookie();
     for (const text of ["", "   ", "x".repeat(301)]) {
-      const response = await app.request(`/search?${new URLSearchParams({ q: text })}`, { headers: { cookie } });
+      const response = await app.request(`/search?${new URLSearchParams({ q: text })}`, {
+        headers: { cookie },
+      });
       expect(response.status).toBe(400);
       expect(readApiError(await response.json())?.code).toBe("invalid_request");
     }

@@ -1,7 +1,7 @@
 import { type EntryList, entryList, readApiError } from "@layered/schemas";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeTestDatabase, hasTestDatabase } from "../../test-support/database.js";
-import { signedInCookie, seedEditorialLibrary } from "../../test-support/editorial.js";
+import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";
 
 /**
@@ -30,7 +30,11 @@ runs("the entry list", () => {
   it("lists one row per translation of the asked kind, newest first", async () => {
     const rows = await list("post", await signedInCookie());
 
-    expect(rows.map((row) => row.title)).toEqual(["A draft", "Auf Deutsch versteckt", "Published in English"]);
+    expect(rows.map((row) => row.title)).toEqual([
+      "A draft",
+      "Auf Deutsch versteckt",
+      "Published in English",
+    ]);
     expect(rows.map((row) => row.date)).toEqual([
       "2026-01-01T00:00:00.000Z",
       "2025-06-01T00:00:00.000Z",

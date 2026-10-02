@@ -13,9 +13,9 @@ import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
 import { entriesRoutes } from "./routes/entries.js";
+import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
 import { searchRoutes } from "./routes/search.js";
 import { settingsRoutes } from "./routes/settings.js";
-import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
 
 /**
  * The application, and the three things every request passes through whatever
