@@ -25,7 +25,7 @@ import {
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
 import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
@@ -121,25 +121,28 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
   }
   if (!entry.data)
     return (
-      <>
-        <BackToList area={area} />
-        <Section.Title title={text("loading")} level={1} />
-      </>
+      <BackToList area={area}>
+        <h1 className="app-bar-title">{text("loading")}</h1>
+      </BackToList>
     );
   // Keyed by the translation, so opening another one starts a fresh draft.
   return <EntryEditor key={entry.data.id} area={area} kind={kind} entry={entry.data} />;
 }
 
-/** The way back to the list, at the start of the dashboard's bar. */
-function BackToList({ area }: { area: DashboardArea }) {
+/**
+ * The way back to the list, at the start of the dashboard's bar, with whatever
+ * follows it there, such as the entry's title.
+ */
+function BackToList({ area, children }: { area: DashboardArea; children?: ReactNode }) {
   const { text } = useDashboardLanguage();
   const to = `/${area.path}`;
   const onClick = useLinkClickHandler(to);
   return (
     <HeaderStart>
-      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon weight="duotone" />}>
+      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon />}>
         {text(area.labelKey)}
       </Button.Link>
+      {children}
     </HeaderStart>
   );
 }
@@ -267,11 +270,15 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 
   return (
     <>
-      <BackToList area={area} />
+      {/* The entry's title stands in the bar, after the way back, so the
+          writing column starts with what is written. */}
+      <BackToList area={area}>
+        <h1 className="app-bar-title">{draft.title.trim() || text("editorTitleMissing")}</h1>
+      </BackToList>
       {/* What the entry's state is and what can be done with it, at the end of
           the bar, where they stay in view however far the text is scrolled. */}
       <HeaderEnd>
-        <span className="entry-editor__status" role="status">
+        <span className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
           {status}
         </span>
         <Button
@@ -301,10 +308,9 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
       </HeaderEnd>
       <Editor>
         <Editor.Main>
-          {/* The heading leads the writing column rather than the whole page,
-              so the panel beside it starts at the top of the content. */}
-          <Section.Title title={draft.title.trim() || text("editorTitleMissing")} level={1} />
-          <Field label={text("editorTitle")} htmlFor="entry-title">
+          {/* The label beside its field rather than over it, so the title takes
+              one line and the text starts higher. */}
+          <Field.Inline className="entry-editor__title" label={text("editorTitle")} htmlFor="entry-title">
             <Input
               id="entry-title"
               value={draft.title}
@@ -312,7 +318,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               lang={entry.language}
               onChange={(event) => update({ title: event.target.value })}
             />
-          </Field>
+          </Field.Inline>
           <Editor.Toolbar
             aria-label={text("editorTools")}
             role="toolbar"

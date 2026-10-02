@@ -582,6 +582,24 @@ dialog.account-dialog::backdrop {
   white-space: nowrap;
 }
 
+/* The title of what is open, after the way back in the bar: the display face of
+   a page heading at the size the bar holds, on one line, shortened where it is
+   long rather than wrapping the bar. */
+.app-bar-title {
+  min-width: 0;
+  /* Further from the way back than the bar's items are from each other, so the
+     title reads as the page's name rather than as the button's label. */
+  margin: 0 0 0 var(--space-3);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Where the reader is, at the start of the bar: the group a list belongs to, in
    the small capitals the sidebar names its groups with, so the two read as the
    same word in the same voice. */
@@ -606,6 +624,24 @@ dialog.account-dialog::backdrop {
 .entry-editor__status {
   font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+/* Unsaved changes are hard to miss: the warning tone, in the shape a chosen
+   segment takes, as high as the buttons beside it. */
+.entry-editor__status[data-unsaved] {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height);
+  padding-inline: var(--space-3);
+  color: var(--state-warning);
+  background: color-mix(in oklab, var(--state-warning) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--state-warning) 60%, transparent);
+  border-radius: var(--radius-chip);
+}
+
+/* The title's label beside its field, which takes the rest of the line. */
+.entry-editor__title > .input {
+  flex: 1;
 }
 
 /* The preview stands across the panel's width under the state, as the one
