@@ -13,7 +13,7 @@
    because proximity is what binds the two, and furthest from the section it
    closes off. */
 .content-prose {
-  --prose-line: calc(var(--text-lg) * var(--leading-normal));
+  --prose-line: calc(var(--text-body) * var(--leading-normal));
   --prose-lead: calc(var(--prose-line) * 0.4);
   --prose-gap: calc(var(--prose-line) * 0.8);
   --prose-heading-gap: calc(var(--prose-line) * 1.6);
@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  font-size: var(--text-lg);
+  font-size: var(--text-body);
   line-height: var(--leading-normal);
   color: var(--text-secondary);
   overflow-wrap: anywhere;
@@ -74,16 +74,16 @@
   font-size: var(--text-2xl);
 }
 .content-prose h3 {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
 }
 .content-prose :where(h4, h5, h6) {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
 }
 /* A card standing in the prose is an aside rather than the argument, and it is
    read at a glance. Everything in it drops one step of the scale, headings
    included, so the card reads as subordinate to the text around it. */
 .content-prose .card {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
 }
 .content-prose .card :where(h1) {
   font-size: var(--text-2xl);
@@ -92,10 +92,10 @@
   font-size: var(--text-xl);
 }
 .content-prose .card :where(h3) {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
 }
 .content-prose .card :where(h4, h5, h6) {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
 }
 /* A heading in such a card belongs to the lines under it rather than standing
    over the card, so they sit closer than two stacked sections would. */

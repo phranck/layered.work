@@ -12,17 +12,17 @@
 }
 
 .title-hero {
-  font-size: var(--text-4xl);
+  font-size: var(--text-3xl);
 }
 
 .title-page {
   font-size: var(--text-3xl);
 }
 
-/* A card is read at a glance rather than line by line, so it sits one step
-   below the page's own text. */
+/* A card's title is a heading of the third level, a step above the text
+   beneath it, which is how the Previously page sets a card. */
 .title-card {
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   line-height: var(--leading-snug);
 }
 
@@ -88,7 +88,7 @@
   gap: var(--space-2);
   align-items: center;
   padding: calc(5px - var(--label-lift)) 10px calc(5px + var(--label-lift));
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   line-height: 1;
   color: var(--text-secondary);
@@ -392,7 +392,7 @@ a.chip:hover {
   gap: var(--space-3);
 }
 .entry-card__summary {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--text-muted);
 }
 .entry-card .card__media img {
@@ -621,4 +621,9 @@ a.chip:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+/* The opening sentence under the hero's title is a step larger than a section's
+   lead, because it is the one sentence the page is read for. */
+.hero .lede {
+  font-size: var(--text-xl);
 }

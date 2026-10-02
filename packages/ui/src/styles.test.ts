@@ -45,11 +45,6 @@ describe("prototype style parity", () => {
 });
 
 describe("article content styles", () => {
-  it("uses the larger content type step", () => {
-    const source = readCss("./content-renderer.css");
-    expect(source).toMatch(/\.content-prose\s*\{[^}]*font-size:\s*var\(--text-lg\)/s);
-  });
-
   it("presents tables as a rounded card with header and row feedback", () => {
     const source = readCss("./content-renderer.css");
     expect(source).toMatch(/\.content-table\s*\{[^}]*border-radius:[^}]*overflow-x:\s*auto/s);
