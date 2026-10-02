@@ -27,10 +27,24 @@
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: var(--radius-chip);
+  /* Only opacity, which changes when the button becomes disabled. Hover changes
+     the sheen and is meant to appear at once. */
+  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .button:active {
   transform: translateY(1px);
+}
+
+/* A button that cannot be pressed says so, and takes no hover or press either,
+   because a face that brightens under the pointer reads as pressable whatever
+   its opacity. Becoming disabled is a change of state, so the fade travels,
+   which is the transition on `.button` above. Whatever explains the reason
+   belongs in the block beside it, since a disabled button shows no tooltip. */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
 }
 
 /* --- Tones ------------------------------------------------------------------
