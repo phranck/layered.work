@@ -28,6 +28,7 @@ export async function readDashboardCounts(
     select
       (select count(*)::int from ${entries} where ${entries.kind} = 'post') as posts,
       (select count(*)::int from ${entries} where ${entries.kind} = 'page') as pages,
+      (select count(*)::int from ${entries} where ${entries.kind} = 'project') as projects,
       (select count(*)::int from ${topics}) as tags,
       (select count(*)::int from ${media}) as media,
       (select count(*)::int from ${homeBlocks}) as blocks,

@@ -4,6 +4,7 @@ import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
+import { EntryListScreen, EntryScreen } from "./entry-list.js";
 import { dashboardAreas } from "./routes.js";
 
 export interface DashboardRouterOptions {
@@ -53,10 +54,17 @@ export function dashboardRouteObjects({
       },
       children: [
         { index: true, element: <Navigate to="/posts" replace /> },
-        ...dashboardAreas.map((area) => ({
-          path: area.path,
-          element: <AreaScreen titleKey={area.labelKey} />,
-        })),
+        ...dashboardAreas.map((area): RouteObject => {
+          const kind = area.entryKind;
+          if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };
+          return {
+            path: area.path,
+            children: [
+              { index: true, element: <EntryListScreen area={area} kind={kind} /> },
+              { path: ":id", element: <EntryScreen area={area} kind={kind} /> },
+            ],
+          };
+        }),
         { path: "*", Component: NotFoundScreen },
       ],
     },

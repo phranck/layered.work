@@ -27,6 +27,7 @@ const account = {
 const counts = {
   posts: 12,
   pages: 4,
+  projects: 6,
   tags: 9,
   media: 17,
   blocks: 5,
@@ -45,9 +46,44 @@ function json(body: unknown, status = 200) {
   });
 }
 
+const posts = [
+  {
+    id: "9a2b6f0e-1c4d-4e5f-8a7b-0c1d2e3f4a5b",
+    entryId: "1b2c3d4e-5f60-4718-9a0b-1c2d3e4f5a6b",
+    title: "NeXTSTEP on a Raspberry Pi",
+    state: "public",
+    language: "en",
+    date: "2025-08-22T00:00:00.000Z",
+    thumbnailUrl: null,
+    translated: true,
+  },
+  {
+    id: "2f3e4d5c-6b7a-4891-a0b1-c2d3e4f5a6b7",
+    entryId: "1b2c3d4e-5f60-4718-9a0b-1c2d3e4f5a6b",
+    title: "NeXTSTEP auf einem Raspberry Pi",
+    state: "hidden",
+    language: "de",
+    date: "2025-08-22T00:00:00.000Z",
+    thumbnailUrl: null,
+    translated: true,
+  },
+  {
+    id: "3a4b5c6d-7e8f-4901-b2c3-d4e5f6a7b8c9",
+    entryId: "4c5d6e7f-8091-4a2b-bc3d-4e5f6a7b8c9d",
+    title: "A draft about soldering",
+    state: "draft",
+    language: "en",
+    date: "2025-09-01T00:00:00.000Z",
+    thumbnailUrl: null,
+    translated: false,
+  },
+];
+
 function successfulGet(input: RequestInfo | URL) {
   const url = String(input);
   if (url.endsWith("/dashboard/counts")) return json({ data: counts });
+  if (url.includes("/entries?kind=post")) return json({ data: posts });
+  if (url.includes("/entries?")) return json({ data: [] });
   if (url.endsWith("/account")) return json({ data: account });
   return json({ data: signedIn });
 }
@@ -149,7 +185,7 @@ describe("dashboard shell", () => {
 
     const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
     const links = within(navigation).getAllByRole("link");
-    expect(links).toHaveLength(14);
+    expect(links).toHaveLength(15);
     const settings = within(navigation).getByRole("link", { name: "Einstellungen" });
     fireEvent.click(settings);
 
@@ -200,6 +236,51 @@ describe("dashboard shell", () => {
     expect(groupTitles(navigation)[0]).toBe("Inhalt");
   });
 
+  it("lists the posts with figures that count the rows below them", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard();
+
+    const table = await screen.findByRole("table");
+    expect(within(table).getAllByRole("row")).toHaveLength(4);
+    const figures = () =>
+      Array.from(document.querySelectorAll(".stat__value"), (figure) => figure.textContent).join(" ");
+    expect(figures()).toBe("1 1 1 2");
+
+    fireEvent.click(screen.getByRole("button", { name: "DE" }));
+    expect(within(table).getAllByRole("row")).toHaveLength(2);
+    expect(figures()).toBe("0 0 1 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Alle" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Titel durchsuchen" }), {
+      target: { value: "solder" },
+    });
+    expect(within(table).getAllByRole("row")).toHaveLength(2);
+    expect(figures()).toBe("0 1 0 0");
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "public" } });
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText("Kein Eintrag passt zu Suche und Filter.")).toBeTruthy();
+  });
+
+  it("opens an entry from its row with Enter", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    const { router } = renderDashboard();
+
+    const row = (await screen.findByText("A draft about soldering")).closest("tr");
+    if (!row) throw new Error("The draft has no row.");
+    row.focus();
+    fireEvent.keyDown(row, { key: "Enter" });
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/posts/${posts[2]?.id}`));
+    expect(await screen.findByRole("heading", { name: "A draft about soldering" })).toBeTruthy();
+  });
+
   it("shows the real API counts and omits unavailable badges", async () => {
     vi.stubGlobal(
       "fetch",
@@ -231,7 +312,8 @@ describe("dashboard shell", () => {
           ),
         ),
     );
-    renderDashboard();
+    // An area without a list, so the only protected request is the counts.
+    renderDashboard("/media");
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
@@ -260,10 +342,10 @@ describe("dashboard shell", () => {
         .mockResolvedValueOnce(json({ data: counts }))
         .mockResolvedValueOnce(json({ data: null })),
     );
-    const { router } = renderDashboard();
+    const { router } = renderDashboard("/media");
 
     expect(await screen.findByRole("link", { name: "Beiträge 12" })).toBeTruthy();
-    await router.navigate("/pages");
+    await router.navigate("/settings");
 
     expect(await screen.findByRole("heading", { name: "Anmelden" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Beiträge 12" })).toBeNull();
@@ -715,7 +797,7 @@ describe("dashboard shell", () => {
         return Promise.resolve(json({ data: signedIn }));
       }),
     );
-    renderDashboard();
+    renderDashboard("/media");
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Abmelden" }));

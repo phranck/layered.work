@@ -1,0 +1,44 @@
+import type { EntryListItem } from "@layered/schemas";
+import { describe, expect, it } from "vitest";
+import { countEntries, filterEntries } from "./entry-list.js";
+
+function row(overrides: Partial<EntryListItem>): EntryListItem {
+  return {
+    id: crypto.randomUUID(),
+    entryId: crypto.randomUUID(),
+    title: "Untitled",
+    state: "public",
+    language: "en",
+    date: "2025-01-01T00:00:00.000Z",
+    thumbnailUrl: null,
+    translated: false,
+    ...overrides,
+  };
+}
+
+const rows = [
+  row({ title: "NeXTSTEP on a Raspberry Pi", translated: true }),
+  row({ title: "NeXTSTEP auf einem Raspberry Pi", language: "de", state: "hidden", translated: true }),
+  row({ title: "A draft about soldering", state: "draft" }),
+];
+
+describe("filtering an entry list", () => {
+  it("finds a word anywhere in the title, whatever its case", () => {
+    expect(filterEntries(rows, { search: "raspberry", state: "all", language: "all" })).toHaveLength(2);
+    expect(filterEntries(rows, { search: "  SOLDER ", state: "all", language: "all" })).toHaveLength(1);
+  });
+
+  it("narrows by state and by language together", () => {
+    const found = filterEntries(rows, { search: "", state: "hidden", language: "de" });
+    expect(found.map((entry) => entry.title)).toEqual(["NeXTSTEP auf einem Raspberry Pi"]);
+    expect(filterEntries(rows, { search: "", state: "hidden", language: "en" })).toEqual([]);
+  });
+});
+
+describe("the figures above an entry list", () => {
+  it("count the rows they are given and nothing else", () => {
+    expect(countEntries(rows)).toEqual({ published: 1, drafts: 1, hidden: 1, translated: 2, total: 3 });
+    const shown = filterEntries(rows, { search: "", state: "all", language: "en" });
+    expect(countEntries(shown)).toEqual({ published: 1, drafts: 1, hidden: 0, translated: 1, total: 2 });
+  });
+});

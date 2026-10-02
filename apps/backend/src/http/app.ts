@@ -12,6 +12,7 @@ import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
+import { entriesRoutes } from "./routes/entries.js";
 import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
 
 /**
@@ -68,6 +69,7 @@ app.route("/health", health);
 app.route("/auth", auth);
 app.route("/account", account);
 app.route("/dashboard", dashboard);
+app.route("/entries", entriesRoutes);
 app.route("/media", media);
 app.route("/content", content);
 

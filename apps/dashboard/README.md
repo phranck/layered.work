@@ -6,6 +6,10 @@ The sidebar uses shared Sidebar, Section, Row and Logo compounds and the prototy
 
 The sidebar keeps its width and the order of its groups between visits, in local storage under `layered:dashboard:sidebar-width` and `layered:dashboard:sidebar-order`. A group is moved by dragging its title, or from the keyboard with the arrow keys on its grip. The order is stored as group ids, so a group added later appears at the end and a removed one is ignored.
 
+## Entry lists
+
+Posts, pages and projects are one screen with a different kind. It reads `GET /entries?kind=…`, which returns one row per translation, newest first. The search field and the state and language filters narrow that list in the browser, and the figures above it are counted from the rows the table shows. A row opens the entry at `/<area>/<translation id>`. That address shows the entry's title until the editor exists.
+
 ## Interface language
 
 Every string the interface shows comes from the catalogue in `src/dashboard-i18n.ts`, in German and in English. The English catalogue is typed from the German one, so `pnpm --filter @layered/dashboard typecheck` fails when a key exists in one language only. A signed-in author sees the language their account names. The sign-in screen follows the browser, because no account is known yet. A failure the API returns is shown as the dashboard's own sentence for its error code, followed by the request ID, because the API's message is English and written for any caller.

@@ -1,12 +1,13 @@
 import type { AccountMediaPage, AccountProfile, UpdateAccountBody } from "@layered/schemas";
-import { ErrorCode } from "@layered/schemas";
+import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, asc, eq, ilike, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { auditLog, media, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 const PAGE_SIZE = 24;
-const RASTER_MIME_TYPES = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"] as const;
+/** The pictures the dashboard can show: the raster types the library accepts. */
+export const RASTER_MIME_TYPES = ACCEPTED_IMAGE_TYPES;
 type Database = ReturnType<typeof database>;
 
 /**

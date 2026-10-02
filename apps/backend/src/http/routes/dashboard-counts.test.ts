@@ -8,6 +8,7 @@ describe("readDashboardCounts", () => {
       {
         posts: 2,
         pages: 1,
+        projects: 9,
         tags: 3,
         media: 4,
         blocks: 5,
@@ -20,6 +21,7 @@ describe("readDashboardCounts", () => {
     await expect(readDashboardCounts({ execute } as never)).resolves.toEqual({
       posts: 2,
       pages: 1,
+      projects: 9,
       tags: 3,
       media: 4,
       blocks: 5,
@@ -35,6 +37,7 @@ describe("readDashboardCounts", () => {
     const statement = new PgDialect().sqlToQuery(execute.mock.calls[0]?.[0]).sql.replace(/\s+/g, " ");
     expect(statement).toContain('from "entries" where "entries"."kind" = \'post\'');
     expect(statement).toContain('from "entries" where "entries"."kind" = \'page\'');
+    expect(statement).toContain('from "entries" where "entries"."kind" = \'project\'');
     expect(statement).toContain(
       'from "navigation_items" inner join "navigations" on "navigations"."id" = "navigation_items"."navigation_id"',
     );

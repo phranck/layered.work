@@ -6,7 +6,10 @@ import {
   createUploadBody,
   type DashboardCounts,
   dashboardCounts,
+  type EntryKind,
+  type EntryList,
   type ErrorCode,
+  entryList,
   readApiError,
   type SignedInAs,
   type SignInBody,
@@ -55,6 +58,8 @@ export interface DashboardApi {
   fetchDashboardCounts(): Promise<DashboardCounts>;
   fetchAccount(): Promise<AccountProfile>;
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
+  /** Every translation of every entry of one kind, newest first. */
+  fetchEntries(kind: EntryKind): Promise<EntryList>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
@@ -141,6 +146,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchAccountMedia(search, page) {
       const params = new URLSearchParams({ search, page: String(page) });
       return dataOf(await request(`/account/media?${params}`, undefined, true), accountMediaPage);
+    },
+    async fetchEntries(kind) {
+      const params = new URLSearchParams({ kind });
+      return dataOf(await request(`/entries?${params}`, undefined, true), entryList);
     },
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));
