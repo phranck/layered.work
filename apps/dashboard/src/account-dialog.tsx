@@ -16,7 +16,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
-import { InterfaceLanguage } from "./dashboard-i18n.js";
+import { DASHBOARD_LANGUAGES } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
@@ -176,10 +176,7 @@ export function AccountDialog({
                   <Segmented
                     aria-label={text("accountLanguage")}
                     value={draft.interfaceLanguage}
-                    options={[
-                      { value: InterfaceLanguage.German, label: "Deutsch" },
-                      { value: InterfaceLanguage.English, label: "English" },
-                    ]}
+                    options={DASHBOARD_LANGUAGES}
                     onValueChange={(value) =>
                       setDraft((current) => ({
                         ...current,
@@ -189,7 +186,10 @@ export function AccountDialog({
                   />
                 </Field>
                 {(upload.error || save.error || signOut.error) && (
-                  <ErrorNotice error={upload.error ?? save.error ?? signOut.error} />
+                  <ErrorNotice
+                    error={upload.error ?? save.error ?? signOut.error}
+                    keyFor={(failure) => (failure.code === "conflict" ? "accountEmailTaken" : undefined)}
+                  />
                 )}
               </div>
             </div>

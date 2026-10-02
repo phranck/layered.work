@@ -132,7 +132,7 @@ function DashboardSidebar({
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
-        aria-label="Breite der Navigation"
+        aria-label={text("sidebarResize")}
         {...handle}
       />
     </Sidebar>
@@ -231,9 +231,10 @@ export function NotFoundScreen() {
 }
 
 export function RouteErrorScreen() {
+  const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title="Dashboard nicht verfügbar" level={1} />
+      <Section.Title title={text("dashboardUnavailable")} level={1} />
       <Section.Body>
         <ErrorNotice error={useRouteError()} />
       </Section.Body>

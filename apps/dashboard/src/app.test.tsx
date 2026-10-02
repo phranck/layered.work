@@ -51,7 +51,13 @@ function successfulGet(input: RequestInfo | URL) {
   return json({ data: signedIn });
 }
 
-function renderDashboard(path = "/posts", loginAlias?: { username: string; email: string }) {
+function renderDashboard(
+  path = "/posts",
+  loginAlias?: { username: string; email: string },
+  browserLanguages = ["de-AT", "en"],
+) {
+  // The sign-in screen speaks the browser's language; most cases read German.
+  vi.spyOn(navigator, "languages", "get").mockReturnValue(browserLanguages);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClients.add(queryClient);
   let router: ReturnType<typeof createDashboardMemoryRouter>;
@@ -106,6 +112,15 @@ describe("dashboard shell", () => {
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(request).not.toHaveBeenCalled();
   });
+  it("signs in in English where the browser prefers it", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ data: null })));
+    renderDashboard("/login", undefined, ["en-GB", "de"]);
+
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByLabelText("Password")).toBeTruthy();
+    expect(document.documentElement.lang).toBe("en");
+  });
+
   it("does not claim the reader is signed out while the session is loading", () => {
     vi.stubGlobal(
       "fetch",
@@ -172,7 +187,8 @@ describe("dashboard shell", () => {
     renderDashboard();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Zahlen konnten nicht geladen werden.");
+    expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
+    expect(alert.textContent).not.toContain("Zahlen konnten nicht geladen werden.");
     expect(alert.textContent).toContain("req-54");
     expect(screen.getByRole("link", { name: "Beiträge" }).textContent).not.toContain("0");
   });
@@ -262,7 +278,7 @@ describe("dashboard shell", () => {
     renderDashboard();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Sitzung konnte nicht geladen werden.");
+    expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
     expect(screen.queryByRole("navigation", { name: "Dashboard-Bereiche" })).toBeNull();
   });
 
@@ -555,7 +571,7 @@ describe("dashboard shell", () => {
     expect(screen.queryByLabelText("Rolle")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Adresse wird bereits verwendet.");
+    expect(alert.textContent).toContain("Diese E-Mail-Adresse gehört bereits zu einem anderen Konto.");
     expect(alert.textContent).toContain("account-1");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
@@ -612,7 +628,7 @@ describe("dashboard shell", () => {
     renderDashboard();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Konto konnte nicht geladen werden.");
+    expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
     expect(alert.textContent).toContain("profile-1");
     expect(screen.queryByRole("navigation", { name: "Dashboard-Bereiche" })).toBeNull();
   });
@@ -658,7 +674,7 @@ describe("dashboard shell", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Abmelden" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Abmeldung fehlgeschlagen.");
+    expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
     expect(alert.textContent).toContain("logout-1");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });

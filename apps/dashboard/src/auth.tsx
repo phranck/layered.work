@@ -7,6 +7,9 @@ import { useNavigate, useSearchParams } from "react-router";
 import { DashboardApiError } from "./api.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { browserLanguage } from "./dashboard-i18n.js";
+import { ErrorNotice } from "./error-notice.js";
+import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 
 /** The sign-in form's id, which the footer's button names to submit it. */
 const LOGIN_FORM = "login-form";
@@ -16,8 +19,21 @@ export interface LoginScreenProps {
   loginAlias?: { username: string; email: string };
 }
 
-export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
+/**
+ * The sign-in screen, in the browser's language, because nobody is signed in
+ * whose account could say otherwise.
+ */
+export function LoginScreen(props: LoginScreenProps = {}) {
+  return (
+    <DashboardLanguageProvider language={browserLanguage()}>
+      <LoginForm {...props} />
+    </DashboardLanguageProvider>
+  );
+}
+
+function LoginForm({ loginAlias }: LoginScreenProps) {
   const api = useDashboardApi();
+  const { text } = useDashboardLanguage();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,11 +64,7 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
       password: String(form.get("password")),
     });
     if (!parsed.success) {
-      setError(
-        new DashboardApiError(
-          loginAlias ? "Bitte prüfe Benutzername und Passwort." : "Bitte prüfe E-Mail-Adresse und Passwort.",
-        ),
-      );
+      setError(new DashboardApiError(loginAlias ? "signInCheckUsername" : "signInCheckEmail"));
       submittingRef.current = false;
       return;
     }
@@ -60,17 +72,10 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
       await mutation.mutateAsync(parsed.data);
       await navigate(safeReturnTo(searchParams.get("returnTo")), { replace: true });
     } catch (cause) {
-      const apiError =
-        cause instanceof DashboardApiError
-          ? cause
-          : new DashboardApiError("Die Anmeldung ist fehlgeschlagen.");
+      const apiError = cause instanceof DashboardApiError ? cause : new DashboardApiError("serverUnexpected");
       setError(
         apiError.code === "unauthenticated"
-          ? new DashboardApiError(
-              loginAlias
-                ? "Benutzername oder Passwort stimmen nicht."
-                : "E-Mail-Adresse oder Passwort stimmen nicht.",
-            )
+          ? new DashboardApiError(loginAlias ? "signInRefusedUsername" : "signInRefusedEmail")
           : apiError,
       );
     } finally {
@@ -82,17 +87,12 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
     <main className="workbench login-page">
       <Logo href="/login" inkHeight="34px" />
       <Card className="login-card">
-        <Card.Header title="Anmelden" />
+        <Card.Header title={text("signIn")} />
         <Card.Body>
           <form id={LOGIN_FORM} className="login-form" onSubmit={submit}>
-            {expired && <p role="status">Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.</p>}
-            {error && (
-              <p className="dashboard-error" role="alert">
-                {error.message}
-                {error.id && <span className="dashboard-error__id">Fehler-ID: {error.id}</span>}
-              </p>
-            )}
-            <Field label={loginAlias ? "Benutzername" : "E-Mail-Adresse"} htmlFor="login-email">
+            {expired && <p role="status">{text("sessionExpired")}</p>}
+            {error && <ErrorNotice error={error} />}
+            <Field label={text(loginAlias ? "signInUsername" : "signInEmail")} htmlFor="login-email">
               <Input
                 id="login-email"
                 name="email"
@@ -103,7 +103,7 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
                 autoFocus
               />
             </Field>
-            <Field label="Passwort" htmlFor="login-password">
+            <Field label={text("signInPassword")} htmlFor="login-password">
               <Input
                 id="login-password"
                 name="password"
@@ -126,7 +126,7 @@ export function LoginScreen({ loginAlias }: LoginScreenProps = {}) {
             disabled={mutation.isPending}
             icon={<SignInIcon weight="duotone" />}
           >
-            {mutation.isPending ? "Anmeldung läuft…" : "Anmelden"}
+            {mutation.isPending ? text("signInPending") : text("signIn")}
           </Button>
         </Card.Footer>
       </Card>

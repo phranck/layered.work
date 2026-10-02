@@ -23,7 +23,8 @@ describe("dashboard API authentication", () => {
     const api = createDashboardApi(new QueryClient(), expired);
 
     await expect(api.signIn({ email: "nobody@example.com", password: "wrong" })).rejects.toMatchObject({
-      message: "Anmeldung abgelehnt.",
+      key: "errorUnauthenticated",
+      code: "unauthenticated",
       id: "login-1",
     });
     expect(expired).not.toHaveBeenCalled();
@@ -56,9 +57,7 @@ describe("dashboard API authentication", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
     const api = createDashboardApi(new QueryClient(), expired);
 
-    await expect(api.fetchDashboardCounts()).rejects.toThrow(
-      "Die Antwort des Servers konnte nicht gelesen werden.",
-    );
+    await expect(api.fetchDashboardCounts()).rejects.toMatchObject({ key: "serverUnreadable" });
     expect(expired).toHaveBeenCalledTimes(1);
   });
 

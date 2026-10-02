@@ -52,7 +52,7 @@ export function MediaPicker({
             aria-label={text("mediaSearch")}
           />
         </form>
-        {media.isError && <ErrorNotice error={media.error} fallback={text("mediaLoadError")} />}
+        {media.isError && <ErrorNotice error={media.error} fallback="mediaLoadError" />}
         {media.isSuccess && media.data.items.length === 0 && <p>{text("mediaEmpty")}</p>}
         {media.data && (
           <div className="media-picker__grid">
