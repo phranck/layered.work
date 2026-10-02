@@ -9,6 +9,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
 import { SearchProvider } from "./search.js";
+import { useAccount, useSession } from "./session-queries.js";
 import { useSidebarOrder } from "./sidebar-order.js";
 import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
@@ -53,19 +54,8 @@ function DashboardSidebar({
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const handleLogoClick = useLinkClickHandler("/posts");
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const session = useSession();
+  const account = useAccount();
   const counts = useQuery({
     queryKey: ["dashboard-counts", session.data?.id],
     queryFn: api.fetchDashboardCounts,
@@ -161,24 +151,11 @@ function DashboardSidebar({
 }
 
 function DashboardLayout() {
-  const api = useDashboardApi();
   const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
   const workbench = useRef<HTMLDivElement>(null);
   const handle = useSidebarWidth(workbench);
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const account = useAccount();
   return (
     <div ref={workbench} className="workbench dashboard-layout">
       {/* Inside the workbench, so the search dialog it holds reads the
@@ -205,20 +182,7 @@ function DashboardLayout() {
 }
 
 export function DashboardShell() {
-  const api = useDashboardApi();
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const account = useAccount();
   if (!account.data) return null;
   return (
     <DashboardLanguageProvider language={account.data.interfaceLanguage}>
