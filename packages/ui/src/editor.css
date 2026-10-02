@@ -39,6 +39,29 @@
   overscroll-behavior: contain;
 }
 
+/* Each field of the panel opens with its title on a band across the whole card,
+   in the shade the card's header and footer take, so the panel reads as a run
+   of sections rather than as one column of controls. The band reaches past the
+   card's padding to both edges, and its text keeps the place it has without the
+   band: the card's padding plus the inset a label over a control takes. */
+.editor__panel .field:not(.field--inline) > .field__label {
+  margin-inline: calc(-1 * var(--card-padding));
+  padding-block: var(--space-2);
+  padding-inline: calc(var(--card-padding) + var(--control-text-inset));
+  background: var(--card-band-fill);
+  border-block: 1px solid var(--edge-hairline);
+}
+
+/* The first band starts where the header ends, rather than a sliver of padding
+   below it, and the header's rule is the line between the two. */
+.editor__panel .card__body--stack {
+  padding-block-start: 0;
+}
+
+.editor__panel .card__body--stack > .field:first-child > .field__label {
+  border-block-start: 0;
+}
+
 /* --- Toolbar --------------------------------------------------------------- */
 
 .editor__toolbar {
