@@ -117,6 +117,9 @@ importers:
       '@layered/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@lezer/common':
+        specifier: 1.5.2
+        version: 1.5.2
       '@lezer/highlight':
         specifier: ^1.2.5
         version: 1.2.5

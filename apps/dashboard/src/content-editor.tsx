@@ -6,6 +6,7 @@ import { EditorSelection, EditorState, type Extension } from "@codemirror/state"
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX } from "@layered/content";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
+import { contentAutocompletion } from "./content-completion.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 
 /**
@@ -53,6 +54,43 @@ const surfaceTheme = EditorView.theme(
     ".cm-content": { padding: "0", caretColor: "var(--text-accent)" },
     ".cm-line": { padding: "0" },
     ".cm-cursor": { borderLeftColor: "var(--text-accent)" },
+
+    // The completion list is an overlay of the workbench, so it takes the
+    // overlay's surface, edge and lift, and the editor's own face and size.
+    ".cm-tooltip": {
+      color: "var(--text-primary)",
+      backgroundColor: "var(--surface-overlay)",
+      border: "1px solid var(--edge-strong)",
+      borderRadius: "var(--radius-control)",
+      boxShadow: "var(--lift-3)",
+      overflow: "hidden",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "var(--font-mono)",
+      fontSize: "var(--text-code)",
+      maxHeight: "18em",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li": {
+      padding: "var(--space-1) var(--space-3)",
+      lineHeight: "1.5",
+    },
+    ".cm-tooltip-autocomplete ul li[aria-selected]": {
+      color: "var(--text-primary)",
+      backgroundColor: "var(--accent-tint)",
+    },
+    ".cm-completionDetail": {
+      marginLeft: "var(--space-3)",
+      fontStyle: "normal",
+      color: "var(--text-muted)",
+    },
+    ".cm-completionMatchedText": { textDecoration: "none", color: "var(--text-accent)" },
+    ".cm-tooltip.cm-completionInfo": {
+      maxWidth: "28em",
+      padding: "var(--space-2) var(--space-3)",
+      fontFamily: "var(--font-sans)",
+      fontSize: "var(--text-sm)",
+      color: "var(--text-muted)",
+    },
   },
   { dark: true },
 );
@@ -70,6 +108,7 @@ function surfaceExtensions(label: string): Extension[] {
   return [
     contentLanguage(),
     contentHighlighting(),
+    contentAutocompletion(),
     history(),
     drawSelection(),
     EditorState.allowMultipleSelections.of(true),

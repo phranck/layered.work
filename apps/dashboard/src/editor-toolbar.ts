@@ -34,17 +34,28 @@ export type ToolbarComponent = {
 }[ComponentName];
 
 /**
- * The field name an inserted table starts with, shared by its column and its
- * row so the two fit each other from the first keystroke.
+ * What stands where the author has still to write something.
+ *
+ * The toolbar inserts plain text and puts the cursor in the first empty quotes.
+ * Completion inserts a snippet, whose `${}` fields Tab moves between, and whose
+ * fields of the same name are edited together: a table's column and row share
+ * the field `${name}`, so renaming it in one renames it in the other.
  */
-const FIELD_PLACEHOLDER = "name";
+export type SnippetForm = { text: string; field: string; body: string };
+
+/** Plain text, as the toolbar inserts it. */
+export const PLAIN: SnippetForm = { text: '""', field: "name", body: "" };
+
+/** A snippet with tab stops, as completion inserts it. */
+// biome-ignore lint/suspicious/noTemplateCurlyInString: `${}` is CodeMirror's snippet field syntax, not a template.
+export const WITH_STOPS: SnippetForm = { text: '"${}"', field: "${name}", body: "${}" };
 
 /** A bare value standing in for a parameter until the author writes one. */
-function placeholderFor(parameter: Parameter): string {
+function placeholderFor(parameter: Parameter, form: SnippetForm): string {
   switch (parameter.kind) {
     case "text":
     case "slug":
-      return '""';
+      return form.text;
     case "number":
       return String(parameter.default ?? parameter.range?.[0] ?? 1);
     case "step":
@@ -56,7 +67,7 @@ function placeholderFor(parameter: Parameter): string {
     case "icon":
       return "";
     case "field":
-      return FIELD_PLACEHOLDER;
+      return form.field;
   }
 }
 
@@ -71,23 +82,23 @@ function placeholderFor(parameter: Parameter): string {
  *
  * @param name - A component from the register.
  */
-export function componentSnippet(name: ComponentName): string {
+export function componentSnippet(name: ComponentName, form: SnippetForm = PLAIN): string {
   const definition: ComponentDefinition = components[name];
   const parameters = Object.entries(definition.parameters) as [string, Parameter][];
   const unnamed = definition.unnamed;
   const required = parameters.filter(([, parameter]) => parameter.required);
   const values = [
-    ...required.filter(([key]) => key === unnamed).map(([, parameter]) => placeholderFor(parameter)),
+    ...required.filter(([key]) => key === unnamed).map(([, parameter]) => placeholderFor(parameter, form)),
     ...required
       .filter(([key]) => key !== unnamed)
-      .map(([key, parameter]) => `${key}: ${placeholderFor(parameter)}`),
-    ...(definition.fields ? [`${FIELD_PLACEHOLDER}: ${placeholderFor(definition.fields)}`] : []),
+      .map(([key, parameter]) => `${key}: ${placeholderFor(parameter, form)}`),
+    ...(definition.fields ? [`${form.field}: ${placeholderFor(definition.fields, form)}`] : []),
   ];
   const head = values.length > 0 || definition.body === "never" ? `${name}(${values.join(", ")})` : name;
   if (definition.body !== "required") return head;
 
-  const parts = (definition.holds ?? []).map((part) => `  ${componentSnippet(part as ComponentName)}`);
-  return `${head} {\n${parts.length > 0 ? parts.join("\n") : "  "}\n}`;
+  const parts = (definition.holds ?? []).map((part) => `  ${componentSnippet(part as ComponentName, form)}`);
+  return `${head} {\n${parts.length > 0 ? parts.join("\n") : `  ${form.body}`}\n}`;
 }
 
 /**
