@@ -1,0 +1,29 @@
+/*
+ * The web behind a whole screen, and the light over it.
+ *
+ * A fixed layer under everything rather than a background with fixed
+ * attachment, which the browser repositions on every scroll frame. The canvas
+ * draws the web; the layer's own `::after` lays the two washes over it, so the
+ * corner they light is not evenly lit. The geometry is the countdown page's,
+ * where the same background was settled.
+ */
+
+.sky {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sky__web {
+  display: block;
+}
+
+.sky::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(75vw 55vh at 14% -6%, var(--sky-wash-accent), transparent 60%),
+    radial-gradient(65vw 45vh at 90% 6%, var(--sky-wash-neutral), transparent 56%);
+}

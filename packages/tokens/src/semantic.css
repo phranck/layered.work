@@ -66,6 +66,11 @@
   --wash-primary: color-mix(in oklab, var(--accent-500) 11%, transparent);
   --wash-secondary: color-mix(in oklab, var(--ink-600) 30%, transparent);
 
+  /* The two washes over the web behind the countdown and the sign-in screen,
+     fainter than the page washes because the web already lights the field. */
+  --sky-wash-accent: color-mix(in oklab, var(--accent-500) 9%, transparent);
+  --sky-wash-neutral: color-mix(in oklab, var(--ink-600) 22%, transparent);
+
   --hover-tint: rgb(255 255 255 / 4%);
   --press-tint: rgb(0 0 0 / 18%);
 

@@ -40,6 +40,11 @@ export const SCENE_SCRIPT = `
   // reach of 190, and the web drew 30 lines a frame. Tightening the box and
   // widening the reach is what turns it into a web.
   //
+  // The dashboard's sign-in screen draws the same web from
+  // packages/ui/src/sky.ts, with these same constants. It is a module there
+  // because this directory is deleted after the launch and the dashboard
+  // stays; until then a change here is a change there too.
+  //
   // A second copy of the cloud lives in tools/og.html, which draws one still
   // frame of it for the sharing image. It is apart because it runs offline in a
   // headless browser against a page this server never serves. Change the shape

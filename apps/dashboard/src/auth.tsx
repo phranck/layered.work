@@ -1,5 +1,5 @@
 import { MAX_PASSWORD_LENGTH, MaxLength, signInBody } from "@layered/schemas";
-import { Button, Card, Field, Input, Logo } from "@layered/ui";
+import { Button, Card, Field, Input, Logo, SkyBackdrop } from "@layered/ui";
 import { SignInIcon } from "@layered/ui/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
@@ -85,6 +85,7 @@ function LoginForm({ loginAlias }: LoginScreenProps) {
 
   return (
     <main className="workbench login-page">
+      <SkyBackdrop />
       <Logo href="/login" inkHeight="34px" />
       <Card className="login-card">
         <Card.Header title={text("signIn")} />
