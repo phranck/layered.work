@@ -115,7 +115,7 @@ export function AccountDialog({
                 </Field>
                 <Field label={text("accountRole")}>
                   <span className="badge" data-status="public">
-                    {account.role === "owner" ? text("administrator") : text("roleEditor")}
+                    {account.role === "owner" ? text("roleOwner") : text("roleEditor")}
                   </span>
                 </Field>
                 <Field label={text("accountLanguage")} hint={text("accountLanguageHint")}>

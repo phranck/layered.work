@@ -32,10 +32,10 @@
 }
 
 /* The handle is focusable so the width can be set from the keyboard, and the
-   line it draws is what shows the focus, rather than an outline around a strip
-   seven pixels wide. */
+   line it draws is what shows the focus, rather than a ring around a strip seven
+   pixels wide. */
 .dashboard-sidebar__separator:focus-visible {
-  outline: none;
+  box-shadow: none;
 }
 
 .dashboard-sidebar__separator:focus-visible::after {

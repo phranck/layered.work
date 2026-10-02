@@ -66,9 +66,8 @@
 }
 
 .input:focus {
-  outline: none;
-  border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }
 
 /* A stand-in for a multi-line field. Not a textarea, because it is not an

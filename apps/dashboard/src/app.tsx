@@ -123,7 +123,7 @@ function DashboardSidebar({
             note={
               account.data
                 ? account.data.role === "owner"
-                  ? text("administrator")
+                  ? text("roleOwner")
                   : text("roleEditor")
                 : undefined
             }

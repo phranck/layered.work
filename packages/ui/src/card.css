@@ -61,6 +61,13 @@
   transform: translateY(-1px);
 }
 
+/* Keyboard focus on a card that opens something, in the edge and halo every
+   focused control shows. The card's own lift would otherwise cover it. */
+.card--interactive:focus-visible {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
+}
+
 .card--interactive:hover .card__media img {
   transform: scale(1.045);
 }

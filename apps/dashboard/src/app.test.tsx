@@ -475,7 +475,7 @@ describe("dashboard shell", () => {
     renderDashboard();
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
-    expect(within(screen.getByRole("dialog")).getByText("Administrator").closest(".badge")).toBeTruthy();
+    expect(within(screen.getByRole("dialog")).getByText("Owner").closest(".badge")).toBeTruthy();
     expect(screen.queryByLabelText("Rolle")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     const alert = await screen.findByRole("alert");
