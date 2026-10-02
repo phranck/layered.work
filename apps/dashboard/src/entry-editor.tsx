@@ -397,17 +397,6 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               {text(LANGUAGE_TEXT[entry.language])}
             </span>
           </Field>
-          <Field
-            label={text("readingWidth")}
-            hint={text("readingWidthHint", READING_WIDTH_CHARACTERS[draft.readingWidth])}
-          >
-            <Segmented
-              aria-label={text("readingWidth")}
-              value={draft.readingWidth}
-              options={READING_WIDTHS.map((width) => ({ value: width, label: READING_WIDTH_LABELS[width] }))}
-              onValueChange={(value) => update({ readingWidth: value as ReadingWidth })}
-            />
-          </Field>
           <Field label={text("editorTranslation")}>
             {entry.counterpart && counterpartPath ? (
               <a
@@ -436,6 +425,17 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                 {translate.isError && <ErrorNotice error={translate.error} />}
               </>
             )}
+          </Field>
+          <Field
+            label={text("readingWidth")}
+            hint={text("readingWidthHint", READING_WIDTH_CHARACTERS[draft.readingWidth])}
+          >
+            <Segmented
+              aria-label={text("readingWidth")}
+              value={draft.readingWidth}
+              options={READING_WIDTHS.map((width) => ({ value: width, label: READING_WIDTH_LABELS[width] }))}
+              onValueChange={(value) => update({ readingWidth: value as ReadingWidth })}
+            />
           </Field>
           <Field label={text("editorTopics")}>
             {entry.topics.length > 0 ? (
