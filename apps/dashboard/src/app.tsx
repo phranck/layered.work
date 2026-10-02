@@ -1,13 +1,14 @@
 import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
 import { UserCircleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
+import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
 function AreaLink({
   area,
@@ -41,9 +42,11 @@ function AreaLink({
 function DashboardSidebar({
   accountOpen,
   onOpenAccount,
+  handle,
 }: {
   accountOpen: boolean;
   onOpenAccount: () => void;
+  handle: SidebarHandleProps;
 }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
@@ -129,7 +132,8 @@ function DashboardSidebar({
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
-        aria-label="Trennung zwischen Navigation und Inhalt"
+        aria-label="Breite der Navigation"
+        {...handle}
       />
     </Sidebar>
   );
@@ -139,6 +143,8 @@ function DashboardLayout() {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
+  const workbench = useRef<HTMLDivElement>(null);
+  const handle = useSidebarWidth(workbench);
   const session = useQuery({
     queryKey: ["session"],
     queryFn: api.fetchSession,
@@ -153,8 +159,12 @@ function DashboardLayout() {
     staleTime: Infinity,
   });
   return (
-    <div className="workbench dashboard-layout">
-      <DashboardSidebar accountOpen={accountOpen} onOpenAccount={() => setAccountOpen(true)} />
+    <div ref={workbench} className="workbench dashboard-layout">
+      <DashboardSidebar
+        accountOpen={accountOpen}
+        onOpenAccount={() => setAccountOpen(true)}
+        handle={handle}
+      />
       <main className="workbench__main dashboard-main">
         <Outlet />
       </main>

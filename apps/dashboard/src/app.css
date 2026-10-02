@@ -31,14 +31,15 @@
   gap: var(--space-6);
 }
 
-.dashboard-sidebar__separator {
-  cursor: default;
-  touch-action: auto;
+/* The handle is focusable so the width can be set from the keyboard, and the
+   line it draws is what shows the focus, rather than an outline around a strip
+   seven pixels wide. */
+.dashboard-sidebar__separator:focus-visible {
+  outline: none;
 }
 
-.dashboard-sidebar__separator::after,
-.dashboard-sidebar__separator:hover::after {
-  opacity: 0;
+.dashboard-sidebar__separator:focus-visible::after {
+  opacity: 1;
 }
 
 .unfinished {

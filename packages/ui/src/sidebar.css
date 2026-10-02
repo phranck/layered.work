@@ -115,7 +115,6 @@
   content: "";
   background: var(--text-accent);
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .sidebar__handle:hover::after,
@@ -166,7 +165,6 @@
   inset-inline-start: -4px;
   font-size: 14px;
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .sidebar .section__title[data-section-handle] {

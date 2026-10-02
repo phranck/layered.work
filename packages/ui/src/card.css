@@ -38,7 +38,6 @@
   height: 100%;
   object-fit: cover;
   transform: scale(1.01);
-  transition: transform var(--duration-slow) var(--ease);
 }
 
 /* --- Interactive --------------------------------------------------------------
@@ -50,10 +49,6 @@
   color: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    transform var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease),
-    border-color var(--duration) var(--ease);
 }
 
 .card--interactive:hover {
@@ -64,7 +59,6 @@
 
 .card--interactive:active {
   transform: translateY(-1px);
-  transition-duration: var(--duration-instant);
 }
 
 .card--interactive:hover .card__media img {

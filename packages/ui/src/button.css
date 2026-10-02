@@ -27,12 +27,6 @@
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: var(--radius-chip);
-  transition:
-    transform var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease);
 }
 
 .button:active {

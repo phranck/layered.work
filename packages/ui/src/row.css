@@ -37,10 +37,7 @@
 
 .row--interactive {
   cursor: pointer;
-  transition:
-    color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease);
+  transition: border-color var(--duration-fast) var(--ease);
 }
 
 .row--interactive:hover {

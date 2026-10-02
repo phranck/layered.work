@@ -5,8 +5,9 @@
  * dimmed version of that same colour as its fill. A reader who has seen green
  * beside "public" once knows what a green panel means without reading it again.
  *
- * Every part of the change is animated. A state that snaps reads as the
- * interface redrawing itself rather than as the thing having changed.
+ * Choosing an option animates its colour and its edge, because a state that
+ * snaps reads as the interface redrawing itself. The fill is also what hover
+ * changes, and hover feedback is immediate, so the fill does not travel.
  */
 
 .choice {
@@ -34,7 +35,6 @@
   border-radius: var(--card-inner-radius);
   transition:
     color var(--duration) var(--ease),
-    background-color var(--duration) var(--ease),
     border-color var(--duration) var(--ease);
 }
 
