@@ -600,6 +600,10 @@ describe("dashboard shell", () => {
     const { api, router } = renderDashboard("/media");
 
     await screen.findByRole("heading", { name: "Medien" });
+    // The sidebar's own count request has to have taken the first answer, so
+    // the request below is the one left waiting. The heading can appear before
+    // that request is made when the machine is busy.
+    await waitFor(() => expect(countRequests).toBe(1));
     const navigation = router.navigate("/settings");
     const protectedRequest = api.fetchDashboardCounts();
     resolveSession(json({ data: null }));
