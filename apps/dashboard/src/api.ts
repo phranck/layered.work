@@ -11,8 +11,10 @@ import {
   type ErrorCode,
   entryList,
   readApiError,
+  type SearchResults,
   type SignedInAs,
   type SignInBody,
+  searchResults,
   signedInAs,
   type UpdateAccountBody,
   type UploadedMedia,
@@ -60,6 +62,8 @@ export interface DashboardApi {
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
+  /** Entries by title and topic, and media by slug and alt text. */
+  search(text: string): Promise<SearchResults>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
@@ -150,6 +154,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchEntries(kind) {
       const params = new URLSearchParams({ kind });
       return dataOf(await request(`/entries?${params}`, undefined, true), entryList);
+    },
+    async search(text) {
+      const params = new URLSearchParams({ q: text });
+      return dataOf(await request(`/search?${params}`, undefined, true), searchResults);
     },
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));

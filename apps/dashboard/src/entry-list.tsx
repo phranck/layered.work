@@ -8,13 +8,14 @@ import {
 import { Button, Card, Row, Section, Segmented, Select } from "@layered/ui";
 import { MagnifyingGlassIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type KeyboardEvent, useMemo, useState } from "react";
+import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { DashboardArea } from "./routes.js";
+import { SearchShortcutCap, useSearchField } from "./search.js";
 
 /** What the reader narrowed the list to. `all` leaves that dimension open. */
 export interface EntryFilter {
@@ -29,8 +30,10 @@ const OPEN_FILTER: EntryFilter = { search: "", state: "all", language: "all" };
 /**
  * The rows a filter leaves.
  *
- * The search matches anywhere in the title and ignores case, because a reader
- * types the word they remember rather than how the title begins.
+ * The search matches anywhere in the title or in a topic's name and ignores
+ * case, because a reader types the word they remember rather than how the title
+ * begins, and often remembers what a post was about rather than what it was
+ * called.
  *
  * @param rows - The whole list.
  * @param filter - What the reader narrowed it to.
@@ -41,7 +44,9 @@ export function filterEntries(rows: readonly EntryListItem[], filter: EntryFilte
     (row) =>
       (filter.state === "all" || row.state === filter.state) &&
       (filter.language === "all" || row.language === filter.language) &&
-      (search === "" || row.title.toLocaleLowerCase().includes(search)),
+      (search === "" ||
+        row.title.toLocaleLowerCase().includes(search) ||
+        row.topics.some((topic) => topic.toLocaleLowerCase().includes(search))),
   );
 }
 
@@ -126,11 +131,37 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const counts = countEntries(rows);
   const title = text(area.labelKey);
 
+  const { fieldRef, returnFocus } = useSearchField();
+  const field = useRef<HTMLInputElement | null>(null);
+  const body = useRef<HTMLTableSectionElement>(null);
+
   const open = (row: EntryListItem) => navigate(`/${area.path}/${row.id}`);
-  const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, row: EntryListItem) => {
-    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
-    event.preventDefault();
-    open(row);
+
+  // The rows are the search's results, so the arrow keys walk from the field
+  // into them and between them, and back up into the field from the first.
+  const onFieldKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      const first = body.current?.querySelector<HTMLElement>("tr");
+      if (!first) return;
+      event.preventDefault();
+      first.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      returnFocus();
+    }
+  };
+  const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: EntryListItem) => {
+    if (event.target !== event.currentTarget) return;
+    const current = event.currentTarget;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open(row);
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = event.key === "ArrowDown" ? current.nextElementSibling : current.previousElementSibling;
+      if (next instanceof HTMLElement) next.focus();
+      else if (event.key === "ArrowUp") field.current?.focus();
+    }
   };
 
   return (
@@ -155,13 +186,20 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
               <label className="search-field">
                 <MagnifyingGlassIcon aria-hidden="true" />
                 <input
+                  ref={(element) => {
+                    field.current = element;
+                    fieldRef(element);
+                  }}
                   className="input"
                   type="search"
                   aria-label={text("searchTitles")}
                   placeholder={text("searchTitles")}
                   value={filter.search}
                   onChange={(event) => setFilter((current) => ({ ...current, search: event.target.value }))}
+                  onKeyDown={onFieldKeyDown}
+                  data-search-field=""
                 />
+                <SearchShortcutCap />
               </label>
               <Select
                 aria-label={text("filterState")}
@@ -212,13 +250,13 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 <th className="col-action align-end">{text("columnAction")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={body}>
               {rows.map((row) => (
                 <tr
                   key={row.id}
                   tabIndex={0}
                   onClick={() => open(row)}
-                  onKeyDown={(event) => openFromKeyboard(event, row)}
+                  onKeyDown={(event) => onRowKeyDown(event, row)}
                 >
                   <td>
                     <Row.Bare>

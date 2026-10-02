@@ -8,6 +8,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
+import { SearchProvider } from "./search.js";
 import { useSidebarOrder } from "./sidebar-order.js";
 import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
@@ -180,21 +181,25 @@ function DashboardLayout() {
   });
   return (
     <div ref={workbench} className="workbench dashboard-layout">
-      <DashboardSidebar
-        accountOpen={accountOpen}
-        onOpenAccount={() => setAccountOpen(true)}
-        handle={handle}
-      />
-      <main className="workbench__main dashboard-main">
-        <Outlet />
-      </main>
-      {accountOpen && account.data && (
-        <AccountDialog
-          account={account.data}
-          onClose={() => setAccountOpen(false)}
-          onSignedOut={() => navigate("/login", { replace: true })}
+      {/* Inside the workbench, so the search dialog it holds reads the
+          workbench's tokens as the account dialog does. */}
+      <SearchProvider>
+        <DashboardSidebar
+          accountOpen={accountOpen}
+          onOpenAccount={() => setAccountOpen(true)}
+          handle={handle}
         />
-      )}
+        <main className="workbench__main dashboard-main">
+          <Outlet />
+        </main>
+        {accountOpen && account.data && (
+          <AccountDialog
+            account={account.data}
+            onClose={() => setAccountOpen(false)}
+            onSignedOut={() => navigate("/login", { replace: true })}
+          />
+        )}
+      </SearchProvider>
     </div>
   );
 }

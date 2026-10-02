@@ -24,3 +24,4 @@ export * from "./errors.js";
 export * from "./home-blocks.js";
 export * from "./media.js";
 export * from "./request.js";
+export * from "./search.js";

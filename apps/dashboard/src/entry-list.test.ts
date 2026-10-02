@@ -12,6 +12,7 @@ function row(overrides: Partial<EntryListItem>): EntryListItem {
     date: "2025-01-01T00:00:00.000Z",
     thumbnailUrl: null,
     translated: false,
+    topics: [],
     ...overrides,
   };
 }
@@ -19,13 +20,18 @@ function row(overrides: Partial<EntryListItem>): EntryListItem {
 const rows = [
   row({ title: "NeXTSTEP on a Raspberry Pi", translated: true }),
   row({ title: "NeXTSTEP auf einem Raspberry Pi", language: "de", state: "hidden", translated: true }),
-  row({ title: "A draft about soldering", state: "draft" }),
+  row({ title: "A draft about soldering", state: "draft", topics: ["Electronics"] }),
 ];
 
 describe("filtering an entry list", () => {
   it("finds a word anywhere in the title, whatever its case", () => {
     expect(filterEntries(rows, { search: "raspberry", state: "all", language: "all" })).toHaveLength(2);
     expect(filterEntries(rows, { search: "  SOLDER ", state: "all", language: "all" })).toHaveLength(1);
+  });
+
+  it("finds an entry by the name of one of its topics", () => {
+    const found = filterEntries(rows, { search: "electro", state: "all", language: "all" });
+    expect(found.map((entry) => entry.title)).toEqual(["A draft about soldering"]);
   });
 
   it("narrows by state and by language together", () => {

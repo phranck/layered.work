@@ -1,10 +1,34 @@
 import type { EntryKind, EntryList } from "@layered/schemas";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, type SQLWrapper, sql } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
 import type { database } from "../db/connect.js";
-import { entries, entryTranslations, media } from "../db/schema/index.js";
+import { entries, entryTopics, entryTranslations, media, topicTranslations } from "../db/schema/index.js";
 
 type Database = ReturnType<typeof database>;
+
+/**
+ * The names of an entry's topics, alphabetically, each in the given language
+ * where the topic has a name in it and otherwise in whichever it has.
+ *
+ * The old site named its topics in English only, so a German translation would
+ * otherwise list no topics at all until somebody writes the German names.
+ *
+ * @param entryId - The entry, as a column of the outer query.
+ * @param language - The language to prefer, as a column of the outer query.
+ */
+export function topicNames(entryId: SQLWrapper, language: SQLWrapper) {
+  return sql<string[]>`array(
+    select coalesce(
+      (select "own"."name" from ${topicTranslations} as "own"
+        where "own"."topic_id" = "assigned"."topic_id" and "own"."language" = ${language}),
+      (select "other"."name" from ${topicTranslations} as "other"
+        where "other"."topic_id" = "assigned"."topic_id" order by "other"."language" limit 1)
+    ) as "name"
+    from ${entryTopics} as "assigned"
+    where "assigned"."entry_id" = ${entryId}
+    order by 1
+  )`;
+}
 
 /**
  * Every translation of every entry of one kind, newest first.
@@ -35,6 +59,7 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
       pictureId: media.id,
       // The other language of the same entry. The inner table is aliased, so the
       // bare table name inside the subquery still means the outer row.
+      topics: topicNames(entries.id, entryTranslations.language),
       translated: sql<boolean>`exists (
         select 1 from ${entryTranslations} as "sibling"
         where "sibling"."entry_id" = ${entries.id} and "sibling"."id" <> ${entryTranslations.id}
@@ -62,5 +87,6 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
     date: (row.publishedAt ?? row.createdAt).toISOString(),
     thumbnailUrl: row.pictureId ? mediaContentUrl(row.pictureId) : null,
     translated: row.translated,
+    topics: row.topics,
   }));
 }

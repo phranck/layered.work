@@ -47,7 +47,7 @@ export { Model, type ModelProps } from "./model.js";
 export { Note } from "./note.js";
 export { Row, RowList, type RowTextProps } from "./row.js";
 export { Section, type SectionLeadProps, type SectionTitleProps } from "./section.js";
-export { Shortcut, type ShortcutPlatform, type ShortcutProps } from "./shortcut.js";
+export { isApplePlatform, Shortcut, type ShortcutPlatform, type ShortcutProps } from "./shortcut.js";
 export { Sidebar } from "./sidebar.js";
 export { Spacer } from "./spacer.js";
 export { Stack, type StackProps } from "./stack.js";

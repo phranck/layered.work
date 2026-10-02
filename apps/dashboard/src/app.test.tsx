@@ -56,6 +56,7 @@ const posts = [
     date: "2025-08-22T00:00:00.000Z",
     thumbnailUrl: null,
     translated: true,
+    topics: [],
   },
   {
     id: "2f3e4d5c-6b7a-4891-a0b1-c2d3e4f5a6b7",
@@ -66,6 +67,7 @@ const posts = [
     date: "2025-08-22T00:00:00.000Z",
     thumbnailUrl: null,
     translated: true,
+    topics: [],
   },
   {
     id: "3a4b5c6d-7e8f-4901-b2c3-d4e5f6a7b8c9",
@@ -76,6 +78,7 @@ const posts = [
     date: "2025-09-01T00:00:00.000Z",
     thumbnailUrl: null,
     translated: false,
+    topics: [],
   },
 ];
 
@@ -254,7 +257,7 @@ describe("dashboard shell", () => {
     expect(figures()).toBe("0 0 1 1");
 
     fireEvent.click(screen.getByRole("button", { name: "Alle" }));
-    fireEvent.change(screen.getByRole("searchbox", { name: "Titel durchsuchen" }), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "Titel und Themen durchsuchen" }), {
       target: { value: "solder" },
     });
     expect(within(table).getAllByRole("row")).toHaveLength(2);
@@ -263,6 +266,113 @@ describe("dashboard shell", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "public" } });
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText("Kein Eintrag passt zu Suche und Filter.")).toBeTruthy();
+  });
+
+  it("focuses the list's search on Command-K and gives the focus back on Escape", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard();
+
+    const field = await screen.findByRole("searchbox", { name: "Titel und Themen durchsuchen" });
+    await screen.findByRole("table");
+    const footer = screen.getByRole("button", { name: /Frank Gregor/ });
+    footer.focus();
+    const pressed = fireEvent.keyDown(document.activeElement ?? document.body, { key: "k", metaKey: true });
+
+    expect(pressed).toBe(false);
+    expect(document.activeElement).toBe(field);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("⌘K")).toBeTruthy();
+
+    fireEvent.keyDown(field, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toContain("NeXTSTEP on a Raspberry Pi");
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "ArrowUp" });
+    expect(document.activeElement).toBe(field);
+
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(document.activeElement).toBe(footer);
+  });
+
+  it("leaves Command-K alone whilst a text field other than a search has focus", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard("/settings");
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    const name = screen.getByLabelText("Name");
+    name.focus();
+    const pressed = fireEvent.keyDown(name, { key: "k", metaKey: true });
+
+    expect(pressed).toBe(true);
+    expect(document.activeElement).toBe(name);
+    expect(screen.queryByRole("dialog", { name: "Suche" })).toBeNull();
+  });
+
+  it("opens a search over everything where a screen has no list, and opens a hit with Enter", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
+    const found = {
+      entries: [
+        { id: posts[2]?.id, kind: "post", title: "A draft about soldering", language: "en", state: "draft" },
+      ],
+      media: [
+        {
+          id: "7d8e9fa0-b1c2-4d3e-8f40-a1b2c3d4e5f6",
+          slug: "soldering-iron",
+          thumbnailUrl: null,
+          altText: "A soldering iron on the bench",
+        },
+      ],
+    };
+    const request = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(String(input).includes("/search?") ? json({ data: found }) : successfulGet(input)),
+    );
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard("/settings");
+
+    const heading = await screen.findByRole("heading", { name: "Einstellungen" });
+    fireEvent.keyDown(document.body, { key: "k", ctrlKey: true });
+    const dialog = await screen.findByRole("dialog", { name: "Suche" });
+    expect(within(dialog).getByText("Strg K")).toBeTruthy();
+
+    const input = within(dialog).getByRole("combobox", { name: "Einträge und Medien durchsuchen" });
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: "solder" } });
+    await within(dialog).findByRole("option", { name: /A draft about soldering/ });
+    expect(request.mock.calls.some(([url]) => String(url).endsWith("/search?q=solder"))).toBe(true);
+    expect(within(dialog).getByRole("option", { name: /soldering-iron/ })).toBeTruthy();
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input.getAttribute("aria-activedescendant")).toBe("media-7d8e9fa0-b1c2-4d3e-8f40-a1b2c3d4e5f6");
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/posts/${posts[2]?.id}`));
+    expect(screen.queryByRole("dialog", { name: "Suche" })).toBeNull();
+    expect(heading).toBeTruthy();
+  });
+
+  it("closes the search on Escape and gives the focus back", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard("/settings");
+
+    const footer = await screen.findByRole("button", { name: /Frank Gregor/ });
+    footer.focus();
+    fireEvent.keyDown(footer, { key: "k", metaKey: true });
+    const dialog = await screen.findByRole("dialog", { name: "Suche" });
+    fireEvent(dialog, new Event("cancel", { cancelable: true }));
+
+    expect(screen.queryByRole("dialog", { name: "Suche" })).toBeNull();
+    expect(document.activeElement).toBe(footer);
   });
 
   it("opens an entry from its row with Enter", async () => {

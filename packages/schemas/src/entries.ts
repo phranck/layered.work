@@ -48,6 +48,11 @@ export const entryListItem = z.object({
   thumbnailUrl: z.string().nullable(),
   /** Whether the same entry exists in the other language as well. */
   translated: z.boolean(),
+  /**
+   * The names of the entry's topics, in this translation's language where the
+   * topic has a name in it, so a search finds a post by what it is about.
+   */
+  topics: z.array(z.string()),
 });
 export type EntryListItem = z.infer<typeof entryListItem>;
 
