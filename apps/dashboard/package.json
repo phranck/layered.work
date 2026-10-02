@@ -11,6 +11,7 @@
     "test": "vitest run && node --import tsx --conditions=development --test build.test.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.12.4",
@@ -22,6 +23,8 @@
     "@layered/schemas": "workspace:*",
     "@layered/tokens": "workspace:*",
     "@layered/ui": "workspace:*",
+    "@lezer/highlight": "^1.2.5",
+    "@lezer/markdown": "1.7.2",
     "@tanstack/react-query": "5.103.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

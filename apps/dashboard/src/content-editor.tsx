@@ -6,6 +6,7 @@ import { EditorSelection, EditorState, type Extension } from "@codemirror/state"
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX } from "@layered/content";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
+import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 
 /**
  * The writing surface for an entry's body.
@@ -22,12 +23,17 @@ import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from
  * CommonMark as the base, extended by the same list the server's parser is
  * configured from. `@codemirror/lang-markdown` would otherwise default to its
  * own Markdown, which adds subscript, superscript and emoji, and its tree would
- * then differ from the server's on exactly those characters. HTML tag
+ * then differ from the server's on exactly those characters. The highlighting
+ * extension adds tags to node types and no nodes, so the tree stays the same. HTML tag
  * completion is off, because the content language is written with components
  * rather than markup.
  */
 export function contentLanguage(): LanguageSupport {
-  return markdown({ base: commonmarkLanguage, extensions: CONTENT_SYNTAX, completeHTMLTags: false });
+  return markdown({
+    base: commonmarkLanguage,
+    extensions: [...CONTENT_SYNTAX, componentHighlighting],
+    completeHTMLTags: false,
+  });
 }
 
 /**
@@ -63,6 +69,7 @@ const surfaceTheme = EditorView.theme(
 function surfaceExtensions(label: string): Extension[] {
   return [
     contentLanguage(),
+    contentHighlighting(),
     history(),
     drawSelection(),
     EditorState.allowMultipleSelections.of(true),
