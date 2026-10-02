@@ -20,7 +20,8 @@ function AreaLink({
   area: (typeof dashboardGroups)[number]["areas"][number];
   count: number | null | undefined;
 }) {
-  const active = useMatch({ path: `/${area.path}`, end: true });
+  // Not only the area itself: an entry opened from a list stays in that list's area.
+  const active = useMatch({ path: `/${area.path}`, end: false });
   const handleClick = useLinkClickHandler(`/${area.path}`);
   const { text } = useDashboardLanguage();
   const Icon = area.icon;

@@ -389,6 +389,7 @@ describe("dashboard shell", () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/posts/${posts[2]?.id}`));
     expect(await screen.findByRole("heading", { name: "A draft about soldering" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Beiträge 12" }).getAttribute("aria-current")).toBe("page");
   });
 
   it("shows the real API counts and omits unavailable badges", async () => {
