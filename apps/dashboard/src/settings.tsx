@@ -11,7 +11,7 @@ import {
 import { Button, Card, Field, Input, Section, Segmented } from "@layered/ui";
 import { FloppyDiskIcon, ImagesIcon, PaperPlaneTiltIcon, XIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import type { SettingsGroups } from "./api.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -19,6 +19,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import type { DashboardArea } from "./routes.js";
+import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
 
 /**
@@ -96,6 +97,13 @@ function SettingsCard<Group extends keyof SettingsGroups>({
   });
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const formId = `settings-${group}`;
+  const form = useRef<HTMLFormElement>(null);
+
+  // Command-S submits the form exactly as the Save button does, checks included,
+  // and does nothing whilst that button is disabled.
+  useSaveShortcut(() => {
+    if (editable && dirty && !save.isPending) form.current?.requestSubmit();
+  });
 
   const update = (change: Partial<SettingsGroups[Group]>) => {
     setDraft((current) => ({ ...current, ...change }));
@@ -119,7 +127,7 @@ function SettingsCard<Group extends keyof SettingsGroups>({
     <Card>
       <Card.Header title={title} />
       <Card.Body>
-        <form id={formId} className="settings-form" onSubmit={submit} noValidate>
+        <form ref={form} id={formId} className="settings-form" onSubmit={submit} noValidate>
           {children(draft, update, editable)}
           {problems.length > 0 && (
             <ul className="dashboard-error settings-form__problems" role="alert">

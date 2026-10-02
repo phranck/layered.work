@@ -56,12 +56,24 @@ const NON_TEXT_INPUTS = new Set([
  * @param event - The keystroke.
  * @param apple - Whether the modifier is Command rather than Control.
  */
-export function isSearchShortcut(
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
-  apple: boolean,
-): boolean {
+export function isSearchShortcut(event: ShortcutEvent, apple: boolean): boolean {
+  return isModifierShortcut(event, "k", apple);
+}
+
+/** What a shortcut is read from. */
+export type ShortcutEvent = Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">;
+
+/**
+ * Whether a key event is the platform's modifier with one letter and nothing
+ * else: Command on an Apple platform, Control elsewhere.
+ *
+ * @param event - The keystroke.
+ * @param letter - The letter, in lower case.
+ * @param apple - Whether the modifier is Command rather than Control.
+ */
+export function isModifierShortcut(event: ShortcutEvent, letter: string, apple: boolean): boolean {
   const modifier = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  return modifier && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "k";
+  return modifier && !event.altKey && !event.shiftKey && event.key.toLowerCase() === letter;
 }
 
 /**

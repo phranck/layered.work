@@ -36,6 +36,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import type { DashboardArea } from "./routes.js";
+import { useSaveShortcut } from "./save-shortcut.js";
 
 /**
  * Where an entry is written, with everything decided about it in the panel
@@ -175,6 +176,11 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
     const timer = setTimeout(() => save.mutate({ value: draft, automatic: true }), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [autosaving, draft, save]);
+
+  // Command-S does what the Save button does, and nothing while it is disabled.
+  useSaveShortcut(() => {
+    if (dirty && !save.isPending) save.mutate({ value: draft, automatic: false });
+  });
 
   // Closing the tab or reloading with something unsaved asks the browser's own question.
   useEffect(() => {

@@ -665,6 +665,83 @@ describe("dashboard shell", () => {
     expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   });
 
+  it("saves an entry on Command-S, also with the cursor in the writing surface", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    const published = { ...draftDetail, state: "public", publishedAt: "2025-09-02T00:00:00.000Z" };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({ data: { ...published, ...JSON.parse(String(init.body)) } })
+          : String(input).endsWith(`/entries/${draftDetail.id}`)
+            ? json({ data: published })
+            : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    // Nothing changed: the browser's own dialog is kept away and nothing is sent.
+    await screen.findByLabelText("Titel");
+    expect(fireEvent.keyDown(document.body, { key: "s", metaKey: true })).toBe(false);
+    expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "Saved by keyboard" } });
+    const surface = document.querySelector(".cm-content") as HTMLElement;
+    surface.focus();
+    expect(fireEvent.keyDown(surface, { key: "s", metaKey: true })).toBe(false);
+
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({ title: "Saved by keyboard", state: "public" });
+  });
+
+  it("saves the account dialog rather than the entry behind it on Command-S", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/account") && init?.method === "PATCH"
+          ? json({ data: { ...account, displayName: "Renamed" } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "Changed entry" } });
+    fireEvent.click(screen.getByRole("button", { name: /Frank Gregor/ }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Renamed" } });
+    fireEvent.keyDown(screen.getByLabelText("Name"), { key: "s", metaKey: true });
+
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
+    expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+
+  it("saves a settings card on Control-S where the platform uses Control", async () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("Win32");
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/settings/site") && init?.method === "PUT"
+          ? json({ data: settings })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/settings");
+
+    fireEvent.change(await screen.findByLabelText("Titel auf Deutsch"), {
+      target: { value: "LAYERED.werk" },
+    });
+    fireEvent.keyDown(document.body, { key: "s", ctrlKey: true });
+
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          ([url, init]) => String(url).endsWith("/settings/site") && init?.method === "PUT",
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("shows the real API counts and omits unavailable badges", async () => {
     vi.stubGlobal(
       "fetch",

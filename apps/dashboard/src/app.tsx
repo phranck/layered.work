@@ -8,6 +8,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
+import { SaveShortcutProvider } from "./save-shortcut.js";
 import { SearchProvider } from "./search.js";
 import { useAccount, useSession, useSignOut } from "./session-queries.js";
 import { useSidebarOrder } from "./sidebar-order.js";
@@ -173,17 +174,19 @@ function DashboardLayout() {
       {/* Inside the workbench, so the search dialog it holds reads the
           workbench's tokens as the account dialog does. */}
       <SearchProvider>
-        <DashboardSidebar
-          accountOpen={accountOpen}
-          onOpenAccount={() => setAccountOpen(true)}
-          handle={handle}
-        />
-        <main className="workbench__main dashboard-main">
-          <Outlet />
-        </main>
-        {accountOpen && account.data && (
-          <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
-        )}
+        <SaveShortcutProvider>
+          <DashboardSidebar
+            accountOpen={accountOpen}
+            onOpenAccount={() => setAccountOpen(true)}
+            handle={handle}
+          />
+          <main className="workbench__main dashboard-main">
+            <Outlet />
+          </main>
+          {accountOpen && account.data && (
+            <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
+          )}
+        </SaveShortcutProvider>
       </SearchProvider>
     </div>
   );

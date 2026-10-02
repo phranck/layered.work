@@ -21,6 +21,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { CardDialog } from "./modal.js";
+import { useSaveShortcut } from "./save-shortcut.js";
 import { useSignOut } from "./session-queries.js";
 
 export function AccountDialog({ account, onClose }: { account: AccountProfile; onClose: () => void }) {
@@ -52,6 +53,13 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
       setAvatarUrl(picture.url);
       queryClient.invalidateQueries({ queryKey: ["account-media"] });
     },
+  });
+
+  // Command-S submits the dialog as its Save button does. Registered after the
+  // screen behind it, so it is the dialog that saves whilst it is open.
+  const form = useRef<HTMLFormElement>(null);
+  useSaveShortcut(() => {
+    if (!save.isPending && !signOut.isPending && !upload.isPending) form.current?.requestSubmit();
   });
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>) {
@@ -96,7 +104,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
     <>
       <CardDialog labelId="account-dialog-title" onClose={dismiss}>
         <Card.Header id="account-dialog-title" title={text("account")} />
-        <form onSubmit={submit}>
+        <form ref={form} onSubmit={submit}>
           <Card.Body>
             <div className="account">
               <div className="account__portrait">
