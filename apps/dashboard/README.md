@@ -8,7 +8,7 @@ The sidebar keeps its width and the order of its groups between visits, in local
 
 ## The bar
 
-A bar runs across the top of the content, right of the sidebar, and stays in place whilst the screen below it scrolls (`AppBar` in the UI package). Its height is `--app-bar-height`, and the sidebar's mark is centred on the same line. A screen puts things into it with `HeaderStart`, `HeaderCenter` and `HeaderEnd` from `src/app-bar-slots.tsx`, which render into the bar through portals and so read the screen's own state. The start holds the way back or the group the screen belongs to, the centre what just happened, and the end the screen's actions.
+A bar runs across the top of the content, right of the sidebar, and stays in place whilst the screen below it scrolls (`AppBar` in the UI package). Its height is `--app-bar-height`, a control with `--workbench-gutter` above and below it, and the sidebar's mark is centred on the same line. That gutter is the one spacing of the frame: the padding all round the bar, the sidebar's padding, the content area's padding, and the gaps between the parts of a screen. A screen puts things into it with `HeaderStart`, `HeaderCenter` and `HeaderEnd` from `src/app-bar-slots.tsx`, which render into the bar through portals and so read the screen's own state. The start holds the way back or the group the screen belongs to, the centre what just happened, and the end the screen's actions.
 
 ## Entry lists
 

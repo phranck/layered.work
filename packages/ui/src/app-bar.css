@@ -17,9 +17,13 @@
   align-items: center;
   flex: none;
   height: var(--app-bar-height, 56px);
-  padding-inline: var(--space-6);
+  /* The height is a control plus the gutter above and below, so this makes the
+     padding the same on all four sides. */
+  padding-inline: var(--workbench-gutter, var(--space-6));
   background: var(--surface-sunken);
-  border-block-end: 1px solid var(--edge-hairline);
+  /* Drawn over the bar's last pixel rather than taking a pixel of its height, so
+     the padding stays the same above and below what the bar holds. */
+  box-shadow: inset 0 -1px 0 var(--edge-hairline);
 }
 
 .app-bar__start,

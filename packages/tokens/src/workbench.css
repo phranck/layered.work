@@ -94,10 +94,16 @@
      narrow the sidebar may get. */
   --sidebar-width: 248px;
 
-  /* The bar across the top of the content. The sidebar's mark area is the same
-     band less the sidebar's own padding, so the two are one line across the
-     window; a change here moves both. */
-  --app-bar-height: 56px;
+  /* The one step the frame is spaced by: the sidebar's padding, the content
+     area's padding, the gaps between the parts of a screen, and the padding all
+     round the bar. One value, so no two distances on a screen can differ. */
+  --workbench-gutter: var(--space-4);
+
+  /* The bar across the top of the content: a control with the gutter above and
+     below it, so its padding is the gutter on every side. The sidebar's mark
+     area is the same band less the sidebar's padding, so the two are one line
+     across the window; a change here moves both. */
+  --app-bar-height: calc(var(--control-height) + 2 * var(--workbench-gutter));
   --sidebar-min: 190px;
   --sidebar-max: 420px;
 
