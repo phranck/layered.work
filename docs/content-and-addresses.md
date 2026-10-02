@@ -53,7 +53,7 @@ Verified on 2 October 2026: the preview renderer checked 42 legacy addresses and
 pnpm --filter @layered/backend db:import --drafts-from ../../migration-out/site.json
 ```
 
-Publii copied some files into several post directories, and the migration gave each copy its own slug. The database holds a file once, by checksum. The import therefore keeps the first slug and rewrites every body that names another copy to name the kept one, so no picture goes missing when the site reads from the database. Running the import again leaves the same rows.
+Publii copied some files into several post directories, and the migration gave each copy its own slug. The database holds a file once, by checksum. The import therefore keeps the first slug and rewrites every body that names another copy to name the kept one, so no picture goes missing when the site reads from the database. The size copies Publii made of every picture stay out of the library, because this site generates its own. Running the import again leaves the same rows.
 
 ## Proving nothing was lost
 
@@ -79,9 +79,9 @@ Measured on 2 October 2026 against the local database after the import above.
 | Entries in the bin | 1 | 0 |
 | Topics | 23 | 23 |
 | Topic assignments | 30 | 30 |
-| Media, distinct contents | 205 | 202 |
+| Media, distinct contents | 205 | 77 |
 
-The entry in the bin, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 are copies of a file already counted, which leaves 205 distinct files. Three of them are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
+The entry in the bin, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 duplicate a file already counted, which leaves 205 distinct files. 125 of them are the size copies Publii made of every picture, in a `responsive` directory beside each one or as a gallery thumbnail. This site generates its own variants, so the import leaves the copies out of the library, and they would otherwise show every picture several times over. Publii's bodies name them in their `srcset`, which is why the check identifies them by where they lie rather than by whether a body names them. Three further files are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
 
 Every one of the 20 migrated entries has the state, title, date and topics it had in Publii, at the address the rules above give it.
 

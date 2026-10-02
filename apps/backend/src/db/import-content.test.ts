@@ -9,7 +9,7 @@ import {
   hasTestDatabase,
   testDatabase,
 } from "../test-support/database.js";
-import { importContent, type Snapshot, withDrafts } from "./import-content.js";
+import { importContent, isPubliiSizeCopy, type Snapshot, withDrafts } from "./import-content.js";
 import { entries, entryTopics, entryTranslations, media, paths, topics } from "./schema/index.js";
 
 /**
@@ -131,15 +131,31 @@ runs("importing a snapshot", () => {
     expect(unresolved).toEqual([]);
   });
 
+  it("leaves Publii's size copies out of the library", async () => {
+    const database = await testDatabase();
+    await importContent(database, snapshot);
+
+    // The responsive copies and gallery thumbnails Publii made of every picture
+    // are superseded by the variants this site generates, and nothing names them.
+    const copies = new Set(
+      snapshot.media.filter((asset) => isPubliiSizeCopy(asset.source)).map((asset) => asset.slug),
+    );
+    expect(copies.size).toBeGreaterThan(0);
+    const slugs = (await database.select({ slug: media.slug }).from(media)).map((row) => row.slug);
+    expect(slugs.filter((slug) => copies.has(slug))).toEqual([]);
+  });
+
   it("holds a file once however many slugs name it", async () => {
     const database = await testDatabase();
     const report = await importContent(database, snapshot);
 
-    const distinctFiles = new Set(snapshot.media.map((asset) => asset.sha256)).size;
+    // Publii's size copies never reach the library, so the count is over the rest.
+    const kept = snapshot.media.filter((asset) => !isPubliiSizeCopy(asset.source));
+    const distinctFiles = new Set(kept.map((asset) => asset.sha256)).size;
     const rows = await database.select({ checksum: media.checksum }).from(media);
     expect(new Set(rows.map((row) => row.checksum)).size).toBe(rows.length);
-    expect(rows.length + report.skipped.length).toBeLessThanOrEqual(distinctFiles);
-    expect(report.aliased.length).toBe(snapshot.media.length - distinctFiles);
+    expect(rows.length).toBeLessThanOrEqual(distinctFiles);
+    expect(report.aliased.length).toBe(kept.length - distinctFiles);
   });
 
   it("changes nothing the second time it runs", async () => {

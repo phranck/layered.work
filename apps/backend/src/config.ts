@@ -80,6 +80,13 @@ const schema = z.object({
   S3_ACCESS_KEY_ID: optional(z.string()),
   S3_SECRET_ACCESS_KEY: optional(z.string()),
 
+  /**
+   * Where media are read from when no bucket is configured, relative to the
+   * repository's root. Outside production only; production always reads the
+   * bucket.
+   */
+  MEDIA_LOCAL_DIR: optional(z.string()),
+
   SMTP2GO_API_KEY: optional(z.string()),
   EMAIL_FROM: optional(z.string()),
 });

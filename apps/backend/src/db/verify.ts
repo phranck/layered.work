@@ -56,7 +56,11 @@ function render(verification: Verification): string {
   const absent = [
     "| File | Named by a post |",
     "| --- | --- |",
-    ...verification.absentFiles.map((file) => `| \`${file.path}\` | ${file.named ? "**yes**" : "no"} |`),
+    // Publii's size copies are counted in the table above and left out of this
+    // list, which would otherwise be a hundred lines of the same pictures.
+    ...verification.absentFiles
+      .filter((file) => !file.copy)
+      .map((file) => `| \`${file.path}\` | ${file.named ? "**yes**" : "no"} |`),
   ];
   return [...counts, "", ...entries, "", ...absent, ""].join("\n");
 }

@@ -35,8 +35,8 @@ function agreeing(): { source: Source; target: Target } {
       ],
       topics: ["a"],
       files: [
-        { path: "posts/1/one.jpg", sha256: "one", named: true },
-        { path: "posts/2/one.jpg", sha256: "one", named: false },
+        { path: "posts/1/one.jpg", sha256: "one", named: true, copy: false },
+        { path: "posts/2/one.jpg", sha256: "one", named: false, copy: false },
       ],
     },
     target: {
@@ -133,9 +133,18 @@ describe("comparing Publii with the database", () => {
     expect(compare(source, target).passed).toBe(false);
   });
 
+  it("does not fail on an absent size copy, though Publii's body names it", () => {
+    const { source, target } = agreeing();
+    source.files.push({ path: "posts/1/responsive/one-md.webp", sha256: "copy", named: true, copy: true });
+
+    const result = compare(source, target);
+    expect(result.passed).toBe(true);
+    expect(result.absentFiles.map((file) => file.path)).toEqual(["posts/1/responsive/one-md.webp"]);
+  });
+
   it("fails on an absent file a post names, and not on one nobody names", () => {
     const { source, target } = agreeing();
-    source.files.push({ path: "plugins/map.svg", sha256: "unnamed", named: false });
+    source.files.push({ path: "plugins/map.svg", sha256: "unnamed", named: false, copy: false });
     expect(compare(source, target).passed).toBe(true);
 
     target.checksums = new Set();

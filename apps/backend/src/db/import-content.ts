@@ -117,6 +117,25 @@ function mediaKindOf(mime: string): "image" | "video" | "document" | "model" {
  * than by this function, which is deliberate: the check belongs where every
  * writer meets it.
  */
+/**
+ * Whether an asset is one of the size copies Publii made of a picture.
+ *
+ * Publii wrote a set of responsive copies of every picture into a `responsive`
+ * directory beside it, and a thumbnail of every gallery image. This site
+ * generates its own variants, so those copies are superseded, and no body or
+ * featured image names one. Written into the library they would show every
+ * picture several times over in the picker.
+ *
+ * `verify-migration.ts` asks the same question of Publii's media directory, so
+ * the import and the check agree about which files were left out on purpose.
+ *
+ * @param source - The file's path inside Publii's media directory, such as
+ *   `posts/14/responsive/Hero-md.webp`.
+ */
+export function isPubliiSizeCopy(source: string): boolean {
+  return source.includes("/responsive/") || /-thumbnail\.[a-z0-9]+$/i.test(source);
+}
+
 async function importMedia(
   database: Database,
   snapshot: Snapshot,
@@ -126,6 +145,13 @@ async function importMedia(
   const bychecksum = new Map<string, { id: string; slug: string }>();
 
   for (const asset of snapshot.media) {
+    if (isPubliiSizeCopy(asset.source)) {
+      report.skipped.push({
+        slug: asset.slug,
+        reason: "a size copy Publii made, superseded by generated variants",
+      });
+      continue;
+    }
     const kind = mediaKindOf(asset.mime);
     if (kind === "image" && (asset.width === undefined || asset.height === undefined)) {
       report.skipped.push({ slug: asset.slug, reason: "an image with no dimensions" });
