@@ -1,11 +1,20 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ComponentType } from "react";
 import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject, redirect } from "react-router";
 import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { EntryListScreen, EntryScreen } from "./entry-list.js";
-import { dashboardAreas } from "./routes.js";
+import { type DashboardArea, dashboardAreas } from "./routes.js";
+import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+
+/** The System group's areas, each of which is one group of the site's settings. */
+const SETTINGS_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
+  settings: SiteSettingsScreen,
+  smtp: MailSettingsScreen,
+  analytics: AnalyticsSettingsScreen,
+};
 
 export interface DashboardRouterOptions {
   api: DashboardApi;
@@ -56,6 +65,8 @@ export function dashboardRouteObjects({
         { index: true, element: <Navigate to="/posts" replace /> },
         ...dashboardAreas.map((area): RouteObject => {
           const kind = area.entryKind;
+          const Screen = SETTINGS_SCREENS[area.id];
+          if (Screen) return { path: area.path, element: <Screen area={area} /> };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };
           return {
             path: area.path,

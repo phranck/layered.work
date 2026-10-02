@@ -82,8 +82,21 @@ const posts = [
   },
 ];
 
+const settings = {
+  site: {
+    title: { en: "LAYERED.work", de: "LAYERED.work" },
+    footerLine: { en: "", de: "" },
+    defaultLanguage: "en",
+    socialImageMediaId: null,
+    socialImageUrl: null,
+  },
+  mail: { senderAddress: "hello@layered.work", senderName: "LAYERED.work", apiKeyConfigured: true },
+  analytics: { umamiWebsiteId: "3e266ac6-8103-4bef-bedb-7d127ed75cc4" },
+};
+
 function successfulGet(input: RequestInfo | URL) {
   const url = String(input);
+  if (url.endsWith("/settings")) return json({ data: settings });
   if (url.endsWith("/dashboard/counts")) return json({ data: counts });
   if (url.includes("/entries?kind=post")) return json({ data: posts });
   if (url.includes("/entries?")) return json({ data: [] });
@@ -373,6 +386,102 @@ describe("dashboard shell", () => {
 
     expect(screen.queryByRole("dialog", { name: "Suche" })).toBeNull();
     expect(document.activeElement).toBe(footer);
+  });
+
+  it("lets the owner change the site's title in both languages and save it", async () => {
+    const saved = {
+      ...settings,
+      site: { ...settings.site, title: { en: "LAYERED.work", de: "LAYERED.werk" } },
+    };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/settings/site") && init?.method === "PUT"
+          ? json({ data: saved })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/settings");
+
+    const save = await screen.findByRole("button", { name: "Speichern" });
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Titel auf Deutsch"), { target: { value: "LAYERED.werk" } });
+    expect((save as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(save);
+
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          ([url, init]) => String(url).endsWith("/settings/site") && init?.method === "PUT",
+        ),
+      ).toBe(true),
+    );
+    const put = request.mock.calls.find(
+      ([url, init]) => String(url).endsWith("/settings/site") && init?.method === "PUT",
+    );
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({
+      title: { en: "LAYERED.work", de: "LAYERED.werk" },
+      footerLine: { en: "", de: "" },
+      defaultLanguage: "en",
+      socialImageMediaId: null,
+    });
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement).disabled).toBe(true),
+    );
+  });
+
+  it("says why a sender name cannot be saved, before anything is sent", async () => {
+    const request = vi.fn((input: RequestInfo | URL) => Promise.resolve(successfulGet(input)));
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/smtp");
+
+    fireEvent.change(await screen.findByLabelText("Absendername"), { target: { value: "Evil <x@y.z>" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "weder spitze Klammern noch Anführungszeichen",
+    );
+    expect(request.mock.calls.some(([url]) => String(url).includes("/settings/mail"))).toBe(false);
+    expect((screen.getByRole("button", { name: "Testnachricht senden" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(screen.getByText("Speichere die Änderungen, bevor du eine Testnachricht sendest.")).toBeTruthy();
+  });
+
+  it("sends a test message and shows what SMTP2GO answered", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/settings/mail/test") && init?.method === "POST"
+          ? json({ data: { accepted: false, answer: "sender not verified", recipient: "frank@example.com" } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/smtp");
+
+    expect(await screen.findByText("Gesetzt")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Testnachricht senden" }));
+
+    const outcome = await screen.findByRole("status");
+    expect(outcome.textContent).toContain("SMTP2GO hat die Nachricht an frank@example.com nicht angenommen.");
+    expect(outcome.textContent).toContain("sender not verified");
+  });
+
+  it("shows an author who is not the owner the settings without letting them change anything", async () => {
+    const editor = { ...account, role: "editor" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(String(input).endsWith("/account") ? json({ data: editor }) : successfulGet(input)),
+      ),
+    );
+    renderDashboard("/analytics");
+
+    const field = await screen.findByLabelText("Website-ID");
+    expect((field as HTMLInputElement).value).toBe(settings.analytics.umamiWebsiteId);
+    expect((field as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText("Nur der Owner kann diese Einstellungen ändern.")).toBeTruthy();
+    expect(screen.getByText("https://umami.layered.work")).toBeTruthy();
   });
 
   it("opens an entry from its row with Enter", async () => {

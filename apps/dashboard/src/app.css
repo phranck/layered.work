@@ -411,7 +411,10 @@ dialog.account-dialog::backdrop {
   text-align: right;
 }
 
-.account__fields .badge {
+/* A badge standing in for a field's control, such as a role or a status. A
+   field stretches its control to the full width, which is right for an input
+   and wrong for a pill. */
+.field > .badge {
   align-self: flex-start;
 }
 /* The account's portrait in the sidebar is round, as it is in the account
@@ -455,7 +458,115 @@ dialog.account-dialog::backdrop {
   white-space: nowrap;
 }
 
+/* --- Settings ---------------------------------------------------------------
+   One card per group, its fields in a column, with the two languages of one
+   value side by side so a reader compares them as a pair. */
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-form__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.settings-form__problems {
+  padding-inline-start: var(--space-6);
+}
+
+/* A sentence about the whole form, set in from the edge as a field's hint is,
+   so it lines up with the labels above it rather than with the inputs. */
+.settings-form__note {
+  margin: 0;
+  padding-inline-start: var(--control-text-inset);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* The provider's answer, quoted as it came, under a sentence that says what it
+   means. Accepted reads as success, anything else as a problem. */
+.settings-form__outcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.settings-form__outcome p {
+  margin: 0;
+}
+
+.settings-form__outcome[data-accepted="true"] {
+  color: var(--state-success);
+}
+
+.settings-form__outcome[data-accepted="false"] {
+  color: var(--state-danger);
+}
+
+.settings-form__answer {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.settings-form__value,
+.settings-form__code {
+  font-family: var(--font-mono);
+}
+
+.settings-form__value {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* A chosen picture with its name and the controls that change it, on one line
+   that reads as the field's value. */
+.media-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--input-height);
+  padding: var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+/* Shown in the shape a social card has, 1200 by 630, so the crop is the one a
+   shared link will show. */
+.media-field img {
+  flex: none;
+  height: var(--control-height);
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border-radius: var(--radius-chip);
+}
+
+.media-field__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-field__actions {
+  margin-inline-start: auto;
+}
+
 @media (width < 1100px) {
+  .settings-form__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .workbench {
     grid-template-columns: minmax(0, 1fr);
     height: auto;

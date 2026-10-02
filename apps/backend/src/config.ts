@@ -87,8 +87,12 @@ const schema = z.object({
    */
   MEDIA_LOCAL_DIR: optional(z.string()),
 
+  /**
+   * The key mail is sent with. Absent means sending is off, and the dashboard
+   * says so. Who mail comes from is a setting edited in the dashboard, because
+   * it is an address rather than a secret.
+   */
   SMTP2GO_API_KEY: optional(z.string()),
-  EMAIL_FROM: optional(z.string()),
 });
 
 /** What the environment turned out to say. */

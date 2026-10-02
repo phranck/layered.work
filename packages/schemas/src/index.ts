@@ -25,3 +25,4 @@ export * from "./home-blocks.js";
 export * from "./media.js";
 export * from "./request.js";
 export * from "./search.js";
+export * from "./settings.js";

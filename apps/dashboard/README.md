@@ -14,6 +14,10 @@ Posts, pages and projects are one screen with a different kind. It reads `GET /e
 
 Command-K on an Apple platform and Control-K elsewhere takes the reader to the search for the screen they are on. On an entry list it focuses the list's own field, which matches titles and topic names. The arrow keys move into the rows, and Escape gives the focus back. On a screen without a list it opens a dialog that asks `GET /search?q=…` for entries by title and topic and for media by slug and alt text. The shortcut does nothing whilst another text field has focus.
 
+## Settings
+
+The System group's three areas are the three groups of the site's settings, each a card with its own save. Settings holds the site's title and footer line in both languages, its default language and the fallback picture for social cards. SMTP2GO holds the sender address and name, shows whether `SMTP2GO_API_KEY` reached the API, and sends a test message to the signed-in owner's own address, reporting SMTP2GO's answer. Umami states the instance and holds the website ID. Every author can read them, and only the owner can change them. A draft is checked against the same schema the API uses, so a refused field says why. The key itself is a secret variable on the backend service and never passes through the dashboard.
+
 ## Interface language
 
 Every string the interface shows comes from the catalogue in `src/dashboard-i18n.ts`, in German and in English. The English catalogue is typed from the German one, so `pnpm --filter @layered/dashboard typecheck` fails when a key exists in one language only. A signed-in author sees the language their account names. The sign-in screen follows the browser, because no account is known yet. A failure the API returns is shown as the dashboard's own sentence for its error code, followed by the request ID, because the API's message is English and written for any caller.

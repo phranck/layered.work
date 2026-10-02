@@ -1,6 +1,7 @@
 import {
   type AccountMediaPage,
   type AccountProfile,
+  type AnalyticsSettings,
   accountMediaPage,
   accountProfile,
   createUploadBody,
@@ -10,12 +11,18 @@ import {
   type EntryList,
   type ErrorCode,
   entryList,
+  type MailSettings,
   readApiError,
   type SearchResults,
+  type SettingsView,
   type SignedInAs,
   type SignInBody,
+  type SiteSettings,
   searchResults,
+  settingsView,
   signedInAs,
+  type TestMailResult,
+  testMailResult,
   type UpdateAccountBody,
   type UploadedMedia,
   updateAccountBody,
@@ -49,6 +56,13 @@ export class DashboardApiError extends Error {
   }
 }
 
+/** What each group of settings holds, by the name its route takes. */
+export interface SettingsGroups {
+  site: SiteSettings;
+  mail: MailSettings;
+  analytics: AnalyticsSettings;
+}
+
 /** Anything that checks an unknown value and hands back a typed one, which every schema does. */
 interface ResponseSchema<Value> {
   safeParse(value: unknown): { success: true; data: Value } | { success: false };
@@ -64,6 +78,15 @@ export interface DashboardApi {
   fetchEntries(kind: EntryKind): Promise<EntryList>;
   /** Entries by title and topic, and media by slug and alt text. */
   search(text: string): Promise<SearchResults>;
+  /** The site's settings, and whether a mail key is configured. */
+  fetchSettings(): Promise<SettingsView>;
+  /** Stores one group of settings and returns all of them as they now stand. */
+  saveSettings<Group extends keyof SettingsGroups>(
+    group: Group,
+    value: SettingsGroups[Group],
+  ): Promise<SettingsView>;
+  /** Sends a test message to the signed-in owner and reports what SMTP2GO answered. */
+  sendTestMail(): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
@@ -158,6 +181,15 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async search(text) {
       const params = new URLSearchParams({ q: text });
       return dataOf(await request(`/search?${params}`, undefined, true), searchResults);
+    },
+    async fetchSettings() {
+      return dataOf(await request("/settings", undefined, true), settingsView);
+    },
+    async saveSettings(group, value) {
+      return dataOf(await request(`/settings/${group}`, jsonBody("PUT", value), true), settingsView);
+    },
+    async sendTestMail() {
+      return dataOf(await request("/settings/mail/test", { method: "POST" }, true), testMailResult);
     },
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));

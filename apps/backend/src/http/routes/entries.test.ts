@@ -1,7 +1,7 @@
 import { type EntryList, entryList, readApiError } from "@layered/schemas";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeTestDatabase, hasTestDatabase } from "../../test-support/database.js";
-import { editorCookie, seedEditorialLibrary } from "../../test-support/editorial.js";
+import { signedInCookie, seedEditorialLibrary } from "../../test-support/editorial.js";
 import { app } from "../app.js";
 
 /**
@@ -28,7 +28,7 @@ runs("the entry list", () => {
   });
 
   it("lists one row per translation of the asked kind, newest first", async () => {
-    const rows = await list("post", await editorCookie());
+    const rows = await list("post", await signedInCookie());
 
     expect(rows.map((row) => row.title)).toEqual(["A draft", "Auf Deutsch versteckt", "Published in English"]);
     expect(rows.map((row) => row.date)).toEqual([
@@ -39,7 +39,7 @@ runs("the entry list", () => {
   });
 
   it("says which rows have a counterpart in the other language", async () => {
-    const rows = await list("post", await editorCookie());
+    const rows = await list("post", await signedInCookie());
     const translated = Object.fromEntries(rows.map((row) => [row.title, row.translated]));
 
     expect(translated).toEqual({
@@ -50,7 +50,7 @@ runs("the entry list", () => {
   });
 
   it("names each row's topics in its own language where the topic has a name in it", async () => {
-    const rows = await list("post", await editorCookie());
+    const rows = await list("post", await signedInCookie());
     const named = Object.fromEntries(rows.map((row) => [row.title, row.topics]));
 
     expect(named).toEqual({
@@ -61,7 +61,7 @@ runs("the entry list", () => {
   });
 
   it("offers a thumbnail only for a picture the dashboard can show", async () => {
-    const rows = await list("post", await editorCookie());
+    const rows = await list("post", await signedInCookie());
     const english = rows.find((row) => row.language === "en" && row.translated);
     const german = rows.find((row) => row.language === "de");
 
@@ -70,7 +70,7 @@ runs("the entry list", () => {
   });
 
   it("keeps pages apart from posts", async () => {
-    const rows = await list("page", await editorCookie());
+    const rows = await list("page", await signedInCookie());
     expect(rows.map((row) => row.title)).toEqual(["A page"]);
   });
 
@@ -80,7 +80,7 @@ runs("the entry list", () => {
   });
 
   it("refuses a kind it does not know and a parameter it did not ask for", async () => {
-    const cookie = await editorCookie();
+    const cookie = await signedInCookie();
     for (const query of ["kind=draft", "kind=post&owner=me", ""]) {
       const response = await app.request(`/entries?${query}`, { headers: { cookie } });
       expect(response.status).toBe(400);
