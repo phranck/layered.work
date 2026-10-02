@@ -6,6 +6,7 @@ import { createDashboardApi } from "./api.js";
 import { expirationLoginLocation } from "./auth-routing.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { createDashboardMemoryRouter } from "./router.js";
+import { SIDEBAR_ORDER_KEY } from "./sidebar-order.js";
 
 const queryClients = new Set<QueryClient>();
 
@@ -76,8 +77,16 @@ function renderDashboard(
   return { api, queryClient, router };
 }
 
+/** The sidebar's group titles, top to bottom. */
+function groupTitles(navigation: HTMLElement): string[] {
+  return within(navigation)
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent ?? "");
+}
+
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   for (const queryClient of queryClients) queryClient.clear();
   queryClients.clear();
   vi.restoreAllMocks();
@@ -151,6 +160,44 @@ describe("dashboard shell", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "LAYERED.work" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
+  });
+
+  it("lists the sidebar's groups in the order the reader left them", async () => {
+    localStorage.setItem(SIDEBAR_ORDER_KEY, JSON.stringify(["system", "content"]));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard();
+
+    const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
+    expect(groupTitles(navigation)).toEqual(["System", "Inhalt", "Startseite", "Struktur", "Formulare"]);
+  });
+
+  it("moves a group with the arrow keys on its grip and keeps the new order", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard();
+
+    const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
+    const grip = within(navigation).getByRole("button", { name: /„Inhalt“ verschieben/ });
+    grip.focus();
+    fireEvent.keyDown(grip, { key: "ArrowDown" });
+
+    expect(groupTitles(navigation)).toEqual(["Startseite", "Inhalt", "Struktur", "Formulare", "System"]);
+    expect(JSON.parse(localStorage.getItem(SIDEBAR_ORDER_KEY) ?? "[]")).toEqual([
+      "landing",
+      "content",
+      "structure",
+      "forms",
+      "system",
+    ]);
+    expect(document.activeElement).toBe(grip);
+    fireEvent.keyDown(grip, { key: "ArrowUp" });
+    fireEvent.keyDown(grip, { key: "ArrowUp" });
+    expect(groupTitles(navigation)[0]).toBe("Inhalt");
   });
 
   it("shows the real API counts and omits unavailable badges", async () => {

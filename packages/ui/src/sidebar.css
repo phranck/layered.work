@@ -163,8 +163,22 @@
 .section__grip {
   position: absolute;
   inset-inline-start: -4px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   font-size: 14px;
+  color: inherit;
+  cursor: grab;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-chip);
   opacity: 0;
+}
+
+/* A grip that is a button can be reached from the keyboard, and it shows itself
+   when it is, since a focused control nobody can see is no control at all. */
+.section__grip:focus-visible {
+  opacity: 1;
 }
 
 .sidebar .section__title[data-section-handle] {

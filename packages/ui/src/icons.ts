@@ -8,6 +8,7 @@
 export type { IconProps, IconWeight } from "@phosphor-icons/react";
 export { ArticleIcon } from "@phosphor-icons/react/dist/ssr/Article";
 export { ChartLineIcon } from "@phosphor-icons/react/dist/ssr/ChartLine";
+export { DotsSixVerticalIcon } from "@phosphor-icons/react/dist/ssr/DotsSixVertical";
 export { EnvelopeSimpleIcon } from "@phosphor-icons/react/dist/ssr/EnvelopeSimple";
 export { FilesIcon } from "@phosphor-icons/react/dist/ssr/Files";
 export { FloppyDiskIcon } from "@phosphor-icons/react/dist/ssr/FloppyDisk";

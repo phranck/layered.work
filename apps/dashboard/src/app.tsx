@@ -1,5 +1,5 @@
 import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { UserCircleIcon } from "@layered/ui/icons";
+import { DotsSixVerticalIcon, UserCircleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
@@ -8,6 +8,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
+import { useSidebarOrder } from "./sidebar-order.js";
 import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
 function AreaLink({
@@ -71,8 +72,11 @@ function DashboardSidebar({
     retry: false,
   });
   const visibleCounts = session.isSuccess && session.data ? counts.data : undefined;
+  const sidebar = useRef<HTMLElement>(null);
+  const slot = useRef<HTMLDivElement>(null);
+  const groups = useSidebarOrder(dashboardGroups, sidebar, slot);
   return (
-    <Sidebar>
+    <Sidebar ref={sidebar}>
       <Sidebar.Header>
         <Logo href="/posts" inkHeight="26px" onClick={handleLogoClick} />
       </Sidebar.Header>
@@ -80,9 +84,22 @@ function DashboardSidebar({
         {session.isError && <ErrorNotice error={session.error} />}
         {session.data && counts.isError && <ErrorNotice error={counts.error} />}
         <nav aria-label={text("dashboardNav")}>
-          {dashboardGroups.map((group) => (
-            <Section key={group.id}>
-              <Section.Title title={text(group.labelKey)} />
+          {groups.ordered.map((group) => (
+            <Section key={group.id} ref={groups.ref(group.id)}>
+              <Section.Title
+                title={text(group.labelKey)}
+                lead={
+                  <button
+                    type="button"
+                    className="section__grip"
+                    aria-label={text("moveGroup", text(group.labelKey))}
+                    {...groups.grip(group.id)}
+                  >
+                    <DotsSixVerticalIcon aria-hidden="true" />
+                  </button>
+                }
+                {...groups.handle(group.id)}
+              />
               <Section.Body>
                 <RowList>
                   {group.areas.map((area) => (
@@ -97,6 +114,9 @@ function DashboardSidebar({
             </Section>
           ))}
         </nav>
+        {/* Where a dragged group will land. One element for every drag, so
+            nothing is created whilst a gesture runs. */}
+        <div ref={slot} className="drop-slot" aria-hidden="true" />
       </Sidebar.Body>
       <Sidebar.Footer>
         <Row.Button

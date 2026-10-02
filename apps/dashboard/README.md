@@ -4,6 +4,8 @@ Vite builds the React application to `dist/`. React Router data routes share the
 
 The sidebar uses shared Sidebar, Section, Row and Logo compounds and the prototype's workbench tokens. TanStack Query reads the signed-in identity and authenticated database counts. Unavailable storage domains have no badge, and a failed count shows an error rather than a zero.
 
+The sidebar keeps its width and the order of its groups between visits, in local storage under `layered:dashboard:sidebar-width` and `layered:dashboard:sidebar-order`. A group is moved by dragging its title, or from the keyboard with the arrow keys on its grip. The order is stored as group ids, so a group added later appears at the end and a removed one is ignored.
+
 ## Interface language
 
 Every string the interface shows comes from the catalogue in `src/dashboard-i18n.ts`, in German and in English. The English catalogue is typed from the German one, so `pnpm --filter @layered/dashboard typecheck` fails when a key exists in one language only. A signed-in author sees the language their account names. The sign-in screen follows the browser, because no account is known yet. A failure the API returns is shown as the dashboard's own sentence for its error code, followed by the request ID, because the API's message is English and written for any caller.

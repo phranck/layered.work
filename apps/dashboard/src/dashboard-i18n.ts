@@ -58,6 +58,7 @@ const de = {
   settings: "Einstellungen",
   dashboardNav: "Dashboard-Bereiche",
   sidebarResize: "Seitenleiste breiter oder schmaler ziehen",
+  moveGroup: (group: string) => `„${group}“ verschieben, mit den Pfeiltasten nach oben oder unten`,
 
   // Session and account
   loadingSession: "Sitzung wird geladen…",
@@ -167,6 +168,7 @@ const en: Catalogue = {
   settings: "Settings",
   dashboardNav: "Dashboard areas",
   sidebarResize: "Drag to widen or narrow the sidebar",
+  moveGroup: (group) => `Move “${group}” up or down with the arrow keys`,
 
   loadingSession: "Loading session…",
   unavailableSession: "Session unavailable",
