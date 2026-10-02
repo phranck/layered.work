@@ -27,6 +27,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
+import { HeaderStart } from "./app-bar-slots.js";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -118,21 +119,27 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
     );
   }
   if (!entry.data)
-    return <Section.Title eyebrow={<BackToList area={area} />} title={text("loading")} level={1} />;
+    return (
+      <>
+        <BackToList area={area} />
+        <Section.Title title={text("loading")} level={1} />
+      </>
+    );
   // Keyed by the translation, so opening another one starts a fresh draft.
   return <EntryEditor key={entry.data.id} area={area} kind={kind} entry={entry.data} />;
 }
 
-/** The way back to the list, standing where the list's eyebrow stood. */
+/** The way back to the list, at the start of the dashboard's bar. */
 function BackToList({ area }: { area: DashboardArea }) {
   const { text } = useDashboardLanguage();
   const to = `/${area.path}`;
   const onClick = useLinkClickHandler(to);
   return (
-    <a className="workbench-back" href={to} onClick={onClick}>
-      <ArrowLeftIcon aria-hidden="true" />
-      {text(area.labelKey)}
-    </a>
+    <HeaderStart>
+      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon weight="duotone" />}>
+        {text(area.labelKey)}
+      </Button.Link>
+    </HeaderStart>
   );
 }
 
@@ -246,11 +253,8 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 
   return (
     <>
-      <Section.Title
-        eyebrow={<BackToList area={area} />}
-        title={draft.title.trim() || text("editorTitleMissing")}
-        level={1}
-      />
+      <BackToList area={area} />
+      <Section.Title title={draft.title.trim() || text("editorTitleMissing")} level={1} />
       <Editor>
         <Editor.Main>
           <Field label={text("editorTitle")} htmlFor="entry-title">

@@ -10,6 +10,7 @@ import { MagnifyingGlassIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { HeaderStart } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -178,9 +179,14 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
 
   return (
     <>
-      {/* The group's name stands where an open entry shows its way back, so
-          the heading below stays put when an entry opens. */}
-      <Section.Title eyebrow={group ? text(group.labelKey) : undefined} title={title} level={1} />
+      {/* Where the reader is, at the start of the bar, where an open entry
+          shows its way back. */}
+      {group && (
+        <HeaderStart>
+          <span className="app-bar-place">{text(group.labelKey)}</span>
+        </HeaderStart>
+      )}
+      <Section.Title title={title} level={1} />
       <div className="stat-row">
         <Stat label={text("statPublished")} value={counts.published} note={text("statPublishedNote")} />
         <Stat label={text("statDrafts")} value={counts.drafts} note={text("statDraftsNote")} />

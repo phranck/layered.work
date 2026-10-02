@@ -93,6 +93,11 @@
      live here too, so the drag and the stylesheet cannot disagree about how
      narrow the sidebar may get. */
   --sidebar-width: 248px;
+
+  /* The bar across the top of the content. The sidebar's mark area is the same
+     band less the sidebar's own padding, so the two are one line across the
+     window; a change here moves both. */
+  --app-bar-height: 56px;
   --sidebar-min: 190px;
   --sidebar-max: 420px;
 

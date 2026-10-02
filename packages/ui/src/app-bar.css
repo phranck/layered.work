@@ -1,0 +1,40 @@
+/*
+ * The bar across the top of a workbench's content.
+ *
+ * Its height is `--app-bar-height`, which the sidebar's mark area derives from
+ * as well, so the mark and whatever stands in the bar share one centre line.
+ * It takes the sidebar's sunken surface, so the two read as one frame around
+ * the content, and a hairline closes it off from what scrolls beneath.
+ *
+ * Three columns, the outer two equal: the centre is centred on the bar rather
+ * than on whatever space the two sides happen to leave.
+ */
+
+.app-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  flex: none;
+  height: var(--app-bar-height, 56px);
+  padding-inline: var(--space-6);
+  background: var(--surface-sunken);
+  border-block-end: 1px solid var(--edge-hairline);
+}
+
+.app-bar__start,
+.app-bar__center,
+.app-bar__end {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+}
+
+.app-bar__center {
+  justify-content: center;
+}
+
+.app-bar__end {
+  justify-content: flex-end;
+}

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
+import { AppBarSlotsProvider } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
@@ -180,9 +181,18 @@ function DashboardLayout() {
             onOpenAccount={() => setAccountOpen(true)}
             handle={handle}
           />
-          <main className="workbench__main dashboard-main">
-            <Outlet />
-          </main>
+          {/* The bar stands above the content and stays put; only the content
+              below it scrolls. */}
+          <AppBarSlotsProvider>
+            {(bar) => (
+              <div className="workbench__column">
+                {bar}
+                <main className="workbench__main dashboard-main">
+                  <Outlet />
+                </main>
+              </div>
+            )}
+          </AppBarSlotsProvider>
           {accountOpen && account.data && (
             <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
           )}

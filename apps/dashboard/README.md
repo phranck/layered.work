@@ -6,6 +6,10 @@ The sidebar uses shared Sidebar, Section, Row and Logo compounds and the prototy
 
 The sidebar keeps its width and the order of its groups between visits, in local storage under `layered:dashboard:sidebar-width` and `layered:dashboard:sidebar-order`. A group is moved by dragging its title, or from the keyboard with the arrow keys on its grip. The order is stored as group ids, so a group added later appears at the end and a removed one is ignored.
 
+## The bar
+
+A bar runs across the top of the content, right of the sidebar, and stays in place whilst the screen below it scrolls (`AppBar` in the UI package). Its height is `--app-bar-height`, and the sidebar's mark is centred on the same line. A screen puts things into it with `HeaderStart`, `HeaderCenter` and `HeaderEnd` from `src/app-bar-slots.tsx`, which render into the bar through portals and so read the screen's own state. The start holds the way back or the group the screen belongs to, the centre what just happened, and the end the screen's actions.
+
 ## Entry lists
 
 Posts, pages and projects are one screen with a different kind. It reads `GET /entries?kind=…`, which returns one row per translation, newest first. The search field and the state and language filters narrow that list in the browser, and the figures above it are counted from the rows the table shows. A row opens the entry at `/<area>/<translation id>`.

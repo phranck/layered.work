@@ -12,11 +12,22 @@
   line-height: var(--leading-normal);
 }
 
+/* The content column: the bar on top, and below it the one part that scrolls,
+   so the bar never moves. */
+.workbench__column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .workbench__main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-6);
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   padding: var(--space-6);
 }
@@ -499,20 +510,15 @@ dialog.account-dialog::backdrop {
 /* A flex box of its own rather than an inline one: an inline box sits on the
    eyebrow's baseline and makes that line taller than the text alone, which
    moved the heading below by 1.8 pixels. */
-.workbench-back {
-  display: flex;
-  width: fit-content;
-  gap: var(--space-2);
-  align-items: center;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-  text-decoration: none;
-}
-
-.workbench-back:hover {
-  color: var(--text-accent);
+/* Where the reader is, at the start of the bar: the group a list belongs to, in
+   the small capitals the sidebar names its groups with, so the two read as the
+   same word in the same voice. */
+.app-bar-place {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 /* Whether the text is saved, at the left of the row the save buttons end. */
@@ -678,6 +684,14 @@ dialog.account-dialog::backdrop {
   .workbench {
     grid-template-columns: minmax(0, 1fr);
     height: auto;
+  }
+
+  /* The page scrolls as a whole here, so the bar holds to the top of the
+     window instead of to the top of a scrolling column. */
+  .workbench .app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
 
   .workbench .sidebar {

@@ -528,6 +528,26 @@ describe("dashboard shell", () => {
     expect(screen.getByText("Electronics")).toBeTruthy();
   });
 
+  it("puts the way back and where the reader is into the bar, not into the heading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    const { router } = renderDashboard();
+
+    await screen.findByRole("table");
+    const bar = document.querySelector(".app-bar") as HTMLElement;
+    expect(within(bar).getByText("Inhalt")).toBeTruthy();
+    expect(document.querySelector("main .eyebrow")).toBeNull();
+
+    await router.navigate(`/posts/${draftDetail.id}`);
+    const back = await within(bar).findByRole("link", { name: "Beiträge" });
+    expect(back.closest(".app-bar__start")).toBeTruthy();
+    expect(within(bar).queryByText("Inhalt")).toBeNull();
+    fireEvent.click(back);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
+  });
+
   it("saves a draft by itself once typing pauses, and says when", async () => {
     const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
       Promise.resolve(
