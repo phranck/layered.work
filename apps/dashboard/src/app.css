@@ -167,10 +167,10 @@ dialog.account-dialog::backdrop {
 .account__fields .badge {
   align-self: flex-start;
 }
-.dashboard-avatar {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* The account's portrait in the sidebar is round, as it is in the account
+   dialog, and the tile holds it at the control height whatever its file
+   measures. */
+.sidebar__footer .row__tile {
   border-radius: var(--radius-pill);
 }
 .media-picker__search {

@@ -105,13 +105,13 @@ function DashboardSidebar({
           aria-haspopup="dialog"
           aria-expanded={accountOpen}
         >
-          <Row.Lead aria-hidden="true">
+          <Row.Tile aria-hidden="true">
             {account.data?.avatarUrl ? (
-              <img className="dashboard-avatar" src={account.data.avatarUrl} alt="" />
+              <img src={account.data.avatarUrl} alt="" />
             ) : (
               <UserCircleIcon weight="duotone" />
             )}
-          </Row.Lead>
+          </Row.Tile>
           <Row.Text
             title={
               session.isPending
