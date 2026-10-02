@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { entries, entryTranslations, paths } from "../db/schema/index.js";
+import { entries, entryTranslations, media, paths } from "../db/schema/index.js";
 import {
   closeTestDatabase,
   emptyTestDatabase,
@@ -146,6 +146,48 @@ runs("the public snapshot", () => {
     const german = snapshot.entries.find((item) => item.language === "de");
     expect(english?.translationPath).toBe("/de/deutsch/");
     expect(german?.translationPath).toBe("/english/");
+  });
+
+  it("carries only the files published content names, however it names them", async () => {
+    const database = await testDatabase();
+    const files = await database
+      .insert(media)
+      .values(
+        ["cover", "in-a-component", "linked", "only-in-a-draft", "unused-upload"].map((slug, index) => ({
+          slug,
+          kind: "image" as const,
+          mimeType: "image/png",
+          storageKey: slug === "unused-upload" ? "uploads/AbCdEf123" : `media/${slug}.png`,
+          byteSize: 10,
+          checksum: String(index).repeat(64),
+          width: 10,
+          height: 10,
+        })),
+      )
+      .returning({ id: media.id, slug: media.slug });
+    const cover = files.find((file) => file.slug === "cover")?.id;
+    const { translationId } = await writeEntry(database, {
+      title: "Names three files",
+      path: "/three/",
+      state: "public",
+      body: 'Image("in-a-component")\n\nThe [sheet](/media/linked.png) as a file.',
+    });
+    await database
+      .update(entryTranslations)
+      .set({ featuredMediaId: cover })
+      .where(eq(entryTranslations.id, translationId));
+    await writeEntry(database, {
+      title: "Not finished",
+      path: "/not-finished/",
+      state: "draft",
+      body: 'Image("only-in-a-draft")',
+    });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.media.map((asset) => asset.slug).sort()).toEqual(["cover", "in-a-component", "linked"]);
+    expect(JSON.stringify(snapshot)).not.toContain("uploads/");
+    expect(JSON.stringify(snapshot)).not.toContain("only-in-a-draft");
   });
 
   it("leaves out a translation nothing can link to", async () => {

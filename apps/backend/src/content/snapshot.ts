@@ -1,3 +1,4 @@
+import { mediaReferences } from "@layered/content";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -89,6 +90,42 @@ const READABLE = ["public", "hidden"] as const;
  * @param database - The database to read from.
  * @returns Everything the site may show, and nothing else.
  */
+/**
+ * The files that published content names, by id.
+ *
+ * Only these leave the database. The library also holds what nobody has
+ * published yet, such as a portrait uploaded for an account or a picture meant
+ * for a draft, and the site has no use for those: it reaches a file only through
+ * an entry. Publishing them would also tell anybody reading the snapshot what is
+ * in the library before it appears anywhere.
+ *
+ * A translation names a file in three ways, and all three count: as its
+ * picture, through a component, which `mediaReferences` reads the way the
+ * validator does, and through a link to the file's own path, which is how the
+ * old site linked a page to a document.
+ *
+ * @param translations - The translations the snapshot carries.
+ * @param assets - Every file in the library, with its storage key.
+ */
+function namedFiles(
+  translations: readonly { body: string; featuredMediaId: string | null }[],
+  assets: readonly { id: string; slug: string; storageKey: string }[],
+): Set<string> {
+  const idBySlug = new Map(assets.map((asset) => [asset.slug, asset.id]));
+  const named = new Set<string>();
+  for (const translation of translations) {
+    if (translation.featuredMediaId) named.add(translation.featuredMediaId);
+    for (const reference of mediaReferences(translation.body)) {
+      const id = idBySlug.get(reference.slug);
+      if (id) named.add(id);
+    }
+    for (const asset of assets) {
+      if (translation.body.includes(`/${asset.storageKey}`)) named.add(asset.id);
+    }
+  }
+  return named;
+}
+
 export async function readPublicSnapshot(database: Database): Promise<PublicSnapshot> {
   const translations = await database
     .select({
@@ -169,6 +206,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     );
 
   const slugById = new Map(assets.map((asset) => [asset.id, asset.slug]));
+  const named = namedFiles(reachable, assets);
 
   // Which translation each one is the counterpart of, so the site can offer the
   // other language. Both directions, because either page may be the one open.
@@ -218,18 +256,20 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   return {
     entries: publicEntries,
     topics: publicTopics,
-    media: assets.map((asset) => ({
-      slug: asset.slug,
-      src: `/${asset.storageKey}`,
-      mime: asset.mimeType,
-      filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
-      source: asset.storageKey,
-      bytes: asset.byteSize,
-      sha256: asset.checksum,
-      ...(asset.width === null ? {} : { width: asset.width }),
-      ...(asset.height === null ? {} : { height: asset.height }),
-      ...(asset.altText ? { alt: asset.altText } : {}),
-    })),
+    media: assets
+      .filter((asset) => named.has(asset.id))
+      .map((asset) => ({
+        slug: asset.slug,
+        src: `/${asset.storageKey}`,
+        mime: asset.mimeType,
+        filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
+        source: asset.storageKey,
+        bytes: asset.byteSize,
+        sha256: asset.checksum,
+        ...(asset.width === null ? {} : { width: asset.width }),
+        ...(asset.height === null ? {} : { height: asset.height }),
+        ...(asset.altText ? { alt: asset.altText } : {}),
+      })),
     redirects: former,
     homeBlocks: blocks.map((block) => ({
       type: block.type,
