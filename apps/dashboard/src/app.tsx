@@ -1,15 +1,15 @@
-import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { DotsSixVerticalIcon, UserCircleIcon } from "@layered/ui/icons";
+import { Button, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
+import { DotsSixVerticalIcon, SignOutIcon, UserCircleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
+import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { dashboardGroups } from "./routes.js";
 import { SearchProvider } from "./search.js";
-import { useAccount, useSession } from "./session-queries.js";
+import { useAccount, useSession, useSignOut } from "./session-queries.js";
 import { useSidebarOrder } from "./sidebar-order.js";
 import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
@@ -57,6 +57,7 @@ function DashboardSidebar({
   const handleLogoClick = useLinkClickHandler("/posts");
   const session = useSession();
   const account = useAccount();
+  const signOut = useSignOut();
   const counts = useQuery({
     queryKey: ["dashboard-counts", session.data?.id],
     queryFn: api.fetchDashboardCounts,
@@ -111,36 +112,47 @@ function DashboardSidebar({
         <div ref={slot} className="drop-slot" aria-hidden="true" />
       </Sidebar.Body>
       <Sidebar.Footer>
-        <Row.Button
-          onClick={onOpenAccount}
-          disabled={!account.data}
-          aria-haspopup="dialog"
-          aria-expanded={accountOpen}
-        >
-          <Row.Tile aria-hidden="true">
-            {account.data?.avatarUrl ? (
-              <img src={account.data.avatarUrl} alt="" />
-            ) : (
-              <UserCircleIcon weight="duotone" />
-            )}
-          </Row.Tile>
-          <Row.Text
-            title={
-              session.isPending
-                ? text("loadingSession")
-                : session.isError
-                  ? text("unavailableSession")
-                  : (account.data?.displayName ?? text("signedOut"))
-            }
-            note={
-              account.data
-                ? account.data.role === "owner"
-                  ? text("roleOwner")
-                  : text("roleEditor")
-                : undefined
-            }
+        {signOut.isError && <ErrorNotice error={signOut.error} />}
+        {/* Two targets side by side rather than one inside the other: the row
+            opens the account, and the button at its end signs out. */}
+        <div className="sidebar-account">
+          <Row.Button
+            onClick={onOpenAccount}
+            disabled={!account.data}
+            aria-haspopup="dialog"
+            aria-expanded={accountOpen}
+          >
+            <Row.Tile aria-hidden="true">
+              {account.data?.avatarUrl ? (
+                <img src={account.data.avatarUrl} alt="" />
+              ) : (
+                <UserCircleIcon weight="duotone" />
+              )}
+            </Row.Tile>
+            <Row.Text
+              title={
+                session.isPending
+                  ? text("loadingSession")
+                  : session.isError
+                    ? text("unavailableSession")
+                    : (account.data?.displayName ?? text("signedOut"))
+              }
+              note={
+                account.data
+                  ? account.data.role === "owner"
+                    ? text("roleOwner")
+                    : text("roleEditor")
+                  : undefined
+              }
+            />
+          </Row.Button>
+          <Button.Icon
+            label={signOut.isPending ? text("signOutPending") : text("signOut")}
+            icon={<SignOutIcon weight="duotone" />}
+            disabled={!account.data || signOut.isPending}
+            onClick={() => signOut.mutate()}
           />
-        </Row.Button>
+        </div>
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
@@ -152,7 +164,6 @@ function DashboardSidebar({
 }
 
 function DashboardLayout() {
-  const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
   const workbench = useRef<HTMLDivElement>(null);
   const handle = useSidebarWidth(workbench);
@@ -171,11 +182,7 @@ function DashboardLayout() {
           <Outlet />
         </main>
         {accountOpen && account.data && (
-          <AccountDialog
-            account={account.data}
-            onClose={() => setAccountOpen(false)}
-            onSignedOut={() => navigate("/login", { replace: true })}
-          />
+          <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
         )}
       </SearchProvider>
     </div>

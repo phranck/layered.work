@@ -21,16 +21,9 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { CardDialog } from "./modal.js";
+import { useSignOut } from "./session-queries.js";
 
-export function AccountDialog({
-  account,
-  onClose,
-  onSignedOut,
-}: {
-  account: AccountProfile;
-  onClose: () => void;
-  onSignedOut: () => void;
-}) {
+export function AccountDialog({ account, onClose }: { account: AccountProfile; onClose: () => void }) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
@@ -48,7 +41,7 @@ export function AccountDialog({
     mutationFn: api.updateAccount,
     onSuccess: (profile) => queryClient.setQueryData(["account", profile.id], profile),
   });
-  const signOut = useMutation({ mutationFn: api.signOut, onSuccess: () => queryClient.clear() });
+  const signOut = useSignOut();
   const fileInput = useRef<HTMLInputElement>(null);
   const upload = useMutation({
     mutationFn: api.uploadMedia,
@@ -92,8 +85,6 @@ export function AccountDialog({
     signingOutRef.current = true;
     try {
       await signOut.mutateAsync();
-      onClose();
-      onSignedOut();
     } catch {
       // The mutation retains the structured error for the alert.
     } finally {

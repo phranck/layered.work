@@ -996,10 +996,28 @@ describe("dashboard shell", () => {
     const { router } = renderDashboard();
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "Abmelden" }));
+    fireEvent.click(await within(screen.getByRole("dialog")).findByRole("button", { name: "Abmelden" }));
 
     await screen.findByRole("heading", { name: "Anmelden" });
     expect(router.state.location.pathname).toBe("/login");
+  });
+
+  it("signs out from the button beside the account in the sidebar, without opening the account", async () => {
+    const request = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/sign-out")) return Promise.resolve(json({ data: { signedOut: true } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard("/media");
+
+    await screen.findByRole("button", { name: /Frank Gregor/ });
+    const footer = document.querySelector(".sidebar__footer") as HTMLElement;
+    fireEvent.click(within(footer).getByRole("button", { name: "Abmelden" }));
+
+    await screen.findByRole("heading", { name: "Anmelden" });
+    expect(router.state.location.pathname).toBe("/login");
+    expect(request.mock.calls.filter(([url]) => String(url).endsWith("/auth/sign-out"))).toHaveLength(1);
   });
 
   it("keeps the account dialog open and shows a sign-out failure with its id", async () => {
@@ -1020,7 +1038,7 @@ describe("dashboard shell", () => {
     renderDashboard("/media");
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "Abmelden" }));
+    fireEvent.click(await within(screen.getByRole("dialog")).findByRole("button", { name: "Abmelden" }));
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");

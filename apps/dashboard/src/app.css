@@ -417,6 +417,27 @@ dialog.account-dialog::backdrop {
 .field > .badge {
   align-self: flex-start;
 }
+/* The account row and the sign-out button beside it. The row takes what is
+   left and shortens its name rather than pushing the button out. The button
+   stands as far in from the right edge as the portrait does from the left,
+   which is the row's padding and its hairline border, so the two ends of the
+   footer mirror each other. */
+.sidebar-account {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding-inline-end: calc(var(--space-3) + 1px);
+}
+
+.sidebar-account > .row {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-account > .button {
+  flex: none;
+}
+
 /* The account's portrait in the sidebar is round, as it is in the account
    dialog, and the tile holds it at the control height whatever its file
    measures. */

@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import { useDashboardApi } from "./dashboard-context.js";
 
 /**
@@ -26,5 +27,23 @@ export function useAccount() {
     enabled: Boolean(session.data),
     retry: false,
     staleTime: Infinity,
+  });
+}
+
+/**
+ * Signing out, wherever it is offered.
+ *
+ * One action for the sidebar's button and the account dialog's, so both end the
+ * same way: the session is gone on the server, the client has dropped the
+ * cache (which `api.signOut` does), and the reader is on the sign-in screen. A
+ * failure is kept on the mutation for the caller to show, and the reader stays
+ * where they are.
+ */
+export function useSignOut() {
+  const api = useDashboardApi();
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: api.signOut,
+    onSuccess: () => navigate("/login", { replace: true }),
   });
 }
