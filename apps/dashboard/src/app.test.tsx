@@ -436,6 +436,82 @@ describe("dashboard shell", () => {
     ).toBe(false);
   });
 
+  it("uploads a portrait through the library and saves it as the account's picture", async () => {
+    const uploaded = {
+      id: "0c1d5e0b-6a43-4f2a-9b6e-3c8a7d2f1e90",
+      slug: "mein-portrait",
+      url: "/api/account/media/0c1d5e0b-6a43-4f2a-9b6e-3c8a7d2f1e90/content",
+      width: 800,
+      height: 800,
+      existing: false,
+    };
+    const token = "claims.signature";
+    const request = vi.fn((input, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/media/uploads"))
+        return Promise.resolve(
+          json({
+            data: { token, url: `/media/uploads/${token}/content`, headers: { "Content-Type": "image/png" } },
+          }),
+        );
+      if (url.endsWith(`/media/uploads/${token}/content`))
+        return Promise.resolve(json({ data: { received: true } }));
+      if (url.endsWith("/media/uploads/complete")) return Promise.resolve(json({ data: uploaded }));
+      if (url.endsWith("/account") && init?.method === "PATCH")
+        return Promise.resolve(
+          json({ data: { ...account, avatarMediaId: uploaded.id, avatarUrl: uploaded.url } }),
+        );
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    const dialog = screen.getByRole("dialog", { name: "Benutzerkonto" });
+    const input = dialog.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error("No file input in the account dialog.");
+    const file = new File([new Uint8Array([137, 80, 78, 71])], "Mein Portrait.png", { type: "image/png" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(dialog.querySelector("img")?.getAttribute("src")).toBe(uploaded.url));
+    const asked = request.mock.calls.find(([url]) => String(url).endsWith("/media/uploads"));
+    expect(JSON.parse(String(asked?.[1]?.body))).toEqual({
+      filename: "Mein Portrait.png",
+      type: "image/png",
+      size: 4,
+    });
+    const sent = request.mock.calls.find(([url]) => String(url).endsWith("/content"));
+    expect(sent?.[1]?.method).toBe("PUT");
+    expect(sent?.[1]?.body).toBe(file);
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          ([url, init]) => String(url).endsWith("/account") && init?.method === "PATCH",
+        ),
+      ).toBe(true),
+    );
+    const patch = request.mock.calls.find(
+      ([url, init]) => String(url).endsWith("/account") && init?.method === "PATCH",
+    );
+    expect(JSON.parse(String(patch?.[1]?.body))).toMatchObject({ avatarMediaId: uploaded.id });
+  });
+
+  it("refuses a file the library does not take before anything is sent", async () => {
+    const request = vi.fn((input) => Promise.resolve(successfulGet(input)));
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    const input = screen.getByRole("dialog").querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error("No file input in the account dialog.");
+    fireEvent.change(input, { target: { files: [new File(["text"], "notes.txt", { type: "text/plain" })] } });
+
+    expect((await screen.findByRole("alert")).textContent).toContain("JPEG, PNG, WebP, AVIF und GIF");
+    expect(request.mock.calls.some(([url]) => String(url).includes("/media/uploads"))).toBe(false);
+  });
+
   it("discards the account draft on Escape and backdrop close", async () => {
     vi.stubGlobal(
       "fetch",

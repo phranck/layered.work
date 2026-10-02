@@ -9,8 +9,21 @@ const PAGE_SIZE = 24;
 const RASTER_MIME_TYPES = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"] as const;
 type Database = ReturnType<typeof database>;
 
+/**
+ * The address the dashboard reads a library picture from, through this API.
+ *
+ * One function, because the picker, the portrait and an upload all hand the
+ * same address to the same browser, and a second spelling of it is a picture
+ * that loads in one place and not in another.
+ *
+ * @param id - The media row.
+ */
+export function mediaContentUrl(id: string): string {
+  return `/api/account/media/${id}/content`;
+}
+
 function avatarUrl(id: string | null): string | null {
-  return id ? `/api/account/media/${id}/content` : null;
+  return id ? mediaContentUrl(id) : null;
 }
 
 function asProfile(row: Omit<AccountProfile, "avatarUrl">): AccountProfile {
@@ -104,7 +117,7 @@ export async function listAccountMedia(
     items: rows.slice(0, PAGE_SIZE).map((row) => ({
       id: row.id,
       slug: row.slug,
-      url: `/api/account/media/${row.id}/content`,
+      url: mediaContentUrl(row.id),
       width: row.width as number,
       height: row.height as number,
     })),

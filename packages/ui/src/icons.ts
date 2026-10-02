@@ -27,5 +27,6 @@ export { StarIcon } from "@phosphor-icons/react/dist/ssr/Star";
 export { TagIcon } from "@phosphor-icons/react/dist/ssr/Tag";
 export { TextboxIcon } from "@phosphor-icons/react/dist/ssr/Textbox";
 export { TrayIcon } from "@phosphor-icons/react/dist/ssr/Tray";
+export { UploadSimpleIcon } from "@phosphor-icons/react/dist/ssr/UploadSimple";
 export { UserCircleIcon } from "@phosphor-icons/react/dist/ssr/UserCircle";
 export { XIcon } from "@phosphor-icons/react/dist/ssr/X";

@@ -48,7 +48,7 @@ export function MediaPicker({
           </Field>
           <Button
             type="submit"
-            icon={<MagnifyingGlassIcon weight="bold" />}
+            icon={<MagnifyingGlassIcon weight="duotone" />}
             aria-label={text("mediaSearch")}
           />
         </form>
@@ -73,14 +73,17 @@ export function MediaPicker({
       <Card.Footer
         actions={
           <>
-            <Button onClick={onCancel} icon={<XIcon weight="bold" />}>
+            <Button onClick={onCancel} icon={<XIcon weight="duotone" />}>
               {text("cancel")}
             </Button>
             {page > 1 && (
               <Button onClick={() => setPage((current) => current - 1)}>{text("previousPage")}</Button>
             )}
             {media.data?.hasMore && (
-              <Button onClick={() => setPage((current) => current + 1)} icon={<ImagesIcon weight="bold" />}>
+              <Button
+                onClick={() => setPage((current) => current + 1)}
+                icon={<ImagesIcon weight="duotone" />}
+              >
                 {text("nextPage")}
               </Button>
             )}

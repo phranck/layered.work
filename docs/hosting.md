@@ -211,6 +211,19 @@ Copy `.env.example` to `.env.local`. The services read it themselves through Nod
 
 Until 13 September 2026 the container on this machine came from a compose file in `/Users/phranck/Sites/layered.work`, which is the old project and no longer exists. The database could not be recreated from anything checked in, and it carried two abandoned schemas from earlier attempts. Both were dumped and dropped.
 
+## Local media
+
+Locally the backend reads and writes pictures in `media-local/` rather than in the bucket, and production always uses the bucket. Leave the four `S3_*` values in `.env.local` empty so that nothing on this machine reaches the production bucket. Set `MEDIA_LOCAL_DIR=media-local` instead, which is ignored by git.
+
+Uploads land under `media-local/uploads/`. The old site's pictures keep the `media/` keys the migration gave them, so the migration's copies are linked in once:
+
+```bash
+mkdir -p media-local
+ln -s ../apps/website/public/media media-local/media
+```
+
+An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
+
 ## The schema is one file, and the database is thrown away
 
 `apps/backend/drizzle/` holds `0000_initial_schema.sql` and every change made since. A schema change is one command, and it is never written by hand:

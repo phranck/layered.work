@@ -7,10 +7,10 @@ import {
   listAccountMedia,
   updateAccountProfile,
 } from "../../account/repository.js";
-import { readAccountMediaObject } from "../../account/storage.js";
 import { observeMediaStream } from "../../account/stream.js";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { readMediaObject } from "../../media/storage.js";
 import { principalOf, requireSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -41,7 +41,7 @@ account.get("/media", validate("query", accountMediaQuery), async (c) =>
 
 account.get("/media/:id/content", validate("param", mediaIdParam), async (c) => {
   const object = await getAccountMediaObject(database(), c.req.valid("param").id);
-  const source = await readAccountMediaObject(object.storageKey);
+  const source = await readMediaObject(object.storageKey);
   const requestId = c.get("requestId");
   const stream = observeMediaStream(source, (error) => {
     logger.error(

@@ -5,6 +5,8 @@ const strings = {
   de: {
     account: "Benutzerkonto",
     accountAvatar: "Bild auswählen",
+    accountAvatarUpload: "Bild hochladen",
+    accountAvatarUploading: "Wird hochgeladen…",
     accountEmail: "E-Mail-Adresse",
     accountLanguage: "Dashboard-Sprache",
     accountLanguageHint: "Gilt nur für diese Oberfläche, nicht für die Website.",
@@ -57,6 +59,8 @@ const strings = {
   en: {
     account: "User account",
     accountAvatar: "Choose a picture",
+    accountAvatarUpload: "Upload a picture",
+    accountAvatarUploading: "Uploading…",
     accountEmail: "Email",
     accountLanguage: "Dashboard language",
     accountLanguageHint: "Applies to this interface only, not to the website.",

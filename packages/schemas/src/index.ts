@@ -21,4 +21,5 @@ export * from "./auth.js";
 export * from "./dashboard.js";
 export * from "./errors.js";
 export * from "./home-blocks.js";
+export * from "./media.js";
 export * from "./request.js";

@@ -1,8 +1,20 @@
-import { type AccountProfile, MaxLength, type UpdateAccountBody } from "@layered/schemas";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type AccountProfile,
+  MaxLength,
+  type UpdateAccountBody,
+} from "@layered/schemas";
 import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import { FloppyDiskIcon, ImagesIcon, SignOutIcon, UserCircleIcon, XIcon } from "@layered/ui/icons";
+import {
+  FloppyDiskIcon,
+  ImagesIcon,
+  SignOutIcon,
+  UploadSimpleIcon,
+  UserCircleIcon,
+  XIcon,
+} from "@layered/ui/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { InterfaceLanguage } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -37,6 +49,24 @@ export function AccountDialog({
     onSuccess: (profile) => queryClient.setQueryData(["account", profile.id], profile),
   });
   const signOut = useMutation({ mutationFn: api.signOut, onSuccess: () => queryClient.clear() });
+  const fileInput = useRef<HTMLInputElement>(null);
+  const upload = useMutation({
+    mutationFn: api.uploadMedia,
+    onSuccess: (picture) => {
+      // The upload becomes the draft portrait, exactly as a chosen picture does,
+      // and is kept only when the account is saved.
+      setDraft((current) => ({ ...current, avatarMediaId: picture.id }));
+      setAvatarUrl(picture.url);
+      queryClient.invalidateQueries({ queryKey: ["account-media"] });
+    },
+  });
+
+  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Cleared, so choosing the same file again after an error starts a new upload.
+    event.target.value = "";
+    if (file) upload.mutate(file);
+  }
 
   function dismiss() {
     if (savingRef.current || signingOutRef.current) return;
@@ -86,9 +116,33 @@ export function AccountDialog({
                     <UserCircleIcon weight="duotone" />
                   </span>
                 )}
-                <Button type="button" onClick={() => setPickerOpen(true)} icon={<ImagesIcon weight="bold" />}>
-                  {text("accountAvatar")}
-                </Button>
+                <div className="account__portrait-actions">
+                  <Button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    disabled={upload.isPending}
+                    icon={<ImagesIcon weight="duotone" />}
+                  >
+                    {text("accountAvatar")}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => fileInput.current?.click()}
+                    disabled={upload.isPending}
+                    icon={<UploadSimpleIcon weight="duotone" />}
+                  >
+                    {upload.isPending ? text("accountAvatarUploading") : text("accountAvatarUpload")}
+                  </Button>
+                  {/* The browser's own file control, hidden behind the button
+                      above so the action looks like every other one. */}
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                    hidden
+                    onChange={chooseFile}
+                  />
+                </div>
               </div>
               <div className="account__fields">
                 <Field label={text("accountName")} htmlFor="account-name">
@@ -134,7 +188,9 @@ export function AccountDialog({
                     }
                   />
                 </Field>
-                {(save.error || signOut.error) && <ErrorNotice error={save.error ?? signOut.error} />}
+                {(upload.error || save.error || signOut.error) && (
+                  <ErrorNotice error={upload.error ?? save.error ?? signOut.error} />
+                )}
               </div>
             </div>
           </Card.Body>
@@ -146,7 +202,7 @@ export function AccountDialog({
                   tone="danger"
                   onClick={submitSignOut}
                   disabled={signOut.isPending || save.isPending}
-                  icon={<SignOutIcon weight="bold" />}
+                  icon={<SignOutIcon weight="duotone" />}
                 >
                   {signOut.isPending ? text("signOutPending") : text("signOut")}
                 </Button>
@@ -154,15 +210,15 @@ export function AccountDialog({
                   type="button"
                   onClick={dismiss}
                   disabled={save.isPending || signOut.isPending}
-                  icon={<XIcon weight="bold" />}
+                  icon={<XIcon weight="duotone" />}
                 >
                   {text("cancel")}
                 </Button>
                 <Button
                   type="submit"
                   tone="primary"
-                  disabled={save.isPending || signOut.isPending}
-                  icon={<FloppyDiskIcon weight="bold" />}
+                  disabled={save.isPending || signOut.isPending || upload.isPending}
+                  icon={<FloppyDiskIcon weight="duotone" />}
                 >
                   {save.isPending ? text("savePending") : text("save")}
                 </Button>

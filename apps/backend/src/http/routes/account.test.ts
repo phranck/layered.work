@@ -9,7 +9,7 @@ const repository = vi.hoisted(() => ({
   listAccountMedia: vi.fn(),
   updateAccountProfile: vi.fn(),
 }));
-const storage = vi.hoisted(() => ({ readAccountMediaObject: vi.fn() }));
+const storage = vi.hoisted(() => ({ readMediaObject: vi.fn() }));
 const readSession = vi.hoisted(() => vi.fn());
 
 vi.mock("../../auth/session.js", async (importOriginal) => ({
@@ -17,7 +17,7 @@ vi.mock("../../auth/session.js", async (importOriginal) => ({
   readSession,
 }));
 vi.mock("../../account/repository.js", () => repository);
-vi.mock("../../account/storage.js", () => storage);
+vi.mock("../../media/storage.js", () => storage);
 
 const { app } = await import("../app.js");
 
@@ -185,7 +185,7 @@ describe("the account API", () => {
       storageKey: "media/portrait.webp",
       mimeType: "image/webp",
     });
-    storage.readAccountMediaObject.mockResolvedValue(
+    storage.readMediaObject.mockResolvedValue(
       new ReadableStream({
         start(controller) {
           controller.enqueue(new Uint8Array([1, 2, 3]));
@@ -204,7 +204,7 @@ describe("the account API", () => {
     expect(response.headers.get("cross-origin-resource-policy")).toBe("same-origin");
     expect(response.headers.get("content-security-policy")).toBeTruthy();
     expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([1, 2, 3]);
-    expect(storage.readAccountMediaObject).toHaveBeenCalledWith("media/portrait.webp");
+    expect(storage.readMediaObject).toHaveBeenCalledWith("media/portrait.webp");
   });
 
   it("keeps storage failures behind the safe API error boundary", async () => {
@@ -213,7 +213,7 @@ describe("the account API", () => {
       storageKey: "media/portrait.webp",
       mimeType: "image/webp",
     });
-    storage.readAccountMediaObject.mockRejectedValue(new Error("S3 secret and endpoint details"));
+    storage.readMediaObject.mockRejectedValue(new Error("S3 secret and endpoint details"));
 
     const response = await app.request(`/account/media/${avatarMediaId}/content`, {
       headers: { cookie: "layered_session=signed" },
@@ -233,7 +233,7 @@ describe("the account API", () => {
       mimeType: "image/webp",
     });
     const streamFailure = new Error("stream connection closed");
-    storage.readAccountMediaObject.mockResolvedValue(
+    storage.readMediaObject.mockResolvedValue(
       new ReadableStream({
         start(controller) {
           controller.error(streamFailure);
