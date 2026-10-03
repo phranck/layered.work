@@ -326,6 +326,26 @@ runs("the entry list", () => {
       expect((await saveSlug(cookie, english?.id ?? "", "old-page")).status).toBe(409);
     });
 
+    it("refuses the slugs the site keeps for itself", async () => {
+      const cookie = await signedInCookie();
+      const english = (await list("post", cookie)).find((row) => row.title === "Published in English");
+      for (const slug of ["posts", "pages", "projects"]) {
+        expect((await saveSlug(cookie, english?.id ?? "", slug)).status).toBe(409);
+      }
+    });
+
+    it("lets a deleted page at a reserved address leave it answering, not gone", async () => {
+      const cookie = await signedInCookie();
+      const page = (await list("page", cookie))[0];
+      const database = await testDatabase();
+      await database.update(paths).set({ path: "/projects/" }).where(eq(paths.path, "/a-page/"));
+      await app.request(`/entries/${page?.id}/trash`, { method: "POST", headers: { cookie } });
+      expect((await readPublicSnapshot(database)).gone).toEqual([]);
+
+      await app.request("/entries/bin?kind=page", { method: "DELETE", headers: { cookie } });
+      expect((await readPublicSnapshot(database)).gone).toEqual([]);
+    });
+
     it("gives a translation without an address one carrying its language", async () => {
       const cookie = await signedInCookie();
       const draft = (await list("post", cookie)).find((row) => row.title === "A draft");

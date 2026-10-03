@@ -878,9 +878,12 @@ describe("dashboard shell", () => {
     fireEvent.change(field, { target: { value: "a-page" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
-      await screen.findByText("Diese Adresse gehört bereits einem anderen Eintrag.", {
-        selector: ".notification__message",
-      }),
+      await screen.findByText(
+        "Diese Adresse ist bereits vergeben, an einen anderen Eintrag oder an die Website selbst.",
+        {
+          selector: ".notification__message",
+        },
+      ),
     ).toBeTruthy();
   });
 

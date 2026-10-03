@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CONTENT_LANGUAGES } from "./entries.js";
+import { CONTENT_LANGUAGES, type ContentLanguage } from "./entries.js";
 import { body, MaxLength, text } from "./request.js";
 
 /**
@@ -56,6 +56,30 @@ export type AnalyticsSettings = z.infer<typeof analyticsSettings>;
 /** The kinds of entry the site lists on an overview of their own. Pages have none. */
 export const LISTED_KINDS = ["post", "project"] as const;
 export type ListedKind = (typeof LISTED_KINDS)[number];
+
+/**
+ * Where each overview answers on the site, in each language. The import turns a
+ * page found at one of these into that overview's introduction.
+ */
+export const LISTING_PATHS: Record<ListedKind, Record<ContentLanguage, string>> = {
+  post: { en: "/posts/", de: "/de/posts/" },
+  project: { en: "/projects/", de: "/de/projects/" },
+};
+
+/**
+ * The slugs the site keeps for itself, for its overviews of posts, pages and
+ * projects. Decided by phranck on 3 October 2026.
+ */
+export const RESERVED_SLUGS = ["posts", "pages", "projects"] as const;
+
+/**
+ * Every address a reserved slug makes, at the root and under each language.
+ * No entry may hold one, and deleting an entry never marks one as gone, because
+ * the address belongs to the site.
+ */
+export const RESERVED_PATHS: readonly string[] = RESERVED_SLUGS.flatMap((slug) =>
+  ["/", "/en/", "/de/"].map((root) => `${root}${slug}/`),
+);
 
 /** The bounds an overview's figures are held to, so no setting can produce a page nobody can read. */
 export const LISTING_BOUNDS = {

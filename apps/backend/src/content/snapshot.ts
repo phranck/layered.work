@@ -1,5 +1,5 @@
 import { mediaReferences } from "@layered/content";
-import type { ListedKind, ListingSettings } from "@layered/schemas";
+import { type ListedKind, type ListingSettings, RESERVED_PATHS } from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -217,7 +217,8 @@ async function formerTopicAddresses(
  * translation in the bin, and every address of one deleted for good.
  *
  * An address something reachable answers at or redirects from is left out,
- * because it was given to something new and is that thing's now.
+ * because it was given to something new and is that thing's now, and so is an
+ * overview's address, which always answers with the overview.
  *
  * @param database - The database to read from.
  * @param taken - The addresses the snapshot already answers at or redirects from.
@@ -230,7 +231,7 @@ async function goneAddresses(database: Database, taken: ReadonlySet<string>): Pr
     .where(isNotNull(entryTranslations.trashedAt));
   const deleted = await database.select({ path: gonePaths.path }).from(gonePaths);
   return [...new Set([...binned, ...deleted].map((row) => row.path))]
-    .filter((path) => !taken.has(path))
+    .filter((path) => !taken.has(path) && !RESERVED_PATHS.includes(path))
     .sort();
 }
 

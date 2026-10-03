@@ -1,6 +1,7 @@
 ---
 import { randomUUID } from "node:crypto";
 import { renderContent, rendersComponent } from "@layered/content";
+import { LISTED_KINDS, LISTING_PATHS } from "@layered/schemas";
 import { Button, Section } from "@layered/ui";
 import { HouseIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
@@ -47,7 +48,7 @@ if(repository&&rawPath==="/media/files/claude-fonts-preview.html"){
 }
 const relative=path.slice(root.length);
 const home=relative==="";
-const kind=relative==="posts/"?"post":relative==="projects/"?"project":undefined;
+const kind=LISTED_KINDS.find(listed=>LISTING_PATHS[listed][language]===path);
 const topicSlug=/^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
 const topic=repository?.data.topics.find(topic=>topic.slug===topicSlug);
 const topics=relative==="topics/";

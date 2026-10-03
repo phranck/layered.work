@@ -1,5 +1,13 @@
 import { basename } from "node:path";
 import { mediaReferences } from "@layered/content";
+import {
+  DEFAULT_LISTING,
+  LISTED_KINDS,
+  LISTING_GROUP,
+  LISTING_PATHS,
+  type ListedKind,
+  listingSettings,
+} from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -9,6 +17,7 @@ import {
   media,
   mediaTranslations,
   paths,
+  settings,
   topics,
   topicTranslations,
 } from "./schema/index.js";
@@ -489,6 +498,52 @@ export function withDrafts(published: Snapshot, migrationOutput: Snapshot): Snap
 }
 
 /**
+ * The overview a snapshot page stands at, where it is a page at one of the
+ * overviews' addresses.
+ *
+ * @param entry - An entry from the snapshot.
+ */
+function listingAt(entry: SnapshotEntry): ListedKind | undefined {
+  if (entry.kind !== "page") return undefined;
+  return LISTED_KINDS.find((kind) => LISTING_PATHS[kind][entry.language] === entry.path);
+}
+
+/**
+ * Writes a page that stands at an overview's address as that overview's
+ * introduction, in the page's language, and imports no page for it.
+ *
+ * An introduction somebody has already written in the dashboard stays, so a
+ * repeated import changes nothing that was decided after the first one.
+ */
+async function importListingIntroduction(
+  database: Database,
+  entry: SnapshotEntry,
+  report: ImportReport,
+): Promise<void> {
+  const kind = listingAt(entry);
+  if (!kind) return;
+  const group = LISTING_GROUP[kind];
+  const [row] = await database
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, group))
+    .limit(1);
+  const parsed = listingSettings.safeParse(row?.value);
+  const current = parsed.success ? parsed.data : DEFAULT_LISTING;
+  report.skipped.push({ slug: entry.slug, reason: `the introduction of the ${kind} overview` });
+  if (current.introduction[entry.language].trim()) return;
+
+  const value = {
+    ...current,
+    introduction: { ...current.introduction, [entry.language]: entry.body.trim() },
+  };
+  await database
+    .insert(settings)
+    .values({ key: group, value })
+    .onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
+/**
  * Writes a whole snapshot.
  *
  * @param database - The database to write to, already connected.
@@ -533,7 +588,14 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
     }
     if (live.length === 0) continue;
 
-    await importEntry(database, live, lookups, report);
+    // A page at an overview's address is that overview's introduction, which
+    // is how the old site set the text above its projects.
+    const overview = live.filter((entry) => listingAt(entry) !== undefined);
+    for (const entry of overview) await importListingIntroduction(database, entry, report);
+    const rest = live.filter((entry) => !overview.includes(entry));
+    if (rest.length === 0) continue;
+
+    await importEntry(database, rest, lookups, report);
   }
 
   return report;

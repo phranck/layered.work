@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { mediaReferences } from "@layered/content";
+import { LISTING_PATHS, listingSettings } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { selectObjects } from "../../../../scripts/publii/upload.mjs";
@@ -17,7 +18,7 @@ import {
   type Snapshot,
   withDrafts,
 } from "./import-content.js";
-import { entries, entryTopics, entryTranslations, media, paths, topics } from "./schema/index.js";
+import { entries, entryTopics, entryTranslations, media, paths, settings, topics } from "./schema/index.js";
 
 /**
  * The import, against the real snapshot and a real database.
@@ -32,6 +33,12 @@ const runs = hasTestDatabase ? describe : describe.skip;
 const snapshot = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../website/content/site.json", import.meta.url)), "utf8"),
 ) as Snapshot;
+
+/** The snapshot's pages at an overview's address, which become introductions rather than entries. */
+const overviewPages = snapshot.entries.filter(
+  (entry) =>
+    entry.kind === "page" && Object.values(LISTING_PATHS).some((path) => path[entry.language] === entry.path),
+);
 
 /**
  * A fuller snapshot standing in for the migration output, which never leaves
@@ -104,20 +111,23 @@ runs("importing a snapshot", () => {
 
     const report = await importContent(database, snapshot);
 
-    // A pair of entries pointing at each other is one piece of writing, so the
-    // entry rows are fewer than the snapshot's entries by the number of pairs.
-    const pairs = snapshot.entries.filter((entry) => entry.translationPath).length / 2;
-    expect(report.translations).toBe(snapshot.entries.length);
-    expect(report.entries).toBe(snapshot.entries.length - pairs);
+    // A page at an overview's address becomes that overview's introduction, so
+    // it is no entry. A pair of entries pointing at each other is one piece of
+    // writing, so the entry rows are fewer than the rest by the number of pairs.
+    const written = snapshot.entries.filter((entry) => !overviewPages.includes(entry));
+    const pairs = written.filter((entry) => entry.translationPath).length / 2;
+    expect(report.translations).toBe(written.length);
+    expect(report.entries).toBe(written.length - pairs);
     expect(report.topics).toBe(snapshot.topics.length);
 
     expect(await database.select().from(entries)).toHaveLength(report.entries);
-    expect(await database.select().from(entryTranslations)).toHaveLength(snapshot.entries.length);
+    expect(await database.select().from(entryTranslations)).toHaveLength(written.length);
     expect(await database.select().from(topics)).toHaveLength(snapshot.topics.length);
 
     // Every address the site answers at, plus every address it redirects from.
+    const writtenPaths = new Set(written.map((entry) => entry.path));
     expect(await database.select().from(paths)).toHaveLength(
-      snapshot.entries.length + snapshot.redirects.length,
+      written.length + snapshot.redirects.filter((redirect) => writtenPaths.has(redirect.target)).length,
     );
 
     const assignments = snapshot.entries.reduce((total, entry) => total + entry.topics.length, 0);
@@ -184,6 +194,25 @@ runs("importing a snapshot", () => {
     expect(new Set(rows.map((row) => row.checksum)).size).toBe(rows.length);
     expect(rows.length).toBeLessThanOrEqual(distinctFiles);
     expect(report.aliased.length).toBe(kept.length - distinctFiles);
+  });
+
+  it("writes a page at an overview's address as that overview's introduction, and keeps one written since", async () => {
+    const database = await testDatabase();
+    const projectsPage = overviewPages.find((entry) => entry.path === "/projects/");
+    expect(projectsPage, "the published snapshot holds the old projects page").toBeDefined();
+    await importContent(database, snapshot);
+
+    const stored = async () =>
+      listingSettings.parse(
+        (await database.select().from(settings).where(eq(settings.key, "projectListing")))[0]?.value,
+      );
+    expect((await stored()).introduction.en).toBe(projectsPage?.body.trim());
+    expect(await database.select().from(paths).where(eq(paths.path, "/projects/"))).toEqual([]);
+
+    const written = { ...(await stored()), introduction: { en: "Written in the dashboard.", de: "" } };
+    await database.update(settings).set({ value: written }).where(eq(settings.key, "projectListing"));
+    await importContent(database, snapshot);
+    expect((await stored()).introduction.en).toBe("Written in the dashboard.");
   });
 
   it("changes nothing the second time it runs", async () => {

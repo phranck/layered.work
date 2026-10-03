@@ -6,6 +6,7 @@ import {
   type EntryList,
   type EntryTrashImpact,
   ErrorCode,
+  RESERVED_PATHS,
   type SaveEntryBody,
   slugFromTitle,
 } from "@layered/schemas";
@@ -264,7 +265,8 @@ export function addressWithSlug(current: string | null, language: ContentLanguag
  * The address it leaves keeps its row as a former address, so the snapshot
  * turns it into a redirect. Taking back one of its own former addresses makes
  * that row current again. An address another translation holds, current or
- * former, is refused, because it would take a working link from that one. An
+ * former, is refused, because it would take a working link from that one, and
+ * so is an overview's address, which the overview always answers at. An
  * address that answered 410 since its entry was deleted belongs to this one
  * from now on.
  *
@@ -284,6 +286,9 @@ async function setAddress(
     .limit(1);
   const wanted = addressWithSlug(current?.path ?? null, language, slug);
   if (current?.path === wanted) return false;
+  if (RESERVED_PATHS.includes(wanted)) {
+    throw new HttpError(ErrorCode.Conflict, "This address belongs to an overview of the site.");
+  }
 
   const [holder] = await tx
     .select({ id: paths.id, translationId: paths.translationId })
@@ -481,11 +486,12 @@ export async function createTranslation(db: Database, id: string, actorUserId: s
       { length: ADDRESS_ATTEMPTS },
       (_, attempt) => `/${language}/${attempt === 0 ? segment : `${segment}-${attempt + 1}`}/`,
     );
-    const taken = new Set(
-      (await tx.select({ path: paths.path }).from(paths).where(inArray(paths.path, candidates))).map(
+    const taken = new Set([
+      ...RESERVED_PATHS,
+      ...(await tx.select({ path: paths.path }).from(paths).where(inArray(paths.path, candidates))).map(
         (row) => row.path,
       ),
-    );
+    ]);
     const path = candidates.find((candidate) => !taken.has(candidate));
     if (!path) throw new HttpError(ErrorCode.Conflict, "Every address for this translation is taken.");
 
@@ -616,10 +622,11 @@ export async function emptyBin(db: Database, kind: EntryKind, actorUserId: strin
     if (binned.length === 0) return { deleted: 0 };
     const ids = binned.map((row) => row.id);
 
-    const addresses = await tx
-      .select({ path: paths.path })
-      .from(paths)
-      .where(inArray(paths.translationId, ids));
+    // An overview's address belongs to the overview, so it goes on answering
+    // with that rather than with 410.
+    const addresses = (
+      await tx.select({ path: paths.path }).from(paths).where(inArray(paths.translationId, ids))
+    ).filter((row) => !RESERVED_PATHS.includes(row.path));
     if (addresses.length > 0) await tx.insert(gonePaths).values(addresses).onConflictDoNothing();
 
     await tx.delete(entryTranslations).where(inArray(entryTranslations.id, ids));
