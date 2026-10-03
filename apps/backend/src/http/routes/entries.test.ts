@@ -1,9 +1,8 @@
-import { type EntryList, entryDetail, entryList, readApiError } from "@layered/schemas";
+import { type EntryList, entryDetail, entryList, readApiError, slugFromTitle } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { readPublicSnapshot } from "../../content/snapshot.js";
 import { auditLog, entries, media, mediaReferences, paths } from "../../db/schema/index.js";
-import { slugFromTitle } from "../../entries/repository.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";

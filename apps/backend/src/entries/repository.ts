@@ -6,6 +6,7 @@ import {
   type EntryTrashImpact,
   ErrorCode,
   type SaveEntryBody,
+  slugFromTitle,
 } from "@layered/schemas";
 import { and, desc, eq, inArray, isNotNull, ne, type SQLWrapper, sql } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
@@ -356,33 +357,6 @@ export async function saveEntry(
 
 /** How many numbered alternatives an address tries before a new translation is refused. */
 const ADDRESS_ATTEMPTS = 9;
-
-/**
- * The German letters an address spells out rather than strips, because "Lötkolben"
- * reads as "loetkolben" to a German reader and as nothing at all as "lotkolben".
- */
-const GERMAN_TRANSCRIPTIONS: Readonly<Record<string, string>> = { ä: "ae", ö: "oe", ü: "ue", ß: "ss" };
-
-/**
- * The last segment of an address, written from a title: lower case, German
- * letters spelt out, other accents taken off, and every run of anything else
- * turned into one hyphen.
- *
- * @param title - The title to write it from.
- * @returns A segment matching the site's path rule, or `entry` where nothing is left.
- */
-export function slugFromTitle(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[äöüß]/g, (letter) => GERMAN_TRANSCRIPTIONS[letter] ?? letter)
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80)
-    .replace(/-+$/, "");
-  return slug || "entry";
-}
 
 /**
  * Creates the other language of an entry, or opens it where it already exists.

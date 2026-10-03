@@ -3,6 +3,7 @@ import {
   type CreateTopicBody,
   ErrorCode,
   type SaveTopicBody,
+  slugFromTitle,
   type TopicList,
   type TopicListItem,
 } from "@layered/schemas";
@@ -16,7 +17,6 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
-import { slugFromTitle } from "../entries/repository.js";
 import { HttpError } from "../http/response.js";
 
 /**

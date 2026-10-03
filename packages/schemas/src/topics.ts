@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CONTENT_LANGUAGES } from "./entries.js";
 import { body, MaxLength, text } from "./request.js";
+import { SLUG_PATTERN } from "./slug.js";
 
 /**
  * Topics as the dashboard manages them.
@@ -10,9 +11,6 @@ import { body, MaxLength, text } from "./request.js";
  * `null` rather than a copy of the other one, because a topic without a German
  * name has to be visible as such on the screen that would fix it.
  */
-
-/** The last segment of a topic's address: what the site's path rule accepts. */
-export const TOPIC_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** What a topic is called, and where it answers, in one language. */
 export const topicName = z.object({
@@ -51,7 +49,7 @@ export type CreateTopicBody = z.infer<typeof createTopicBody>;
 /** A name and an address in one language, as the topics screen saves them. */
 const savedTopicName = body({
   name: text(MaxLength.Line),
-  slug: text(MaxLength.Handle, { pattern: TOPIC_SLUG_PATTERN }),
+  slug: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
 });
 
 /**
