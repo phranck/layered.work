@@ -1,6 +1,6 @@
 # What the website reads, and which addresses it answers
 
-The content itself is migrated from the old Publii site by a pipeline that stays on one machine and is not part of this repository. What belongs here is the shape that pipeline produces, because the website parses it, and the addresses the site has to keep answering, because its route implements them.
+The content itself is migrated from the old Publii site by the pipeline in `scripts/publii/`. It reads a Publii database that lives on one machine, and the pipeline itself is in this repository, because it is the only reproducible description of how the old site became this one. What belongs here besides it is the shape that pipeline produces, because the website parses it, and the addresses the site has to keep answering, because its route implements them.
 
 ## The content snapshot
 
