@@ -130,7 +130,7 @@ runs("the sign-in limit", () => {
   });
 });
 
-describe("what a refusal is written down as", () => {
+runs("what a refusal is written down as", () => {
   const written: { fields: Record<string, unknown>; message: string }[] = [];
 
   beforeEach(async () => {
