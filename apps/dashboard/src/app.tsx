@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
-import { AppBarSlotsProvider } from "./app-bar-slots.js";
+import { AppBarSlotsProvider, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
@@ -225,7 +225,7 @@ export function AreaScreen({
   const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title={text(titleKey)} level={1} />
+      <ScreenTitle title={text(titleKey)} />
       <Section.Body>
         <p className="unfinished">{text("unfinished")}</p>
       </Section.Body>
@@ -237,7 +237,7 @@ export function NotFoundScreen() {
   const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title={text("notFound")} level={1} />
+      <ScreenTitle title={text("notFound")} />
       <Section.Body>
         <p>{text("notFoundBody")}</p>
       </Section.Body>

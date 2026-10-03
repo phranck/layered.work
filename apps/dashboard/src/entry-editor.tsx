@@ -39,7 +39,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { steppedTextSize, useEditorTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
-import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
+import { entryListKey, LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
@@ -83,14 +83,11 @@ const READING_WIDTH_LABELS: Record<ReadingWidth, string> = {
   full: "XL",
 };
 
-/** Each state's word, its line of explanation, and the status tone its mark takes. */
-const STATE_OPTIONS: Record<
-  PublicationState,
-  { label: DashboardStringKey; note: DashboardStringKey; tone: "success" | "warning" | "info" }
-> = {
-  public: { label: "statePublic", note: "statePublicNote", tone: "success" },
-  draft: { label: "stateDraft", note: "stateDraftNote", tone: "warning" },
-  hidden: { label: "stateHidden", note: "stateHiddenNote", tone: "info" },
+/** Each state's word and its line of explanation. Its tone is `STATE_TONE`. */
+const STATE_OPTIONS: Record<PublicationState, { label: DashboardStringKey; note: DashboardStringKey }> = {
+  public: { label: "statePublic", note: "statePublicNote" },
+  draft: { label: "stateDraft", note: "stateDraftNote" },
+  hidden: { label: "stateHidden", note: "stateHiddenNote" },
 };
 
 /** What the editor changes, taken out of what it opened. */
@@ -506,7 +503,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                   value={state}
                   label={text(STATE_OPTIONS[state].label)}
                   note={text(STATE_OPTIONS[state].note)}
-                  tone={STATE_OPTIONS[state].tone}
+                  tone={STATE_TONE[state]}
                 />
               ))}
             </Choice>

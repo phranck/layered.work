@@ -5,7 +5,7 @@ import {
   PUBLICATION_STATES,
   type PublicationState,
 } from "@layered/schemas";
-import { Button, Card, Row, Section, Segmented, Select } from "@layered/ui";
+import { Button, Card, Row, Segmented, Select } from "@layered/ui";
 import {
   ArrowCounterClockwiseIcon,
   MagnifyingGlassIcon,
@@ -16,14 +16,14 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { HeaderStart } from "./app-bar-slots.js";
+import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { type DashboardArea, groupOf } from "./routes.js";
+import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
 
 /**
@@ -99,6 +99,19 @@ const STATE_TEXT: Record<PublicationState, DashboardStringKey> = {
   hidden: "stateHidden",
 };
 
+/** A tone the status colours name, as `data-tone` takes it. */
+export type StateTone = "success" | "warning" | "info";
+
+/**
+ * The tone each publication state is shown in: its mark in the editor and its
+ * figure above a list, so the same state has the same colour everywhere.
+ */
+export const STATE_TONE: Record<PublicationState, StateTone> = {
+  public: "success",
+  draft: "warning",
+  hidden: "info",
+};
+
 /** The name of each language, in the interface language. */
 export const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = {
   en: "languageEn",
@@ -119,9 +132,19 @@ export const entryListKey = (kind: EntryKind) => ["entries", kind] as const;
  * The number is right-aligned in a tabular face, because it is read against the
  * number in the next card.
  */
-function Stat({ label, value, note }: { label: string; value: number; note: string }) {
+function Stat({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: number;
+  note: string;
+  tone?: StateTone;
+}) {
   return (
-    <Card className="stat">
+    <Card className="stat" data-tone={tone}>
       <span className="stat__label">{label}</span>
       <span className="stat__value">{value}</span>
       <span className="stat__note">{note}</span>
@@ -156,7 +179,6 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
   const title = text(area.labelKey);
-  const group = groupOf(area);
 
   const { fieldRef, returnFocus } = useSearchField();
   const field = useRef<HTMLInputElement | null>(null);
@@ -219,18 +241,26 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
 
   return (
     <>
-      {/* Where the reader is, at the start of the bar, where an open entry
-          shows its way back. */}
-      {group && (
-        <HeaderStart>
-          <span className="app-bar-place">{text(group.labelKey)}</span>
-        </HeaderStart>
-      )}
-      <Section.Title title={title} level={1} />
+      <ScreenTitle title={title} />
       <div className="stat-row">
-        <Stat label={text("statPublished")} value={counts.published} note={text("statPublishedNote")} />
-        <Stat label={text("statDrafts")} value={counts.drafts} note={text("statDraftsNote")} />
-        <Stat label={text("statHidden")} value={counts.hidden} note={text("statHiddenNote")} />
+        <Stat
+          label={text("statPublished")}
+          value={counts.published}
+          note={text("statPublishedNote")}
+          tone={STATE_TONE.public}
+        />
+        <Stat
+          label={text("statDrafts")}
+          value={counts.drafts}
+          note={text("statDraftsNote")}
+          tone={STATE_TONE.draft}
+        />
+        <Stat
+          label={text("statHidden")}
+          value={counts.hidden}
+          note={text("statHiddenNote")}
+          tone={STATE_TONE.hidden}
+        />
         <Stat
           label={text("statTranslated")}
           value={counts.translated}

@@ -48,6 +48,21 @@ export function HeaderStart({ children }: { children: ReactNode }) {
   return start ? createPortal(children, start) : null;
 }
 
+/**
+ * A screen's heading, at the start of the bar, where an open entry shows its
+ * title after the way back. The content below begins with what the screen
+ * holds rather than with its name.
+ *
+ * @param title - What the screen is called.
+ */
+export function ScreenTitle({ title }: { title: string }) {
+  return (
+    <HeaderStart>
+      <h1 className="app-bar-title">{title}</h1>
+    </HeaderStart>
+  );
+}
+
 /** Puts its children in the centre of the bar: what just happened. */
 export function HeaderCenter({ children }: { children: ReactNode }) {
   const { center } = use(SlotsContext);

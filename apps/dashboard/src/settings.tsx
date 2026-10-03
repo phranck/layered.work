@@ -8,11 +8,12 @@ import {
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Section, Segmented } from "@layered/ui";
+import { Button, Card, Field, Input, Segmented } from "@layered/ui";
 import { FloppyDiskIcon, ImagesIcon, PaperPlaneTiltIcon, XIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import type { SettingsGroups } from "./api.js";
+import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -176,7 +177,7 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
   return (
     <>
-      <Section.Title title={text(area.labelKey)} level={1} />
+      <ScreenTitle title={text(area.labelKey)} />
       {settings.isError && <ErrorNotice error={settings.error} />}
       {settings.data && render(settings.data)}
     </>

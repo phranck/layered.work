@@ -1,0 +1,28 @@
+/*
+ * The status tones, as one custom property any component reads.
+ *
+ * An element carrying `data-tone` gets `--tone`, bound to the status token of
+ * that name. The publication state's choice in the editor and the figures above
+ * an entry list both read it, so a draft is the same orange in both places
+ * because there is only one place that says what orange a draft is.
+ */
+
+[data-tone="success"] {
+  --tone: var(--state-success);
+}
+
+[data-tone="warning"] {
+  --tone: var(--state-warning);
+}
+
+[data-tone="info"] {
+  --tone: var(--state-info);
+}
+
+[data-tone="accent"] {
+  --tone: var(--accent-400);
+}
+
+[data-tone="danger"] {
+  --tone: var(--state-danger);
+}

@@ -55,7 +55,7 @@
   inset: 0;
   z-index: -1;
   content: "";
-  background: color-mix(in oklab, var(--choice-tone, transparent) 16%, transparent);
+  background: color-mix(in oklab, var(--tone, transparent) 16%, transparent);
   border-radius: inherit;
   opacity: 0;
   transition: opacity var(--duration) var(--ease);
@@ -63,31 +63,11 @@
 
 .choice__option[aria-checked="true"] {
   color: var(--text-primary);
-  border-color: color-mix(in oklab, var(--choice-tone) 34%, transparent);
+  border-color: color-mix(in oklab, var(--tone) 34%, transparent);
 }
 
 .choice__option[aria-checked="true"]::before {
   opacity: 1;
-}
-
-/* --- Tones ------------------------------------------------------------------
-   Four names, bound to the status tokens. They are the only place this component
-   touches colour, and they read the semantic tokens like everything else. */
-
-.choice__option[data-tone="success"] {
-  --choice-tone: var(--state-success);
-}
-.choice__option[data-tone="warning"] {
-  --choice-tone: var(--state-warning);
-}
-.choice__option[data-tone="info"] {
-  --choice-tone: var(--state-info);
-}
-.choice__option[data-tone="accent"] {
-  --choice-tone: var(--accent-400);
-}
-.choice__option[data-tone="danger"] {
-  --choice-tone: var(--state-danger);
 }
 
 /* --- Mark -------------------------------------------------------------------
@@ -98,7 +78,7 @@
   flex: none;
   width: 10px;
   height: 10px;
-  background: var(--choice-tone, var(--text-faint));
+  background: var(--tone, var(--text-faint));
   border-radius: 50%;
   opacity: 0.72;
   transition:
@@ -108,7 +88,7 @@
 
 .choice__option[aria-checked="true"] .choice__mark {
   opacity: 1;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--choice-tone) 22%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--tone) 22%, transparent);
 }
 
 /* --- Text -------------------------------------------------------------------

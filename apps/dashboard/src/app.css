@@ -159,8 +159,9 @@ dialog.account-dialog::backdrop {
 }
 
 /* --- Entry lists -----------------------------------------------------------
-   The figures above a list, each compared against the one beside it, which is
-   what right alignment and a tabular face are for. */
+   The figures above a list: the name at the top left with its line of
+   explanation under it, and the number at the top right, in a tabular face, so
+   the numbers line up from one card to the next. */
 
 .stat-row {
   display: grid;
@@ -169,14 +170,19 @@ dialog.account-dialog::backdrop {
 }
 
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "note value";
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-content: start;
   padding: var(--card-padding);
-  text-align: right;
 }
 
 .stat__label {
+  grid-area: label;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
@@ -185,15 +191,31 @@ dialog.account-dialog::backdrop {
 }
 
 .stat__value {
+  grid-area: value;
+  align-self: start;
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .stat__note {
+  grid-area: note;
   font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+/* A figure that counts one publication state takes that state's tone, in the
+   fill and the edge the chosen state has in the editor, so the two read as the
+   same colour for the same thing. */
+.stat[data-tone] {
+  background: color-mix(in oklab, var(--tone) 16%, var(--card-surface));
+  border-color: color-mix(in oklab, var(--tone) 34%, transparent);
+}
+
+.stat[data-tone] .stat__label {
+  color: color-mix(in oklab, var(--tone) 70%, var(--text-primary));
 }
 
 /* A field with something fixed inside its frame: a search field with its icon,
@@ -583,15 +605,10 @@ dialog.account-dialog::backdrop {
   white-space: nowrap;
 }
 
-/* Where the reader is, at the start of the bar: the group a list belongs to, in
-   the small capitals the sidebar names its groups with, so the two read as the
-   same word in the same voice. */
-.app-bar-place {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--text-faint);
+/* A screen's own heading stands first in the bar, with nothing before it to
+   keep its distance from. */
+.app-bar-title:first-child {
+  margin-inline-start: 0;
 }
 
 /* The element CodeMirror is mounted in fills the writing surface, so the editor

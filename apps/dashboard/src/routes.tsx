@@ -136,12 +136,3 @@ export const dashboardGroups: DashboardGroup[] = [
 ];
 
 export const dashboardAreas = dashboardGroups.flatMap((group) => group.areas);
-
-/**
- * The sidebar group an area belongs to, which a screen names above its heading.
- *
- * @param area - Any area from the groups above.
- */
-export function groupOf(area: DashboardArea): DashboardGroup | undefined {
-  return dashboardGroups.find((group) => group.areas.includes(area));
-}

@@ -6,7 +6,7 @@ import {
   saveTopicBody,
   type TopicListItem,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Section, Select } from "@layered/ui";
+import { Button, Card, Field, Input, Select } from "@layered/ui";
 import {
   ArrowsMergeIcon,
   FloppyDiskIcon,
@@ -18,7 +18,7 @@ import {
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type KeyboardEvent, useMemo, useState } from "react";
 import { DashboardApiError } from "./api.js";
-import { HeaderStart } from "./app-bar-slots.js";
+import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { LANGUAGE_TEXT } from "./entry-list.js";
@@ -26,7 +26,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { type DashboardArea, groupOf } from "./routes.js";
+import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
 
 /**
@@ -101,7 +101,6 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
   const rows = useMemo(() => filterTopics(list.data ?? [], search), [list.data, search]);
   const { fieldRef, returnFocus } = useSearchField();
   const title = text(area.labelKey);
-  const group = groupOf(area);
   // A topic is named in the interface's language where it can be, because that
   // is the language the reader is working in.
   const interfaceLanguage: ContentLanguage = language;
@@ -114,12 +113,7 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
 
   return (
     <>
-      {group && (
-        <HeaderStart>
-          <span className="app-bar-place">{text(group.labelKey)}</span>
-        </HeaderStart>
-      )}
-      <Section.Title title={title} level={1} />
+      <ScreenTitle title={title} />
       <Card>
         <Card.Header
           title={title}
