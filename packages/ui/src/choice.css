@@ -28,7 +28,7 @@
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   font: inherit;
   color: var(--text-secondary);
   text-align: start;
@@ -113,12 +113,14 @@
 
 /* --- Text -------------------------------------------------------------------
    Neither line wraps: an option that grows a line changes its own height and no
-   other's, which makes the list read as misaligned. */
+   other's, which makes the list read as misaligned. The two lines belong to one
+   option, so they sit at the snug leading rather than the reading one. */
 
 .choice__text {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  line-height: var(--leading-snug);
 }
 
 .choice__label,
