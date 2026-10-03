@@ -18,17 +18,23 @@ const BATCH = 16;
  * @param database - The database whose library is checked.
  * @param exists - Asks the store about one key; the store this process uses
  *   unless a test hands in another.
- * @returns The missing files, by slug and key, in the order of their slugs.
+ * @returns The missing files and their expected bytes, in the order of their slugs.
  */
 export async function missingObjects(
   database: Database,
   exists: (storageKey: string) => Promise<boolean> = mediaObjectExists,
-): Promise<{ slug: string; storageKey: string }[]> {
+): Promise<{ slug: string; storageKey: string; mimeType: string; byteSize: number; checksum: string }[]> {
   const files = await database
-    .select({ slug: media.slug, storageKey: media.storageKey })
+    .select({
+      slug: media.slug,
+      storageKey: media.storageKey,
+      mimeType: media.mimeType,
+      byteSize: media.byteSize,
+      checksum: media.checksum,
+    })
     .from(media)
     .orderBy(asc(media.slug));
-  const missing: { slug: string; storageKey: string }[] = [];
+  const missing: typeof files = [];
   for (let start = 0; start < files.length; start += BATCH) {
     const batch = files.slice(start, start + BATCH);
     const found = await Promise.all(batch.map((file) => exists(file.storageKey)));

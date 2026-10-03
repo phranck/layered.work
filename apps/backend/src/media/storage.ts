@@ -28,7 +28,7 @@ import { config, isProduction } from "../config.js";
 let client: S3Client | undefined;
 
 /** The repository's root, which a relative `MEDIA_LOCAL_DIR` is read against. */
-const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
+export const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 
 /** How long a presigned upload address stays valid, in seconds. */
 const UPLOAD_URL_SECONDS = 5 * 60;
@@ -124,6 +124,25 @@ export async function readMediaBytes(storageKey: string): Promise<Buffer> {
   const result = await bucketClient().send(new GetObjectCommand({ Bucket: mode.bucket, Key: storageKey }));
   if (!result.Body) throw new Error("Object storage returned no body.");
   return Buffer.from(await result.Body.transformToByteArray());
+}
+
+/** Writes a verified local file to the configured bucket. The sync command calls this only for absent keys. */
+export async function writeBucketMediaBytes(
+  storageKey: string,
+  bytes: Buffer,
+  mimeType: string,
+): Promise<void> {
+  const mode = storageMode();
+  if (mode.kind !== "bucket") throw new Error("A bucket is required to sync local media.");
+  await bucketClient().send(
+    new PutObjectCommand({
+      Bucket: mode.bucket,
+      Key: storageKey,
+      Body: bytes,
+      ContentType: mimeType,
+      ContentLength: bytes.length,
+    }),
+  );
 }
 
 /**
