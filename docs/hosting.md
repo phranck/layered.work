@@ -174,7 +174,7 @@ The [zerops.yml specification](https://docs.zerops.io/zerops-yaml/specification#
 
 **Neither check takes a `retryPeriod` or a `failureTimeout`.** The specification's own example gives both as plain integers, and so does the published JSON Schema, and zcli refuses the whole file: `cannot unmarshal !!int 60 into time.Duration`. The deployment fails before anything is replaced, so nothing goes down, but every service is rejected at once. Leave both out and take the defaults.
 
-All three services have one, which is the part that is easy to get wrong: the health check watches what is already running, so a service without a readiness check puts a new container into rotation as soon as it starts. The website asks for its own `/health`, and the dashboard asks for its index page, because nginx serves an empty document root perfectly happily and a build that produced nothing would otherwise replace a working dashboard.
+All three services have one, which is the part that is easy to get wrong: the health check watches what is already running, so a service without a readiness check puts a new container into rotation as soon as it starts. The website asks for its own `/health`, and the dashboard asks for `/api/health/ready` through nginx, so a shell with a broken backend proxy cannot replace a working dashboard.
 
 ## What the forwarded chain looks like
 
@@ -225,6 +225,8 @@ ln -s ../apps/website/public/media media-local/migration
 ```
 
 The site addresses a file as its key behind `MEDIA_ORIGIN`, which is the bucket's root in production. Locally `MEDIA_ORIGIN` is unset, so the address is the bare key, and the website's development server answers it from `media-local/` through `apps/website/tools/local-media.mjs`. `pnpm --filter @layered/backend db:verify` asks the store for every key in the library and fails where one names no object.
+
+Before a batch release, put the four bucket values in the ignored `.env.local` as `ZEROPS_S3_ENDPOINT`, `ZEROPS_S3_BUCKET`, `ZEROPS_S3_ACCESS_KEY_ID`, and `ZEROPS_S3_SECRET_ACCESS_KEY`, then run `pnpm --filter @layered/backend db:sync-media` from the local checkout. Only this command maps those values to `S3_*`; ordinary local backend runs continue to use `media-local/`. The command refuses a database outside localhost, reads the library's storage keys from the local database, and uploads only objects absent from the bucket. It checks the local bytes against the database's size and SHA-256 before upload, then reads each uploaded object back and checks it again. Keep `DATABASE_URL` pointed at the local database.
 
 An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
 
@@ -305,4 +307,3 @@ backend_SMTP2GO_API_KEY      shape: "AAAAAAAA"
 That is after replacing every alphanumeric with `A`. `SESSION_SECRET` is over 32 characters, which is why the service starts at all, and it still prints as eight.
 
 On 13 September 2026 that placeholder was read as a measurement and reported as a figure: "ten characters, around sixty bits". The secret really was too short, but the evidence for that was the application refusing to boot with `SESSION_SECRET: Too small`, which is the real value being read by the thing that uses it. Ask the application, not the listing.
-

@@ -38,7 +38,15 @@ runs("checking every storage key against the store", () => {
       return key === "migration/present.pdf";
     });
 
-    expect(missing).toEqual([{ slug: "absent", storageKey: "migration/absent.pdf" }]);
+    expect(missing).toEqual([
+      {
+        slug: "absent",
+        storageKey: "migration/absent.pdf",
+        mimeType: "application/pdf",
+        byteSize: 10,
+        checksum: "1".repeat(64),
+      },
+    ]);
     expect(asked.sort()).toEqual(["migration/absent.pdf", "migration/present.pdf"]);
   });
 });
