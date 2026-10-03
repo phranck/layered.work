@@ -101,12 +101,12 @@ export const entryTranslations = pgTable(
     featuredMediaId: uuid("featured_media_id").references(() => media.id, { onDelete: "restrict" }),
 
     /**
-     * When it was moved to the bin, or null whilst it is not there.
+     * When it was moved to the trash, or null whilst it is not there.
      *
      * A column rather than a fourth publication state, because the state is
-     * what it returns to when it is restored. In the bin it is gone from the
+     * what it returns to when it is restored. In the trash it is gone from the
      * site exactly as a draft is, and its addresses answer 410. Its rows, its
-     * addresses and its media references stay until the bin is emptied, which
+     * addresses and its media references stay until the trash is emptied, which
      * is what makes restoring it possible.
      */
     trashedAt: timestamp("trashed_at", { withTimezone: true }),
@@ -163,7 +163,7 @@ export const paths = pgTable(
  * Every address of a translation that was deleted for good, so it answers 410
  * rather than 404.
  *
- * Emptying the bin removes a translation and, through the cascade, its rows in
+ * Emptying the trash removes a translation and, through the cascade, its rows in
  * `paths`. What the site needs afterwards is only the fact that the address
  * was here and is gone, which is what a search engine needs to drop it cleanly,
  * so the addresses move here first. An address given to something new later

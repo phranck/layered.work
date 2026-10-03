@@ -42,16 +42,16 @@ describe("filtering an entry list", () => {
   });
 });
 
-describe("the bin in an entry list", () => {
-  const binned = [...rows, row({ title: "Thrown away", trashed: true })];
+describe("the trash in an entry list", () => {
+  const inTrash = [...rows, row({ title: "Thrown away", trashed: true })];
 
   it("is left out of every choice but its own", () => {
-    expect(filterEntries(binned, { search: "", state: "all", language: "all" })).toHaveLength(3);
-    expect(filterEntries(binned, { search: "", state: "public", language: "all" })).toHaveLength(1);
+    expect(filterEntries(inTrash, { search: "", state: "all", language: "all" })).toHaveLength(3);
+    expect(filterEntries(inTrash, { search: "", state: "public", language: "all" })).toHaveLength(1);
   });
 
-  it("is all the bin filter shows", () => {
-    const found = filterEntries(binned, { search: "", state: "bin", language: "all" });
+  it("is all the trash filter shows", () => {
+    const found = filterEntries(inTrash, { search: "", state: "trash", language: "all" });
     expect(found.map((entry) => entry.title)).toEqual(["Thrown away"]);
   });
 });

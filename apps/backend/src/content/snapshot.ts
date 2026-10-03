@@ -38,7 +38,7 @@ export interface PublicSnapshot {
   topics: { id: string; slug: string; name: string }[];
   media: PublicMedia[];
   redirects: { source: string; target: string }[];
-  /** Addresses of translations in the bin or deleted for good, which answer 410. */
+  /** Addresses of translations in the trash or deleted for good, which answer 410. */
   gone: string[];
   /** How the overviews of posts and projects are set up. */
   listings: Record<ListedKind, ListingSettings>;
@@ -214,7 +214,7 @@ async function formerTopicAddresses(
 
 /**
  * The addresses that answer 410: every address, current or former, of a
- * translation in the bin, and every address of one deleted for good.
+ * translation in the trash, and every address of one deleted for good.
  *
  * An address something reachable answers at or redirects from is left out,
  * because it was given to something new and is that thing's now, and so is an
@@ -224,13 +224,13 @@ async function formerTopicAddresses(
  * @param taken - The addresses the snapshot already answers at or redirects from.
  */
 async function goneAddresses(database: Database, taken: ReadonlySet<string>): Promise<string[]> {
-  const binned = await database
+  const inTrash = await database
     .select({ path: paths.path })
     .from(paths)
     .innerJoin(entryTranslations, eq(entryTranslations.id, paths.translationId))
     .where(isNotNull(entryTranslations.trashedAt));
   const deleted = await database.select({ path: gonePaths.path }).from(gonePaths);
-  return [...new Set([...binned, ...deleted].map((row) => row.path))]
+  return [...new Set([...inTrash, ...deleted].map((row) => row.path))]
     .filter((path) => !taken.has(path) && !RESERVED_PATHS.includes(path))
     .sort();
 }

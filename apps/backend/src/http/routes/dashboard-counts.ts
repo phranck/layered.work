@@ -19,13 +19,13 @@ type StoredDashboardCounts = Omit<DashboardCounts, "forms" | "submissions" | "ma
  * Reads sidebar totals from their owning rows.
  *
  * Entry translations are not counted: an entry is one work however many
- * languages it has, and it counts while one of them is outside the bin. Disabled blocks and accounts remain rows an editor
+ * languages it has, and it counts while one of them is outside the trash. Disabled blocks and accounts remain rows an editor
  * manages, so the administrative total includes them.
  */
 export async function readDashboardCounts(
   db: Pick<ReturnType<typeof database>, "execute">,
 ): Promise<DashboardCounts> {
-  // An entry counts while one of its languages is outside the bin.
+  // An entry counts while one of its languages is outside the trash.
   const kept = sql`exists (
     select 1 from ${entryTranslations}
     where ${entryTranslations.entryId} = ${entries.id} and ${entryTranslations.trashedAt} is null

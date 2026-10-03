@@ -29,11 +29,11 @@ import { SearchShortcutCap, useSearchField } from "./search.js";
 
 /**
  * What the reader narrowed the list to. `all` leaves that dimension open, and
- * `bin` shows what is in the bin, which every other choice leaves out.
+ * `trash` shows what is in the trash, which every other choice leaves out.
  */
 export interface EntryFilter {
   search: string;
-  state: PublicationState | "all" | "bin";
+  state: PublicationState | "all" | "trash";
   language: ContentLanguage | "all";
 }
 
@@ -46,7 +46,7 @@ const OPEN_FILTER: EntryFilter = { search: "", state: "all", language: "all" };
  * The search matches anywhere in the title or in a topic's name and ignores
  * case, because a reader types the word they remember rather than how the title
  * begins, and often remembers what a post was about rather than what it was
- * called. A row in the bin is shown only where the reader asked for the bin.
+ * called. A row in the trash is shown only where the reader asked for the trash.
  *
  * @param rows - The whole list.
  * @param filter - What the reader narrowed it to.
@@ -55,8 +55,8 @@ export function filterEntries(rows: readonly EntryListItem[], filter: EntryFilte
   const search = filter.search.trim().toLocaleLowerCase();
   return rows.filter(
     (row) =>
-      row.trashed === (filter.state === "bin") &&
-      (filter.state === "all" || filter.state === "bin" || row.state === filter.state) &&
+      row.trashed === (filter.state === "trash") &&
+      (filter.state === "all" || filter.state === "trash" || row.state === filter.state) &&
       (filter.language === "all" || row.language === filter.language) &&
       (search === "" ||
         row.title.toLocaleLowerCase().includes(search) ||
@@ -204,12 +204,12 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   });
   const [emptying, setEmptying] = useState(false);
   const empty = useMutation({
-    mutationFn: () => api.emptyBin(kind),
+    mutationFn: () => api.emptyTrash(kind),
     onError: (error) => notifyError(error),
     onSuccess: ({ deleted }) => {
       refresh();
       setEmptying(false);
-      notify({ tone: "success", message: text("binEmptied", deleted) });
+      notify({ tone: "success", message: text("trashEmptied", deleted) });
     },
   });
 
@@ -303,7 +303,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 options={[
                   { value: "all", label: text("filterAll") },
                   ...PUBLICATION_STATES.map((state) => ({ value: state, label: text(STATE_TEXT[state]) })),
-                  { value: "bin", label: text("filterBin") },
+                  { value: "trash", label: text("filterTrash") },
                 ]}
               />
               <Segmented
@@ -318,9 +318,9 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                   { value: "de", label: "DE" },
                 ]}
               />
-              {filter.state === "bin" && rows.length > 0 && (
+              {filter.state === "trash" && rows.length > 0 && (
                 <Button tone="danger" icon={<TrashIcon />} onClick={() => setEmptying(true)}>
-                  {text("emptyBin")}
+                  {text("emptyTrash")}
                 </Button>
               )}
             </>
@@ -334,8 +334,8 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         {list.isSuccess && rows.length === 0 && (
           <Card.Body>
             <p className="unfinished">
-              {filter.state === "bin" && !filter.search.trim()
-                ? text("binEmpty")
+              {filter.state === "trash" && !filter.search.trim()
+                ? text("trashEmpty")
                 : list.data.length === 0
                   ? text("entriesEmpty")
                   : text("entriesNoMatch")}
@@ -425,10 +425,10 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         )}
       </Card>
       {emptying && (
-        <CardDialog labelId="empty-bin-title" onClose={() => setEmptying(false)}>
-          <Card.Header id="empty-bin-title" title={text("emptyBinTitle")} />
+        <CardDialog labelId="empty-trash-title" onClose={() => setEmptying(false)}>
+          <Card.Header id="empty-trash-title" title={text("emptyTrashTitle")} />
           <Card.Body>
-            <p>{text("emptyBinBody", rows.length)}</p>
+            <p>{text("emptyTrashBody", rows.length)}</p>
           </Card.Body>
           <Card.Footer
             actions={
@@ -442,7 +442,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                   disabled={empty.isPending}
                   onClick={() => empty.mutate()}
                 >
-                  {empty.isPending ? text("emptyBinPending") : text("emptyBin")}
+                  {empty.isPending ? text("emptyTrashPending") : text("emptyTrash")}
                 </Button>
               </>
             }

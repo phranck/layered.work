@@ -116,9 +116,9 @@ const de = {
   editEntry: "Bearbeiten",
   entriesEmpty: "Hier gibt es noch keine Einträge.",
   entriesNoMatch: "Kein Eintrag passt zu Suche und Filter.",
-  filterBin: "Papierkorb",
+  filterTrash: "Papierkorb",
   stateTrashed: "Im Papierkorb",
-  binEmpty: "Der Papierkorb ist leer.",
+  trashEmpty: "Der Papierkorb ist leer.",
   restore: "Wiederherstellen",
   restorePending: "Wird wiederhergestellt…",
   restored: "Wiederhergestellt",
@@ -135,17 +135,17 @@ const de = {
       : `Wird der Papierkorb geleert, ${count === 1 ? "wird die Datei" : `werden die ${count} Dateien`}, auf die er verweist, für das Löschen freigegeben.`,
   trashNavigation: (count: number) =>
     `${count === 1 ? "Ein Navigationspunkt zeigt" : `${count} Navigationspunkte zeigen`} auf diesen Eintrag.`,
-  editorInBin: "Im Papierkorb",
-  editorTranslationInBin: (language: string) => `Die Fassung auf ${language} liegt im Papierkorb.`,
+  editorInTrash: "Im Papierkorb",
+  editorTranslationInTrash: (language: string) => `Die Fassung auf ${language} liegt im Papierkorb.`,
   editorShowInOtherLanguage: (language: string) => `Auch auf ${language} zeigen`,
   editorShowInOtherLanguageHint: (language: string) =>
     `Erscheint auch in den Listen, Feeds und der Suche auf ${language}, mit seiner Sprache markiert, bis es dort eine veröffentlichte Fassung gibt.`,
-  emptyBin: "Papierkorb leeren",
-  emptyBinTitle: "Papierkorb leeren",
-  emptyBinBody: (count: number) =>
+  emptyTrash: "Papierkorb leeren",
+  emptyTrashTitle: "Papierkorb leeren",
+  emptyTrashBody: (count: number) =>
     `${count === 1 ? "Eine Fassung wird" : `${count} Fassungen werden`} endgültig gelöscht. Ihre Adressen melden danach, dass sie gelöscht wurden, und die Dateien, auf die sie verweisen, sind für das Löschen freigegeben. Das lässt sich nicht rückgängig machen.`,
-  emptyBinPending: "Wird geleert…",
-  binEmptied: (count: number) =>
+  emptyTrashPending: "Wird geleert…",
+  trashEmptied: (count: number) =>
     count === 1 ? "Eine Fassung endgültig gelöscht" : `${count} Fassungen endgültig gelöscht`,
   // Entry editor
   editorTitle: "Titel",
@@ -438,36 +438,36 @@ const en: Catalogue = {
   editEntry: "Edit",
   entriesEmpty: "There are no entries here yet.",
   entriesNoMatch: "No entry matches the search and the filters.",
-  filterBin: "Bin",
-  stateTrashed: "In the bin",
-  binEmpty: "The bin is empty.",
+  filterTrash: "Trash",
+  stateTrashed: "In the trash",
+  trashEmpty: "The trash is empty.",
   restore: "Restore",
   restorePending: "Restoring…",
   restored: "Restored",
-  trash: "Move to the bin",
+  trash: "Move to trash",
   trashPending: "Moving…",
-  trashedNotice: "Moved to the bin",
-  trashTitle: (title) => `Move “${title}” to the bin`,
+  trashedNotice: "Moved to trash",
+  trashTitle: (title) => `Move “${title}” to trash`,
   trashBody:
-    "The entry disappears from the website, from every listing, the feeds, the sitemap and the search, and its address says that it was deleted. It can be restored from the bin at the same address.",
+    "The entry disappears from the website, from every listing, the feeds, the sitemap and the search, and its address says that it was deleted. It can be restored from the trash at the same address.",
   trashOtherLanguage: (language) => `The ${language} version stays as it is.`,
   trashMedia: (count) =>
     count === 0
       ? "It names no file."
-      : `When the bin is emptied, ${count === 1 ? "the file it names is" : `the ${count} files it names are`} released for deletion.`,
+      : `When the trash is emptied, ${count === 1 ? "the file it names is" : `the ${count} files it names are`} released for deletion.`,
   trashNavigation: (count) =>
     `${count === 1 ? "One navigation item points" : `${count} navigation items point`} at this entry.`,
-  editorInBin: "In the bin",
-  editorTranslationInBin: (language) => `The ${language} version is in the bin.`,
+  editorInTrash: "In the trash",
+  editorTranslationInTrash: (language) => `The ${language} version is in the trash.`,
   editorShowInOtherLanguage: (language) => `Also show in ${language}`,
   editorShowInOtherLanguageHint: (language) =>
     `Appears in the ${language} listings, feeds and search as well, marked with its language, until a ${language} version is published.`,
-  emptyBin: "Empty the bin",
-  emptyBinTitle: "Empty the bin",
-  emptyBinBody: (count) =>
+  emptyTrash: "Empty the trash",
+  emptyTrashTitle: "Empty the trash",
+  emptyTrashBody: (count) =>
     `${count === 1 ? "One version is" : `${count} versions are`} deleted for good. Their addresses say afterwards that they were deleted, and the files they name are released for deletion. This cannot be undone.`,
-  emptyBinPending: "Emptying…",
-  binEmptied: (count) =>
+  emptyTrashPending: "Emptying…",
+  trashEmptied: (count) =>
     count === 1 ? "One version deleted for good" : `${count} versions deleted for good`,
   editorTitle: "Title",
   editorTitleMissing: "Untitled",

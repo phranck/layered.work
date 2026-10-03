@@ -475,7 +475,7 @@ async function importEntry(
  * sits in a public repository. The migration output carries the drafts and the
  * text as it was before those corrections. So the published file decides every
  * entry it holds, and the other contributes only what is a draft and absent
- * from it. An entry in the bin is not a draft and is not taken.
+ * from it. An entry in the trash is not a draft and is not taken.
  *
  * @param published - The snapshot the site publishes.
  * @param migrationOutput - The pipeline's full output, drafts included.
@@ -581,10 +581,10 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
 
   for (const group of groupTranslations(snapshot)) {
     // A trashed entry is not a state the schema has, and it is not one anybody
-    // asked for: the old site had one, it was in the bin, and it stays out.
+    // asked for: the old site had one, it was in the trash, and it stays out.
     const live = group.filter((entry) => entry.visibility !== "trashed");
     for (const entry of group) {
-      if (entry.visibility === "trashed") report.skipped.push({ slug: entry.slug, reason: "in the bin" });
+      if (entry.visibility === "trashed") report.skipped.push({ slug: entry.slug, reason: "in the trash" });
     }
     if (live.length === 0) continue;
 

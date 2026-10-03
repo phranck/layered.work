@@ -342,7 +342,7 @@ runs("the entry list", () => {
       await app.request(`/entries/${page?.id}/trash`, { method: "POST", headers: { cookie } });
       expect((await readPublicSnapshot(database)).gone).toEqual([]);
 
-      await app.request("/entries/bin?kind=page", { method: "DELETE", headers: { cookie } });
+      await app.request("/entries/trash?kind=page", { method: "DELETE", headers: { cookie } });
       expect((await readPublicSnapshot(database)).gone).toEqual([]);
     });
 
@@ -497,7 +497,7 @@ runs("the entry list", () => {
     expect(response.status).toBe(404);
   });
 
-  it("moves one language to the bin: gone from the site and the counterpart, back at the same address", async () => {
+  it("moves one language to the trash: gone from the site and the counterpart, back at the same address", async () => {
     const cookie = await signedInCookie();
     const rows = await list("post", cookie);
     const english = rows.find((row) => row.title === "Published in English");
@@ -559,7 +559,7 @@ runs("the entry list", () => {
     expect(logged.map((row) => row.action)).toEqual(["entry.trashed", "entry.restored"]);
   });
 
-  it("empties the bin of one list: the rows go, the files are released, and the addresses stay gone", async () => {
+  it("empties the trash of one list: the rows go, the files are released, and the addresses stay gone", async () => {
     const cookie = await signedInCookie();
     const rows = await list("post", cookie);
     const english = rows.find((row) => row.title === "Published in English");
@@ -575,12 +575,12 @@ runs("the entry list", () => {
     for (const row of [english, german]) {
       await app.request(`/entries/${row?.id}/trash`, { method: "POST", headers: { cookie } });
     }
-    // The bin keeps what it holds until it is emptied.
+    // The trash keeps what it holds until it is emptied.
     expect(await database.select().from(mediaReferences)).toHaveLength(1);
     const page = (await list("page", cookie))[0];
     await app.request(`/entries/${page?.id}/trash`, { method: "POST", headers: { cookie } });
 
-    const emptied = await app.request("/entries/bin?kind=post", { method: "DELETE", headers: { cookie } });
+    const emptied = await app.request("/entries/trash?kind=post", { method: "DELETE", headers: { cookie } });
     expect(((await emptied.json()) as { data: unknown }).data).toEqual({ deleted: 2 });
 
     expect((await list("post", cookie)).map((row) => row.title)).toEqual(["A draft"]);

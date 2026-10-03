@@ -4,7 +4,7 @@ import { database } from "../../db/connect.js";
 import { createPreview } from "../../entries/preview.js";
 import {
   createTranslation,
-  emptyBin,
+  emptyTrash,
   listEntries,
   readEntry,
   saveEntry,
@@ -56,7 +56,7 @@ entriesRoutes.put("/:id", validate("param", entryIdParam), validate("json", save
   ok(c, await saveEntry(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId)),
 );
 
-// What moving it to the bin affects, for the question asked first.
+// What moving it to the trash affects, for the question asked first.
 entriesRoutes.get("/:id/trash-impact", validate("param", entryIdParam), async (c) =>
   ok(c, await trashImpact(database(), c.req.valid("param").id)),
 );
@@ -69,7 +69,7 @@ entriesRoutes.post("/:id/restore", validate("param", entryIdParam), async (c) =>
   ok(c, await setTrashed(database(), c.req.valid("param").id, false, principalOf(c).userId)),
 );
 
-// Empties the bin of one list, for good.
-entriesRoutes.delete("/bin", validate("query", entryListQuery), async (c) =>
-  ok(c, await emptyBin(database(), c.req.valid("query").kind, principalOf(c).userId)),
+// Empties the trash of one list, for good.
+entriesRoutes.delete("/trash", validate("query", entryListQuery), async (c) =>
+  ok(c, await emptyTrash(database(), c.req.valid("query").kind, principalOf(c).userId)),
 );

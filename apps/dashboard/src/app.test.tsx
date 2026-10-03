@@ -953,7 +953,7 @@ describe("dashboard shell", () => {
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
-  it("moves an entry to the bin after saying what that affects, and goes back to the list", async () => {
+  it("moves an entry to the trash after saying what that affects, and goes back to the list", async () => {
     const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/trash-impact"))
@@ -977,15 +977,15 @@ describe("dashboard shell", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
   });
 
-  it("shows the bin as a filter, restores a row from it, and asks before emptying it", async () => {
-    const binned = { ...posts[2], trashed: true };
+  it("shows the trash as a filter, restores a row from it, and asks before emptying it", async () => {
+    const inTrash = { ...posts[2], trashed: true };
     const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/entries?kind=post"))
-        return Promise.resolve(json({ data: [posts[0], posts[1], binned] }));
+        return Promise.resolve(json({ data: [posts[0], posts[1], inTrash] }));
       if (url.endsWith("/restore") && init?.method === "POST")
         return Promise.resolve(json({ data: draftDetail }));
-      if (url.includes("/entries/bin?kind=post") && init?.method === "DELETE")
+      if (url.includes("/entries/trash?kind=post") && init?.method === "DELETE")
         return Promise.resolve(json({ data: { deleted: 1 } }));
       return Promise.resolve(successfulGet(input));
     });
@@ -994,13 +994,13 @@ describe("dashboard shell", () => {
 
     const table = await screen.findByRole("table");
     expect(within(table).queryByText("A draft about soldering")).toBeNull();
-    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "bin" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "trash" } });
     expect(within(table).getByText("A draft about soldering")).toBeTruthy();
     expect(within(table).getByText("Im Papierkorb")).toBeTruthy();
 
     fireEvent.click(within(table).getByRole("button", { name: "Wiederherstellen" }));
     await waitFor(() =>
-      expect(request.mock.calls.some(([url]) => String(url).endsWith(`/entries/${binned.id}/restore`))).toBe(
+      expect(request.mock.calls.some(([url]) => String(url).endsWith(`/entries/${inTrash.id}/restore`))).toBe(
         true,
       ),
     );

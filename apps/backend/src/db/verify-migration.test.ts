@@ -26,8 +26,8 @@ function agreeing(): { source: Source; target: Target } {
         },
         { slug: "later", title: "Later", state: "draft", createdAt: "2025-01-03T00:00:00.000Z", topics: [] },
         {
-          slug: "binned",
-          title: "Binned",
+          slug: "in-trash",
+          title: "In the trash",
           state: "trashed",
           createdAt: "2025-01-04T00:00:00.000Z",
           topics: [],
@@ -74,7 +74,7 @@ function agreeing(): { source: Source; target: Target } {
 }
 
 describe("reading a Publii status", () => {
-  it("lets the bin win, then a draft, then hidden", () => {
+  it("lets the trash win, then a draft, then hidden", () => {
     expect(stateOf("published,is-page,trashed")).toBe("trashed");
     expect(stateOf("draft,is-page")).toBe("draft");
     expect(stateOf("published,hidden,excluded_homepage")).toBe("hidden");
@@ -119,13 +119,13 @@ describe("comparing Publii with the database", () => {
     expect(compare(source, target).passed).toBe(false);
   });
 
-  it("notices an entry from the bin that arrived", () => {
+  it("notices an entry from the trash that arrived", () => {
     const { source, target } = agreeing();
     target.translations.push({
-      entryId: "bin",
-      slug: "binned",
-      path: "/binned/",
-      title: "Binned",
+      entryId: "trash",
+      slug: "in-trash",
+      path: "/in-trash/",
+      title: "In the trash",
       state: "public",
       publishedAt: null,
     });

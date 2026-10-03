@@ -1,6 +1,6 @@
 import {
   type ContentLanguage,
-  type EmptiedBin,
+  type EmptiedTrash,
   type EntryDetail,
   type EntryKind,
   type EntryList,
@@ -112,7 +112,7 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
       // The other language of the same entry. The inner table is aliased, so the
       // bare table name inside the subquery still means the outer row.
       topics: topicNames(entries.id, entryTranslations.language),
-      // A language in the bin is not a translation a reader can switch to.
+      // A language in the trash is not a translation a reader can switch to.
       translated: sql<boolean>`exists (
         select 1 from ${entryTranslations} as "sibling"
         where "sibling"."entry_id" = ${entries.id} and "sibling"."id" <> ${entryTranslations.id}
@@ -385,9 +385,9 @@ export async function saveEntry(
       .where(eq(entryTranslations.id, id))
       .limit(1);
     if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
-    // A translation in the bin is restored before it is written to, so a save
+    // A translation in the trash is restored before it is written to, so a save
     // can never publish something the reader believes is deleted.
-    if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the bin.");
+    if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
 
     const now = new Date();
     const becomesPublic = value.state === "public" && current.state !== "public";
@@ -524,8 +524,8 @@ export async function createTranslation(db: Database, id: string, actorUserId: s
 }
 
 /**
- * What moving a translation to the bin will affect: the files it names, which
- * the bin keeps until it is emptied, and the navigation items pointing at its
+ * What moving a translation to the trash will affect: the files it names, which
+ * the trash keeps until it is emptied, and the navigation items pointing at its
  * entry.
  *
  * @param db - The database.
@@ -555,7 +555,7 @@ export async function trashImpact(db: Database, id: string): Promise<EntryTrashI
 }
 
 /**
- * Moves a translation to the bin, or takes it out again.
+ * Moves a translation to the trash, or takes it out again.
  *
  * Nothing but the mark changes, so a translation comes back with its state, its
  * addresses and its files exactly as it left. Moving one that is already where
@@ -563,7 +563,7 @@ export async function trashImpact(db: Database, id: string): Promise<EntryTrashI
  *
  * @param db - The database.
  * @param id - The translation.
- * @param trashed - True to move it to the bin, false to restore it.
+ * @param trashed - True to move it to the trash, false to restore it.
  * @param actorUserId - The account that asked, for the audit log.
  * @returns The translation as it now stands.
  * @throws `not_found` where there is no such translation.
@@ -600,7 +600,7 @@ export async function setTrashed(
 }
 
 /**
- * Deletes every translation of one kind that is in the bin, for good.
+ * Deletes every translation of one kind that is in the trash, for good.
  *
  * Their addresses move to `gone_paths` first, so they answer 410 afterwards. The
  * rows go with everything that cascades from them, which is what releases the
@@ -608,19 +608,19 @@ export async function setTrashed(
  * because a piece of work in no language is nothing.
  *
  * @param db - The database.
- * @param kind - Posts, pages or projects, because the bin is a filter on one list.
+ * @param kind - Posts, pages or projects, because the trash is a filter on one list.
  * @param actorUserId - The account that emptied it, for the audit log.
  * @returns How many translations were deleted.
  */
-export async function emptyBin(db: Database, kind: EntryKind, actorUserId: string): Promise<EmptiedBin> {
+export async function emptyTrash(db: Database, kind: EntryKind, actorUserId: string): Promise<EmptiedTrash> {
   return db.transaction(async (tx) => {
-    const binned = await tx
+    const inTrash = await tx
       .select({ id: entryTranslations.id, entryId: entryTranslations.entryId })
       .from(entryTranslations)
       .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
       .where(and(eq(entries.kind, kind), isNotNull(entryTranslations.trashedAt)));
-    if (binned.length === 0) return { deleted: 0 };
-    const ids = binned.map((row) => row.id);
+    if (inTrash.length === 0) return { deleted: 0 };
+    const ids = inTrash.map((row) => row.id);
 
     // A reserved address belongs to the site, so it goes on answering with
     // what the site puts there rather than with 410.
@@ -630,7 +630,7 @@ export async function emptyBin(db: Database, kind: EntryKind, actorUserId: strin
     if (addresses.length > 0) await tx.insert(gonePaths).values(addresses).onConflictDoNothing();
 
     await tx.delete(entryTranslations).where(inArray(entryTranslations.id, ids));
-    const entryIds = [...new Set(binned.map((row) => row.entryId))];
+    const entryIds = [...new Set(inTrash.map((row) => row.entryId))];
     await tx
       .delete(entries)
       .where(

@@ -654,14 +654,14 @@ dialog.account-dialog::backdrop {
 
 /* An action in the panel stands across its width, as the one action in a
    column of fields, so it reads as belonging to all of them: the preview under
-   the state, and the move to the bin at the panel's end, apart from the rest. */
+   the state, and the move to the trash at the panel's end, apart from the rest. */
 .entry-editor__action {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-/* The move to the bin is set off from the fields above it by a rule, so it is
+/* The move to the trash is set off from the fields above it by a rule, so it is
    not reached by somebody working down the panel. */
 .entry-editor__action--apart {
   padding-block-start: var(--space-5);

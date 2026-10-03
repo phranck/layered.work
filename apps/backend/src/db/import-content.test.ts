@@ -44,7 +44,7 @@ const overviewPages = snapshot.entries.filter(
  * A fuller snapshot standing in for the migration output, which never leaves
  * the machine that produced it. One published entry carries a stale body, as
  * the migration output does after an editorial correction, and two entries
- * exist only here: a draft and one in the bin.
+ * exist only here: a draft and one in the trash.
  */
 function migrationOutput(): Snapshot {
   const [first, ...rest] = snapshot.entries;
@@ -55,7 +55,13 @@ function migrationOutput(): Snapshot {
       { ...first, body: "The text before the correction." },
       ...rest,
       { ...first, id: "draft-fixture", slug: "draft-fixture", path: "/draft-fixture/", visibility: "draft" },
-      { ...first, id: "bin-fixture", slug: "bin-fixture", path: "/bin-fixture/", visibility: "trashed" },
+      {
+        ...first,
+        id: "trash-fixture",
+        slug: "trash-fixture",
+        path: "/trash-fixture/",
+        visibility: "trashed",
+      },
     ],
   };
 }

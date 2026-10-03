@@ -36,7 +36,7 @@ export interface SourcePost {
 export interface SourceFile {
   path: string;
   sha256: string;
-  /** Whether a post that is not in the bin names the file. */
+  /** Whether a post that is not in the trash names the file. */
   named: boolean;
   /**
    * Whether it is a size copy Publii made, which the import leaves out on
@@ -103,7 +103,7 @@ export interface Verification {
 /**
  * The state a Publii status string describes.
  *
- * Publii writes its flags into one comma-separated column. The bin wins over
+ * Publii writes its flags into one comma-separated column. The trash wins over
  * everything, a draft over visibility, and a post that is neither published nor
  * a draft is treated as a draft, the same reading the migration applied.
  */
@@ -302,7 +302,7 @@ export function compare(source: Source, target: Target): Verification {
         title: true,
         date: true,
         topics: true,
-        problems: found ? ["in the bin in Publii, and present here"] : [],
+        problems: found ? ["in the trash in Publii, and present here"] : [],
       };
     }
     if (!found) {
@@ -361,7 +361,7 @@ export function compare(source: Source, target: Target): Verification {
       note: "",
     })),
     {
-      what: "Entries in the bin",
+      what: "Entries in the trash",
       source: countOf(source.posts, "trashed"),
       target: 0,
       matches: entryRows.every((row) => row.state !== "trashed" || row.problems.length === 0),

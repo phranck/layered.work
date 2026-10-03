@@ -4,7 +4,7 @@ The content itself is migrated from the old Publii site by a pipeline that stays
 
 ## The content snapshot
 
-The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the bin or was deleted from it. Beside them, `listings` holds how the overviews of posts and projects are set up in the dashboard: entries per page, columns, a headline and an introduction per language, and the preview length. A snapshot without it, such as the one committed from the export, uses the defaults.
+The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the trash or was deleted from it. Beside them, `listings` holds how the overviews of posts and projects are set up in the dashboard: entries per page, columns, a headline and an introduction per language, and the preview length. A snapshot without it, such as the one committed from the export, uses the defaults.
 
 Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, `showInOtherLanguage`, and `template`. `showInOtherLanguage` lists a public entry in the other language's listings, feeds and search as well, marked with its language, whilst that language has no published version of it. Dates are ISO strings or null. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
 
@@ -40,7 +40,7 @@ That output cannot contain an address the site stopped generating earlier, and s
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
 | `/feed.xml`, `/feed.json`, `/sitemap.xml`, `/robots.txt` | 200 | These keep their addresses exactly. |
 | The six addresses in `legacy-redirects.json` | 308 | Observed in the Internet Archive, absent from the final output. Each row carries its own reason. |
-| Every address of an entry in the dashboard's bin, or deleted from it for good | 410 | The entry was here and is gone, which tells a search engine to drop the address rather than retry it. The page offers the home page and the search. An address of an entry deleted for good stays in `gone_paths`, and one given to a new entry later belongs to that entry. |
+| Every address of an entry in the dashboard's trash, or deleted from it for good | 410 | The entry was here and is gone, which tells a search engine to drop the address rather than retry it. The page offers the home page and the search. An address of an entry deleted for good stays in `gone_paths`, and one given to a new entry later belongs to that entry. |
 | `/404.html` | 404 | Publii served its error page at a real address. Nothing links to it and a redirect would only disguise the status. |
 
 Two things are deliberately outside this list. Static assets such as the favicons, the web manifest and the images under `/media/` are not page addresses and are not crawled by the check. The old site had no search page: its search ran in the browser on the pages themselves, so there is no address to preserve.
@@ -86,12 +86,12 @@ Measured on 2 October 2026 against the local database after the import above.
 | Entries, public | 15 | 15 |
 | Entries, hidden | 2 | 2 |
 | Entries, draft | 3 | 3 |
-| Entries in the bin | 1 | 0 |
+| Entries in the trash | 1 | 0 |
 | Topics | 23 | 23 |
 | Topic assignments | 30 | 30 |
 | Media, distinct contents | 205 | 77 |
 
-The entry in the bin, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 duplicate a file already counted, which leaves 205 distinct files. 125 of them are the size copies Publii made of every picture, in a `responsive` directory beside each one or as a gallery thumbnail. This site generates its own variants, so the import leaves the copies out of the library, and they would otherwise show every picture several times over. Publii's bodies name them in their `srcset`, which is why the check identifies them by where they lie rather than by whether a body names them. Three further files are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
+The entry in the trash, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 duplicate a file already counted, which leaves 205 distinct files. 125 of them are the size copies Publii made of every picture, in a `responsive` directory beside each one or as a gallery thumbnail. This site generates its own variants, so the import leaves the copies out of the library, and they would otherwise show every picture several times over. Publii's bodies name them in their `srcset`, which is why the check identifies them by where they lie rather than by whether a body names them. Three further files are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
 
 Every one of the 20 migrated entries has the state, title, date and topics it had in Publii, at the address the rules above give it.
 

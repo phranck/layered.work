@@ -239,7 +239,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   }, [dirty]);
 
   // Leaving inside the dashboard asks the dashboard's own question, except for
-  // an entry in the bin, which cannot be saved, and after moving it there,
+  // an entry in the trash, which cannot be saved, and after moving it there,
   // which was asked about already.
   const trashedHere = useRef(false);
   const blocker = useBlocker(
@@ -339,11 +339,11 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
       {/* What the entry's state is and what can be done with it, at the end of
           the bar, where they stay in view however far the text is scrolled. */}
       {entry.trashed ? (
-        // In the bin nothing is written or published; the one thing to do is
+        // In the trash nothing is written or published; the one thing to do is
         // to take it out again.
         <HeaderEnd>
           <span className="badge" data-status="trashed" role="status">
-            {text("editorInBin")}
+            {text("editorInTrash")}
           </span>
           <Button
             tone="primary"
@@ -548,7 +548,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               </a>
             ) : entry.counterpartTrashed ? (
               <span className="entry-editor__note">
-                {text("editorTranslationInBin", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
+                {text("editorTranslationInTrash", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
               </span>
             ) : (
               <>
@@ -650,9 +650,9 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 }
 
 /**
- * The question before a translation goes to the bin: what that does on the
+ * The question before a translation goes to the trash: what that does on the
  * site, what happens to the other language, how many files it releases once the
- * bin is emptied, and whether navigation points at it.
+ * trash is emptied, and whether navigation points at it.
  *
  * The figures are asked for when the dialog opens, so they describe the entry
  * as it is stored at that moment.
