@@ -224,16 +224,15 @@ zerops:
         # nginx forwards same-origin /api/ requests over the private network.
         # Keeping the edge's forwarding chain intact preserves caller limits;
         # calling the public API here would add another pair of proxy hops.
-        API_ORIGIN: http://backend:3000
+        # nginx's runtime resolver does not apply /etc/resolv.conf search domains.
+        API_ORIGIN: http://backend.zerops:3000
     deploy:
-      # nginx starts whatever is in the document root, including nothing, so a
-      # build that produced no index.html would otherwise replace a working
-      # dashboard with a directory listing or a 404. Asking for the page itself
-      # is the whole check this service needs.
+      # The shell alone can answer while its API proxy is broken. Check the
+      # backend through nginx before replacing a working dashboard container.
       readinessCheck:
         httpGet:
           port: 80
-          path: /
+          path: /api/health/ready
     run:
       base: nginx@1.22
       ports:

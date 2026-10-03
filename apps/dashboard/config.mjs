@@ -1,7 +1,7 @@
 /** Private upstream used by nginx and the Vite development proxy. */
 export function dashboardApiOrigin(command = "build") {
   const value =
-    process.env.API_ORIGIN ?? (command === "serve" ? "http://localhost:4002" : "http://backend:3000");
+    process.env.API_ORIGIN ?? (command === "serve" ? "http://localhost:4002" : "http://backend.zerops:3000");
   let url;
   try {
     url = new URL(value);

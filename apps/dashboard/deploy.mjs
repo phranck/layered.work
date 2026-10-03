@@ -63,13 +63,19 @@ server {
     server_name _;
     root /var/www/apps/dashboard/dist;
     index index.html;
+    # Zerops service DNS changes when the backend is redeployed. Resolve the
+    # private name again after five seconds instead of pinning its old address.
+    resolver 10.18.128.1 valid=5s ipv6=off;
 
 ${nginxHeaders(headers)}
 
     # Same-origin cookies stay on the dashboard host; the private upstream
     # receives the existing edge chain unchanged, preserving per-client limits.
     location /api/ {
-        proxy_pass ${apiOrigin}/;
+        set $dashboard_api_origin ${apiOrigin};
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass $dashboard_api_origin;
+        proxy_redirect ${apiOrigin}/ /api/;
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Forwarded-For $http_x_forwarded_for;
         proxy_intercept_errors off;
