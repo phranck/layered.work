@@ -17,6 +17,7 @@ zerops:
         # `packages/schemas/dist` is never produced and the deployed service
         # cannot import it.
         - pnpm --filter "@layered/backend..." build
+        - node scripts/verify-backend-artifact.mjs
       deployFiles:
         - apps/backend/dist
         # The generated migrations and their journal. Without them the runner
@@ -46,6 +47,13 @@ zerops:
         # package '@layered/passwords'".
         - packages/passwords/dist
         - packages/passwords/package.json
+        # Content imports the token package at runtime. Include both sides of
+        # the workspace links and content's external parser dependencies.
+        - packages/content/dist
+        - packages/content/package.json
+        - packages/content/node_modules
+        - packages/tokens/dist
+        - packages/tokens/package.json
         - node_modules
         - package.json
       cache: node_modules
