@@ -5,6 +5,7 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  formerTopicSlugs,
   homeBlocks,
   media,
   mediaTranslations,
@@ -173,6 +174,36 @@ export async function publicMedia(
 }
 
 /**
+ * The redirects a renamed or merged topic leaves behind.
+ *
+ * The site addresses a topic by its English slug in both languages, under
+ * `/topics/` and `/de/topics/`, so only an English former slug is an address
+ * anybody can hold. Each one leads to where its topic answers now, in both
+ * languages. A topic with no English slug has no address to lead to.
+ *
+ * @param database - The database to read from.
+ * @param current - Every topic's current English slug.
+ */
+async function formerTopicAddresses(
+  database: Database,
+  current: readonly { id: string; slug: string }[],
+): Promise<{ source: string; target: string }[]> {
+  const slugById = new Map(current.map((topic) => [topic.id, topic.slug]));
+  const rows = await database
+    .select({ topicId: formerTopicSlugs.topicId, slug: formerTopicSlugs.slug })
+    .from(formerTopicSlugs)
+    .where(eq(formerTopicSlugs.language, "en"));
+  return rows.flatMap((row) => {
+    const target = slugById.get(row.topicId);
+    if (!target || target === row.slug) return [];
+    return [
+      { source: `/topics/${row.slug}/`, target: `/topics/${target}/` },
+      { source: `/de/topics/${row.slug}/`, target: `/de/topics/${target}/` },
+    ];
+  });
+}
+
+/**
  * Reads the published content.
  *
  * @param database - The database to read from.
@@ -275,6 +306,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     .from(topicTranslations)
     .innerJoin(topics, eq(topics.id, topicTranslations.topicId))
     .where(eq(topicTranslations.language, "en"));
+  former.push(...(await formerTopicAddresses(database, publicTopics)));
 
   const blocks = await database
     .select({

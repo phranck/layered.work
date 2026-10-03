@@ -39,6 +39,8 @@ import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
+import { TopicField } from "./topic-field.js";
+import { topicListKey } from "./topics.js";
 
 /**
  * Where an entry is written, with everything decided about it in the panel
@@ -92,12 +94,24 @@ function draftOf(entry: EntryDetail): SaveEntryBody {
     body: entry.body,
     state: entry.state,
     readingWidth: entry.readingWidth,
+    topicIds: entry.topics.map((topic) => topic.id),
   };
 }
 
-/** Whether two drafts say the same thing. Compared field by field, never by serialising. */
+/**
+ * Whether two drafts say the same thing. Compared field by field, never by
+ * serialising, and the topics as a set, because their order means nothing.
+ */
 function sameDraft(first: SaveEntryBody, second: SaveEntryBody): boolean {
-  return (Object.keys(first) as (keyof SaveEntryBody)[]).every((key) => first[key] === second[key]);
+  const { topicIds: firstTopics, ...firstFields } = first;
+  const { topicIds: secondTopics, ...secondFields } = second;
+  return (
+    (Object.keys(firstFields) as (keyof typeof firstFields)[]).every(
+      (key) => firstFields[key] === secondFields[key],
+    ) &&
+    firstTopics.length === secondTopics.length &&
+    firstTopics.every((id) => secondTopics.includes(id))
+  );
 }
 
 /**
@@ -180,6 +194,8 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
       setSavedAt({ at: new Date(), automatic });
       queryClient.setQueryData(entryKey(entry.id), stored);
       void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+      // The topics screen counts the entries of each topic.
+      void queryClient.invalidateQueries({ queryKey: topicListKey });
     },
   });
 
@@ -465,18 +481,13 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               onValueChange={(value) => update({ readingWidth: value as ReadingWidth })}
             />
           </Field>
-          <Field label={text("editorTopics")}>
-            {entry.topics.length > 0 ? (
-              <span className="entry-editor__topics">
-                {entry.topics.map((topic) => (
-                  <span key={topic.id} className="chip">
-                    {topic.name}
-                  </span>
-                ))}
-              </span>
-            ) : (
-              <span className="entry-editor__note">{text("editorTopicsNone")}</span>
-            )}
+          <Field label={text("editorTopics")} htmlFor="entry-topics">
+            <TopicField
+              inputId="entry-topics"
+              language={entry.language}
+              value={draft.topicIds}
+              onChange={(topicIds) => update({ topicIds })}
+            />
           </Field>
         </Editor.Panel>
       </Editor>

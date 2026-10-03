@@ -15,6 +15,7 @@ import {
   entryTranslations,
   media,
   paths,
+  topics,
   topicTranslations,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
@@ -41,16 +42,19 @@ export function topicNames(entryId: SQLWrapper, language: SQLWrapper) {
 }
 
 /**
- * The same topics with their ids, for a screen that links or changes them.
+ * The same topics with their ids, for a screen that links or changes them, and
+ * whether each is named in the given language rather than borrowing the other.
  *
  * @param entryId - The entry, as a column of the outer query.
  * @param language - The language to prefer, as a column of the outer query.
  */
 export function topicIdsAndNames(entryId: SQLWrapper, language: SQLWrapper) {
-  return sql<{ id: string; name: string }[]>`coalesce((
-    select json_agg(json_build_object('id', "named"."id", 'name', "named"."name") order by "named"."name")
+  return sql<{ id: string; name: string; named: boolean }[]>`coalesce((
+    select json_agg(json_build_object('id', "named"."id", 'name', "named"."name", 'named', "named"."named") order by "named"."name")
     from (
-      select "assigned"."topic_id" as "id", ${assignedTopicName(language)} as "name"
+      select "assigned"."topic_id" as "id", ${assignedTopicName(language)} as "name",
+        exists (select 1 from ${topicTranslations} as "own"
+          where "own"."topic_id" = "assigned"."topic_id" and "own"."language" = ${language}) as "named"
       from ${entryTopics} as "assigned"
       where "assigned"."entry_id" = ${entryId}
     ) as "named"
@@ -213,6 +217,43 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
   };
 }
 
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * Sets which topics an entry carries, inside the transaction that saves it.
+ *
+ * @param tx - The save's transaction.
+ * @param entryId - The entry.
+ * @param topicIds - Every topic it carries afterwards.
+ * @returns Whether the set changed, for the audit log.
+ * @throws `invalid_request` where a topic does not exist.
+ */
+async function setEntryTopics(
+  tx: Transaction,
+  entryId: string,
+  topicIds: readonly string[],
+): Promise<boolean> {
+  const wanted = [...new Set(topicIds)];
+  if (wanted.length > 0) {
+    const found = await tx.select({ id: topics.id }).from(topics).where(inArray(topics.id, wanted));
+    if (found.length !== wanted.length) {
+      throw new HttpError(ErrorCode.InvalidRequest, "One of these topics does not exist.");
+    }
+  }
+  const current = (
+    await tx
+      .select({ topicId: entryTopics.topicId })
+      .from(entryTopics)
+      .where(eq(entryTopics.entryId, entryId))
+  ).map((row) => row.topicId);
+  const unchanged = current.length === wanted.length && current.every((topicId) => wanted.includes(topicId));
+  if (unchanged) return false;
+
+  await tx.delete(entryTopics).where(eq(entryTopics.entryId, entryId));
+  if (wanted.length > 0) await tx.insert(entryTopics).values(wanted.map((topicId) => ({ entryId, topicId })));
+  return true;
+}
+
 /**
  * Stores what the editor holds for one translation, and records the act.
  *
@@ -221,7 +262,8 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
  * modification time moves with every save, because it is the entry that
  * changed. The audit log names which fields changed and never their values,
  * and a translation becoming public is its own line, because who published
- * what and when is the question that log exists to answer.
+ * what and when is the question that log exists to answer. The topics are the
+ * entry's, so saving one language sets them for both.
  *
  * @param db - The database.
  * @param id - The translation.
@@ -253,18 +295,21 @@ export async function saveEntry(
 
     const now = new Date();
     const becomesPublic = value.state === "public" && current.state !== "public";
+    const { topicIds, ...fields } = value;
     await tx
       .update(entryTranslations)
       .set({
-        ...value,
+        ...fields,
         publishedAt: becomesPublic && !current.publishedAt ? now : current.publishedAt,
       })
       .where(eq(entryTranslations.id, id));
     await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
+    const topicsChanged = await setEntryTopics(tx, current.entryId, topicIds);
 
-    const changedKeys = (Object.keys(value) as (keyof SaveEntryBody)[]).filter(
-      (key) => current[key] !== value[key],
+    const changedKeys: string[] = (Object.keys(fields) as (keyof typeof fields)[]).filter(
+      (key) => current[key] !== fields[key],
     );
+    if (topicsChanged) changedKeys.push("topicIds");
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({
         actorUserId,

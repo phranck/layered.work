@@ -12,6 +12,7 @@
 
 import type { IconProps as PhosphorIconProps } from "@phosphor-icons/react";
 import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
+import { ArrowsMergeIcon as ArrowsMerge } from "@phosphor-icons/react/dist/ssr/ArrowsMerge";
 import { ArrowsOutLineVerticalIcon as ArrowsOutLineVertical } from "@phosphor-icons/react/dist/ssr/ArrowsOutLineVertical";
 import { ArticleIcon as Article } from "@phosphor-icons/react/dist/ssr/Article";
 import { CardsIcon as Cards } from "@phosphor-icons/react/dist/ssr/Cards";
@@ -57,6 +58,7 @@ import { TextBIcon as TextB } from "@phosphor-icons/react/dist/ssr/TextB";
 import { TextboxIcon as Textbox } from "@phosphor-icons/react/dist/ssr/Textbox";
 import { TextHTwoIcon as TextHTwo } from "@phosphor-icons/react/dist/ssr/TextHTwo";
 import { TextItalicIcon as TextItalic } from "@phosphor-icons/react/dist/ssr/TextItalic";
+import { TrashIcon as Trash } from "@phosphor-icons/react/dist/ssr/Trash";
 import { TrayIcon as Tray } from "@phosphor-icons/react/dist/ssr/Tray";
 import { UploadSimpleIcon as UploadSimple } from "@phosphor-icons/react/dist/ssr/UploadSimple";
 import { UserCircleIcon as UserCircle } from "@phosphor-icons/react/dist/ssr/UserCircle";
@@ -86,6 +88,7 @@ function duotone(Icon: ComponentType<PhosphorIconProps>, name: string) {
 
 export const ArrowLeftIcon = duotone(ArrowLeft, "ArrowLeftIcon");
 export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsOutLineVerticalIcon");
+export const ArrowsMergeIcon = duotone(ArrowsMerge, "ArrowsMergeIcon");
 export const ArticleIcon = duotone(Article, "ArticleIcon");
 export const CardsIcon = duotone(Cards, "CardsIcon");
 export const CheckCircleIcon = duotone(CheckCircle, "CheckCircleIcon");
@@ -130,6 +133,7 @@ export const TextBIcon = duotone(TextB, "TextBIcon");
 export const TextboxIcon = duotone(Textbox, "TextboxIcon");
 export const TextHTwoIcon = duotone(TextHTwo, "TextHTwoIcon");
 export const TextItalicIcon = duotone(TextItalic, "TextItalicIcon");
+export const TrashIcon = duotone(Trash, "TrashIcon");
 export const TrayIcon = duotone(Tray, "TrayIcon");
 export const UploadSimpleIcon = duotone(UploadSimple, "UploadSimpleIcon");
 export const UserCircleIcon = duotone(UserCircle, "UserCircleIcon");

@@ -109,12 +109,29 @@ const draftDetail = {
   modifiedAt: "2025-09-01T00:00:00.000Z",
   path: "/a-draft-about-soldering/",
   pictureUrl: null,
-  topics: [{ id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e", name: "Electronics" }],
+  topics: [{ id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e", name: "Electronics", named: true }],
   counterpart: null,
 };
 
+/** The topics, one of which the draft has and one of which has no German name. */
+const topics = [
+  {
+    id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e",
+    en: { name: "Electronics", slug: "electronics" },
+    de: { name: "Elektronik", slug: "elektronik" },
+    entryCount: 1,
+  },
+  {
+    id: "8e9fa0b1-c2d3-4e4f-9a5b-6c7d8e9f0a1b",
+    en: { name: "Soldering", slug: "soldering" },
+    de: null,
+    entryCount: 3,
+  },
+];
+
 function successfulGet(input: RequestInfo | URL) {
   const url = String(input);
+  if (url.endsWith("/topics")) return json({ data: topics });
   if (url.endsWith(`/entries/${draftDetail.id}`)) return json({ data: draftDetail });
   if (url.endsWith("/settings")) return json({ data: settings });
   if (url.endsWith("/dashboard/counts")) return json({ data: counts });
@@ -684,6 +701,71 @@ describe("dashboard shell", () => {
     });
     expect(screen.getByRole("radio", { name: /Öffentlich/ }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByRole("status").textContent).toMatch(/^Gespeichert um /);
+  });
+
+  it("adds a topic from the completion, creates a new one by name, removes one, and saves them", async () => {
+    const created = {
+      id: "9fa0b1c2-d3e4-4f5a-8b6c-7d8e9f0a1b2c",
+      en: { name: "Flux", slug: "flux" },
+      de: null,
+      entryCount: 0,
+    };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/topics") && init?.method === "POST") return Promise.resolve(json({ data: created }));
+      if (init?.method === "PUT")
+        return Promise.resolve(json({ data: { ...draftDetail, ...JSON.parse(String(init.body)) } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    const field = await screen.findByRole("combobox", { name: "Themen" });
+    await screen.findByText("Electronics");
+    fireEvent.change(field, { target: { value: "solder" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(await screen.findByText("Soldering")).toBeTruthy();
+
+    fireEvent.change(field, { target: { value: "Flux" } });
+    expect(screen.getByRole("option", { name: "„Flux“ neu anlegen" })).toBeTruthy();
+    fireEvent.keyDown(field, { key: "Enter" });
+    await screen.findByText("Flux");
+    const asked = request.mock.calls.find(
+      ([url, init]) => String(url).endsWith("/topics") && init?.method === "POST",
+    );
+    expect(JSON.parse(String(asked?.[1]?.body))).toEqual({ language: "en", name: "Flux" });
+
+    fireEvent.click(screen.getByRole("button", { name: "„Electronics“ entfernen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body)).topicIds).toEqual([topics[1]?.id, created.id]);
+  });
+
+  it("lists the topics with a missing German name shown as missing, and asks before deleting one", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(init?.method === "DELETE" ? json({ data: null }) : successfulGet(input)),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/tags");
+
+    const table = await screen.findByRole("table");
+    const soldering = within(table).getByText("Soldering").closest("tr") as HTMLElement;
+    expect(within(soldering).getByText("Fehlt")).toBeTruthy();
+    expect(within(soldering).getByText("3")).toBeTruthy();
+
+    fireEvent.click(within(soldering).getByRole("button", { name: "Löschen" }));
+    const dialog = await screen.findByRole("dialog", { name: "„Soldering“ löschen" });
+    expect(within(dialog).getByText(/3 Einträge verlieren dieses Thema/)).toBeTruthy();
+    expect(request.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Löschen" }));
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          ([url, init]) => String(url).endsWith(`/topics/${topics[1]?.id}`) && init?.method === "DELETE",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("creates the other language from the panel and opens it", async () => {

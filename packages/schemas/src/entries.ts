@@ -98,12 +98,19 @@ export const entryDetail = z.object({
   path: z.string().nullable(),
   /** Its picture, where it has one the dashboard can show. */
   pictureUrl: z.string().nullable(),
-  /** The topics of the entry, named in this translation's language where they can be. */
-  topics: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  /**
+   * The topics of the entry, named in this translation's language where they
+   * can be. `named` is false where the topic has no name in that language and
+   * shows the other one, so the editor can say so rather than pass it off.
+   */
+  topics: z.array(z.object({ id: z.uuid(), name: z.string(), named: z.boolean() })),
   /** The other language of the same entry, or null where there is none yet. */
   counterpart: z.object({ id: z.uuid(), language: z.enum(CONTENT_LANGUAGES), title: z.string() }).nullable(),
 });
 export type EntryDetail = z.infer<typeof entryDetail>;
+
+/** How many topics one entry may carry. A list longer than this describes nothing. */
+export const MAX_TOPICS_PER_ENTRY = 20;
 
 /**
  * What saving a translation sends.
@@ -112,6 +119,9 @@ export type EntryDetail = z.infer<typeof entryDetail>;
  * of the translation rather than a patch that depends on what came before. The
  * entry's kind, its language and its address are not here: none of them is
  * changed by writing.
+ *
+ * The topics belong to the entry rather than to this translation, so saving
+ * either language sets them for both, which is what the panel shows.
  */
 export const saveEntryBody = body({
   title: text(MaxLength.Line),
@@ -119,6 +129,7 @@ export const saveEntryBody = body({
   body: z.string().max(MaxLength.Body),
   state: z.enum(PUBLICATION_STATES),
   readingWidth: z.enum(READING_WIDTHS),
+  topicIds: z.array(z.uuid()).max(MAX_TOPICS_PER_ENTRY),
 });
 export type SaveEntryBody = z.infer<typeof saveEntryBody>;
 

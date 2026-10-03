@@ -1,6 +1,14 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { entries, entryTranslations, media, paths } from "../db/schema/index.js";
+import {
+  entries,
+  entryTranslations,
+  formerTopicSlugs,
+  media,
+  paths,
+  topics,
+  topicTranslations,
+} from "../db/schema/index.js";
 import {
   closeTestDatabase,
   emptyTestDatabase,
@@ -108,6 +116,26 @@ runs("the public snapshot", () => {
     const snapshot = await readPublicSnapshot(database);
 
     expect(snapshot.redirects).toEqual([{ source: "/before/", target: "/now/" }]);
+  });
+
+  it("turns a topic's former English address into a redirect in both languages", async () => {
+    const database = await testDatabase();
+    const [topic] = await database.insert(topics).values({}).returning({ id: topics.id });
+    if (!topic) throw new Error("no topic");
+    await database
+      .insert(topicTranslations)
+      .values({ topicId: topic.id, language: "en", name: "Hardware", slug: "hardware" });
+    await database.insert(formerTopicSlugs).values([
+      { topicId: topic.id, language: "en", slug: "electronics" },
+      { topicId: topic.id, language: "de", slug: "elektronik" },
+    ]);
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.redirects).toEqual([
+      { source: "/topics/electronics/", target: "/topics/hardware/" },
+      { source: "/de/topics/electronics/", target: "/de/topics/hardware/" },
+    ]);
   });
 
   it("does not offer a former address of a draft", async () => {

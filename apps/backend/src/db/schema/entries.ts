@@ -178,6 +178,29 @@ export const topicTranslations = pgTable(
 );
 
 /**
+ * Every address a topic has stopped answering at, and the topic it went to.
+ *
+ * A slug changed on the topics screen, or a topic merged into another, leaves
+ * its old address behind as a row here, so a link to it becomes a permanent
+ * redirect rather than a missing page. A slug is free again in its language
+ * only once no topic and no row here holds it, which is why the two are checked
+ * together wherever a slug is chosen.
+ */
+export const formerTopicSlugs = pgTable(
+  "former_topic_slugs",
+  {
+    id: identifier(),
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => topics.id, { onDelete: "cascade" }),
+    language: language().notNull(),
+    slug: text().notNull(),
+    createdAt: instant("created_at"),
+  },
+  (table) => [unique("former_topic_slugs_slug_per_language").on(table.language, table.slug)],
+);
+
+/**
  * Which files a translation's body names.
  *
  * Rebuilt from the body every time it is saved, so it always describes what is

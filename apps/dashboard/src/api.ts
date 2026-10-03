@@ -4,6 +4,8 @@ import {
   type AnalyticsSettings,
   accountMediaPage,
   accountProfile,
+  type CreateTopicBody,
+  createTopicBody,
   createUploadBody,
   type DashboardCounts,
   dashboardCounts,
@@ -16,21 +18,28 @@ import {
   entryList,
   entryPreview,
   type MailSettings,
+  mergeTopicBody,
   type PreviewEntryBody,
   previewEntryBody,
   readApiError,
   type SaveEntryBody,
+  type SaveTopicBody,
   type SearchResults,
   type SettingsView,
   type SignedInAs,
   type SignInBody,
   type SiteSettings,
   saveEntryBody,
+  saveTopicBody,
   searchResults,
   settingsView,
   signedInAs,
   type TestMailResult,
+  type TopicList,
+  type TopicListItem,
   testMailResult,
+  topicList,
+  topicListItem,
   type UpdateAccountBody,
   type UploadedMedia,
   updateAccountBody,
@@ -92,6 +101,16 @@ export interface DashboardApi {
   createTranslation(id: string): Promise<EntryDetail>;
   /** Keeps what the editor holds as a preview, and returns the address that shows it. */
   createPreview(id: string, value: PreviewEntryBody): Promise<EntryPreview>;
+  /** Every topic with its names, addresses and how many entries carry it. */
+  fetchTopics(): Promise<TopicList>;
+  /** Creates a topic from a name typed while writing, or returns the one with that name. */
+  createTopic(value: CreateTopicBody): Promise<TopicListItem>;
+  /** Stores a topic's names and addresses in both languages. */
+  saveTopic(id: string, value: SaveTopicBody): Promise<TopicListItem>;
+  /** Moves every entry of one topic to another and removes the first. */
+  mergeTopic(id: string, into: string): Promise<TopicListItem>;
+  /** Removes a topic from the site and from every entry. */
+  deleteTopic(id: string): Promise<void>;
   /** Entries by title and topic, and media by slug and alt text. */
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
@@ -208,6 +227,24 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async createTranslation(id) {
       const path = `/entries/${encodeURIComponent(id)}/translation`;
       return dataOf(await request(path, { method: "POST" }, true), entryDetail);
+    },
+    async fetchTopics() {
+      return dataOf(await request("/topics", undefined, true), topicList);
+    },
+    async createTopic(value) {
+      const sent = jsonBody("POST", createTopicBody.parse(value));
+      return dataOf(await request("/topics", sent, true), topicListItem);
+    },
+    async saveTopic(id, value) {
+      const sent = jsonBody("PUT", saveTopicBody.parse(value));
+      return dataOf(await request(`/topics/${encodeURIComponent(id)}`, sent, true), topicListItem);
+    },
+    async mergeTopic(id, into) {
+      const sent = jsonBody("POST", mergeTopicBody.parse({ into }));
+      return dataOf(await request(`/topics/${encodeURIComponent(id)}/merge`, sent, true), topicListItem);
+    },
+    async deleteTopic(id) {
+      await request(`/topics/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
     },
     async search(text) {
       const params = new URLSearchParams({ q: text });

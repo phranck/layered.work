@@ -17,6 +17,7 @@ import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
 import { previewsRoutes } from "./routes/previews.js";
 import { searchRoutes } from "./routes/search.js";
 import { settingsRoutes } from "./routes/settings.js";
+import { topicsRoutes } from "./routes/topics.js";
 
 /**
  * The application, and the three things every request passes through whatever
@@ -74,6 +75,7 @@ app.route("/account", account);
 app.route("/dashboard", dashboard);
 app.route("/entries", entriesRoutes);
 app.route("/search", searchRoutes);
+app.route("/topics", topicsRoutes);
 app.route("/settings", settingsRoutes);
 app.route("/media", media);
 app.route("/content", content);

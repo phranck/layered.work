@@ -1,0 +1,44 @@
+import { createTopicBody, mergeTopicBody, saveTopicBody, topicIdParam } from "@layered/schemas";
+import { Hono } from "hono";
+import { database } from "../../db/connect.js";
+import { createTopic, deleteTopic, listTopics, mergeTopic, saveTopic } from "../../topics/repository.js";
+import { principalOf, requireSession } from "../require-session.js";
+import { ok } from "../response.js";
+import { validate } from "../validate.js";
+
+/**
+ * The topics an entry can be about, as the dashboard manages them.
+ *
+ * Every route needs a session. Topics belong to the site, as the entries do, so
+ * any signed-in author may change them, and every change is in the audit log.
+ */
+export const topicsRoutes = new Hono();
+
+topicsRoutes.use("*", requireSession);
+
+topicsRoutes.get("/", async (c) => ok(c, await listTopics(database())));
+
+// Created from the editor, so it answers with the existing topic for a name that is taken.
+topicsRoutes.post("/", validate("json", createTopicBody), async (c) =>
+  ok(c, await createTopic(database(), c.req.valid("json"), principalOf(c).userId)),
+);
+
+topicsRoutes.put("/:id", validate("param", topicIdParam), validate("json", saveTopicBody), async (c) =>
+  ok(c, await saveTopic(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId)),
+);
+
+topicsRoutes.post(
+  "/:id/merge",
+  validate("param", topicIdParam),
+  validate("json", mergeTopicBody),
+  async (c) =>
+    ok(
+      c,
+      await mergeTopic(database(), c.req.valid("param").id, c.req.valid("json").into, principalOf(c).userId),
+    ),
+);
+
+topicsRoutes.delete("/:id", validate("param", topicIdParam), async (c) => {
+  await deleteTopic(database(), c.req.valid("param").id, principalOf(c).userId);
+  return ok(c, null);
+});

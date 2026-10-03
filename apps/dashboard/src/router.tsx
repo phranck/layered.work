@@ -9,9 +9,14 @@ import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+import { TopicsScreen } from "./topics.js";
 
-/** The System group's areas, each of which is one group of the site's settings. */
-const SETTINGS_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
+/**
+ * The areas with a screen of their own rather than an entry list: the topics,
+ * and the System group's areas, each of which is one group of the site's settings.
+ */
+const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
+  tags: TopicsScreen,
   settings: SiteSettingsScreen,
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,
@@ -66,7 +71,7 @@ export function dashboardRouteObjects({
         { index: true, element: <Navigate to="/posts" replace /> },
         ...dashboardAreas.map((area): RouteObject => {
           const kind = area.entryKind;
-          const Screen = SETTINGS_SCREENS[area.id];
+          const Screen = AREA_SCREENS[area.id];
           if (Screen) return { path: area.path, element: <Screen area={area} /> };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };
           return {

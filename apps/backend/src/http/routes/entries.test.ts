@@ -128,6 +128,7 @@ runs("the entry list", () => {
           body: "Now it says something.",
           state: "public",
           readingWidth: "wide",
+          topicIds: [],
           ...value,
         }),
       });
@@ -156,13 +157,86 @@ runs("the entry list", () => {
     expect(JSON.stringify(actions)).not.toContain("Now it says something");
   });
 
+  it("sets the entry's topics for both languages, and logs that they changed", async () => {
+    const cookie = await signedInCookie();
+    const rows = await list("post", cookie);
+    const english = rows.find((row) => row.title === "Published in English");
+    const german = rows.find((row) => row.language === "de");
+    const soldering = (await list("post", cookie)).find((row) => row.title === "A draft");
+    const solderingDetail = entryDetail.parse(
+      (
+        (await (await app.request(`/entries/${soldering?.id}`, { headers: { cookie } })).json()) as {
+          data: unknown;
+        }
+      ).data,
+    );
+    const retroDetail = entryDetail.parse(
+      (
+        (await (await app.request(`/entries/${english?.id}`, { headers: { cookie } })).json()) as {
+          data: unknown;
+        }
+      ).data,
+    );
+    const topicIds = [...retroDetail.topics, ...solderingDetail.topics].map((topic) => topic.id);
+
+    const response = await app.request(`/entries/${english?.id}`, {
+      method: "PUT",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Published in English",
+        summary: null,
+        body: "",
+        state: "public",
+        readingWidth: "normal",
+        topicIds,
+      }),
+    });
+    expect(response.status).toBe(200);
+
+    const germanDetail = entryDetail.parse(
+      (
+        (await (await app.request(`/entries/${german?.id}`, { headers: { cookie } })).json()) as {
+          data: unknown;
+        }
+      ).data,
+    );
+    expect(germanDetail.topics.map(({ name, named }) => ({ name, named }))).toEqual([
+      { name: "Retro-Computer", named: true },
+      { name: "Soldering", named: false },
+    ]);
+
+    const database = await testDatabase();
+    const logged = await database
+      .select({ detail: auditLog.detail })
+      .from(auditLog)
+      .where(eq(auditLog.subjectId, english?.id ?? ""));
+    expect(logged.map((row) => row.detail)).toContainEqual({ changedKeys: ["topicIds"] });
+  });
+
   it("refuses a save that carries a field it does not take or a state it does not know", async () => {
     const cookie = await signedInCookie();
     const draft = (await list("post", cookie)).find((row) => row.state === "draft");
     for (const value of [
-      { title: "T", summary: null, body: "", state: "public", readingWidth: "normal", path: "/elsewhere/" },
-      { title: "T", summary: null, body: "", state: "protected", readingWidth: "normal" },
-      { title: "", summary: null, body: "", state: "draft", readingWidth: "normal" },
+      {
+        title: "T",
+        summary: null,
+        body: "",
+        state: "public",
+        readingWidth: "normal",
+        topicIds: [],
+        path: "/x/",
+      },
+      { title: "T", summary: null, body: "", state: "protected", readingWidth: "normal", topicIds: [] },
+      { title: "", summary: null, body: "", state: "draft", readingWidth: "normal", topicIds: [] },
+      { title: "T", summary: null, body: "", state: "draft", readingWidth: "normal" },
+      {
+        title: "T",
+        summary: null,
+        body: "",
+        state: "draft",
+        readingWidth: "normal",
+        topicIds: ["0199f064-43b7-79a8-917f-eefc8c852400"],
+      },
     ]) {
       const response = await app.request(`/entries/${draft?.id}`, {
         method: "PUT",

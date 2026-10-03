@@ -692,10 +692,82 @@ dialog.account-dialog::backdrop {
   text-decoration: underline;
 }
 
-.entry-editor__topics {
+/* --- Topics -----------------------------------------------------------------
+   An entry's topics as chips over the field that adds more. The list of
+   suggestions opens under the field in the panel's own flow, because the panel
+   scrolls by itself and would cut off a list laid over its lower edge. */
+
+.topic-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.topic-field__chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A topic with no name in the entry's language shows the other language's
+   name, set apart so it is not taken for a translation. */
+.topic-field__chips .chip[data-unnamed] {
+  font-style: italic;
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.topic-field__control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.topic-field__list {
+  padding: var(--space-1);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-2);
+}
+
+/* A table whose rows are not a way into anything: its actions are the buttons
+   at the end of each row, so the row itself takes no pointer. */
+.data-table--static tbody tr {
+  cursor: auto;
+}
+
+/* A topic's name with its address beneath it, in the face addresses are set in. */
+.topic-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topic-name__name,
+.topic-name__slug {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topic-name__slug {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* Measured against the widest cell in either interface language, cell padding
+   included: the heading "Einträge" at 110px, and three icon buttons with their
+   gaps at 162px. Each width adds a little air. */
+.col-count {
+  width: 120px;
+}
+
+.col-actions {
+  width: 176px;
 }
 
 /* --- Settings ---------------------------------------------------------------

@@ -36,7 +36,10 @@ if(legacy)return Astro.redirect(legacy,308);
 if(path==="/en/")return Astro.redirect("/",308);
 if(repository&&path==="/tags/")return Astro.redirect("/topics/",308);
 const legacyTopic=/^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
-if(legacyTopic&&repository?.data.topics.some(topic=>topic.slug===legacyTopic))return Astro.redirect(topicPath("en",legacyTopic),308);
+// A topic merged or renamed since then answers at its new address in one step.
+const legacyTopicPath=legacyTopic?topicPath("en",legacyTopic):undefined;
+const legacyTopicTarget=legacyTopicPath&&(repository?.redirect(legacyTopicPath)??(repository?.data.topics.some(topic=>topic.slug===legacyTopic)?legacyTopicPath:undefined));
+if(legacyTopicTarget)return Astro.redirect(legacyTopicTarget,308);
 if(repository&&path==="/authors/frank-gregor/")return Astro.redirect("/",308);
 if(repository&&rawPath==="/media/files/claude-fonts-preview.html"){
   const media=repository.media("claude-fonts-preview");

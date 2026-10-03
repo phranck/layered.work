@@ -31,7 +31,8 @@ That output cannot contain an address the site stopped generating earlier, and s
 | Every English entry, at the path it had | 200 | The English paths are unchanged, which is the whole point of the scheme. |
 | `/projects/gimli/`, `/gimli/`, `/website-design-die-zweite/`, `/nextstep-on-rpi5-de/`, `/ki-bedienungsanleitung/` | 308 to `/de/<slug>/` | The four German entries move under the language prefix. The two publicly listed ones were linked, and the two hidden ones stay reachable the same way. |
 | `/tags/` | 308 to `/topics/` | The section is called Topics now. |
-| `/tags/<slug>/` | 308 to `/topics/<slug>/` | Same subject, new prefix, for every topic the snapshot still carries. |
+| `/tags/<slug>/` | 308 to `/topics/<slug>/` | Same subject, new prefix, for every topic the snapshot still carries. A topic renamed or merged since then is reached in one step at its current address. |
+| `/topics/<former>/`, `/de/topics/<former>/` | 308 to the topic's current address | An English address a topic gave up when its address was changed or when it was merged into another. The dashboard keeps it in `former_topic_slugs`, and the snapshot turns it into a redirect. |
 | `/authors/frank-gregor/` | 308 to `/` | There is one author and the new site has no author page, so the home page is the nearest real answer. |
 | `/page/<number>/` | 308 to the posts listing page holding the same posts | Publii paginated the home page's post list at these addresses, eight posts to a page, so the posts listing is where they belong. It shows twelve to a page, so the number is converted rather than kept: `/page/2/` lands on `/posts/`. Pagination moved from the path into the query, where the listing reads it. |
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
