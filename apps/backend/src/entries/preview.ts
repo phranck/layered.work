@@ -16,6 +16,7 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { readListingSettings } from "../settings/repository.js";
 
 /**
  * Previews: an entry as a reader would see it, from what the editor holds.
@@ -219,6 +220,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     media,
     redirects: [],
     gone: [],
+    listings: await readListingSettings(db),
     homeBlocks: [],
   };
 }

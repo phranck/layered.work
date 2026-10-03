@@ -1,4 +1,4 @@
-import { homeBlockTypes } from "@layered/schemas";
+import { DEFAULT_LISTING, homeBlockTypes } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
 import { createRepository, parseListingQuery, summaryOf } from "./repository.js";
 
@@ -102,6 +102,33 @@ describe("public content repository", () => {
     ).toThrow();
     expect(() => createRepository({ ...snapshot, entries: [entry(1), entry(1)] })).toThrow();
   });
+  it("pages an overview by its own page size, and a topic by the posts' one", () => {
+    const repo = createRepository({
+      ...snapshot,
+      entries: Array.from({ length: 7 }, (_, i) => ({ ...entry(i + 1), kind: i < 4 ? "post" : "project" })),
+      listings: {
+        post: { ...DEFAULT_LISTING, pageSize: 3 },
+        project: { ...DEFAULT_LISTING, pageSize: 5, headline: { en: "Work", de: "" } },
+      },
+    });
+    expect(repo.list({ language: "en", kind: "post" }).pages).toBe(2);
+    expect(repo.list({ language: "en", kind: "project" }).pages).toBe(1);
+    expect(repo.list({ language: "en", topic: "hardware" }).entries).toHaveLength(3);
+    expect(repo.listing("project").headline.en).toBe("Work");
+  });
+
+  it("uses the default overviews for a snapshot that names none", () => {
+    expect(createRepository(snapshot).listing("post")).toEqual(DEFAULT_LISTING);
+  });
+
+  it("shortens a preview at a word to the length it is given", () => {
+    const long = createRepository({
+      ...snapshot,
+      entries: [{ ...entry(1), summary: "one two three four five six seven eight nine ten" }],
+    }).entry("/entry-1/");
+    expect(summaryOf(long as never, 20)).toBe("one two three four…");
+  });
+
   it("paginates deterministically without client-side state", () => {
     const repo = createRepository({
       ...snapshot,

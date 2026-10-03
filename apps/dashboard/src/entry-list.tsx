@@ -21,6 +21,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { ListingSettingsCard } from "./listing-settings.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
@@ -267,6 +268,8 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           note={text("statTranslatedNote", counts.total)}
         />
       </div>
+      {/* Pages have no overview on the site, so there is nothing to set up. */}
+      {kind !== "page" && <ListingSettingsCard kind={kind} />}
       <Card>
         <Card.Header
           title={title}

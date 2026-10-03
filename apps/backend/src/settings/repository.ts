@@ -3,6 +3,10 @@ import {
   analyticsSettings,
   DEFAULT_SETTINGS,
   ErrorCode,
+  LISTING_GROUP,
+  type ListedKind,
+  type ListingSettings,
+  listingSettings,
   type MailSettings,
   mailSettings,
   type SettingsView,
@@ -29,7 +33,13 @@ type Database = ReturnType<typeof database>;
  */
 
 /** What a group holds, by its key. */
-type GroupValue = { site: SiteSettings; mail: MailSettings; analytics: AnalyticsSettings };
+type GroupValue = {
+  site: SiteSettings;
+  mail: MailSettings;
+  analytics: AnalyticsSettings;
+  postListing: ListingSettings;
+  projectListing: ListingSettings;
+};
 
 /** A group of settings by its key. */
 export type SettingsGroup = keyof GroupValue;
@@ -44,6 +54,8 @@ const GROUPS: {
   site: { schema: siteSettings, fallback: DEFAULT_SETTINGS.site },
   mail: { schema: mailSettings, fallback: DEFAULT_SETTINGS.mail },
   analytics: { schema: analyticsSettings, fallback: DEFAULT_SETTINGS.analytics },
+  postListing: { schema: listingSettings, fallback: DEFAULT_SETTINGS.postListing },
+  projectListing: { schema: listingSettings, fallback: DEFAULT_SETTINGS.projectListing },
 };
 
 /** One group's stored value, or its default where it has none or one that no longer fits. */
@@ -77,7 +89,28 @@ export async function readSettings(db: Database): Promise<SettingsView> {
     },
     mail: { ...readGroup("mail", stored), apiKeyConfigured: Boolean(config.SMTP2GO_API_KEY) },
     analytics: readGroup("analytics", stored),
+    postListing: readGroup("postListing", stored),
+    projectListing: readGroup("projectListing", stored),
   };
+}
+
+/**
+ * How the site's two overviews are set up, for the public snapshot.
+ *
+ * Only these two groups leave the database towards the site. The others hold
+ * nothing a reader sees or, like the mail sender, nothing a reader may.
+ *
+ * @param db - The database.
+ */
+export async function readListingSettings(
+  db: Pick<Database, "select">,
+): Promise<Record<ListedKind, ListingSettings>> {
+  const rows = await db
+    .select({ key: settings.key, value: settings.value })
+    .from(settings)
+    .where(inArray(settings.key, Object.values(LISTING_GROUP)));
+  const stored = new Map(rows.map((row) => [row.key, row.value]));
+  return { post: readGroup("postListing", stored), project: readGroup("projectListing", stored) };
 }
 
 /**

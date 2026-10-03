@@ -196,6 +196,86 @@
   text-wrap: pretty;
 }
 
+/* --- Collapsible ------------------------------------------------------------
+   The header is the button. Closed, the card is its header alone, with the
+   card's corners at its foot and no rule under it; open, the content below
+   grows to its own height. Only the content's height animates, and layout
+   carries everything after the card. */
+
+.card--collapsible > .card__header {
+  padding: 0;
+  transition:
+    border-color var(--duration) var(--ease),
+    border-radius var(--duration) var(--ease);
+}
+
+.card--collapsible:not([data-open]) > .card__header {
+  border-block-end-color: transparent;
+  border-end-start-radius: calc(var(--card-radius) - 1px);
+  border-end-end-radius: calc(var(--card-radius) - 1px);
+}
+
+.card--collapsible .card__title {
+  flex: 1;
+}
+
+.card--collapsible .card__meta {
+  margin-inline-end: var(--card-padding);
+}
+
+/* The button fills the header, so the whole band opens the card, and it keeps
+   the header's padding as its own. */
+.card__toggle {
+  display: flex;
+  flex: 1;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--card-padding);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: inherit;
+}
+
+.card__toggle:focus-visible {
+  box-shadow: var(--focus-halo);
+}
+
+.card__caret {
+  flex: none;
+  font-size: var(--text-base);
+  color: var(--text-faint);
+  transition: transform var(--duration) var(--ease);
+}
+
+.card--collapsible[data-open] .card__caret {
+  transform: rotate(180deg);
+}
+
+/* The card is a flex column, and an item that clips rather than scrolls keeps
+   its content's height as its least height, which would hold the region open
+   until the transition ends. */
+.card__collapse {
+  min-height: 0;
+  overflow: clip;
+  interpolate-size: allow-keywords;
+  transition: height var(--duration) var(--ease);
+}
+
+.card--collapsible:not([data-open]) > .card__collapse {
+  height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card__collapse,
+  .card__caret {
+    transition-duration: var(--duration-fast);
+  }
+}
+
 /* --- Overlay --------------------------------------------------------------
    A card shown over the page rather than in it. The same card: only where it
    sits changes, so nothing about its parts has to know. */

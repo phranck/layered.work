@@ -8,7 +8,13 @@ export {
   type ButtonLinkProps,
   type ButtonProps,
 } from "./button.js";
-export { Card, type CardFooterProps, type CardHeaderProps, type CardMediaProps } from "./card.js";
+export {
+  Card,
+  type CardCollapsibleProps,
+  type CardFooterProps,
+  type CardHeaderProps,
+  type CardMediaProps,
+} from "./card.js";
 export { Choice, type ChoiceOptionProps, type ChoiceProps } from "./choice.js";
 export { CodeBlock, type CodeBlockProps } from "./code-block.js";
 export { CONTENT_RENDERERS } from "./content-adapters.js";
@@ -37,6 +43,7 @@ export {
   type SelectProps,
   Switch,
   type SwitchProps,
+  Textarea,
 } from "./field.js";
 export { Figure, type FigureProps } from "./figure.js";
 export { returnFocusQuietly } from "./focus-return.js";

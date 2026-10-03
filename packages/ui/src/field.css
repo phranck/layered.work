@@ -70,13 +70,15 @@
   box-shadow: var(--focus-halo);
 }
 
-/* A stand-in for a multi-line field. Not a textarea, because it is not an
-   editor: it shows what the setting holds, at the height that text needs. */
+/* A multi-line field, as `Textarea` draws it or as a block showing what a
+   setting holds, at the height its text needs. A textarea is taller only by
+   the reader's hand. */
 .input--area {
   height: auto;
   min-height: 74px;
   line-height: var(--leading-normal);
   white-space: pre-wrap;
+  resize: vertical;
 }
 
 /* --- Select -----------------------------------------------------------------

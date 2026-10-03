@@ -21,6 +21,7 @@ import {
   entryList,
   entryPreview,
   entryTrashImpact,
+  type ListingSettings,
   type MailSettings,
   mergeTopicBody,
   type PreviewEntryBody,
@@ -82,6 +83,8 @@ export interface SettingsGroups {
   site: SiteSettings;
   mail: MailSettings;
   analytics: AnalyticsSettings;
+  postListing: ListingSettings;
+  projectListing: ListingSettings;
 }
 
 /** Anything that checks an unknown value and hands back a typed one, which every schema does. */

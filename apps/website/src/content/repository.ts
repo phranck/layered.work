@@ -1,9 +1,12 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
+  DEFAULT_LISTING,
   type HomeBlock,
   homeBlockSchema,
   homeBlockTypes,
   isKnownHomeBlock,
+  type ListedKind,
+  listingSettings,
   READING_WIDTHS,
   unknownHomeBlocks,
 } from "@layered/schemas";
@@ -86,6 +89,14 @@ const snapshotSchema = z.object({
   redirects: z.array(z.object({ source: path, target: path })),
   /** Addresses of entries that were deleted, which answer 410 rather than 404. */
   gone: z.array(path).default([]),
+  /**
+   * How the overviews of posts and projects are set up in the dashboard. A
+   * snapshot without them, such as the one committed from the export, uses
+   * the defaults.
+   */
+  listings: z
+    .object({ post: listingSettings, project: listingSettings })
+    .default({ post: DEFAULT_LISTING, project: DEFAULT_LISTING }),
   homeBlocks: z.array(homeBlockSchema).optional(),
 });
 export type Language = z.infer<typeof language>;
@@ -93,9 +104,6 @@ export type Entry = z.infer<typeof entrySchema>;
 export type Media = z.infer<typeof mediaSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type { HomeBlock };
-
-/** How many entries one page of a listing shows. */
-export const LISTING_PAGE_SIZE = 12;
 
 /**
  * All collection readers share this publication predicate.
@@ -141,7 +149,15 @@ function withoutComponents(source: string): string {
   return source.replace(new RegExp(`\\b(?:${names})\\s*\\([^()]*\\)\\s*`, "g"), "");
 }
 
-export function summaryOf(entry: Entry): string {
+/**
+ * An entry's preview text: its summary, or its first paragraph of prose, as
+ * plain text and shortened at a word.
+ *
+ * @param entry - The entry.
+ * @param length - The most characters it holds, which an overview's settings
+ *   decide for its cards; everywhere else the default.
+ */
+export function summaryOf(entry: Entry, length: number = DEFAULT_LISTING.previewLength): string {
   const source =
     entry.summary?.trim() ||
     entry.body.split(/\n\s*\n/).find((part) => !/^\s*(?:#|```|[A-Z]\w*\()/.test(part)) ||
@@ -152,7 +168,7 @@ export function summaryOf(entry: Entry): string {
     .replace(/[*_`>#]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return plain.length <= 220 ? plain : `${plain.slice(0, 220).replace(/\s+\S*$/, "")}…`;
+  return plain.length <= length ? plain : `${plain.slice(0, length).replace(/\s+\S*$/, "")}…`;
 }
 export function readingTime(entry: Entry): number {
   return Math.max(1, Math.ceil(entry.body.split(/\s+/).length / 220));
@@ -306,6 +322,8 @@ export function createRepository(input: unknown) {
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
     },
     redirect: (name: string) => redirects.get(name),
+    /** How the overview of one kind is set up. */
+    listing: (kind: ListedKind) => data.listings[kind],
     /** Whether an address belonged to an entry that was deleted. */
     gone: (name: string) => gone.has(name),
     publicEntries,
@@ -322,6 +340,9 @@ export function createRepository(input: unknown) {
       query?: string;
       page?: number;
     }) {
+      // A topic or a search lists posts and projects together, and takes the
+      // posts' page size, because posts are most of what it finds.
+      const pageSize = data.listings[kind === "project" ? "project" : "post"].pageSize;
       const matches = publicEntries(locale).filter(
         (entry) =>
           (!kind || entry.kind === kind) &&
@@ -329,9 +350,9 @@ export function createRepository(input: unknown) {
           (!query || searchText(entry).toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))),
       );
       return {
-        entries: matches.slice((page - 1) * LISTING_PAGE_SIZE, page * LISTING_PAGE_SIZE),
+        entries: matches.slice((page - 1) * pageSize, page * pageSize),
         total: matches.length,
-        pages: Math.ceil(matches.length / LISTING_PAGE_SIZE),
+        pages: Math.ceil(matches.length / pageSize),
         page,
       };
     },

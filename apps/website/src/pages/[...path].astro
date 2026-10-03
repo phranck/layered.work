@@ -58,7 +58,7 @@ const search=relative==="search/";
 const legacyPage=/^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
 if(repository&&legacyPage){
   const target=new URL(`${root}posts/`,Astro.site);
-  const listingPage=legacyPostsPage(Number(legacyPage));
+  const listingPage=legacyPostsPage(Number(legacyPage),repository.listing("post").pageSize);
   if(listingPage>1)target.searchParams.set("page",String(listingPage));
   return Astro.redirect(target.pathname+target.search,308);
 }
@@ -71,7 +71,9 @@ const found=home||listing||topics||!!entry;
 // it was here and is gone, so it drops the address rather than retrying it.
 const gone=!found&&!!repository?.gone(path);
 if(repository&&!found)Astro.response.status=gone?410:404;
-const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found")));
+// An overview's own headline where the dashboard sets one, and its name otherwise.
+const headline=kind&&repository&&!invalidQuery?repository.listing(kind).headline[language].trim():"";
+const title=headline||(errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
 const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=siteNavigation(language);
 const footer=siteFooter(language);

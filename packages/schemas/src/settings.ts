@@ -5,9 +5,9 @@ import { body, MaxLength, text } from "./request.js";
 /**
  * What belongs to the site as a whole rather than to any entry.
  *
- * Three groups, each stored as one row of the `settings` table under its own
- * key and each saved on its own: the site itself, the mail it sends, and the
- * analytics it reports to. Each group is declared here once, so the form that
+ * Each group is stored as one row of the `settings` table under its own key and
+ * saved on its own: the site itself, the mail it sends, the analytics it
+ * reports to, and how each of its two overviews is set up. Each group is declared here once, so the form that
  * edits it and the route that stores it accept exactly the same values.
  *
  * The SMTP2GO key is not among them. It is a secret, so it reaches the API as an
@@ -53,6 +53,54 @@ export const analyticsSettings = body({
 });
 export type AnalyticsSettings = z.infer<typeof analyticsSettings>;
 
+/** The kinds of entry the site lists on an overview of their own. Pages have none. */
+export const LISTED_KINDS = ["post", "project"] as const;
+export type ListedKind = (typeof LISTED_KINDS)[number];
+
+/** The bounds an overview's figures are held to, so no setting can produce a page nobody can read. */
+export const LISTING_BOUNDS = {
+  pageSize: { min: 3, max: 60 },
+  columns: { min: 1, max: 4 },
+  previewLength: { min: 60, max: 600 },
+} as const;
+
+/** A whole number held to one of the bounds above. */
+const bounded = ({ min, max }: { min: number; max: number }) => z.number().int().min(min).max(max);
+
+/**
+ * How one overview on the site is set up: posts or projects.
+ *
+ * An empty headline means the overview's own name, "Posts" or "Beiträge", and
+ * an empty introduction means none. The introduction is written in the content
+ * language, as an entry is.
+ */
+export const listingSettings = body({
+  /** How many entries one page of the overview shows. */
+  pageSize: bounded(LISTING_BOUNDS.pageSize),
+  /** How many columns the grid has at most. It has fewer where the window is too narrow for them. */
+  columns: bounded(LISTING_BOUNDS.columns),
+  headline: inBothLanguages(z.string().trim().max(MaxLength.Line)),
+  introduction: inBothLanguages(z.string().trim().max(MaxLength.Paragraph)),
+  /** How many characters a card's preview text holds before it is shortened at a word. */
+  previewLength: bounded(LISTING_BOUNDS.previewLength),
+});
+export type ListingSettings = z.infer<typeof listingSettings>;
+
+/** What an overview nobody has set up uses. */
+export const DEFAULT_LISTING: ListingSettings = {
+  pageSize: 12,
+  columns: 3,
+  headline: { en: "", de: "" },
+  introduction: { en: "", de: "" },
+  previewLength: 220,
+};
+
+/** The settings group each overview is stored under. */
+export const LISTING_GROUP = { post: "postListing", project: "projectListing" } as const satisfies Record<
+  ListedKind,
+  string
+>;
+
 /**
  * The Umami website id the site has reported to since before these settings
  * existed, which is what a settings table without an analytics row means.
@@ -69,7 +117,15 @@ export const DEFAULT_SETTINGS = {
   },
   mail: { senderAddress: null, senderName: "LAYERED.work" },
   analytics: { umamiWebsiteId: DEFAULT_UMAMI_WEBSITE_ID },
-} as const satisfies { site: SiteSettings; mail: MailSettings; analytics: AnalyticsSettings };
+  postListing: DEFAULT_LISTING,
+  projectListing: DEFAULT_LISTING,
+} as const satisfies {
+  site: SiteSettings;
+  mail: MailSettings;
+  analytics: AnalyticsSettings;
+  postListing: ListingSettings;
+  projectListing: ListingSettings;
+};
 
 /** Everything the settings screens show, as the API answers it. */
 export const settingsView = z.object({
@@ -82,6 +138,8 @@ export const settingsView = z.object({
     apiKeyConfigured: z.boolean(),
   }),
   analytics: analyticsSettings,
+  postListing: listingSettings,
+  projectListing: listingSettings,
 });
 export type SettingsView = z.infer<typeof settingsView>;
 

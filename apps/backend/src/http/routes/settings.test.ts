@@ -1,6 +1,13 @@
-import { DEFAULT_SETTINGS, readApiError, type SettingsView, settingsView } from "@layered/schemas";
+import {
+  DEFAULT_LISTING,
+  DEFAULT_SETTINGS,
+  readApiError,
+  type SettingsView,
+  settingsView,
+} from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { readPublicSnapshot } from "../../content/snapshot.js";
 import { auditLog, media } from "../../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { OWNER, seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
@@ -111,6 +118,40 @@ runs("the site's settings", () => {
     });
     expect(owner.status).toBe(409);
     expect(readApiError(await owner.json())?.message).toMatch(/No SMTP2GO key/);
+  });
+
+  it("stores how each overview is set up, apart from the other, and hands both to the site", async () => {
+    const cookie = await signedInCookie(OWNER);
+    const projects = {
+      ...DEFAULT_LISTING,
+      pageSize: 9,
+      columns: 2,
+      headline: { en: "Work", de: "" },
+      introduction: { en: "Random selection of some of my projects.", de: "" },
+    };
+    expect((await put("projectListing", projects, cookie)).status).toBe(200);
+
+    const view = await read(cookie);
+    expect(view.projectListing).toEqual(projects);
+    expect(view.postListing).toEqual(DEFAULT_LISTING);
+
+    const snapshot = await readPublicSnapshot(await testDatabase());
+    expect(snapshot.listings).toEqual({ post: DEFAULT_LISTING, project: projects });
+  });
+
+  it("refuses an overview the bounds do not allow", async () => {
+    const cookie = await signedInCookie(OWNER);
+    for (const change of [
+      { pageSize: 0 },
+      { pageSize: 61 },
+      { columns: 5 },
+      { previewLength: 10 },
+      { headline: { en: "Posts" } },
+    ]) {
+      const response = await put("postListing", { ...DEFAULT_LISTING, ...change }, cookie);
+      expect(response.status).toBe(400);
+    }
+    expect((await put("postListing", DEFAULT_LISTING, await signedInCookie())).status).toBe(403);
   });
 
   it("refuses everything without a session", async () => {

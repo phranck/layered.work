@@ -1,4 +1,5 @@
 import { mediaReferences } from "@layered/content";
+import type { ListedKind, ListingSettings } from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -14,6 +15,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
+import { readListingSettings } from "../settings/repository.js";
 
 /**
  * The public content of the site, read out of the database in the shape the
@@ -38,6 +40,8 @@ export interface PublicSnapshot {
   redirects: { source: string; target: string }[];
   /** Addresses of translations in the bin or deleted for good, which answer 410. */
   gone: string[];
+  /** How the overviews of posts and projects are set up. */
+  listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
 }
 
@@ -356,6 +360,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       database,
       new Set([...currentPaths.values(), ...former.map((item) => item.source)]),
     ),
+    listings: await readListingSettings(database),
     homeBlocks: blocks.map((block) => ({
       type: block.type,
       enabled: block.enabled,

@@ -1,4 +1,4 @@
-import { type ErrorCode, MAX_UPLOAD_BYTES } from "@layered/schemas";
+import { type ErrorCode, LISTING_BOUNDS, MAX_UPLOAD_BYTES } from "@layered/schemas";
 
 /**
  * The dashboard's own language.
@@ -288,6 +288,19 @@ const de = {
   invalidSenderName:
     "Der Absendername braucht Text und darf weder spitze Klammern noch Anführungszeichen enthalten.",
   invalidWebsiteId: "Die Website-ID ist keine gültige Umami-ID.",
+  listingSettings: "Übersicht auf der Website",
+  listingHeadline: (language: string) => `Überschrift auf ${language}`,
+  listingHeadlineHint: "Leer zeigt den Standardnamen.",
+  listingIntroduction: (language: string) => `Einleitung auf ${language}`,
+  listingIntroductionHint: "Steht über den Karten und wird geschrieben wie ein Eintrag.",
+  listingPageSize: "Einträge pro Seite",
+  listingColumns: "Spalten",
+  listingColumnsHint: "Höchstens so viele. Ein schmales Fenster zeigt weniger.",
+  listingPreviewLength: "Länge der Vorschau",
+  listingRange: (min: number, max: number) => `Von ${min} bis ${max}.`,
+  invalidPageSize: `Einträge pro Seite: eine ganze Zahl von ${LISTING_BOUNDS.pageSize.min} bis ${LISTING_BOUNDS.pageSize.max}.`,
+  invalidPreviewLength: `Länge der Vorschau: eine ganze Zahl von ${LISTING_BOUNDS.previewLength.min} bis ${LISTING_BOUNDS.previewLength.max}.`,
+  invalidListingText: "Eine Überschrift oder Einleitung ist zu lang.",
 
   // Media picker
   mediaPicker: "Bild auswählen",
@@ -592,6 +605,19 @@ const en: Catalogue = {
   invalidSenderAddress: "The sender address is not a valid email address.",
   invalidSenderName: "The sender name needs text and may contain neither angle brackets nor quotation marks.",
   invalidWebsiteId: "The website ID is not a valid Umami ID.",
+  listingSettings: "Overview on the website",
+  listingHeadline: (language) => `Headline in ${language}`,
+  listingHeadlineHint: "Empty shows the default name.",
+  listingIntroduction: (language) => `Introduction in ${language}`,
+  listingIntroductionHint: "Stands above the cards and is written like an entry.",
+  listingPageSize: "Entries per page",
+  listingColumns: "Columns",
+  listingColumnsHint: "At most this many. A narrow window shows fewer.",
+  listingPreviewLength: "Preview length",
+  listingRange: (min, max) => `From ${min} to ${max}.`,
+  invalidPageSize: `Entries per page: a whole number from ${LISTING_BOUNDS.pageSize.min} to ${LISTING_BOUNDS.pageSize.max}.`,
+  invalidPreviewLength: `Preview length: a whole number from ${LISTING_BOUNDS.previewLength.min} to ${LISTING_BOUNDS.previewLength.max}.`,
+  invalidListingText: "A headline or an introduction is too long.",
 
   mediaPicker: "Choose a picture",
   mediaSearch: "Search pictures",

@@ -4,7 +4,7 @@ The content itself is migrated from the old Publii site by a pipeline that stays
 
 ## The content snapshot
 
-The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the bin or was deleted from it.
+The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the bin or was deleted from it. Beside them, `listings` holds how the overviews of posts and projects are set up in the dashboard: entries per page, columns, a headline and an introduction per language, and the preview length. A snapshot without it, such as the one committed from the export, uses the defaults.
 
 Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, `showInOtherLanguage`, and `template`. `showInOtherLanguage` lists a public entry in the other language's listings, feeds and search as well, marked with its language, whilst that language has no published version of it. Dates are ISO strings or null. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
 
@@ -34,7 +34,7 @@ That output cannot contain an address the site stopped generating earlier, and s
 | `/tags/<slug>/` | 308 to `/topics/<slug>/` | Same subject, new prefix, for every topic the snapshot still carries. A topic renamed or merged since then is reached in one step at its current address. |
 | `/topics/<former>/`, `/de/topics/<former>/` | 308 to the topic's current address | An English address a topic gave up when its address was changed or when it was merged into another. The dashboard keeps it in `former_topic_slugs`, and the snapshot turns it into a redirect. |
 | `/authors/frank-gregor/` | 308 to `/` | There is one author and the new site has no author page, so the home page is the nearest real answer. |
-| `/page/<number>/` | 308 to the posts listing page holding the same posts | Publii paginated the home page's post list at these addresses, eight posts to a page, so the posts listing is where they belong. It shows twelve to a page, so the number is converted rather than kept: `/page/2/` lands on `/posts/`. Pagination moved from the path into the query, where the listing reads it. |
+| `/page/<number>/` | 308 to the posts listing page holding the same posts | Publii paginated the home page's post list at these addresses, eight posts to a page, so the posts listing is where they belong. It shows as many to a page as its settings in the dashboard say, twelve by default, so the number is converted with that page size rather than kept: at twelve, `/page/2/` lands on `/posts/`. Pagination moved from the path into the query, where the listing reads it. |
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
 | `/feed.xml`, `/feed.json`, `/sitemap.xml`, `/robots.txt` | 200 | These keep their addresses exactly. |
 | The six addresses in `legacy-redirects.json` | 308 | Observed in the Internet Archive, absent from the final output. Each row carries its own reason. |

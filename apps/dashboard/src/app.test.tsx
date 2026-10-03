@@ -1,3 +1,4 @@
+import { DEFAULT_LISTING } from "@layered/schemas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider } from "react-router";
@@ -6,6 +7,7 @@ import { createDashboardApi } from "./api.js";
 import { expirationLoginLocation } from "./auth-routing.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { EDITOR_TEXT_SIZE_KEY } from "./editor-text-size.js";
+import { LISTING_SETTINGS_OPEN_KEY } from "./listing-settings.js";
 import { createDashboardMemoryRouter } from "./router.js";
 import { SIDEBAR_ORDER_KEY } from "./sidebar-order.js";
 
@@ -96,6 +98,8 @@ const settings = {
   },
   mail: { senderAddress: "hello@layered.work", senderName: "LAYERED.work", apiKeyConfigured: true },
   analytics: { umamiWebsiteId: "3e266ac6-8103-4bef-bedb-7d127ed75cc4" },
+  postListing: DEFAULT_LISTING,
+  projectListing: DEFAULT_LISTING,
 };
 
 /** The draft from the list, as the editor opens it. */
@@ -251,9 +255,9 @@ describe("dashboard shell", () => {
     fireEvent.click(settings);
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/settings"));
-    expect(settings.getAttribute("aria-current")).toBe("page");
+    await waitFor(() => expect(settings.getAttribute("aria-current")).toBe("page"));
     expect(settings.getAttribute("data-current")).toBe("true");
-    expect(screen.getByRole("heading", { name: "Einstellungen" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Einstellungen" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("link", { name: "LAYERED.work" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
@@ -295,6 +299,59 @@ describe("dashboard shell", () => {
     fireEvent.keyDown(grip, { key: "ArrowUp" });
     fireEvent.keyDown(grip, { key: "ArrowUp" });
     expect(groupTitles(navigation)[0]).toBe("Inhalt");
+  });
+
+  it("sets up the projects overview in a card that opens, saves it, and remembers that it is open", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/settings/projectListing") && init?.method === "PUT"
+          ? json({ data: { ...settings, projectListing: JSON.parse(String(init.body)) } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard("/projects");
+
+    const toggle = await screen.findByRole("button", { name: "Übersicht auf der Website" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(localStorage.getItem(LISTING_SETTINGS_OPEN_KEY)).toBe("true");
+
+    fireEvent.change(screen.getByLabelText("Einträge pro Seite"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.change(screen.getByLabelText("Überschrift auf Englisch"), { target: { value: "Work" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(
+        request.mock.calls.some(
+          ([url, init]) => String(url).endsWith("/settings/projectListing") && init?.method === "PUT",
+        ),
+      ).toBe(true),
+    );
+    const put = request.mock.calls.find(([url]) => String(url).endsWith("/settings/projectListing"));
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({
+      pageSize: 9,
+      columns: 2,
+      headline: { en: "Work", de: "" },
+    });
+  });
+
+  it("says why an overview's page size cannot be saved, and offers no card for pages", async () => {
+    localStorage.setItem(LISTING_SETTINGS_OPEN_KEY, "true");
+    const request = vi.fn((input: RequestInfo | URL) => Promise.resolve(successfulGet(input)));
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard("/posts");
+
+    fireEvent.change(await screen.findByLabelText("Einträge pro Seite"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("von 3 bis 60");
+    expect(request.mock.calls.some(([url]) => String(url).includes("/settings/postListing"))).toBe(false);
+
+    await router.navigate("/pages");
+    await screen.findByRole("heading", { level: 1, name: "Seiten" });
+    expect(screen.queryByRole("button", { name: "Übersicht auf der Website" })).toBeNull();
   });
 
   it("lists the posts with figures that count the rows below them", async () => {
@@ -1338,7 +1395,7 @@ describe("dashboard shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
     fireEvent.click(await screen.findByRole("button", { name: "portrait" }));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
 
     expect(await screen.findByRole("heading", { name: "Posts" })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Dashboard areas" })).toBeTruthy();
@@ -1438,7 +1495,7 @@ describe("dashboard shell", () => {
     expect(sent?.[1]?.method).toBe("PUT");
     expect(sent?.[1]?.body).toBe(file);
 
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
       expect(
         request.mock.calls.some(
@@ -1507,7 +1564,7 @@ describe("dashboard shell", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     expect(within(screen.getByRole("dialog")).getByText("Owner").closest(".badge")).toBeTruthy();
     expect(screen.queryByLabelText("Rolle")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Diese E-Mail-Adresse gehört bereits zu einem anderen Konto.");
     expect(alert.textContent).toContain("account-1");
@@ -1529,7 +1586,7 @@ describe("dashboard shell", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
       expect(
         request.mock.calls.filter(

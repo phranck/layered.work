@@ -22,7 +22,18 @@ const LANGUAGE_NAMES: Record<Language, Record<Language, string>> = {
  * language says so with a language tag, and marks its text with that language,
  * so a reader knows before opening it and a screen reader pronounces it right.
  */
-export function EntryCard({ entry, image, language }: { entry: Entry; image?: Media; language?: Language }) {
+export function EntryCard({
+  entry,
+  image,
+  language,
+  summaryLength,
+}: {
+  entry: Entry;
+  image?: Media;
+  language?: Language;
+  /** How long the preview text may be, where the overview's settings say. */
+  summaryLength?: number;
+}) {
   const foreign = language !== undefined && entry.language !== language;
   return (
     <Card.Link href={entry.path} className="entry-card" lang={foreign ? entry.language : undefined}>
@@ -56,7 +67,7 @@ export function EntryCard({ entry, image, language }: { entry: Entry; image?: Me
             )}
           </div>
           <h3 className="title-card">{entry.title}</h3>
-          <p className="entry-card__summary">{summaryOf(entry)}</p>
+          <p className="entry-card__summary">{summaryOf(entry, summaryLength)}</p>
         </div>
       </Card.Body>
       <Card.Footer

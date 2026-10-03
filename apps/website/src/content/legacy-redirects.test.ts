@@ -3,12 +3,18 @@ import { LEGACY_REDIRECT_TARGETS, LEGACY_REDIRECTS, legacyPostsPage } from "./le
 
 describe("the old home page's numbered pages", () => {
   it("land on the listing page that holds the posts they showed", () => {
-    // Eight posts a page then, twelve now: the old second page began with the
-    // ninth post, which is on the first page here.
-    expect(legacyPostsPage(1)).toBe(1);
-    expect(legacyPostsPage(2)).toBe(1);
-    expect(legacyPostsPage(3)).toBe(2);
-    expect(legacyPostsPage(4)).toBe(3);
+    // Eight posts a page then, twelve by default now: the old second page began
+    // with the ninth post, which is on the first page here.
+    expect(legacyPostsPage(1, 12)).toBe(1);
+    expect(legacyPostsPage(2, 12)).toBe(1);
+    expect(legacyPostsPage(3, 12)).toBe(2);
+    expect(legacyPostsPage(4, 12)).toBe(3);
+  });
+
+  it("follow the page size the posts overview is set to", () => {
+    // Five a page: the old third page began with the seventeenth post, on the fourth page.
+    expect(legacyPostsPage(3, 5)).toBe(4);
+    expect(legacyPostsPage(2, 8)).toBe(2);
   });
 });
 

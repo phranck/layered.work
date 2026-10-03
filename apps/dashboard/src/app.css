@@ -793,6 +793,14 @@ dialog.account-dialog::backdrop {
   gap: var(--space-5);
 }
 
+/* Three figures that belong together, side by side. */
+.settings-form__trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
 .settings-form__problems {
   padding-inline-start: var(--space-6);
 }
@@ -882,7 +890,8 @@ dialog.account-dialog::backdrop {
 }
 
 @media (width < 1100px) {
-  .settings-form__pair {
+  .settings-form__pair,
+  .settings-form__trio {
     grid-template-columns: minmax(0, 1fr);
   }
 

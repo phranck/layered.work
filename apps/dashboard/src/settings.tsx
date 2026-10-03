@@ -33,8 +33,8 @@ import { useAccount } from "./session-queries.js";
  * title. Every author can read them; only the owner can change them.
  */
 
-/** The query the three screens share, so saving one refreshes the others. */
-const SETTINGS_KEY = ["settings"] as const;
+/** The query every settings card shares, so saving one refreshes the others. */
+export const SETTINGS_KEY = ["settings"] as const;
 
 /** How long an Umami website id is: a UUID, hyphens included. */
 const UUID_LENGTH = 36;
@@ -65,6 +65,11 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
   actions?: (dirty: boolean) => ReactNode;
   /** A line in the footer, such as why one of those actions cannot be used yet. */
   note?: (dirty: boolean) => string | undefined;
+  /**
+   * Draws the card as one that opens and closes under its header, which is how
+   * a group of settings stands on a screen that is about something else.
+   */
+  collapse?: { open: boolean; onOpenChange: (open: boolean) => void };
 }
 
 /**
@@ -76,7 +81,7 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
  * checks it again and says only that the request was refused, which is the
  * backstop rather than the explanation.
  */
-function SettingsCard<Group extends keyof SettingsGroups>({
+export function SettingsCard<Group extends keyof SettingsGroups>({
   group,
   title,
   saved,
@@ -85,6 +90,7 @@ function SettingsCard<Group extends keyof SettingsGroups>({
   children,
   actions,
   note,
+  collapse,
 }: SettingsCardProps<Group>) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
@@ -130,9 +136,8 @@ function SettingsCard<Group extends keyof SettingsGroups>({
     save.mutate(parsed.data, { onSuccess: () => setDraft(parsed.data) });
   };
 
-  return (
-    <Card>
-      <Card.Header title={title} />
+  const content = (
+    <>
       <Card.Body>
         <form ref={form} id={formId} className="settings-form" onSubmit={submit} noValidate>
           {children(draft, update, editable)}
@@ -162,6 +167,16 @@ function SettingsCard<Group extends keyof SettingsGroups>({
           </>
         }
       />
+    </>
+  );
+  return collapse ? (
+    <Card.Collapsible title={title} open={collapse.open} onOpenChange={collapse.onOpenChange}>
+      {content}
+    </Card.Collapsible>
+  ) : (
+    <Card>
+      <Card.Header title={title} />
+      {content}
     </Card>
   );
 }

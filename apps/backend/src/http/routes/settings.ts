@@ -1,4 +1,11 @@
-import { analyticsSettings, ErrorCode, mailSettings, siteSettings } from "@layered/schemas";
+import {
+  analyticsSettings,
+  ErrorCode,
+  LISTING_GROUP,
+  listingSettings,
+  mailSettings,
+  siteSettings,
+} from "@layered/schemas";
 import { Hono } from "hono";
 import { getAccountProfile } from "../../account/repository.js";
 import { config } from "../../config.js";
@@ -11,7 +18,8 @@ import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
 /**
- * The site's settings: the site itself, the mail it sends, and its analytics.
+ * The site's settings: the site itself, the mail it sends, its analytics, and
+ * how its overviews of posts and projects are set up.
  *
  * Every signed-in author may read them, because the screens show them. Only the
  * owner may change them or send a test message, because they belong to the site
@@ -35,6 +43,13 @@ settingsRoutes.put("/mail", requireOwner, validate("json", mailSettings), async 
 settingsRoutes.put("/analytics", requireOwner, validate("json", analyticsSettings), async (c) =>
   ok(c, await saveSettings(database(), "analytics", c.req.valid("json"), principalOf(c).userId)),
 );
+
+// How the overviews of posts and projects are set up, one group each.
+for (const group of Object.values(LISTING_GROUP)) {
+  settingsRoutes.put(`/${group}`, requireOwner, validate("json", listingSettings), async (c) =>
+    ok(c, await saveSettings(database(), group, c.req.valid("json"), principalOf(c).userId)),
+  );
+}
 
 /**
  * Sends one message through SMTP2GO with the saved sender, and reports what

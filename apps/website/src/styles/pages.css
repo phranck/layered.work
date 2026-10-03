@@ -277,10 +277,29 @@
   padding-block-end: var(--section-gap);
 }
 
+/* As many columns of at least 272px as fit, and no more than an overview's
+   settings allow in `--grid-columns`: each column is then at least the width
+   that number of columns would have. Without the setting there is no upper
+   bound beyond what fits. */
 .entry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
+  grid-template-columns: repeat(
+      auto-fill,
+      minmax(
+        max(
+          min(100%, 272px),
+          calc((100% - (var(--grid-columns, 99) - 1) * var(--gap)) / var(--grid-columns, 99))
+        ),
+        1fr
+      )
+    );
   gap: var(--gap);
+}
+
+/* An overview's introduction, between its heading and its cards, set in from
+   the edge as far as the heading above it. */
+.listing-introduction {
+  padding-inline-start: var(--card-text-inset);
 }
 .entry-card {
   min-width: 0;

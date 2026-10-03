@@ -17,6 +17,7 @@ import { ArrowsMergeIcon as ArrowsMerge } from "@phosphor-icons/react/dist/ssr/A
 import { ArrowsOutLineVerticalIcon as ArrowsOutLineVertical } from "@phosphor-icons/react/dist/ssr/ArrowsOutLineVertical";
 import { ArticleIcon as Article } from "@phosphor-icons/react/dist/ssr/Article";
 import { CardsIcon as Cards } from "@phosphor-icons/react/dist/ssr/Cards";
+import { CaretDownIcon as CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";
 import { ChartLineIcon as ChartLine } from "@phosphor-icons/react/dist/ssr/ChartLine";
 import { CheckCircleIcon as CheckCircle } from "@phosphor-icons/react/dist/ssr/CheckCircle";
 import { CodeIcon as Code } from "@phosphor-icons/react/dist/ssr/Code";
@@ -96,6 +97,7 @@ export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsO
 export const ArrowsMergeIcon = duotone(ArrowsMerge, "ArrowsMergeIcon");
 export const ArticleIcon = duotone(Article, "ArticleIcon");
 export const CardsIcon = duotone(Cards, "CardsIcon");
+export const CaretDownIcon = duotone(CaretDown, "CaretDownIcon");
 export const CheckCircleIcon = duotone(CheckCircle, "CheckCircleIcon");
 export const ChartLineIcon = duotone(ChartLine, "ChartLineIcon");
 export const CodeIcon = duotone(Code, "CodeIcon");
