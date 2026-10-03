@@ -176,9 +176,9 @@ dialog.account-dialog::backdrop {
     "label value"
     "note value";
   column-gap: var(--space-3);
-  row-gap: var(--space-1);
   align-content: start;
   padding: var(--card-padding);
+  line-height: var(--leading-snug);
 }
 
 .stat__label {
@@ -190,12 +190,20 @@ dialog.account-dialog::backdrop {
   color: var(--text-faint);
 }
 
+/* The number is as tall as the two lines beside it: its digits reach from the
+   cap line of the name to the baseline of the explanation. Measured on Barlow:
+   the two lines span 27.8px of ink and a bold digit is 0.713em high, which
+   makes 39px. At a line height of one the digits begin 0.185em below the box
+   and the name's capitals 4.3px below the row, so the box moves up by the
+   difference. The negative bottom margin keeps the number from stretching the
+   rows it stands beside. */
 .stat__value {
   grid-area: value;
   align-self: start;
-  font-size: var(--text-2xl);
+  margin-block: -0.075em -0.25em;
+  font-size: 2.4375rem;
   font-weight: var(--weight-bold);
-  line-height: var(--leading-tight);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
