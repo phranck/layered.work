@@ -730,10 +730,29 @@ dialog.account-dialog::backdrop {
 .topic-field__control {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+}
+
+/* The list opens by its height, as a grid row going from nothing, `0fr`, to
+   its content's height, `1fr`, which Safari animates as well. The clip holds no
+   least height of its own, or it would keep the row open, and its top margin
+   is the distance to the field, inside what closes. */
+.topic-field__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration) var(--ease);
+}
+
+.topic-field__reveal[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.topic-field__clip {
+  min-height: 0;
+  overflow: clip;
 }
 
 .topic-field__list {
+  margin-block-start: var(--space-1);
   padding: var(--space-1);
   background: var(--surface-raised);
   border: 1px solid var(--edge-hairline);

@@ -130,7 +130,7 @@ const CardCollapsible = forwardRef<HTMLElement, CardCollapsibleProps>(
           </h2>
         </header>
         <div id={regionId} className="card__collapse" inert={!open}>
-          {children}
+          <div className="card__collapse-content">{children}</div>
         </div>
       </section>
     );

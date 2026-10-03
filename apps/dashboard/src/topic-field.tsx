@@ -129,6 +129,16 @@ export function TopicField({
     }
   };
 
+  // The list opens and closes by its height. Whilst it closes it goes on showing
+  // what it held, so the closing is seen rather than the lines vanishing first.
+  const [kept, setKept] = useState<Suggestion[]>([]);
+  useEffect(() => {
+    const next = topicSuggestions(topics.data ?? [], value, typed, language);
+    if (next.length > 0) setKept(next);
+  }, [topics.data, value, typed, language]);
+  const open = suggestions.length > 0;
+  const listed = open ? suggestions : kept;
+
   // The panel scrolls by itself, so the list is brought into view as it opens
   // and grows rather than left under the panel's lower edge.
   const list = useRef<HTMLDivElement>(null);
@@ -189,11 +199,16 @@ export function TopicField({
           }}
           onKeyDown={onKeyDown}
         />
-        {suggestions.length > 0 && (
-          <div ref={list} className="topic-field__list">
-            <RowList id={listId} role="listbox" aria-label={text("editorTopics")}>
-              {suggestions.map((suggestion, index) => {
-                const current = index === activeIndex;
+        <div ref={list} className="topic-field__reveal" data-open={open || undefined} inert={!open}>
+          <div className="topic-field__clip">
+            <RowList
+              id={listId}
+              role="listbox"
+              aria-label={text("editorTopics")}
+              className="topic-field__list"
+            >
+              {listed.map((suggestion, index) => {
+                const current = open && index === activeIndex;
                 const label =
                   suggestion.kind === "topic"
                     ? topicLabel(suggestion.topic, language).name
@@ -220,7 +235,7 @@ export function TopicField({
               })}
             </RowList>
           </div>
-        )}
+        </div>
       </div>
       {topics.isError && <ErrorNotice error={topics.error} />}
     </div>

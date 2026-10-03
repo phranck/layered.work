@@ -790,12 +790,12 @@ describe("dashboard shell", () => {
     await screen.findByText("Electronics");
     fireEvent.change(field, { target: { value: "solder" } });
     fireEvent.keyDown(field, { key: "Enter" });
-    expect(await screen.findByText("Soldering")).toBeTruthy();
+    expect(await screen.findByText("Soldering", { selector: "li.chip" })).toBeTruthy();
 
     fireEvent.change(field, { target: { value: "Flux" } });
     expect(screen.getByRole("option", { name: "„Flux“ neu anlegen" })).toBeTruthy();
     fireEvent.keyDown(field, { key: "Enter" });
-    await screen.findByText("Flux");
+    await screen.findByText("Flux", { selector: "li.chip" });
     const asked = request.mock.calls.find(
       ([url, init]) => String(url).endsWith("/topics") && init?.method === "POST",
     );

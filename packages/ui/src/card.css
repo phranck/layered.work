@@ -255,18 +255,25 @@
   transform: rotate(180deg);
 }
 
-/* The card is a flex column, and an item that clips rather than scrolls keeps
-   its content's height as its least height, which would hold the region open
-   until the transition ends. */
+/* The region is a grid of one row that goes from the content's height, `1fr`,
+   to nothing, `0fr`, and the browser animates between the two. That works in
+   Safari, which cannot animate a height to `auto`. The content clips and has
+   no least height of its own, or it would hold the row open. */
 .card__collapse {
-  min-height: 0;
-  overflow: clip;
-  interpolate-size: allow-keywords;
-  transition: height var(--duration) var(--ease);
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration) var(--ease);
 }
 
 .card--collapsible:not([data-open]) > .card__collapse {
-  height: 0;
+  grid-template-rows: 0fr;
+}
+
+.card__collapse-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {
