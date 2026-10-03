@@ -3,13 +3,20 @@ import { fileURLToPath } from "node:url";
 import { mediaReferences } from "@layered/content";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { selectObjects } from "../../../../scripts/publii/upload.mjs";
 import {
   closeTestDatabase,
   emptyTestDatabase,
   hasTestDatabase,
   testDatabase,
 } from "../test-support/database.js";
-import { importContent, isPubliiSizeCopy, type Snapshot, withDrafts } from "./import-content.js";
+import {
+  importContent,
+  isPubliiSizeCopy,
+  migratedStorageKey,
+  type Snapshot,
+  withDrafts,
+} from "./import-content.js";
 import { entries, entryTopics, entryTranslations, media, paths, topics } from "./schema/index.js";
 
 /**
@@ -45,6 +52,27 @@ function migrationOutput(): Snapshot {
     ],
   };
 }
+
+describe("the storage key of a migrated file", () => {
+  it("is the key the upload gave its object in the bucket", () => {
+    const file = {
+      slug: "cover",
+      src: "/media/cover.webp",
+      source: "posts/3/cover.webp",
+      filename: "cover.webp",
+      mime: "image/webp",
+      bytes: 10,
+      sha256: "c".repeat(64),
+    };
+    const { objects } = selectObjects(
+      { entries: [{ body: 'Image("cover")', featuredImage: null }], media: [file] },
+      { variants: [] },
+    );
+
+    expect(objects.map((object) => object.key)).toEqual([migratedStorageKey(file.src)]);
+    expect(migratedStorageKey(file.src)).toBe("migration/cover.webp");
+  });
+});
 
 describe("taking the drafts from the migration output", () => {
   it("adds the drafts and nothing else", () => {

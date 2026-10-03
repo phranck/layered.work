@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import node from "@astrojs/node";
 import react from "@astrojs/react";
 import { defineConfig } from "astro/config";
+import { localMedia } from "./tools/local-media.mjs";
 
 /**
  * The project's local environment file, which says where the site's content
@@ -61,6 +62,15 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   integrations: [react(), bundleReactIntoBuild()],
   vite: {
+    // Local work's media answer at their storage keys, from the directory the
+    // backend keeps them in, which is what the bucket does in a deployment.
+    plugins: [
+      localMedia(
+        process.env.MEDIA_LOCAL_DIR
+          ? fileURLToPath(new URL(`../../${process.env.MEDIA_LOCAL_DIR}/`, import.meta.url))
+          : undefined,
+      ),
+    ],
     // The model viewer is imported only once a model scrolls into view, so the
     // development server would discover it then, re-bundle its dependencies,
     // and answer the page's request for the old bundle with 504. Bundling it

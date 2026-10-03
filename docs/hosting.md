@@ -217,12 +217,14 @@ Until 13 September 2026 the container on this machine came from a compose file i
 
 Locally the backend reads and writes pictures in `media-local/` rather than in the bucket, and production always uses the bucket. Leave the four `S3_*` values in `.env.local` empty so that nothing on this machine reaches the production bucket. Set `MEDIA_LOCAL_DIR=media-local` instead, which is ignored by git.
 
-Uploads land under `media-local/uploads/`. The old site's pictures keep the `media/` keys the migration gave them, so the migration's copies are linked in once:
+A file's storage key is the key of its object in the bucket, and `media-local/` holds the same keys. Uploads land under `media-local/uploads/`. The old site's pictures have the `migration/` keys `scripts/publii/upload.mjs` gave them in the bucket, so the migration's copies are linked in once:
 
 ```bash
 mkdir -p media-local
-ln -s ../apps/website/public/media media-local/media
+ln -s ../apps/website/public/media media-local/migration
 ```
+
+The site addresses a file as its key behind `MEDIA_ORIGIN`, which is the bucket's root in production. Locally `MEDIA_ORIGIN` is unset, so the address is the bare key, and the website's development server answers it from `media-local/` through `apps/website/tools/local-media.mjs`. `pnpm --filter @layered/backend db:verify` asks the store for every key in the library and fails where one names no object.
 
 An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
 

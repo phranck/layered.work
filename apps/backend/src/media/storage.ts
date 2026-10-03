@@ -1,10 +1,17 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { access, mkdir, readFile, rm } from "node:fs/promises";
+import { access, mkdir, readFile, rm, stat } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  NotFound,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { config, isProduction } from "../config.js";
 
@@ -117,6 +124,31 @@ export async function readMediaBytes(storageKey: string): Promise<Buffer> {
   const result = await bucketClient().send(new GetObjectCommand({ Bucket: mode.bucket, Key: storageKey }));
   if (!result.Body) throw new Error("Object storage returned no body.");
   return Buffer.from(await result.Body.transformToByteArray());
+}
+
+/**
+ * Whether the store this process reads holds an object at a key.
+ *
+ * Asks for the object's metadata rather than its bytes, so checking every key
+ * in the library costs one small request each.
+ *
+ * @param storageKey - The object's key.
+ */
+export async function mediaObjectExists(storageKey: string): Promise<boolean> {
+  const mode = storageMode();
+  if (mode.kind === "local") {
+    return stat(localMediaPath(mode.root, storageKey)).then(
+      (found) => found.isFile(),
+      () => false,
+    );
+  }
+  try {
+    await bucketClient().send(new HeadObjectCommand({ Bucket: mode.bucket, Key: storageKey }));
+    return true;
+  } catch (error) {
+    if (error instanceof NotFound) return false;
+    throw error;
+  }
 }
 
 /**

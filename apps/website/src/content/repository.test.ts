@@ -192,28 +192,33 @@ describe("where the media are served from", () => {
     media: [
       {
         slug: "a-picture",
-        src: "/media/a-picture.webp",
-        srcSet: "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+        src: "/migration/a-picture.webp",
+        srcSet: "/migration/a-picture-variant-480.webp 480w, /migration/a-picture-variant-960.webp 960w",
       },
+      { slug: "an-upload", src: "/uploads/tl_WnGQ4duhWJVeRjRqMmQ" },
     ],
   };
 
   it("leaves the paths alone when nothing says otherwise, which is the local case", () => {
     delete process.env.MEDIA_ORIGIN;
     const asset = createRepository(withMedia).media("a-picture");
-    expect(asset?.src).toBe("/media/a-picture.webp");
+    expect(asset?.src).toBe("/migration/a-picture.webp");
     expect(asset?.srcSet).toBe(
-      "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+      "/migration/a-picture-variant-480.webp 480w, /migration/a-picture-variant-960.webp 960w",
     );
   });
 
-  it("puts the configured origin in front of every candidate, keeping the widths", () => {
-    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration";
+  it("puts the bucket's origin in front of every key, migrated and uploaded alike, keeping the widths", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket";
     try {
-      const asset = createRepository(withMedia).media("a-picture");
+      const repository = createRepository(withMedia);
+      const asset = repository.media("a-picture");
       expect(asset?.src).toBe("https://storage.example/bucket/migration/a-picture.webp");
       expect(asset?.srcSet).toBe(
         "https://storage.example/bucket/migration/a-picture-variant-480.webp 480w, https://storage.example/bucket/migration/a-picture-variant-960.webp 960w",
+      );
+      expect(repository.media("an-upload")?.src).toBe(
+        "https://storage.example/bucket/uploads/tl_WnGQ4duhWJVeRjRqMmQ",
       );
     } finally {
       delete process.env.MEDIA_ORIGIN;
@@ -221,13 +226,34 @@ describe("where the media are served from", () => {
   });
 
   it("tolerates a trailing slash on the origin rather than doubling it", () => {
-    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration/";
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/";
     try {
       expect(createRepository(withMedia).media("a-picture")?.src).toBe(
         "https://storage.example/bucket/migration/a-picture.webp",
       );
     } finally {
       delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
+  it("finds a file the export names by its old path below the prefix the upload put it under", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket";
+    try {
+      const exported = createRepository({
+        ...snapshot,
+        media: [{ slug: "a-picture", src: "/media/a-picture.webp" }],
+      });
+      expect(exported.media("a-picture")?.src).toBe(
+        "https://storage.example/bucket/migration/a-picture.webp",
+      );
+    } finally {
+      delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
+  it("refuses a path that is not one key below the origin", () => {
+    for (const src of ["//evil.test/x.webp", "/migration/../x", "https://evil.test/x.webp"]) {
+      expect(() => createRepository({ ...snapshot, media: [{ slug: "bad", src }] })).toThrow();
     }
   });
 });

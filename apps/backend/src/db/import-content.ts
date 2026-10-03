@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { mediaReferences } from "@layered/content";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -110,13 +111,24 @@ function mediaKindOf(mime: string): "image" | "video" | "document" | "model" {
 }
 
 /**
- * Writes the snapshot's assets, and returns their database ids by slug.
+ * The storage key of a migrated file: the key `scripts/publii/upload.mjs` gave
+ * its object in the bucket, which is the file's name below `migration/`.
  *
- * The slug is what content refers to and what the snapshot carries, so it is the
- * key on both sides. An image without dimensions is refused by the table rather
- * than by this function, which is deliberate: the check belongs where every
- * writer meets it.
+ * The upload script writes the objects and this writes the rows that name them,
+ * so the two have to agree, and `import-content.test.ts` holds them to it by
+ * running both on the same file. The snapshot's `src`, a path on the old site,
+ * names no object anywhere.
+ *
+ * @param src - The file's path in the snapshot, such as `/media/cover.webp`.
+ * @returns Its key, such as `migration/cover.webp`.
  */
+export function migratedStorageKey(src: string): string {
+  return `${MIGRATION_PREFIX}${basename(src)}`;
+}
+
+/** Where `scripts/publii/upload.mjs` writes every migrated object in the bucket. */
+const MIGRATION_PREFIX = "migration/";
+
 /**
  * Whether an asset is one of the size copies Publii made of a picture.
  *
@@ -136,6 +148,14 @@ export function isPubliiSizeCopy(source: string): boolean {
   return source.includes("/responsive/") || /-thumbnail\.[a-z0-9]+$/i.test(source);
 }
 
+/**
+ * Writes the snapshot's assets, and returns their database ids by slug.
+ *
+ * The slug is what content refers to and what the snapshot carries, so it is the
+ * key on both sides. An image without dimensions is refused by the table rather
+ * than by this function, which is deliberate: the check belongs where every
+ * writer meets it.
+ */
 async function importMedia(
   database: Database,
   snapshot: Snapshot,
@@ -177,7 +197,7 @@ async function importMedia(
         slug: asset.slug,
         kind,
         mimeType: asset.mime,
-        storageKey: asset.src.replace(/^\//, ""),
+        storageKey: migratedStorageKey(asset.src),
         byteSize: asset.bytes,
         checksum: asset.sha256,
         width: asset.width ?? null,
@@ -188,7 +208,7 @@ async function importMedia(
         set: {
           kind,
           mimeType: asset.mime,
-          storageKey: asset.src.replace(/^\//, ""),
+          storageKey: migratedStorageKey(asset.src),
           byteSize: asset.bytes,
           width: asset.width ?? null,
           height: asset.height ?? null,

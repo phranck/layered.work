@@ -173,18 +173,17 @@ zerops:
         # committed and carries only what a reader may reach, which a test in
         # the website enforces.
         WEBSITE_CONTENT_FILE: /var/www/apps/website/content/site.json
-        # Where the media actually are. The snapshot records every asset as
-        # /media/<file>, which is the path on the machine that produced it; a
-        # deployment has no such directory and the files sit in the bucket
-        # instead, under the prefix the migration wrote them to. The policy in
-        # @layered/policy names the same host, because the browser refuses a
-        # picture from an origin the page did not declare.
+        # Where the media are: the bucket's root. Every file's storage key is the
+        # key of its object there, `migration/…` for the old site's files and
+        # `uploads/…` for the dashboard's, and the site puts the key behind this
+        # origin. The policy in @layered/policy names the same host, because the
+        # browser refuses a picture from an origin the page did not declare.
         # The host is written out because Zerops does not resolve
         # ${assets_storageCdnUrl} here: the deployed page carried that
         # reference verbatim in every image source. It is no secret, and
         # @layered/policy names the same host for the browser. The bucket name
         # is a reference, and that one does resolve.
-        MEDIA_ORIGIN: https://storage.cdn.zerops.app/${assets_bucketName}/migration
+        MEDIA_ORIGIN: https://storage.cdn.zerops.app/${assets_bucketName}
       # Nothing but the command. This line is handed to `exec`, not to a shell,
       # so `PORT=3000 node …` here is read as the name of a program to run and
       # fails with "not found": the service then restarts in a loop and the site

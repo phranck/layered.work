@@ -60,7 +60,13 @@ const entrySchema = z.object({
 });
 const mediaSchema = z.object({
   slug,
-  src: z.string().regex(/^\/media\/[a-zA-Z0-9_./-]+$/),
+  /**
+   * The file's storage key with a slash in front, such as `/migration/cover.webp`
+   * or `/uploads/tl_WnGQ4duhWJVeRjRqMmQ`, which is where it answers below the
+   * media origin. A snapshot written from the export says `/media/…`, which is
+   * where the same files lie in `public/`.
+   */
+  src: z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
   alt: z.string().optional(),
   caption: z.string().optional(),
   width: z.number().positive().optional(),
@@ -186,22 +192,40 @@ export interface SearchIndexEntry {
 /**
  * Where the media actually are, when they are not beside the site.
  *
- * The snapshot records every asset as `/media/<file>`, which is where they sit
- * on the machine that produced it. A deployment has no such directory: the
- * files live in the object storage, and `MEDIA_ORIGIN` names the prefix they
- * answer under there. Unset means the paths are already right, which is the
- * local case.
+ * The database's snapshot records every asset by its storage key, as `/<key>`,
+ * and the bucket answers each object at its key below `MEDIA_ORIGIN`, so the
+ * address is the two put together. The snapshot committed from the export,
+ * which the site falls back to, records `/media/<file>` instead, and that file
+ * lies below `migration/` in the bucket.
+ *
+ * Unset means the path is already the address, which is the local case: the
+ * development server answers a key from the directory the backend reads, and
+ * `public/` answers the export's `/media/…` paths.
  *
  * Read per call rather than once, so a test can set it and so the value cannot
  * be captured before the environment is complete.
  *
- * @param path - The `/media/...` path as the snapshot records it.
+ * @param path - The path as the snapshot records it, `/<storage key>`.
  * @returns The address a browser should ask for.
  */
 function mediaUrl(path: string): string {
   const origin = process.env.MEDIA_ORIGIN?.replace(/\/+$/, "");
-  return origin ? `${origin}${path.slice("/media".length)}` : path;
+  if (!origin) return path;
+  // A path from the export names the file where the export left it. In the
+  // bucket that file lies below the prefix the upload wrote it to.
+  return path.startsWith(EXPORT_MEDIA_PREFIX)
+    ? `${origin}/${BUCKET_MIGRATION_PREFIX}${path.slice(EXPORT_MEDIA_PREFIX.length)}`
+    : `${origin}${path}`;
 }
+
+/** Where the export's snapshot says a migrated file is. */
+const EXPORT_MEDIA_PREFIX = "/media/";
+
+/**
+ * Where `scripts/publii/upload.mjs` put every migrated file in the bucket, which
+ * is also the start of its storage key in the database.
+ */
+const BUCKET_MIGRATION_PREFIX = "migration/";
 
 /**
  * The same, for a `srcset`, which is a list of `<url> <width>w` pairs.

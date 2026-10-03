@@ -6,11 +6,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { readPublicSnapshot } from "../content/snapshot.js";
 import { connectOnce, databaseUrl } from "./connect.js";
 import { compare, readSource, readTarget, type Verification } from "./verify-migration.js";
+import { missingObjects } from "./verify-storage.js";
 
 /**
  * Compares the Publii site with the database it is pointed at, and prints the
  * result as Markdown tables: the counts, every post, and every file absent from
- * the database. `docs/content-and-addresses.md` records them.
+ * the database. `docs/content-and-addresses.md` records them. It also asks the
+ * store for every storage key the library holds, and lists any that names no
+ * object.
  *
  * ```sh
  * pnpm --filter @layered/backend db:verify
@@ -72,11 +75,27 @@ try {
   const verification = compare(source, await readTarget(database));
   console.log(render(verification));
 
+  // Every key the library holds has to name an object in the store this
+  // process reads, which is the bucket where one is configured and the local
+  // directory otherwise.
+  const missing = await missingObjects(database);
+  console.log(
+    missing.length === 0
+      ? "Every storage key names an object in the store."
+      : [
+          "| File | Storage key with no object |",
+          "| --- | --- |",
+          ...missing.map((file) => `| \`${file.slug}\` | \`${file.storageKey}\` |`),
+          "",
+        ].join("\n"),
+  );
+
   const out = values["snapshot-out"];
   if (out) await writeFile(resolve(out), `${JSON.stringify(await readPublicSnapshot(database), null, 2)}\n`);
 
-  console.log(verification.passed ? "Nothing differs." : "Differences found.");
-  process.exitCode = verification.passed ? 0 : 1;
+  const passed = verification.passed && missing.length === 0;
+  console.log(passed ? "Nothing differs." : "Differences found.");
+  process.exitCode = passed ? 0 : 1;
 } finally {
   await sql.end({ timeout: 5 });
 }
