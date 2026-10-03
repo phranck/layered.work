@@ -25,6 +25,20 @@ const SectionPage = forwardRef<HTMLElement, ComponentPropsWithoutRef<"section">>
     <section ref={ref} className={join("section section--page", className)} {...props} />
   ),
 );
+/**
+ * A section that spans the window, as one band of a page built from several.
+ *
+ * Its background reaches both window edges whilst its content keeps the page
+ * measure, so a page reads as a stack of distinct parts rather than one surface
+ * with headings on it. Consecutive bands alternate between the page surface and
+ * the sunken one on their own, which is what lets the dashboard reorder the home
+ * page's blocks without anybody choosing a colour per block.
+ */
+const SectionBand = forwardRef<HTMLElement, ComponentPropsWithoutRef<"section">>(
+  ({ className, ...props }, ref) => (
+    <section ref={ref} className={join("section section--band", className)} {...props} />
+  ),
+);
 /** The configurable section heading. */
 const SectionTitle = forwardRef<HTMLElement, SectionTitleProps>(
   ({ actions, children, className, eyebrow, lead, level = 2, title, ...props }, ref) => {
@@ -74,6 +88,7 @@ const SectionStack = forwardRef<HTMLDivElement, DivProps>(({ className, ...props
 /** A heading and the content belonging to it. */
 export const Section = Object.assign(SectionRoot, {
   Page: SectionPage,
+  Band: SectionBand,
   Title: SectionTitle,
   Lead: SectionLead,
   Body: SectionBody,

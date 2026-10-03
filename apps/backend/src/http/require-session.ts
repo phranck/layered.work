@@ -48,6 +48,21 @@ export const requireSession = createMiddleware(async (c, next) => {
 });
 
 /**
+ * Refuses the request unless the owner of the site is signed in.
+ *
+ * For what changes the site as a whole rather than any one entry, such as its
+ * settings and the mail it sends. It stands behind `requireSession` on the route,
+ * so a request without a session is told to sign in rather than that it lacks a
+ * role.
+ */
+export const requireOwner = createMiddleware(async (c, next) => {
+  if (principalOf(c).role !== "owner") {
+    throw new HttpError(ErrorCode.Forbidden, "Only the owner of the site can change this.");
+  }
+  await next();
+});
+
+/**
  * The principal, for a handler that runs behind `requireSession`.
  *
  * Throws rather than returning undefined, because a handler reaching this

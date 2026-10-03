@@ -35,6 +35,16 @@ describe("every entry", () => {
   });
 
   it.each(COMPONENT_NAMES)("%s shows an example that the validator accepts", (name) => {
+    // A part means nothing outside its whole, so its example is a line of the
+    // whole's example and is checked there, in the place it can stand.
+    const within = (register[name] as (typeof register)[string]).within;
+    if (within) {
+      expect(register[within]?.example, `${name} belongs in ${within}'s example`).toContain(
+        components[name].example,
+      );
+      return;
+    }
+
     // No media library is given, so a name is taken on trust. The example is
     // about how a component is written, and holding it against the files that
     // happen to exist would make the reference fail for a reason that has

@@ -13,6 +13,7 @@ import {
 import { identifier, instant } from "./columns.js";
 import { entryKind, language, publicationState, readingWidth } from "./enums.js";
 import { media } from "./media.js";
+import { users } from "./people.js";
 
 /**
  * Everything an author writes, and the addresses it answers at.
@@ -77,6 +78,14 @@ export const entryTranslations = pgTable(
     state: publicationState().notNull().default("draft"),
     readingWidth: readingWidth("reading_width").notNull().default("normal"),
 
+    /**
+     * Whether the other language's listings, feeds and search show this
+     * translation as well, marked with its language, whilst that language has
+     * no published version of its own. A German reader still finds an English
+     * post that was never translated.
+     */
+    showInOtherLanguage: boolean("show_in_other_language").notNull().default(false),
+
     /** When it first became public. Null whilst it never has been. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
 
@@ -90,6 +99,17 @@ export const entryTranslations = pgTable(
      * Publii had one.
      */
     featuredMediaId: uuid("featured_media_id").references(() => media.id, { onDelete: "restrict" }),
+
+    /**
+     * When it was moved to the trash, or null whilst it is not there.
+     *
+     * A column rather than a fourth publication state, because the state is
+     * what it returns to when it is restored. In the trash it is gone from the
+     * site exactly as a draft is, and its addresses answer 410. Its rows, its
+     * addresses and its media references stay until the trash is emptied, which
+     * is what makes restoring it possible.
+     */
+    trashedAt: timestamp("trashed_at", { withTimezone: true }),
   },
   (table) => [
     unique("entry_translations_one_per_language").on(table.entryId, table.language),
@@ -140,6 +160,22 @@ export const paths = pgTable(
 );
 
 /**
+ * Every address of a translation that was deleted for good, so it answers 410
+ * rather than 404.
+ *
+ * Emptying the trash removes a translation and, through the cascade, its rows in
+ * `paths`. What the site needs afterwards is only the fact that the address
+ * was here and is gone, which is what a search engine needs to drop it cleanly,
+ * so the addresses move here first. An address given to something new later
+ * is that thing's again, and the site answers with it rather than with 410.
+ */
+export const gonePaths = pgTable("gone_paths", {
+  /** The path as it appears after the host, leading slash included. */
+  path: text().primaryKey(),
+  goneAt: instant("gone_at"),
+});
+
+/**
  * A subject an entry is about.
  *
  * The topic itself carries nothing a reader sees, because everything a reader
@@ -174,6 +210,29 @@ export const topicTranslations = pgTable(
     unique("topic_translations_one_per_language").on(table.topicId, table.language),
     unique("topic_translations_slug_per_language").on(table.language, table.slug),
   ],
+);
+
+/**
+ * Every address a topic has stopped answering at, and the topic it went to.
+ *
+ * A slug changed on the topics screen, or a topic merged into another, leaves
+ * its old address behind as a row here, so a link to it becomes a permanent
+ * redirect rather than a missing page. A slug is free again in its language
+ * only once no topic and no row here holds it, which is why the two are checked
+ * together wherever a slug is chosen.
+ */
+export const formerTopicSlugs = pgTable(
+  "former_topic_slugs",
+  {
+    id: identifier(),
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => topics.id, { onDelete: "cascade" }),
+    language: language().notNull(),
+    slug: text().notNull(),
+    createdAt: instant("created_at"),
+  },
+  (table) => [unique("former_topic_slugs_slug_per_language").on(table.language, table.slug)],
 );
 
 /**
@@ -226,4 +285,36 @@ export const entryTopics = pgTable(
     primaryKey({ columns: [table.entryId, table.topicId] }),
     index("entry_topics_by_topic").on(table.topicId),
   ],
+);
+
+/**
+ * What the editor held when somebody asked to see it as a reader would.
+ *
+ * A preview shows the text being written, unsaved changes included, because
+ * saving first would put a public entry's half-finished change live. So the
+ * editor's state is kept here for as long as the preview link lasts, and
+ * nowhere is it mistaken for the translation itself: the site's snapshot never
+ * reads this table.
+ *
+ * Rows past their expiry are removed whenever a new preview is made, so the
+ * table holds the previews of the last hour and nothing older.
+ */
+export const entryPreviews = pgTable(
+  "entry_previews",
+  {
+    id: identifier(),
+    translationId: uuid("translation_id")
+      .notNull()
+      .references(() => entryTranslations.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    summary: text(),
+    body: text().notNull(),
+    readingWidth: readingWidth("reading_width").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: instant("created_at"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("entry_previews_by_expiry").on(table.expiresAt)],
 );

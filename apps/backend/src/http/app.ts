@@ -12,6 +12,12 @@ import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
+import { entriesRoutes } from "./routes/entries.js";
+import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
+import { previewsRoutes } from "./routes/previews.js";
+import { searchRoutes } from "./routes/search.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { topicsRoutes } from "./routes/topics.js";
 
 /**
  * The application, and the three things every request passes through whatever
@@ -28,12 +34,16 @@ export const app = new Hono();
 app.use("*", requestId);
 app.use("*", safetyHeaders);
 app.use("*", corsForInterfaces);
-app.use(
-  "*",
-  bodyLimit({
-    maxSize: MAX_BODY_BYTES,
-    onError: (c) => fail(c, ErrorCode.PayloadTooLarge, "The request body is too large."),
-  }),
+const limitBody = bodyLimit({
+  maxSize: MAX_BODY_BYTES,
+  onError: (c) => fail(c, ErrorCode.PayloadTooLarge, "The request body is too large."),
+});
+
+// Every body is held to the API's limit except an upload's bytes on the local
+// route, which takes up to the size its token declares and enforces that
+// itself while it writes. The route exists only outside production.
+app.use("*", (c, next) =>
+  c.req.method === "PUT" && LOCAL_UPLOAD_CONTENT.test(c.req.path) ? next() : limitBody(c, next),
 );
 
 /**
@@ -63,7 +73,13 @@ app.route("/health", health);
 app.route("/auth", auth);
 app.route("/account", account);
 app.route("/dashboard", dashboard);
+app.route("/entries", entriesRoutes);
+app.route("/search", searchRoutes);
+app.route("/topics", topicsRoutes);
+app.route("/settings", settingsRoutes);
+app.route("/media", media);
 app.route("/content", content);
+app.route("/previews", previewsRoutes);
 
 /** An address that is not here, in the same shape as every other failure. */
 app.notFound((c) => fail(c, ErrorCode.NotFound, "There is nothing at this address."));

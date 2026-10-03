@@ -55,6 +55,10 @@ export default defineConfig({
       // Fixed, so cookie signing is exercised with a key that is the same in
       // every test rather than one generated per process.
       SESSION_SECRET: "a-test-session-secret-that-is-long-enough",
+      // Empty, whatever the local environment file says, so no test can send a
+      // real message through SMTP2GO. What SMTP2GO answers is tested against a
+      // stand-in for its API instead.
+      SMTP2GO_API_KEY: "",
     },
   },
 });

@@ -1,4 +1,10 @@
-import { homeBlockTypes } from "@layered/schemas";
+import {
+  CONTENT_LANGUAGES,
+  ENTRY_KINDS,
+  homeBlockTypes,
+  PUBLICATION_STATES,
+  READING_WIDTHS,
+} from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
 
 /**
@@ -19,7 +25,7 @@ import { pgEnum } from "drizzle-orm/pg-core";
  * a kind rather than a page carrying a label. The site already sorts all three
  * apart, and the migration read the old site the same way.
  */
-export const entryKind = pgEnum("entry_kind", ["post", "page", "project"]);
+export const entryKind = pgEnum("entry_kind", ENTRY_KINDS);
 
 /**
  * How far a translation has got, and who may read it.
@@ -34,7 +40,7 @@ export const entryKind = pgEnum("entry_kind", ["post", "page", "project"]);
  * Per translation rather than per entry, because an English post can be public
  * whilst its German version is still being written.
  */
-export const publicationState = pgEnum("publication_state", ["public", "draft", "hidden"]);
+export const publicationState = pgEnum("publication_state", PUBLICATION_STATES);
 
 /**
  * The two languages the site is written in.
@@ -42,7 +48,7 @@ export const publicationState = pgEnum("publication_state", ["public", "draft", 
  * A type rather than a free string, so a third language is a migration that
  * every query is checked against rather than a value that quietly appears.
  */
-export const language = pgEnum("language", ["en", "de"]);
+export const language = pgEnum("language", CONTENT_LANGUAGES);
 
 /**
  * How wide the text of an entry is set.
@@ -52,7 +58,7 @@ export const language = pgEnum("language", ["en", "de"]);
  * Chosen per translation, because a German text of the same article is longer
  * and may want a different one.
  */
-export const readingWidth = pgEnum("reading_width", ["narrow", "normal", "wide", "full"]);
+export const readingWidth = pgEnum("reading_width", READING_WIDTHS);
 
 /**
  * What an account may do.

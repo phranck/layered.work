@@ -321,6 +321,72 @@ describe("the example the epic is written around", () => {
   });
 });
 
+describe("a table", () => {
+  /** A table around the given lines, one per line of its body. */
+  const table = (...lines: string[]) => ["Table {", ...lines.map((line) => `  ${line}`), "}"].join("\n");
+
+  it("accepts rows that carry the fields its columns show, and more besides", () => {
+    expect(
+      findingsIn(
+        table(
+          'TableColumn("Part", value: part)',
+          'TableColumn("Count", value: count, alignment: numeric)',
+          'TableRow(part: "Screw", count: "12", supplier: "Bossard")',
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("offers the nearest field when a column names one no row has", () => {
+    expect(onlyFinding(table('TableColumn("Mail", value: emial)', 'TableRow(email: "a@b.c")'))).toMatchObject(
+      {
+        code: FINDING.UnknownField,
+        message: "No row has a field called emial. Did you mean email?",
+        line: 2,
+        column: 30,
+        suggestion: "email",
+      },
+    );
+  });
+
+  it("reports the row that lacks a field the others have", () => {
+    expect(
+      onlyFinding(table('TableColumn("A", value: a)', 'TableRow(a: "1")', 'TableRow(b: "2")')),
+    ).toMatchObject({
+      code: FINDING.MissingField,
+      message: "This row has no a, which a column shows.",
+      line: 4,
+      column: 3,
+    });
+  });
+
+  it("refuses prose and other components in its body", () => {
+    const found = findingsIn(
+      table('TableColumn("A", value: a)', 'TableRow(a: "1")', "", "Some words.", "", 'Image("assembly")'),
+    );
+    expect(found.map((finding) => [finding.code, finding.message])).toEqual([
+      [FINDING.ContentNotAccepted, "Table holds only TableColumn or TableRow."],
+      [FINDING.MisplacedComponent, "Table holds only TableColumn or TableRow, not Image."],
+    ]);
+  });
+
+  it("refuses a part written outside a table", () => {
+    expect(onlyFinding('TableRow(a: "1")')).toMatchObject({
+      code: FINDING.MisplacedComponent,
+      message: "TableRow belongs inside Table.",
+      line: 1,
+      column: 1,
+    });
+  });
+
+  it("refuses a field name written in quotes", () => {
+    expect(onlyFinding(table('TableColumn("A", value: "a")', 'TableRow(a: "1")'))).toMatchObject({
+      code: FINDING.ValueNotPermitted,
+      message: '"a" is not a value for value, which takes the name of a field its rows have, written bare.',
+    });
+  });
+});
+
 describe("plain Markdown", () => {
   it("is left alone", () => {
     const text = [

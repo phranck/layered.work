@@ -1,27 +1,35 @@
-import { type AccountProfile, MaxLength, type UpdateAccountBody } from "@layered/schemas";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type AccountProfile,
+  MaxLength,
+  type UpdateAccountBody,
+} from "@layered/schemas";
 import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import { FloppyDiskIcon, ImagesIcon, SignOutIcon, UserCircleIcon, XIcon } from "@layered/ui/icons";
+import {
+  FloppyDiskIcon,
+  ImagesIcon,
+  SignOutIcon,
+  UploadSimpleIcon,
+  UserCircleIcon,
+  XIcon,
+} from "@layered/ui/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
-import { InterfaceLanguage } from "./dashboard-i18n.js";
+import { DASHBOARD_LANGUAGES } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { CardDialog } from "./modal.js";
+import { useNotify } from "./notifications.js";
+import { useSaveShortcut } from "./save-shortcut.js";
+import { useSignOut } from "./session-queries.js";
 
-export function AccountDialog({
-  account,
-  onClose,
-  onSignedOut,
-}: {
-  account: AccountProfile;
-  onClose: () => void;
-  onSignedOut: () => void;
-}) {
+export function AccountDialog({ account, onClose }: { account: AccountProfile; onClose: () => void }) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
+  const { notify } = useNotify();
   const [draft, setDraft] = useState<UpdateAccountBody>({
     displayName: account.displayName,
     email: account.email,
@@ -36,7 +44,32 @@ export function AccountDialog({
     mutationFn: api.updateAccount,
     onSuccess: (profile) => queryClient.setQueryData(["account", profile.id], profile),
   });
-  const signOut = useMutation({ mutationFn: api.signOut, onSuccess: () => queryClient.clear() });
+  const signOut = useSignOut();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const upload = useMutation({
+    mutationFn: api.uploadMedia,
+    onSuccess: (picture) => {
+      // The upload becomes the draft portrait, exactly as a chosen picture does,
+      // and is kept only when the account is saved.
+      setDraft((current) => ({ ...current, avatarMediaId: picture.id }));
+      setAvatarUrl(picture.url);
+      queryClient.invalidateQueries({ queryKey: ["account-media"] });
+    },
+  });
+
+  // Command-S submits the dialog as its Save button does. Registered after the
+  // screen behind it, so it is the dialog that saves whilst it is open.
+  const form = useRef<HTMLFormElement>(null);
+  useSaveShortcut(() => {
+    if (!save.isPending && !signOut.isPending && !upload.isPending) form.current?.requestSubmit();
+  });
+
+  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Cleared, so choosing the same file again after an error starts a new upload.
+    event.target.value = "";
+    if (file) upload.mutate(file);
+  }
 
   function dismiss() {
     if (savingRef.current || signingOutRef.current) return;
@@ -49,6 +82,7 @@ export function AccountDialog({
     savingRef.current = true;
     try {
       await save.mutateAsync(draft);
+      notify({ tone: "success", message: text("saved") });
       onClose();
     } catch {
       // The mutation retains the structured error for the alert.
@@ -62,8 +96,6 @@ export function AccountDialog({
     signingOutRef.current = true;
     try {
       await signOut.mutateAsync();
-      onClose();
-      onSignedOut();
     } catch {
       // The mutation retains the structured error for the alert.
     } finally {
@@ -75,7 +107,7 @@ export function AccountDialog({
     <>
       <CardDialog labelId="account-dialog-title" onClose={dismiss}>
         <Card.Header id="account-dialog-title" title={text("account")} />
-        <form onSubmit={submit}>
+        <form ref={form} onSubmit={submit}>
           <Card.Body>
             <div className="account">
               <div className="account__portrait">
@@ -86,9 +118,33 @@ export function AccountDialog({
                     <UserCircleIcon weight="duotone" />
                   </span>
                 )}
-                <Button type="button" onClick={() => setPickerOpen(true)} icon={<ImagesIcon weight="bold" />}>
-                  {text("accountAvatar")}
-                </Button>
+                <div className="account__portrait-actions">
+                  <Button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    disabled={upload.isPending}
+                    icon={<ImagesIcon weight="duotone" />}
+                  >
+                    {text("accountAvatar")}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => fileInput.current?.click()}
+                    disabled={upload.isPending}
+                    icon={<UploadSimpleIcon weight="duotone" />}
+                  >
+                    {upload.isPending ? text("accountAvatarUploading") : text("accountAvatarUpload")}
+                  </Button>
+                  {/* The browser's own file control, hidden behind the button
+                      above so the action looks like every other one. */}
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                    hidden
+                    onChange={chooseFile}
+                  />
+                </div>
               </div>
               <div className="account__fields">
                 <Field label={text("accountName")} htmlFor="account-name">
@@ -115,17 +171,14 @@ export function AccountDialog({
                 </Field>
                 <Field label={text("accountRole")}>
                   <span className="badge" data-status="public">
-                    {account.role === "owner" ? text("administrator") : text("roleEditor")}
+                    {account.role === "owner" ? text("roleOwner") : text("roleEditor")}
                   </span>
                 </Field>
                 <Field label={text("accountLanguage")} hint={text("accountLanguageHint")}>
                   <Segmented
                     aria-label={text("accountLanguage")}
                     value={draft.interfaceLanguage}
-                    options={[
-                      { value: InterfaceLanguage.German, label: "Deutsch" },
-                      { value: InterfaceLanguage.English, label: "English" },
-                    ]}
+                    options={DASHBOARD_LANGUAGES}
                     onValueChange={(value) =>
                       setDraft((current) => ({
                         ...current,
@@ -134,7 +187,12 @@ export function AccountDialog({
                     }
                   />
                 </Field>
-                {(save.error || signOut.error) && <ErrorNotice error={save.error ?? signOut.error} />}
+                {(upload.error || save.error || signOut.error) && (
+                  <ErrorNotice
+                    error={upload.error ?? save.error ?? signOut.error}
+                    keyFor={(failure) => (failure.code === "conflict" ? "accountEmailTaken" : undefined)}
+                  />
+                )}
               </div>
             </div>
           </Card.Body>
@@ -146,7 +204,7 @@ export function AccountDialog({
                   tone="danger"
                   onClick={submitSignOut}
                   disabled={signOut.isPending || save.isPending}
-                  icon={<SignOutIcon weight="bold" />}
+                  icon={<SignOutIcon weight="duotone" />}
                 >
                   {signOut.isPending ? text("signOutPending") : text("signOut")}
                 </Button>
@@ -154,15 +212,15 @@ export function AccountDialog({
                   type="button"
                   onClick={dismiss}
                   disabled={save.isPending || signOut.isPending}
-                  icon={<XIcon weight="bold" />}
+                  icon={<XIcon weight="duotone" />}
                 >
                   {text("cancel")}
                 </Button>
                 <Button
                   type="submit"
                   tone="primary"
-                  disabled={save.isPending || signOut.isPending}
-                  icon={<FloppyDiskIcon weight="bold" />}
+                  disabled={save.isPending || signOut.isPending || upload.isPending}
+                  icon={<FloppyDiskIcon weight="duotone" />}
                 >
                   {save.isPending ? text("savePending") : text("save")}
                 </Button>

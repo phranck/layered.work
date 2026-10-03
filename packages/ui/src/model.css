@@ -7,8 +7,8 @@
   height: 100%;
 }
 .content-model model-viewer {
-  /* Keep the app-owned keyboard indicator inside the viewer's clipped surface. */
-  --focus-offset: -3px;
+  /* The viewer clips what lies outside it, so its focus is drawn inside. */
+  --focus-ring: inset 0 0 0 1px var(--focus-edge), inset 0 0 0 4px var(--accent-tint);
   display: block;
   width: 100%;
   /* The stage owns the normal aspect ratio; the dialog owns the expanded size. */
@@ -71,4 +71,8 @@
 }
 html:has(.content-model__dialog[open]) {
   overflow: hidden;
+}
+/* The viewer's own lift would otherwise cover its focus. */
+.content-model model-viewer:focus-visible {
+  box-shadow: var(--focus-ring);
 }

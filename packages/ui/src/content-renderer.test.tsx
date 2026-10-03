@@ -37,11 +37,28 @@ describe("content renderer", () => {
     expect(template.content.querySelector("code")?.textContent).toBe(source);
   });
   it("exports and maps every renderer the register declares", () => {
-    const names = [...new Set(Object.values(components).map((entry) => entry.renders))].sort();
+    // A name in lower case is prose the content renderer builds itself.
+    const names = [...new Set(Object.values(components).map((entry) => entry.renders))]
+      .filter((name) => name !== name.toLowerCase())
+      .sort();
     expect(Object.keys(CONTENT_RENDERERS).sort()).toEqual(names);
     for (const name of names) expect(ui).toHaveProperty(name);
-    for (const entry of Object.values(components))
-      expect(draw(entry.example)).not.toContain("content-placeholder");
+    // A part of something larger is drawn as part of its whole's example.
+    for (const entry of Object.values(components) as { example: string; within?: string }[])
+      if (!entry.within) expect(draw(entry.example)).not.toContain("content-placeholder");
+  });
+  it("draws a Table with its caption, its alignment and Markdown in a cell", () => {
+    const template = document.createElement("template");
+    template.innerHTML = draw(
+      'Table(caption: "Parts") {\n  TableColumn("Part", value: part)\n  TableColumn("Count", value: count, alignment: numeric)\n  TableRow(part: "**Panel**", count: "1")\n}',
+    );
+    const table = template.content.querySelector(".content-table > table");
+    expect(table?.querySelector("caption")?.textContent).toBe("Parts");
+    expect([...(table?.querySelectorAll("th") ?? [])].map((cell) => cell.getAttribute("data-align"))).toEqual(
+      [null, "numeric"],
+    );
+    expect(table?.querySelector("td strong")?.textContent).toBe("Panel");
+    expect(table?.querySelector("td[data-align='numeric']")?.textContent).toBe("1");
   });
   it("composes the epic's two columns with semantic media and note", () => {
     const html = draw(

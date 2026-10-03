@@ -8,6 +8,8 @@
  * costs nothing.
  */
 
+import { DEFAULT_UMAMI_WEBSITE_ID } from "@layered/schemas";
+
 /**
  * When the site opens.
  *
@@ -199,13 +201,15 @@ export const FEDIVERSE_CREATOR = "@phranck@oldbytes.space";
  * numbers for one site, and only this one is kept.
  *
  * The identifier is the site's own, carried over from the old build, so the
- * history either side of the rebuild is one line rather than two.
+ * history either side of the rebuild is one line rather than two. It is declared
+ * in `@layered/schemas`, where the dashboard's analytics setting starts from it,
+ * so the two cannot name different websites.
  *
  * Umami sets no cookie and stores nothing that identifies a reader, so nothing
  * here waits on a consent banner.
  */
 export const UMAMI_SCRIPT = "https://umami.layered.work/script.js";
-export const UMAMI_WEBSITE_ID = "3e266ac6-8103-4bef-bedb-7d127ed75cc4";
+export const UMAMI_WEBSITE_ID = DEFAULT_UMAMI_WEBSITE_ID;
 
 /** The sharing image, wanted by the tags on the page and by the file that makes it. */
 export const SHARE_IMAGE = "/og.png";

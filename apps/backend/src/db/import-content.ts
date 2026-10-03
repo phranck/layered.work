@@ -1,4 +1,13 @@
+import { basename } from "node:path";
 import { mediaReferences } from "@layered/content";
+import {
+  DEFAULT_LISTING,
+  LISTED_KINDS,
+  LISTING_GROUP,
+  LISTING_PATHS,
+  type ListedKind,
+  listingSettings,
+} from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -8,6 +17,7 @@ import {
   media,
   mediaTranslations,
   paths,
+  settings,
   topics,
   topicTranslations,
 } from "./schema/index.js";
@@ -110,6 +120,44 @@ function mediaKindOf(mime: string): "image" | "video" | "document" | "model" {
 }
 
 /**
+ * The storage key of a migrated file: the key `scripts/publii/upload.mjs` gave
+ * its object in the bucket, which is the file's name below `migration/`.
+ *
+ * The upload script writes the objects and this writes the rows that name them,
+ * so the two have to agree, and `import-content.test.ts` holds them to it by
+ * running both on the same file. The snapshot's `src`, a path on the old site,
+ * names no object anywhere.
+ *
+ * @param src - The file's path in the snapshot, such as `/media/cover.webp`.
+ * @returns Its key, such as `migration/cover.webp`.
+ */
+export function migratedStorageKey(src: string): string {
+  return `${MIGRATION_PREFIX}${basename(src)}`;
+}
+
+/** Where `scripts/publii/upload.mjs` writes every migrated object in the bucket. */
+const MIGRATION_PREFIX = "migration/";
+
+/**
+ * Whether an asset is one of the size copies Publii made of a picture.
+ *
+ * Publii wrote a set of responsive copies of every picture into a `responsive`
+ * directory beside it, and a thumbnail of every gallery image. This site
+ * generates its own variants, so those copies are superseded, and no body or
+ * featured image names one. Written into the library they would show every
+ * picture several times over in the picker.
+ *
+ * `verify-migration.ts` asks the same question of Publii's media directory, so
+ * the import and the check agree about which files were left out on purpose.
+ *
+ * @param source - The file's path inside Publii's media directory, such as
+ *   `posts/14/responsive/Hero-md.webp`.
+ */
+export function isPubliiSizeCopy(source: string): boolean {
+  return source.includes("/responsive/") || /-thumbnail\.[a-z0-9]+$/i.test(source);
+}
+
+/**
  * Writes the snapshot's assets, and returns their database ids by slug.
  *
  * The slug is what content refers to and what the snapshot carries, so it is the
@@ -126,6 +174,13 @@ async function importMedia(
   const bychecksum = new Map<string, { id: string; slug: string }>();
 
   for (const asset of snapshot.media) {
+    if (isPubliiSizeCopy(asset.source)) {
+      report.skipped.push({
+        slug: asset.slug,
+        reason: "a size copy Publii made, superseded by generated variants",
+      });
+      continue;
+    }
     const kind = mediaKindOf(asset.mime);
     if (kind === "image" && (asset.width === undefined || asset.height === undefined)) {
       report.skipped.push({ slug: asset.slug, reason: "an image with no dimensions" });
@@ -151,7 +206,7 @@ async function importMedia(
         slug: asset.slug,
         kind,
         mimeType: asset.mime,
-        storageKey: asset.src.replace(/^\//, ""),
+        storageKey: migratedStorageKey(asset.src),
         byteSize: asset.bytes,
         checksum: asset.sha256,
         width: asset.width ?? null,
@@ -162,7 +217,7 @@ async function importMedia(
         set: {
           kind,
           mimeType: asset.mime,
-          storageKey: asset.src.replace(/^\//, ""),
+          storageKey: migratedStorageKey(asset.src),
           byteSize: asset.bytes,
           width: asset.width ?? null,
           height: asset.height ?? null,
@@ -420,7 +475,7 @@ async function importEntry(
  * sits in a public repository. The migration output carries the drafts and the
  * text as it was before those corrections. So the published file decides every
  * entry it holds, and the other contributes only what is a draft and absent
- * from it. An entry in the bin is not a draft and is not taken.
+ * from it. An entry in the trash is not a draft and is not taken.
  *
  * @param published - The snapshot the site publishes.
  * @param migrationOutput - The pipeline's full output, drafts included.
@@ -440,6 +495,52 @@ export function withDrafts(published: Snapshot, migrationOutput: Snapshot): Snap
     entries: [...published.entries, ...drafts],
     media: [...published.media, ...media],
   };
+}
+
+/**
+ * The overview a snapshot page stands at, where it is a page at one of the
+ * overviews' addresses.
+ *
+ * @param entry - An entry from the snapshot.
+ */
+function listingAt(entry: SnapshotEntry): ListedKind | undefined {
+  if (entry.kind !== "page") return undefined;
+  return LISTED_KINDS.find((kind) => LISTING_PATHS[kind][entry.language] === entry.path);
+}
+
+/**
+ * Writes a page that stands at an overview's address as that overview's
+ * introduction, in the page's language, and imports no page for it.
+ *
+ * An introduction somebody has already written in the dashboard stays, so a
+ * repeated import changes nothing that was decided after the first one.
+ */
+async function importListingIntroduction(
+  database: Database,
+  entry: SnapshotEntry,
+  report: ImportReport,
+): Promise<void> {
+  const kind = listingAt(entry);
+  if (!kind) return;
+  const group = LISTING_GROUP[kind];
+  const [row] = await database
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, group))
+    .limit(1);
+  const parsed = listingSettings.safeParse(row?.value);
+  const current = parsed.success ? parsed.data : DEFAULT_LISTING;
+  report.skipped.push({ slug: entry.slug, reason: `the introduction of the ${kind} overview` });
+  if (current.introduction[entry.language].trim()) return;
+
+  const value = {
+    ...current,
+    introduction: { ...current.introduction, [entry.language]: entry.body.trim() },
+  };
+  await database
+    .insert(settings)
+    .values({ key: group, value })
+    .onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
 /**
@@ -480,14 +581,21 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
 
   for (const group of groupTranslations(snapshot)) {
     // A trashed entry is not a state the schema has, and it is not one anybody
-    // asked for: the old site had one, it was in the bin, and it stays out.
+    // asked for: the old site had one, it was in the trash, and it stays out.
     const live = group.filter((entry) => entry.visibility !== "trashed");
     for (const entry of group) {
-      if (entry.visibility === "trashed") report.skipped.push({ slug: entry.slug, reason: "in the bin" });
+      if (entry.visibility === "trashed") report.skipped.push({ slug: entry.slug, reason: "in the trash" });
     }
     if (live.length === 0) continue;
 
-    await importEntry(database, live, lookups, report);
+    // A page at an overview's address is that overview's introduction, which
+    // is how the old site set the text above its projects.
+    const overview = live.filter((entry) => listingAt(entry) !== undefined);
+    for (const entry of overview) await importListingIntroduction(database, entry, report);
+    const rest = live.filter((entry) => !overview.includes(entry));
+    if (rest.length === 0) continue;
+
+    await importEntry(database, rest, lookups, report);
   }
 
   return report;

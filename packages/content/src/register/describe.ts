@@ -37,6 +37,8 @@ export function accepts(parameter: Parameter): string {
       return `one of ${either(parameter.values ?? [])}`;
     case "icon":
       return "the name of an icon";
+    case "field":
+      return "the name of a field its rows have, written bare";
   }
 }
 

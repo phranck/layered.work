@@ -49,6 +49,17 @@ describe("static compounds", () => {
     expect(markup).not.toContain("<script>");
   });
 
+  it("renders a band as a section the page stylesheet can alternate", () => {
+    const markup = renderToStaticMarkup(
+      <Section.Band id="projects">
+        <Section.Title eyebrow="Projects" title="Built" />
+      </Section.Band>,
+    );
+
+    expect(markup).toContain('class="section section--band"');
+    expect(markup).toContain('id="projects"');
+  });
+
   it("renders every structural compound part with prototype class names", () => {
     const markup = renderToStaticMarkup(
       <>
@@ -93,7 +104,6 @@ describe("static compounds", () => {
               ]}
             />
             <Editor.Surface>S</Editor.Surface>
-            <Editor.Actions destructive="Delete">Save</Editor.Actions>
           </Editor.Main>
           <Editor.Panel title="Panel">Fields</Editor.Panel>
         </Editor>

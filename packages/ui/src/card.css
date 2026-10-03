@@ -10,11 +10,23 @@
  * its contents keep arithmetic from a padding they do not use.
  */
 
+/*
+ * A card's header and footer are a shade darker than its body, so the
+ * announcement and the actions read as the frame around the content. The shade
+ * is derived from whatever surface the card stands on, so an overlay card,
+ * which is a step higher, keeps the same difference. Two inputs decide it: the
+ * tone the surface is mixed towards and how much of it.
+ */
 .card {
+  --card-surface: var(--surface-raised);
+  --card-band-tone: black;
+  --card-band-strength: 10%;
+  --card-band-fill: color-mix(in oklab, var(--card-surface), var(--card-band-tone) var(--card-band-strength));
+
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--surface-raised);
+  background: var(--card-surface);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--lift-2);
@@ -38,7 +50,6 @@
   height: 100%;
   object-fit: cover;
   transform: scale(1.01);
-  transition: transform var(--duration-slow) var(--ease);
 }
 
 /* --- Interactive --------------------------------------------------------------
@@ -50,10 +61,6 @@
   color: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    transform var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease),
-    border-color var(--duration) var(--ease);
 }
 
 .card--interactive:hover {
@@ -64,7 +71,13 @@
 
 .card--interactive:active {
   transform: translateY(-1px);
-  transition-duration: var(--duration-instant);
+}
+
+/* Keyboard focus on a card that opens something, in the edge and halo every
+   focused control shows. The card's own lift would otherwise cover it. */
+.card--interactive:focus-visible {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }
 
 .card--interactive:hover .card__media img {
@@ -96,6 +109,10 @@
   justify-content: space-between;
   padding: var(--card-padding);
   border-block-end: 1px solid var(--edge-hairline);
+  background: var(--card-band-fill);
+  /* The inner edge of the card's corner, inside its one-pixel border. */
+  border-start-start-radius: calc(var(--card-radius) - 1px);
+  border-start-end-radius: calc(var(--card-radius) - 1px);
 }
 
 .card__heading {
@@ -105,15 +122,15 @@
   min-width: 0;
 }
 
-/* No weight here: the heading level sets it, in base.css. A card is read at a
-   glance, so its heading sits one step below the page's own text. */
+/* No weight here: the heading level sets it, in base.css. A card's heading is
+   one step above the text in it, which is how the Previously page sets a card. */
 .card__title {
   display: flex;
   gap: var(--space-3);
   align-items: center;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-display);
   color: var(--text-primary);
@@ -163,6 +180,9 @@
   justify-content: space-between;
   padding: var(--card-padding);
   border-block-start: 1px solid var(--edge-hairline);
+  background: var(--card-band-fill);
+  border-end-start-radius: calc(var(--card-radius) - 1px);
+  border-end-end-radius: calc(var(--card-radius) - 1px);
 }
 
 .card__footer .actions {
@@ -174,6 +194,93 @@
   font-size: var(--text-sm);
   color: var(--text-faint);
   text-wrap: pretty;
+}
+
+/* --- Collapsible ------------------------------------------------------------
+   The header is the button. Closed, the card is its header alone, with the
+   card's corners at its foot and no rule under it; open, the content below
+   grows to its own height. Only the content's height animates, and layout
+   carries everything after the card. */
+
+.card--collapsible > .card__header {
+  padding: 0;
+  transition:
+    border-color var(--duration) var(--ease),
+    border-radius var(--duration) var(--ease);
+}
+
+.card--collapsible:not([data-open]) > .card__header {
+  border-block-end-color: transparent;
+  border-end-start-radius: calc(var(--card-radius) - 1px);
+  border-end-end-radius: calc(var(--card-radius) - 1px);
+}
+
+.card--collapsible .card__title {
+  flex: 1;
+}
+
+.card--collapsible .card__meta {
+  margin-inline-end: var(--card-padding);
+}
+
+/* The button fills the header, so the whole band opens the card, and it keeps
+   the header's padding as its own. */
+.card__toggle {
+  display: flex;
+  flex: 1;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--card-padding);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: inherit;
+}
+
+.card__toggle:focus-visible {
+  box-shadow: var(--focus-halo);
+}
+
+.card__caret {
+  flex: none;
+  font-size: var(--text-base);
+  color: var(--text-faint);
+  transition: transform var(--duration) var(--ease);
+}
+
+.card--collapsible[data-open] .card__caret {
+  transform: rotate(180deg);
+}
+
+/* The region is a grid of one row that goes from the content's height, `1fr`,
+   to nothing, `0fr`, and the browser animates between the two. That works in
+   Safari, which cannot animate a height to `auto`. The content clips and has
+   no least height of its own, or it would hold the row open. */
+.card__collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration) var(--ease);
+}
+
+.card--collapsible:not([data-open]) > .card__collapse {
+  grid-template-rows: 0fr;
+}
+
+.card__collapse-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card__collapse,
+  .card__caret {
+    transition-duration: var(--duration-fast);
+  }
 }
 
 /* --- Overlay --------------------------------------------------------------
@@ -206,7 +313,7 @@
   width: min(520px, 100%);
   max-height: calc(100dvh - 2 * var(--page-gutter));
   overflow: auto;
-  background: var(--surface-floating);
+  --card-surface: var(--surface-floating);
   border-color: var(--edge-strong);
   box-shadow: var(--lift-4);
   transform: translateY(var(--travel)) scale(0.98);

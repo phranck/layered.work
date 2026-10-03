@@ -4,6 +4,7 @@ import { join, relative, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { isPubliiSizeCopy } from "./import-content.js";
 import { entries, entryTopics, entryTranslations, media, paths, topicTranslations } from "./schema/index.js";
 
 /**
@@ -35,8 +36,14 @@ export interface SourcePost {
 export interface SourceFile {
   path: string;
   sha256: string;
-  /** Whether a post that is not in the bin names the file. */
+  /** Whether a post that is not in the trash names the file. */
   named: boolean;
+  /**
+   * Whether it is a size copy Publii made, which the import leaves out on
+   * purpose. Publii's bodies name those in their `srcset`, so `named` is true
+   * of most of them and says nothing about whether a picture went missing.
+   */
+  copy: boolean;
 }
 
 /** Everything read out of Publii. */
@@ -96,7 +103,7 @@ export interface Verification {
 /**
  * The state a Publii status string describes.
  *
- * Publii writes its flags into one comma-separated column. The bin wins over
+ * Publii writes its flags into one comma-separated column. The trash wins over
  * everything, a draft over visibility, and a post that is neither published nor
  * a draft is treated as a draft, the same reading the migration applied.
  */
@@ -187,6 +194,7 @@ export function readSource(input: string): Source {
         .update(readFileSync(join(mediaRoot, path)))
         .digest("hex"),
       named: named.includes(path.split("/").at(-1) ?? path),
+      copy: isPubliiSizeCopy(path),
     }));
 
     return { posts, topics, files };
@@ -294,7 +302,7 @@ export function compare(source: Source, target: Target): Verification {
         title: true,
         date: true,
         topics: true,
-        problems: found ? ["in the bin in Publii, and present here"] : [],
+        problems: found ? ["in the trash in Publii, and present here"] : [],
       };
     }
     if (!found) {
@@ -341,7 +349,8 @@ export function compare(source: Source, target: Target): Verification {
     (total, slugs) => total + slugs.length,
     0,
   );
-  const absentNamed = absentFiles.filter((file) => file.named).length;
+  const absentCopies = absentFiles.filter((file) => file.copy).length;
+  const absentNamed = absentFiles.filter((file) => file.named && !file.copy).length;
 
   const counts: CountRow[] = [
     ...(["public", "hidden", "draft"] as const).map((state) => ({
@@ -352,7 +361,7 @@ export function compare(source: Source, target: Target): Verification {
       note: "",
     })),
     {
-      what: "Entries in the bin",
+      what: "Entries in the trash",
       source: countOf(source.posts, "trashed"),
       target: 0,
       matches: entryRows.every((row) => row.state !== "trashed" || row.problems.length === 0),
@@ -377,7 +386,7 @@ export function compare(source: Source, target: Target): Verification {
       source: distinct.size,
       target: distinct.size - absentFiles.length,
       matches: absentNamed === 0,
-      note: `${source.files.length} files without the disk images; ${absentFiles.length} absent here, ${absentNamed} of them named by a post`,
+      note: `${source.files.length} files without the disk images; ${absentFiles.length} absent here, ${absentCopies} of them Publii's size copies, and ${absentNamed} of the rest named by a post`,
     },
   ];
 

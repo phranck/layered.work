@@ -8,6 +8,18 @@ export interface ShortcutProps extends ComponentPropsWithoutRef<"kbd"> {
   shortcutKey: string;
   platform?: ShortcutPlatform;
 }
+/**
+ * Whether this browser runs on an Apple platform, where the shortcut modifier
+ * is Command rather than Control.
+ *
+ * One answer for the key cap and for whatever listens for the keystroke, so the
+ * cap never shows a key the listener does not accept.
+ */
+export function isApplePlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+}
+
 /** A server-safe keyboard shortcut cap. */
 export function Shortcut({
   children,
@@ -18,10 +30,7 @@ export function Shortcut({
 }: ShortcutProps) {
   const [resolvedPlatform, setResolvedPlatform] = useState(platform === "auto" ? "control" : platform);
   useEffect(() => {
-    if (platform === "auto")
-      setResolvedPlatform(
-        /Mac|iPhone|iPad/.test(navigator.platform ?? navigator.userAgent) ? "apple" : "control",
-      );
+    if (platform === "auto") setResolvedPlatform(isApplePlatform() ? "apple" : "control");
   }, [platform]);
   const displayedPlatform = platform === "auto" ? resolvedPlatform : platform;
   return (

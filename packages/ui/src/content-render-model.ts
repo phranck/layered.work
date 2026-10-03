@@ -26,6 +26,7 @@ const proseTags = new Set([
   "a",
   "img",
   "table",
+  "caption",
   "thead",
   "tbody",
   "tr",
@@ -36,7 +37,7 @@ function renderElement(node: ElementNode, media: MediaResolver): ReactNode {
   const children = renderNodes(node.children, media);
   if (!proseTags.has(node.tag)) return children;
   const attributes: Record<string, string | undefined> = {};
-  for (const name of ["alt", "title", "data-task"])
+  for (const name of ["alt", "title", "data-task", "data-align"])
     if (node.attributes[name]) attributes[name] = node.attributes[name];
   if (/^h[1-6]$/.test(node.tag)) attributes.id = node.attributes.id;
   if (node.tag === "a") attributes.href = contentUrl(node.attributes.href);

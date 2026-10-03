@@ -28,6 +28,7 @@ const principal = {
 const counts = {
   posts: 8,
   pages: 5,
+  projects: 7,
   tags: 13,
   media: 21,
   blocks: 3,

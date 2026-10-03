@@ -1,9 +1,13 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { mediaReferences } from "@layered/content";
+import { type ListedKind, type ListingSettings, RESERVED_PATHS } from "@layered/schemas";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   entries,
   entryTopics,
   entryTranslations,
+  formerTopicSlugs,
+  gonePaths,
   homeBlocks,
   media,
   mediaTranslations,
@@ -11,6 +15,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
+import { readListingSettings } from "../settings/repository.js";
 
 /**
  * The public content of the site, read out of the database in the shape the
@@ -33,6 +38,10 @@ export interface PublicSnapshot {
   topics: { id: string; slug: string; name: string }[];
   media: PublicMedia[];
   redirects: { source: string; target: string }[];
+  /** Addresses of translations in the trash or deleted for good, which answer 410. */
+  gone: string[];
+  /** How the overviews of posts and projects are set up. */
+  listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
 }
 
@@ -55,6 +64,8 @@ export interface PublicEntry {
   featured: boolean;
   onHomePage: boolean;
   readingWidth: string;
+  /** Listed in the other language as well whilst that language has no version a reader can open. */
+  showInOtherLanguage: boolean;
 }
 
 /** One asset, in the shape the site's repository parses. */
@@ -84,6 +95,147 @@ type Database = PostgresJsDatabase<Record<string, unknown>>;
 const READABLE = ["public", "hidden"] as const;
 
 /**
+ * The files that published content names, by id.
+ *
+ * Only these leave the database. The library also holds what nobody has
+ * published yet, such as a portrait uploaded for an account or a picture meant
+ * for a draft, and the site has no use for those: it reaches a file only through
+ * an entry. Publishing them would also tell anybody reading the snapshot what is
+ * in the library before it appears anywhere.
+ *
+ * A translation names a file in three ways, and all three count: as its
+ * picture, through a component, which `mediaReferences` reads the way the
+ * validator does, and through a link to the file's own path, which is how the
+ * old site linked a page to a document.
+ *
+ * @param translations - The translations the snapshot carries.
+ * @param assets - Every file in the library, with its storage key.
+ */
+function namedFiles(
+  translations: readonly { body: string; featuredMediaId: string | null }[],
+  assets: readonly { id: string; slug: string; storageKey: string }[],
+): Set<string> {
+  const idBySlug = new Map(assets.map((asset) => [asset.slug, asset.id]));
+  const named = new Set<string>();
+  for (const translation of translations) {
+    if (translation.featuredMediaId) named.add(translation.featuredMediaId);
+    for (const reference of mediaReferences(translation.body)) {
+      const id = idBySlug.get(reference.slug);
+      if (id) named.add(id);
+    }
+    for (const asset of assets) {
+      if (translation.body.includes(`/${asset.storageKey}`)) named.add(asset.id);
+    }
+  }
+  return named;
+}
+
+/**
+ * The files some translations name, in the shape the site parses, and every
+ * file's slug by id for the pictures that stand for a translation.
+ *
+ * Shared by the snapshot and the preview, so a preview names its pictures
+ * exactly as the published page will.
+ *
+ * @param database - The database to read from.
+ * @param translations - What is being shown: its bodies and its pictures.
+ */
+export async function publicMedia(
+  database: Database,
+  translations: readonly { body: string; featuredMediaId: string | null }[],
+): Promise<{ media: PublicMedia[]; slugById: Map<string, string> }> {
+  const assets = await database
+    .select({
+      id: media.id,
+      slug: media.slug,
+      mimeType: media.mimeType,
+      storageKey: media.storageKey,
+      byteSize: media.byteSize,
+      checksum: media.checksum,
+      width: media.width,
+      height: media.height,
+      altText: mediaTranslations.altText,
+    })
+    .from(media)
+    .leftJoin(
+      mediaTranslations,
+      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
+    );
+
+  const named = namedFiles(translations, assets);
+  return {
+    slugById: new Map(assets.map((asset) => [asset.id, asset.slug])),
+    media: assets
+      .filter((asset) => named.has(asset.id))
+      .map((asset) => ({
+        slug: asset.slug,
+        src: `/${asset.storageKey}`,
+        mime: asset.mimeType,
+        filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
+        source: asset.storageKey,
+        bytes: asset.byteSize,
+        sha256: asset.checksum,
+        ...(asset.width === null ? {} : { width: asset.width }),
+        ...(asset.height === null ? {} : { height: asset.height }),
+        ...(asset.altText ? { alt: asset.altText } : {}),
+      })),
+  };
+}
+
+/**
+ * The redirects a renamed or merged topic leaves behind.
+ *
+ * The site addresses a topic by its English slug in both languages, under
+ * `/topics/` and `/de/topics/`, so only an English former slug is an address
+ * anybody can hold. Each one leads to where its topic answers now, in both
+ * languages. A topic with no English slug has no address to lead to.
+ *
+ * @param database - The database to read from.
+ * @param current - Every topic's current English slug.
+ */
+async function formerTopicAddresses(
+  database: Database,
+  current: readonly { id: string; slug: string }[],
+): Promise<{ source: string; target: string }[]> {
+  const slugById = new Map(current.map((topic) => [topic.id, topic.slug]));
+  const rows = await database
+    .select({ topicId: formerTopicSlugs.topicId, slug: formerTopicSlugs.slug })
+    .from(formerTopicSlugs)
+    .where(eq(formerTopicSlugs.language, "en"));
+  return rows.flatMap((row) => {
+    const target = slugById.get(row.topicId);
+    if (!target || target === row.slug) return [];
+    return [
+      { source: `/topics/${row.slug}/`, target: `/topics/${target}/` },
+      { source: `/de/topics/${row.slug}/`, target: `/de/topics/${target}/` },
+    ];
+  });
+}
+
+/**
+ * The addresses that answer 410: every address, current or former, of a
+ * translation in the trash, and every address of one deleted for good.
+ *
+ * An address something reachable answers at or redirects from is left out,
+ * because it was given to something new and is that thing's now, and so is an
+ * address the site reserves for itself.
+ *
+ * @param database - The database to read from.
+ * @param taken - The addresses the snapshot already answers at or redirects from.
+ */
+async function goneAddresses(database: Database, taken: ReadonlySet<string>): Promise<string[]> {
+  const inTrash = await database
+    .select({ path: paths.path })
+    .from(paths)
+    .innerJoin(entryTranslations, eq(entryTranslations.id, paths.translationId))
+    .where(isNotNull(entryTranslations.trashedAt));
+  const deleted = await database.select({ path: gonePaths.path }).from(gonePaths);
+  return [...new Set([...inTrash, ...deleted].map((row) => row.path))]
+    .filter((path) => !taken.has(path) && !RESERVED_PATHS.includes(path))
+    .sort();
+}
+
+/**
  * Reads the published content.
  *
  * @param database - The database to read from.
@@ -100,6 +252,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       body: entryTranslations.body,
       state: entryTranslations.state,
       readingWidth: entryTranslations.readingWidth,
+      showInOtherLanguage: entryTranslations.showInOtherLanguage,
       publishedAt: entryTranslations.publishedAt,
       featuredMediaId: entryTranslations.featuredMediaId,
       kind: entries.kind,
@@ -109,7 +262,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .where(inArray(entryTranslations.state, [...READABLE]));
+    .where(and(inArray(entryTranslations.state, [...READABLE]), isNull(entryTranslations.trashedAt)));
 
   const translationIds = translations.map((row) => row.translationId);
   const currentPaths = new Map<string, string>();
@@ -150,25 +303,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.slug]);
   }
 
-  const assets = await database
-    .select({
-      id: media.id,
-      slug: media.slug,
-      mimeType: media.mimeType,
-      storageKey: media.storageKey,
-      byteSize: media.byteSize,
-      checksum: media.checksum,
-      width: media.width,
-      height: media.height,
-      altText: mediaTranslations.altText,
-    })
-    .from(media)
-    .leftJoin(
-      mediaTranslations,
-      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
-    );
-
-  const slugById = new Map(assets.map((asset) => [asset.id, asset.slug]));
+  const { media: publishedMedia, slugById } = await publicMedia(database, reachable);
 
   // Which translation each one is the counterpart of, so the site can offer the
   // other language. Both directions, because either page may be the one open.
@@ -196,6 +331,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       featured: row.featured,
       onHomePage: row.onHomePage,
       readingWidth: row.readingWidth,
+      showInOtherLanguage: row.showInOtherLanguage,
     };
   });
 
@@ -204,6 +340,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     .from(topicTranslations)
     .innerJoin(topics, eq(topics.id, topicTranslations.topicId))
     .where(eq(topicTranslations.language, "en"));
+  former.push(...(await formerTopicAddresses(database, publicTopics)));
 
   const blocks = await database
     .select({
@@ -218,19 +355,13 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   return {
     entries: publicEntries,
     topics: publicTopics,
-    media: assets.map((asset) => ({
-      slug: asset.slug,
-      src: `/${asset.storageKey}`,
-      mime: asset.mimeType,
-      filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
-      source: asset.storageKey,
-      bytes: asset.byteSize,
-      sha256: asset.checksum,
-      ...(asset.width === null ? {} : { width: asset.width }),
-      ...(asset.height === null ? {} : { height: asset.height }),
-      ...(asset.altText ? { alt: asset.altText } : {}),
-    })),
+    media: publishedMedia,
     redirects: former,
+    gone: await goneAddresses(
+      database,
+      new Set([...currentPaths.values(), ...former.map((item) => item.source)]),
+    ),
+    listings: await readListingSettings(database),
     homeBlocks: blocks.map((block) => ({
       type: block.type,
       enabled: block.enabled,

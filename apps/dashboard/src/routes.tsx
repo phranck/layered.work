@@ -1,4 +1,4 @@
-import type { DashboardCounts } from "@layered/schemas";
+import type { DashboardCounts, EntryKind } from "@layered/schemas";
 import {
   ArticleIcon,
   ChartLineIcon,
@@ -15,6 +15,7 @@ import {
   TagIcon,
   TextboxIcon,
   TrayIcon,
+  WrenchIcon,
 } from "@layered/ui/icons";
 import type { ComponentType } from "react";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -27,6 +28,8 @@ export interface DashboardArea {
   labelKey: DashboardStringKey;
   countKey?: CountKey;
   icon: ComponentType<IconProps>;
+  /** The kind of entry this area lists, for the areas that are an entry list. */
+  entryKind?: EntryKind;
 }
 
 export interface DashboardGroup {
@@ -40,8 +43,30 @@ export const dashboardGroups: DashboardGroup[] = [
     id: "content",
     labelKey: "content",
     areas: [
-      { id: "posts", path: "posts", labelKey: "posts", countKey: "posts", icon: ArticleIcon },
-      { id: "pages", path: "pages", labelKey: "pages", countKey: "pages", icon: FilesIcon },
+      {
+        id: "posts",
+        path: "posts",
+        labelKey: "posts",
+        countKey: "posts",
+        icon: ArticleIcon,
+        entryKind: "post",
+      },
+      {
+        id: "pages",
+        path: "pages",
+        labelKey: "pages",
+        countKey: "pages",
+        icon: FilesIcon,
+        entryKind: "page",
+      },
+      {
+        id: "projects",
+        path: "projects",
+        labelKey: "projects",
+        countKey: "projects",
+        icon: WrenchIcon,
+        entryKind: "project",
+      },
       { id: "tags", path: "tags", labelKey: "tags", countKey: "tags", icon: TagIcon },
       { id: "media", path: "media", labelKey: "media", countKey: "media", icon: ImagesIcon },
     ],

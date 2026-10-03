@@ -1,6 +1,14 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { entries, entryTranslations, paths } from "../db/schema/index.js";
+import {
+  entries,
+  entryTranslations,
+  formerTopicSlugs,
+  media,
+  paths,
+  topics,
+  topicTranslations,
+} from "../db/schema/index.js";
 import {
   closeTestDatabase,
   emptyTestDatabase,
@@ -110,6 +118,26 @@ runs("the public snapshot", () => {
     expect(snapshot.redirects).toEqual([{ source: "/before/", target: "/now/" }]);
   });
 
+  it("turns a topic's former English address into a redirect in both languages", async () => {
+    const database = await testDatabase();
+    const [topic] = await database.insert(topics).values({}).returning({ id: topics.id });
+    if (!topic) throw new Error("no topic");
+    await database
+      .insert(topicTranslations)
+      .values({ topicId: topic.id, language: "en", name: "Hardware", slug: "hardware" });
+    await database.insert(formerTopicSlugs).values([
+      { topicId: topic.id, language: "en", slug: "electronics" },
+      { topicId: topic.id, language: "de", slug: "elektronik" },
+    ]);
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.redirects).toEqual([
+      { source: "/topics/electronics/", target: "/topics/hardware/" },
+      { source: "/de/topics/electronics/", target: "/de/topics/hardware/" },
+    ]);
+  });
+
   it("does not offer a former address of a draft", async () => {
     const database = await testDatabase();
     const { translationId } = await writeEntry(database, {
@@ -146,6 +174,68 @@ runs("the public snapshot", () => {
     const german = snapshot.entries.find((item) => item.language === "de");
     expect(english?.translationPath).toBe("/de/deutsch/");
     expect(german?.translationPath).toBe("/english/");
+  });
+
+  it("offers no other language whilst that language is still a draft", async () => {
+    const database = await testDatabase();
+    const { entryId } = await writeEntry(database, {
+      title: "In English",
+      path: "/english/",
+      state: "public",
+    });
+    const [german] = await database
+      .insert(entryTranslations)
+      .values({ entryId, language: "de", title: "Noch nicht fertig", body: "", state: "draft" })
+      .returning({ id: entryTranslations.id });
+    if (!german) throw new Error("no translation");
+    await database.insert(paths).values({ translationId: german.id, path: "/de/noch-nicht/" });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.entries.map((entry) => entry.translationPath)).toEqual([null]);
+    expect(JSON.stringify(snapshot)).not.toContain("/de/noch-nicht/");
+  });
+
+  it("carries only the files published content names, however it names them", async () => {
+    const database = await testDatabase();
+    const files = await database
+      .insert(media)
+      .values(
+        ["cover", "in-a-component", "linked", "only-in-a-draft", "unused-upload"].map((slug, index) => ({
+          slug,
+          kind: "image" as const,
+          mimeType: "image/png",
+          storageKey: slug === "unused-upload" ? "uploads/AbCdEf123" : `media/${slug}.png`,
+          byteSize: 10,
+          checksum: String(index).repeat(64),
+          width: 10,
+          height: 10,
+        })),
+      )
+      .returning({ id: media.id, slug: media.slug });
+    const cover = files.find((file) => file.slug === "cover")?.id;
+    const { translationId } = await writeEntry(database, {
+      title: "Names three files",
+      path: "/three/",
+      state: "public",
+      body: 'Image("in-a-component")\n\nThe [sheet](/media/linked.png) as a file.',
+    });
+    await database
+      .update(entryTranslations)
+      .set({ featuredMediaId: cover })
+      .where(eq(entryTranslations.id, translationId));
+    await writeEntry(database, {
+      title: "Not finished",
+      path: "/not-finished/",
+      state: "draft",
+      body: 'Image("only-in-a-draft")',
+    });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.media.map((asset) => asset.slug).sort()).toEqual(["cover", "in-a-component", "linked"]);
+    expect(JSON.stringify(snapshot)).not.toContain("uploads/");
+    expect(JSON.stringify(snapshot)).not.toContain("only-in-a-draft");
   });
 
   it("leaves out a translation nothing can link to", async () => {

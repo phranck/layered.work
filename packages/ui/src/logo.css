@@ -19,7 +19,6 @@
 .logo__image {
   width: auto;
   height: var(--logo-height);
-  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .logo:hover .logo__image {

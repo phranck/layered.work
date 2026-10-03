@@ -1,5 +1,6 @@
 ---
-import { Button, Section } from "@layered/ui";
+import { renderContent } from "@layered/content";
+import { Button, ContentRenderer, Section } from "@layered/ui";
 import { ListIcon, SquaresFourIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
 import { EntryCard } from "./entry-card.js";
@@ -10,15 +11,22 @@ const de=language==="de";
 const result=repository.list({language,kind,topic,query,page});
 if(page>1&&page>result.pages) Astro.response.status=404;
 const pageUrl=(number:number)=>{const url=new URL(Astro.url);url.searchParams.set("page",String(number));return url.pathname+url.search;};
+// An overview of posts or projects is set up in the dashboard: its introduction,
+// how many columns its grid has at most, and how long its preview texts are. A
+// topic or a search page lists both kinds and keeps the defaults.
+const listing=kind==="post"||kind==="project"?repository.listing(kind):undefined;
+const introductionText=listing?.introduction[language].trim()??"";
+const introduction=introductionText?renderContent(introductionText):[];
 ---
 <Section.Page>
   <Section.Lead title={title} />
+  {introduction.length>0&&<div class="listing-introduction content-prose"><ContentRenderer nodes={introduction} media={repository.media} /></div>}
   {search&&<form class="search-form" method="get"><label for="site-search">{de?"Suchbegriff":"Search for"}</label><div class="search-form__row"><input id="site-search" class="field" type="search" name="q" maxlength="120" value={query} /><Button type="submit" icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Suchen":"Search"}</Button></div></form>}
   <div class="listing-toolbar" hidden data-view-toolbar>
     <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon,{weight:"duotone"})}>{de?"Raster":"Grid"}</Button>
     <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon,{weight:"duotone"})}>{de?"Liste":"List"}</Button>
   </div>
-  <div class="entry-grid" data-entry-list>{result.entries.map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+  <div class="entry-grid" data-entry-list style={listing?`--grid-columns: ${listing.columns}`:undefined}>{result.entries.map(entry=><EntryCard entry={entry} {language} summaryLength={listing?.previewLength} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
   {result.total===0&&<p class="empty-state">{de?"Keine passenden Einträge gefunden.":"No matching entries found."}</p>}
   {result.pages>1&&<nav class="pagination" aria-label={de?"Seitennavigation":"Pagination"}>{Array.from({length:result.pages},(_,i)=>i+1).map(number=><Button.Link href={pageUrl(number)} aria-current={number===page?"page":undefined}>{number}</Button.Link>)}</nav>}
 </Section.Page>

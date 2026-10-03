@@ -1,9 +1,10 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sessionSecret } from "../config.js";
 import { sessions, users } from "../db/schema/index.js";
 import { deviation } from "../logger.js";
+import { sameSignature } from "./signature.js";
 
 /**
  * What a signed-in browser holds, and how a request is traced back to a person.
@@ -70,11 +71,7 @@ export function readCookieValue(value: string): string | null {
   if (separator <= 0) return null;
 
   const token = value.slice(0, separator);
-  const claimed = Buffer.from(value.slice(separator + 1), "base64url");
-  const expected = Buffer.from(sign(token), "base64url");
-
-  if (claimed.length !== expected.length) return null;
-  return timingSafeEqual(claimed, expected) ? token : null;
+  return sameSignature(value.slice(separator + 1), sign(token)) ? token : null;
 }
 
 /**

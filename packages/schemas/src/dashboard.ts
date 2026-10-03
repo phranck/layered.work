@@ -13,6 +13,7 @@ export const dashboardCounts = z
   .object({
     posts: storedCount,
     pages: storedCount,
+    projects: storedCount,
     tags: storedCount,
     media: storedCount,
     blocks: storedCount,

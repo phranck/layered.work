@@ -43,6 +43,14 @@ export const FINDING = {
   BodyNotAccepted: "body-not-accepted",
   /** No body on a component that exists to hold something. */
   MissingBody: "missing-body",
+  /** A component written where it does not belong: a part outside its whole, or anything a whole does not hold. */
+  MisplacedComponent: "misplaced-component",
+  /** Prose in the body of a component that holds a list of parts and nothing else. */
+  ContentNotAccepted: "content-not-accepted",
+  /** A field a column shows that no row of its table has. */
+  UnknownField: "unknown-field",
+  /** A row without a field that one of its table's columns shows. */
+  MissingField: "missing-field",
   /** A bracket or a brace that is never closed. */
   Unclosed: "unclosed",
   /** A component the parser marked and could not explain. */

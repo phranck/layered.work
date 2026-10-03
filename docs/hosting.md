@@ -205,11 +205,28 @@ A CDN in front would add one more entry and make the caller three from the end. 
 | Application role | `layered_app`, deliberately not a superuser, and the owner of the database, the schema, every table and every type |
 | Administrative role | `layered`, for creating roles and looking around, and used by nothing that runs |
 
-Copy `.env.example` to `.env.local`. The services read it themselves through Node's `--env-file-if-exists`, so nothing has to be exported into a shell before `grat start` works. Neither password is a secret: the database listens on one laptop's loopback address and holds nothing that is not reproducible from the Publii export.
+Copy `.env.example` to `.env.local`. The services read it themselves, so nothing has to be exported into a shell before `grat start` works. The backend does it through Node's `--env-file-if-exists`. The website does it with `process.loadEnvFile` at the top of `apps/website/astro.config.mjs`, because `astro dev` reads no file at the repository's root, and without `API_URL` every page answers 503.
+
+**React is bundled into the website's built server and only there.** Zerops deploys `dist` without the app's dependency links, so `astro build` puts React inside the standalone server. The development server must not do the same: Vite's module runner would then load React's CommonJS entry itself and stop with "module is not defined". The small integration `bundleReactIntoBuild` in `astro.config.mjs` adds the line for builds alone, and `tools/bundle-react-into-build.test.mjs` holds it there. Neither password is a secret: the database listens on one laptop's loopback address and holds nothing that is not reproducible from the Publii export.
 
 **The volume mounts `/var/lib/postgresql`, not the `data` directory inside it.** From version 18 the image puts its cluster in a version-named subdirectory so a later `pg_upgrade --link` does not cross a mount boundary, and it refuses to start when it finds a mount one level too deep.
 
 Until 13 September 2026 the container on this machine came from a compose file in `/Users/phranck/Sites/layered.work`, which is the old project and no longer exists. The database could not be recreated from anything checked in, and it carried two abandoned schemas from earlier attempts. Both were dumped and dropped.
+
+## Local media
+
+Locally the backend reads and writes pictures in `media-local/` rather than in the bucket, and production always uses the bucket. Leave the four `S3_*` values in `.env.local` empty so that nothing on this machine reaches the production bucket. Set `MEDIA_LOCAL_DIR=media-local` instead, which is ignored by git.
+
+A file's storage key is the key of its object in the bucket, and `media-local/` holds the same keys. Uploads land under `media-local/uploads/`. The old site's pictures have the `migration/` keys `scripts/publii/upload.mjs` gave them in the bucket, so the migration's copies are linked in once:
+
+```bash
+mkdir -p media-local
+ln -s ../apps/website/public/media media-local/migration
+```
+
+The site addresses a file as its key behind `MEDIA_ORIGIN`, which is the bucket's root in production. Locally `MEDIA_ORIGIN` is unset, so the address is the bare key, and the website's development server answers it from `media-local/` through `apps/website/tools/local-media.mjs`. `pnpm --filter @layered/backend db:verify` asks the store for every key in the library and fails where one names no object.
+
+An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
 
 ## The schema is one file, and the database is thrown away
 

@@ -44,6 +44,13 @@ export const Input = forwardRef<HTMLInputElement, ComponentPropsWithoutRef<"inpu
   ),
 );
 
+/** A styled native multi-line input, such as for a paragraph of introduction. */
+export const Textarea = forwardRef<HTMLTextAreaElement, ComponentPropsWithoutRef<"textarea">>(
+  ({ className, rows = 3, ...props }, ref) => (
+    <textarea ref={ref} className={join("input input--area", className)} rows={rows} {...props} />
+  ),
+);
+
 /** Props for a controlled switch. */
 export interface SwitchProps extends Omit<ComponentPropsWithoutRef<"button">, "onChange" | "role"> {
   checked: boolean;

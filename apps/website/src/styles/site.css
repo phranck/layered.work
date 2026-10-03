@@ -38,11 +38,32 @@
   /* Narrow enough that four pairs share one row at the page measure, wide
      enough that a value such as "USB-C, ESD protection" stays on one line. */
   --spec-column-min: 160px;
+
+  /* The space between two entries of the main navigation, and how far a social
+     link rises under the pointer. */
+  --nav-item-gap: 2px;
+  --social-hover-lift: 2px;
 }
 
+/* The site's large type steps. The small ones are shared with the workbench in
+   scale.css. These three are the site's own, at the sizes the Previously page
+   uses for its lead, its section titles and its page title, which sits a
+   little below that page's 56px. The workbench keeps fluid values for them,
+   because its headings stand over working panels rather than over a page. */
+:root {
+  --text-xl: 1.6875rem;
+  --text-2xl: 2.25rem;
+  --text-3xl: 3.25rem;
+}
+/* A phone takes the three large steps down, so a heading still fits a line. */
+@media (width <= 720px) {
+  :root {
+    --text-xl: 1.3125rem;
+    --text-2xl: 1.75rem;
+    --text-3xl: 2.25rem;
+  }
+}
 html {
-  /* Scale the complete website typography while retaining the shared hierarchy. */
-  font-size: 106.25%;
   scroll-behavior: smooth;
   scroll-padding-block-start: calc(var(--bar-height) + var(--space-5));
   -webkit-text-size-adjust: 100%;
@@ -163,7 +184,7 @@ main h1::before {
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--focus-width);
+  gap: var(--nav-item-gap);
   align-items: center;
   margin-inline-start: var(--space-4);
 }
@@ -176,9 +197,6 @@ main h1::before {
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
   border-radius: var(--radius-chip);
-  transition:
-    color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
 }
 .site-nav a:hover {
   color: var(--text-primary);
@@ -209,9 +227,6 @@ main h1::before {
   background: var(--surface-sunken);
   border: var(--line-width) solid var(--edge-hairline);
   border-radius: var(--radius-control);
-  transition:
-    color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease);
 }
 .search-trigger svg {
   flex: none;
@@ -237,9 +252,6 @@ main h1::before {
   letter-spacing: var(--tracking-wide);
   color: var(--text-faint);
   border-radius: var(--control-inner-radius);
-  transition:
-    color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
 }
 .lang-switch__option[aria-current] {
   color: var(--text-primary);
@@ -268,7 +280,6 @@ a.lang-switch__option:hover {
   box-shadow: var(--lift-2);
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease);
 }
 .lang-switch:has([aria-disabled]:hover, [aria-disabled]:focus) .lang-switch__explanation {
   opacity: 1;
@@ -351,17 +362,15 @@ a.lang-switch__option:hover {
   background: transparent;
   border: 0;
 }
-/* The field is a bare box inside the bar, so a ring around it would be a
-   rectangle inside a rounded shape. The bar carries the focus instead, and the
-   ring follows the corners the reader sees. */
+/* The field is a bare box inside the bar, so focus drawn around it would be a
+   rectangle inside a rounded shape. The bar carries the focus instead, in the
+   edge and halo every focused control shows. */
 .search-dialog__field:focus-visible {
-  outline: none;
+  box-shadow: none;
 }
 .search-dialog__form:has(.search-dialog__field:focus-visible) {
-  border-color: var(--accent-line);
-  outline: var(--focus-width) solid var(--accent-400);
-  outline-offset: var(--line-width);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }
 .search-dialog__field::-webkit-search-cancel-button {
   display: none;
@@ -382,9 +391,6 @@ a.lang-switch__option:hover {
   align-items: baseline;
   padding: var(--space-3);
   border-radius: var(--card-inner-radius);
-  transition:
-    color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
 }
 .search-result:hover,
 .search-result:focus-visible {
@@ -457,7 +463,6 @@ a.lang-switch__option:hover {
 .footer-nav a {
   font-size: var(--text-base);
   color: var(--text-muted);
-  transition: color var(--duration-fast) var(--ease);
 }
 .footer-nav a:hover {
   color: var(--text-primary);
@@ -494,11 +499,6 @@ a.lang-switch__option:hover {
   background: var(--surface-raised);
   border: var(--line-width) solid var(--edge-hairline);
   border-radius: var(--radius-control);
-  transition:
-    color var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
 }
 .social-row__link--text {
   width: auto;
@@ -509,7 +509,7 @@ a.lang-switch__option:hover {
   color: var(--accent-300);
   background: var(--surface-floating);
   border-color: var(--accent-line);
-  transform: translateY(calc(-1 * var(--focus-width)));
+  transform: translateY(calc(-1 * var(--social-hover-lift)));
 }
 /* Keep the navigation available on small screens, without a script-dependent
    toggle. The prototype's links become a wrapping second row. */

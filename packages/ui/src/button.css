@@ -23,20 +23,31 @@
   font-weight: var(--weight-semibold);
   line-height: 1.2;
   letter-spacing: -0.01em;
+  /* A button rendered as a link is a button, so it drops the line a link
+     takes by default; the face and the edge already say it can be pressed. */
+  text-decoration: none;
   text-shadow: var(--text-emboss);
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: var(--radius-chip);
-  transition:
-    transform var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease);
+  /* Only opacity, which changes when the button becomes disabled. Hover changes
+     the sheen and is meant to appear at once. */
+  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .button:active {
   transform: translateY(1px);
+}
+
+/* A button that cannot be pressed says so, and takes no hover or press either,
+   because a face that brightens under the pointer reads as pressable whatever
+   its opacity. Becoming disabled is a change of state, so the fade travels,
+   which is the transition on `.button` above. Whatever explains the reason
+   belongs in the block beside it, since a disabled button shows no tooltip. */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
 }
 
 /* --- Tones ------------------------------------------------------------------
@@ -145,7 +156,7 @@
 
 .actions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
   justify-content: flex-end;
 }
@@ -162,7 +173,11 @@
  * anywhere else.
  */
 @media (width < 720px) {
+  /* The row takes the whole line as well. Where it is itself an item of a
+     flex row, as in a card's footer, it would otherwise shrink to its buttons
+     and a full-width button would fill nothing wider than itself. */
   .actions {
+    flex-basis: 100%;
     flex-direction: column;
     align-items: stretch;
   }
@@ -170,4 +185,12 @@
   .actions .button {
     width: 100%;
   }
+}
+
+/* A button has an edge of its own, so focus turns that edge to the focus edge
+   and adds the halo, exactly as a text field does. Stated here because the fill
+   tones above set their own shadow, which would otherwise hide the halo. */
+.button:focus-visible {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }

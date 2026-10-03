@@ -28,7 +28,7 @@
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
-  padding: var(--space-4);
+  padding: var(--workbench-gutter, var(--space-4));
   background: var(--surface-sunken);
   border-inline-end: 1px solid var(--edge-hairline);
 }
@@ -69,6 +69,19 @@
   display: grid;
   place-items: center;
   padding-block: var(--space-3) var(--space-1);
+}
+
+/* Beside an app bar, the mark stands in the same band as the bar's contents:
+   the bar's height less the sidebar's padding above and below the mark. */
+.workbench .sidebar__header {
+  /* Flex rather than the grid above: the mark's image is taller than its ink,
+     and a grid row grows to the image and hangs it from the top, whereas a
+     flex line overflows evenly and keeps it centred on the band. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--app-bar-height) - 2 * var(--workbench-gutter, var(--space-4)));
+  padding-block: 0;
 }
 
 /* --- Body -------------------------------------------------------------------
@@ -115,7 +128,6 @@
   content: "";
   background: var(--text-accent);
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .sidebar__handle:hover::after,
@@ -164,9 +176,22 @@
 .section__grip {
   position: absolute;
   inset-inline-start: -4px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   font-size: 14px;
+  color: inherit;
+  cursor: grab;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-chip);
   opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease);
+}
+
+/* A grip that is a button can be reached from the keyboard, and it shows itself
+   when it is, since a focused control nobody can see is no control at all. */
+.section__grip:focus-visible {
+  opacity: 1;
 }
 
 .sidebar .section__title[data-section-handle] {

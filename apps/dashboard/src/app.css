@@ -12,13 +12,24 @@
   line-height: var(--leading-normal);
 }
 
-.workbench__main {
+/* The content column: the bar on top, and below it the one part that scrolls,
+   so the bar never moves. */
+.workbench__column {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
   min-width: 0;
+  min-height: 0;
+}
+
+.workbench__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--workbench-gutter);
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
-  padding: var(--space-6);
+  padding: var(--workbench-gutter);
 }
 
 .workbench > .sidebar {
@@ -31,14 +42,15 @@
   gap: var(--space-6);
 }
 
-.dashboard-sidebar__separator {
-  cursor: default;
-  touch-action: auto;
+/* The handle is focusable so the width can be set from the keyboard, and the
+   line it draws is what shows the focus, rather than a ring around a strip seven
+   pixels wide. */
+.dashboard-sidebar__separator:focus-visible {
+  box-shadow: none;
 }
 
-.dashboard-sidebar__separator::after,
-.dashboard-sidebar__separator:hover::after {
-  opacity: 0;
+.dashboard-sidebar__separator:focus-visible::after {
+  opacity: 1;
 }
 
 .unfinished {
@@ -120,6 +132,14 @@ dialog.account-dialog::backdrop {
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-pill);
 }
+/* Two buttons stacked under the portrait take the width of the wider one, so
+   they read as one group rather than as two ragged lines. */
+.account__portrait-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+}
 .account__fields {
   display: flex;
   flex: 1;
@@ -127,41 +147,327 @@ dialog.account-dialog::backdrop {
   gap: var(--space-5);
   min-width: 0;
 }
-.badge {
+/* The other language of the same entry, beside a row's own: present, and
+   quieter than the language the row is. */
+.lang-tag--counterpart {
+  opacity: 0.5;
+}
+
+.lang-tags {
   display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 5px 9px 3px 7px;
+  gap: var(--space-1);
+}
+
+/* --- Entry lists -----------------------------------------------------------
+   The figures above a list: the name at the top left with its line of
+   explanation under it, and the number at the top right, in a tabular face, so
+   the numbers line up from one card to the next. */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "note value";
+  column-gap: var(--space-3);
+  align-content: start;
+  padding: var(--card-padding);
+  line-height: var(--leading-snug);
+}
+
+.stat__label {
+  grid-area: label;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  line-height: 1;
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--badge-colour, var(--text-muted));
-  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
-  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
-  border-radius: var(--radius-chip);
+  color: var(--text-faint);
 }
 
-.badge::before {
-  width: 5px;
-  height: 5px;
-  content: "";
-  background: currentcolor;
-  border-radius: 50%;
+/* The number is as tall as the two lines beside it: its digits reach from the
+   cap line of the name to the baseline of the explanation. Measured on Barlow:
+   the two lines span 27.8px of ink and a bold digit is 0.713em high, which
+   makes 39px. At a line height of one the digits begin 0.185em below the box
+   and the name's capitals 4.3px below the row, so the box moves up by the
+   difference. The negative bottom margin keeps the number from stretching the
+   rows it stands beside. */
+.stat__value {
+  grid-area: value;
+  align-self: start;
+  margin-block: -0.075em -0.25em;
+  font-size: 2.4375rem;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-.badge[data-status="public"] {
-  --badge-colour: var(--state-success);
+.stat__note {
+  grid-area: note;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
-.account__fields .badge {
+/* A figure that counts one publication state takes that state's tone, in the
+   fill and the edge the chosen state has in the editor, so the two read as the
+   same colour for the same thing. */
+.stat[data-tone] {
+  background: color-mix(in oklab, var(--tone) 16%, var(--card-surface));
+  border-color: color-mix(in oklab, var(--tone) 34%, transparent);
+}
+
+.stat[data-tone] .stat__label {
+  color: color-mix(in oklab, var(--tone) 70%, var(--text-primary));
+}
+
+/* A field with something fixed inside its frame: a search field with its icon,
+   an address with the part of it that cannot change. The wrapper carries the
+   frame and the focus, so what is fixed and what is typed sit on one surface
+   rather than two. */
+.search-field,
+.address-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  height: var(--input-height);
+  padding-inline: var(--space-3);
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.search-field {
+  width: 260px;
+}
+
+.search-field:focus-within,
+.address-field:focus-within {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
+}
+
+.search-field .input,
+.address-field .input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.search-field .input:focus-visible,
+.address-field .input:focus-visible {
+  box-shadow: none;
+}
+
+/* The address reads as one path, so its fixed parts and the typed segment sit
+   flush in the face addresses are set in. */
+.address-field {
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+}
+
+.address-field .input {
+  font: inherit;
+  color: var(--text-primary);
+}
+
+.address-field__fixed {
+  flex: none;
+}
+
+/* A segment that cannot be saved as it stands, such as one ending in a hyphen,
+   says so with the warning edge until it is finished. */
+.address-field:has(.input[aria-invalid]) {
+  border-color: var(--state-warning);
+}
+
+/* The browser's own clear button is a second, foreign control inside a field
+   that already empties with a selection and a keystroke. */
+.search-field .input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* The key cap sits at the end of the field, past whatever is typed. */
+.search-field .shortcut {
+  flex: none;
+}
+
+/* In the search dialog the field is the dialog's subject, so it takes the
+   card's width rather than a list header's corner, and it keeps its height
+   whilst the results beneath it scroll. */
+.search-field--wide {
+  flex: none;
+  width: 100%;
+}
+
+.search-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.search-results:empty {
+  display: none;
+}
+
+.search-results__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search-results__label {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* A fixed layout, so one long title shortens rather than pushing the table
+   past the card. The title column declares no width and takes what is left. */
+.data-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border-block-end: 1px solid var(--edge-hairline);
+}
+
+.data-table td {
+  padding: var(--space-3) var(--space-5);
+  overflow: hidden;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  border-block-end: 1px solid var(--edge-hairline);
+}
+
+.data-table tr:last-child td {
+  border-block-end: 0;
+}
+
+/* A row opens the entry, so the whole row is the target and says so. The hover
+   tint carries no transition, because hovering is not a change of state. */
+.data-table tbody tr {
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+  background: var(--hover-tint);
+}
+
+.data-table tbody tr:focus-visible {
+  background: var(--hover-tint);
+  box-shadow: inset 2px 0 0 0 var(--text-accent);
+}
+
+/* Under a fixed layout a column that must show its content whole needs a width
+   wide enough for it, because nothing makes room afterwards. Measured against
+   the widest cell each column holds in either interface language, cell padding
+   included: the badge "Öffentlich" at 148px, the heading "Language" at 116px,
+   the date "Sep 28, 2026" at 135px and the heading "Action" at 92px. Each width
+   adds a little air. The title column declares none and takes the rest. */
+.col-state {
+  width: 160px;
+}
+
+.col-language {
+  width: 124px;
+}
+
+.col-date {
+  width: 144px;
+}
+
+.col-action {
+  width: 100px;
+}
+
+/* The title cell's row shortens its text rather than its tile. */
+.data-table .row {
+  min-width: 0;
+}
+
+/* A date is compared by size, so it is right aligned together with its
+   heading, in a tabular face so the digits line up and not only the edge. */
+.align-end {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th.align-end {
+  text-align: right;
+}
+
+/* A badge standing in for a field's control, such as a role or a status. A
+   field stretches its control to the full width, which is right for an input
+   and wrong for a pill. */
+.field > .badge {
   align-self: flex-start;
 }
-.dashboard-avatar {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* The account row and the sign-out button beside it. The row takes what is
+   left and shortens its name rather than pushing the button out. The button
+   stands as far in from the right edge as the portrait does from the left,
+   which is the row's padding and its hairline border, so the two ends of the
+   footer mirror each other. */
+.sidebar-account {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding-inline-end: calc(var(--space-3) + 1px);
+}
+
+.sidebar-account > .row {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-account > .button {
+  flex: none;
+}
+
+/* The account's portrait in the sidebar is round, as it is in the account
+   dialog, and the tile holds it at the control height whatever its file
+   measures. */
+.sidebar__footer .row__tile {
   border-radius: var(--radius-pill);
 }
 .media-picker__search {
@@ -199,10 +505,426 @@ dialog.account-dialog::backdrop {
   white-space: nowrap;
 }
 
+/* --- Entry editor -----------------------------------------------------------
+   The way back out stands where the list's eyebrow stood and takes the
+   eyebrow's lettering, so the heading below it does not move when an entry
+   opens. A link resets the inherited case and spacing, so both are asked for
+   again. The colour changes on hover at once. */
+
+/* A flex box of its own rather than an inline one: an inline box sits on the
+   eyebrow's baseline and makes that line taller than the text alone, which
+   moved the heading below by 1.8 pixels. */
+/* --- Notifications ---------------------------------------------------------
+   One at a time in the centre of the bar. It arrives at once and fades when it
+   leaves, so news is seen the moment it happens and does not snap away. The
+   tone is carried by the icon as well as the colour. */
+.notification {
+  /* The message and the icon share one ink, so the two read as one sign: the
+     tone lightened towards the text colour until it reads on the tinted pill,
+     because the pure status colours fall short of 4.5:1 there. */
+  --notification-ink: color-mix(in oklab, var(--notification-tone) 70%, var(--text-primary));
+
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  min-height: var(--control-height);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: color-mix(in oklab, var(--notification-tone) 14%, var(--surface-raised));
+  border: 1px solid color-mix(in oklab, var(--notification-tone) 34%, transparent);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-2);
+  transition: opacity var(--duration) var(--ease);
+}
+
+.notification[data-leaving] {
+  opacity: 0;
+}
+
+.notification[data-tone="success"] {
+  --notification-tone: var(--state-success);
+}
+.notification[data-tone="info"] {
+  --notification-tone: var(--state-info);
+}
+.notification[data-tone="warning"] {
+  --notification-tone: var(--state-warning);
+}
+.notification[data-tone="danger"] {
+  --notification-tone: var(--state-danger);
+}
+
+.notification__icon {
+  flex: none;
+  width: var(--row-icon-size, 19px);
+  height: var(--row-icon-size, 19px);
+  color: var(--notification-ink);
+}
+
+.notification__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.notification__message,
+.notification__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification__message {
+  color: var(--notification-ink);
+}
+
+.notification__detail {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Read by a screen reader, seen by nobody: the pill above is what is seen. */
+.notification-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The title of what is open, after the way back in the bar: the display face of
+   a page heading at the size the bar holds, on one line, shortened where it is
+   long rather than wrapping the bar. */
+.app-bar-title {
+  min-width: 0;
+  /* Further from the way back than the bar's items are from each other, so the
+     title reads as the page's name rather than as the button's label. */
+  margin: 0 0 0 var(--space-3);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A screen's own heading stands first in the bar, with nothing before it to
+   keep its distance from. */
+.app-bar-title:first-child {
+  margin-inline-start: 0;
+}
+
+/* The element CodeMirror is mounted in fills the writing surface, so the editor
+   inside it can scroll within the surface's height. */
+.content-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Whether the text is saved, at the left of the row the save buttons end. */
+.entry-editor__status {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Unsaved changes are hard to miss: the warning tone, in the shape a chosen
+   segment takes, as high as the buttons beside it. */
+.entry-editor__status[data-unsaved] {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height);
+  padding-inline: var(--space-3);
+  color: var(--state-warning);
+  background: color-mix(in oklab, var(--state-warning) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--state-warning) 60%, transparent);
+  border-radius: var(--radius-chip);
+}
+
+/* The title's label beside its field, which takes the rest of the line. */
+.entry-editor__title > .input {
+  flex: 1;
+}
+
+/* An action in the panel stands across its width, as the one action in a
+   column of fields, so it reads as belonging to all of them: the preview under
+   the state, and the move to the trash at the panel's end, apart from the rest. */
+.entry-editor__action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The move to the trash is set off from the fields above it by a rule, so it is
+   not reached by somebody working down the panel. */
+.entry-editor__action--apart {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--edge-hairline);
+}
+
+.entry-editor__action .button {
+  justify-content: center;
+  width: 100%;
+}
+
+.entry-editor__value,
+.entry-editor__link {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.entry-editor__link {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+/* A value that is only words, where a field would hold a control, begins where
+   the label's words begin rather than where a control's edge would. */
+.entry-editor__note {
+  padding-inline-start: var(--control-text-inset);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.entry-editor__link:hover {
+  text-decoration: underline;
+}
+
+/* --- Topics -----------------------------------------------------------------
+   An entry's topics as chips over the field that adds more. The list of
+   suggestions opens under the field in the panel's own flow, because the panel
+   scrolls by itself and would cut off a list laid over its lower edge. */
+
+.topic-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.topic-field__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A topic with no name in the entry's language shows the other language's
+   name, set apart so it is not taken for a translation. */
+.topic-field__chips .chip[data-unnamed] {
+  font-style: italic;
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.topic-field__control {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The list opens by its height, as a grid row going from nothing, `0fr`, to
+   its content's height, `1fr`, which Safari animates as well. The clip holds no
+   least height of its own, or it would keep the row open, and its top margin
+   is the distance to the field, inside what closes. */
+.topic-field__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration) var(--ease);
+}
+
+.topic-field__reveal[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.topic-field__clip {
+  min-height: 0;
+  overflow: clip;
+}
+
+.topic-field__list {
+  margin-block-start: var(--space-1);
+  padding: var(--space-1);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-2);
+}
+
+/* A table whose rows are not a way into anything: its actions are the buttons
+   at the end of each row, so the row itself takes no pointer. */
+.data-table--static tbody tr {
+  cursor: auto;
+}
+
+/* A topic's name with its address beneath it, in the face addresses are set in. */
+.topic-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topic-name__name,
+.topic-name__slug {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topic-name__slug {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* Measured against the widest cell in either interface language, cell padding
+   included: the heading "Einträge" at 110px, and three icon buttons with their
+   gaps at 162px. Each width adds a little air. */
+.col-count {
+  width: 120px;
+}
+
+.col-actions {
+  width: 176px;
+}
+
+/* --- Settings ---------------------------------------------------------------
+   One card per group, its fields in a column, with the two languages of one
+   value side by side so a reader compares them as a pair. */
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-form__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+/* Three figures that belong together, side by side. */
+.settings-form__trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.settings-form__problems {
+  padding-inline-start: var(--space-6);
+}
+
+/* A sentence about the whole form, set in from the edge as a field's hint is,
+   so it lines up with the labels above it rather than with the inputs. */
+.settings-form__note {
+  margin: 0;
+  padding-inline-start: var(--control-text-inset);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* The provider's answer, quoted as it came, under a sentence that says what it
+   means. Accepted reads as success, anything else as a problem. */
+.settings-form__outcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+.settings-form__outcome p {
+  margin: 0;
+}
+
+.settings-form__outcome[data-accepted="true"] {
+  color: var(--state-success);
+}
+
+.settings-form__outcome[data-accepted="false"] {
+  color: var(--state-danger);
+}
+
+.settings-form__answer {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.settings-form__value,
+.settings-form__code {
+  font-family: var(--font-mono);
+}
+
+.settings-form__value {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* A chosen picture with its name and the controls that change it, on one line
+   that reads as the field's value. */
+.media-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--input-height);
+  padding: var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+/* Shown in the shape a social card has, 1200 by 630, so the crop is the one a
+   shared link will show. */
+.media-field img {
+  flex: none;
+  height: var(--control-height);
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border-radius: var(--radius-chip);
+}
+
+.media-field__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-field__actions {
+  margin-inline-start: auto;
+}
+
 @media (width < 1100px) {
+  .settings-form__pair,
+  .settings-form__trio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .workbench {
     grid-template-columns: minmax(0, 1fr);
     height: auto;
+  }
+
+  /* The page scrolls as a whole here, so the bar holds to the top of the
+     window instead of to the top of a scrolling column. */
+  .workbench .app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
 
   .workbench .sidebar {

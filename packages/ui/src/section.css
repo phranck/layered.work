@@ -24,6 +24,34 @@
   padding-block-start: 0;
 }
 
+/* --- Band -------------------------------------------------------------------
+   A section whose background spans the window whilst its content keeps the
+   page measure. The fill is a border image with a horizontal outset rather
+   than a wider box, because an outset paints beyond the element without
+   counting towards anybody's width, so the page never gains a horizontal
+   scroll and the content needs no inner wrapper to get back to the measure.
+
+   Bands alternate by position among themselves, so the order the home page's
+   blocks are arranged in never has to say which colour each one takes. A band
+   that brings a fill of its own, such as a hero's gradient, sets
+   `--band-fill` and still counts towards the alternation. */
+
+.section--band {
+  --band-fill: linear-gradient(var(--surface-page) 0 0);
+  padding-block: var(--section-gap);
+  border-image: var(--band-fill) fill 0 / 0 / 0 100vmax;
+}
+
+.section--band:nth-child(even of .section--band) {
+  --band-fill: linear-gradient(var(--surface-sunken) 0 0);
+}
+
+/* A band's kicker is what tells the parts of the page apart, so it carries the
+   accent the way a sidebar's current item does. */
+.section--band .eyebrow {
+  color: var(--text-accent);
+}
+
 /* --- Title ----------------------------------------------------------------
    Eyebrow above, name below, actions at the right of the same row. Fixed across
    the product, so the same information is always in the same place. */

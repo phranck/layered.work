@@ -1,10 +1,26 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ComponentType } from "react";
 import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject, redirect } from "react-router";
 import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
-import { dashboardAreas } from "./routes.js";
+import { EntryEditorScreen } from "./entry-editor.js";
+import { EntryListScreen } from "./entry-list.js";
+import { type DashboardArea, dashboardAreas } from "./routes.js";
+import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+import { TopicsScreen } from "./topics.js";
+
+/**
+ * The areas with a screen of their own rather than an entry list: the topics,
+ * and the System group's areas, each of which is one group of the site's settings.
+ */
+const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
+  tags: TopicsScreen,
+  settings: SiteSettingsScreen,
+  smtp: MailSettingsScreen,
+  analytics: AnalyticsSettingsScreen,
+};
 
 export interface DashboardRouterOptions {
   api: DashboardApi;
@@ -53,10 +69,19 @@ export function dashboardRouteObjects({
       },
       children: [
         { index: true, element: <Navigate to="/posts" replace /> },
-        ...dashboardAreas.map((area) => ({
-          path: area.path,
-          element: <AreaScreen titleKey={area.labelKey} />,
-        })),
+        ...dashboardAreas.map((area): RouteObject => {
+          const kind = area.entryKind;
+          const Screen = AREA_SCREENS[area.id];
+          if (Screen) return { path: area.path, element: <Screen area={area} /> };
+          if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };
+          return {
+            path: area.path,
+            children: [
+              { index: true, element: <EntryListScreen area={area} kind={kind} /> },
+              { path: ":id", element: <EntryEditorScreen area={area} kind={kind} /> },
+            ],
+          };
+        }),
         { path: "*", Component: NotFoundScreen },
       ],
     },

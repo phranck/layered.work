@@ -1,13 +1,20 @@
-import { Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { UserCircleIcon } from "@layered/ui/icons";
+import { Button, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
+import { DotsSixVerticalIcon, SignOutIcon, UserCircleIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Outlet, useLinkClickHandler, useMatch, useNavigate, useRouteError } from "react-router";
+import { useRef, useState } from "react";
+import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
+import { AppBarSlotsProvider, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
+import { NotificationProvider } from "./notifications.js";
 import { dashboardGroups } from "./routes.js";
+import { SaveShortcutProvider } from "./save-shortcut.js";
+import { SearchProvider } from "./search.js";
+import { useAccount, useSession, useSignOut } from "./session-queries.js";
+import { useSidebarOrder } from "./sidebar-order.js";
+import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
 function AreaLink({
   area,
@@ -16,7 +23,8 @@ function AreaLink({
   area: (typeof dashboardGroups)[number]["areas"][number];
   count: number | null | undefined;
 }) {
-  const active = useMatch({ path: `/${area.path}`, end: true });
+  // Not only the area itself: an entry opened from a list stays in that list's area.
+  const active = useMatch({ path: `/${area.path}`, end: false });
   const handleClick = useLinkClickHandler(`/${area.path}`);
   const { text } = useDashboardLanguage();
   const Icon = area.icon;
@@ -41,26 +49,18 @@ function AreaLink({
 function DashboardSidebar({
   accountOpen,
   onOpenAccount,
+  handle,
 }: {
   accountOpen: boolean;
   onOpenAccount: () => void;
+  handle: SidebarHandleProps;
 }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const handleLogoClick = useLinkClickHandler("/posts");
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const session = useSession();
+  const account = useAccount();
+  const signOut = useSignOut();
   const counts = useQuery({
     queryKey: ["dashboard-counts", session.data?.id],
     queryFn: api.fetchDashboardCounts,
@@ -68,18 +68,34 @@ function DashboardSidebar({
     retry: false,
   });
   const visibleCounts = session.isSuccess && session.data ? counts.data : undefined;
+  const sidebar = useRef<HTMLElement>(null);
+  const slot = useRef<HTMLDivElement>(null);
+  const groups = useSidebarOrder(dashboardGroups, sidebar, slot);
   return (
-    <Sidebar>
+    <Sidebar ref={sidebar}>
       <Sidebar.Header>
-        <Logo href="/posts" inkHeight="26px" onClick={handleLogoClick} />
+        <Logo href="/posts" inkHeight="32px" onClick={handleLogoClick} />
       </Sidebar.Header>
       <Sidebar.Body>
         {session.isError && <ErrorNotice error={session.error} />}
         {session.data && counts.isError && <ErrorNotice error={counts.error} />}
         <nav aria-label={text("dashboardNav")}>
-          {dashboardGroups.map((group) => (
-            <Section key={group.id}>
-              <Section.Title title={text(group.labelKey)} />
+          {groups.ordered.map((group) => (
+            <Section key={group.id} ref={groups.ref(group.id)}>
+              <Section.Title
+                title={text(group.labelKey)}
+                lead={
+                  <button
+                    type="button"
+                    className="section__grip"
+                    aria-label={text("moveGroup", text(group.labelKey))}
+                    {...groups.grip(group.id)}
+                  >
+                    <DotsSixVerticalIcon aria-hidden="true" />
+                  </button>
+                }
+                {...groups.handle(group.id)}
+              />
               <Section.Body>
                 <RowList>
                   {group.areas.map((area) => (
@@ -94,96 +110,105 @@ function DashboardSidebar({
             </Section>
           ))}
         </nav>
+        {/* Where a dragged group will land. One element for every drag, so
+            nothing is created whilst a gesture runs. */}
+        <div ref={slot} className="drop-slot" aria-hidden="true" />
       </Sidebar.Body>
       <Sidebar.Footer>
-        <Row.Button
-          onClick={onOpenAccount}
-          disabled={!account.data}
-          aria-haspopup="dialog"
-          aria-expanded={accountOpen}
-        >
-          <Row.Lead aria-hidden="true">
-            {account.data?.avatarUrl ? (
-              <img className="dashboard-avatar" src={account.data.avatarUrl} alt="" />
-            ) : (
-              <UserCircleIcon weight="duotone" />
-            )}
-          </Row.Lead>
-          <Row.Text
-            title={
-              session.isPending
-                ? text("loadingSession")
-                : session.isError
-                  ? text("unavailableSession")
-                  : (account.data?.displayName ?? text("signedOut"))
-            }
-            note={
-              account.data
-                ? account.data.role === "owner"
-                  ? text("administrator")
-                  : text("roleEditor")
-                : undefined
-            }
+        {signOut.isError && <ErrorNotice error={signOut.error} />}
+        {/* Two targets side by side rather than one inside the other: the row
+            opens the account, and the button at its end signs out. */}
+        <div className="sidebar-account">
+          <Row.Button
+            onClick={onOpenAccount}
+            disabled={!account.data}
+            aria-haspopup="dialog"
+            aria-expanded={accountOpen}
+          >
+            <Row.Tile aria-hidden="true">
+              {account.data?.avatarUrl ? (
+                <img src={account.data.avatarUrl} alt="" />
+              ) : (
+                <UserCircleIcon weight="duotone" />
+              )}
+            </Row.Tile>
+            <Row.Text
+              title={
+                session.isPending
+                  ? text("loadingSession")
+                  : session.isError
+                    ? text("unavailableSession")
+                    : (account.data?.displayName ?? text("signedOut"))
+              }
+              note={
+                account.data
+                  ? account.data.role === "owner"
+                    ? text("roleOwner")
+                    : text("roleEditor")
+                  : undefined
+              }
+            />
+          </Row.Button>
+          <Button.Icon
+            label={signOut.isPending ? text("signOutPending") : text("signOut")}
+            icon={<SignOutIcon weight="duotone" />}
+            disabled={!account.data || signOut.isPending}
+            onClick={() => signOut.mutate()}
           />
-        </Row.Button>
+        </div>
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
-        aria-label="Trennung zwischen Navigation und Inhalt"
+        aria-label={text("sidebarResize")}
+        {...handle}
       />
     </Sidebar>
   );
 }
 
 function DashboardLayout() {
-  const api = useDashboardApi();
-  const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const workbench = useRef<HTMLDivElement>(null);
+  const handle = useSidebarWidth(workbench);
+  const account = useAccount();
   return (
-    <div className="workbench dashboard-layout">
-      <DashboardSidebar accountOpen={accountOpen} onOpenAccount={() => setAccountOpen(true)} />
-      <main className="workbench__main dashboard-main">
-        <Outlet />
-      </main>
-      {accountOpen && account.data && (
-        <AccountDialog
-          account={account.data}
-          onClose={() => setAccountOpen(false)}
-          onSignedOut={() => navigate("/login", { replace: true })}
-        />
-      )}
+    <div ref={workbench} className="workbench dashboard-layout">
+      {/* Inside the workbench, so the search dialog it holds reads the
+          workbench's tokens as the account dialog does. */}
+      <SearchProvider>
+        <SaveShortcutProvider>
+          {/* The bar's places and what is said in it reach the whole frame,
+              the sidebar and the account dialog included. */}
+          <AppBarSlotsProvider>
+            {(bar) => (
+              <NotificationProvider>
+                <DashboardSidebar
+                  accountOpen={accountOpen}
+                  onOpenAccount={() => setAccountOpen(true)}
+                  handle={handle}
+                />
+                {/* The bar stands above the content and stays put; only the
+                    content below it scrolls. */}
+                <div className="workbench__column">
+                  {bar}
+                  <main className="workbench__main dashboard-main">
+                    <Outlet />
+                  </main>
+                </div>
+                {accountOpen && account.data && (
+                  <AccountDialog account={account.data} onClose={() => setAccountOpen(false)} />
+                )}
+              </NotificationProvider>
+            )}
+          </AppBarSlotsProvider>
+        </SaveShortcutProvider>
+      </SearchProvider>
     </div>
   );
 }
 
 export function DashboardShell() {
-  const api = useDashboardApi();
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: api.fetchSession,
-    retry: false,
-    staleTime: Infinity,
-  });
-  const account = useQuery({
-    queryKey: ["account", session.data?.id],
-    queryFn: api.fetchAccount,
-    enabled: Boolean(session.data),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const account = useAccount();
   if (!account.data) return null;
   return (
     <DashboardLanguageProvider language={account.data.interfaceLanguage}>
@@ -200,7 +225,7 @@ export function AreaScreen({
   const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title={text(titleKey)} level={1} />
+      <ScreenTitle title={text(titleKey)} />
       <Section.Body>
         <p className="unfinished">{text("unfinished")}</p>
       </Section.Body>
@@ -212,7 +237,7 @@ export function NotFoundScreen() {
   const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title={text("notFound")} level={1} />
+      <ScreenTitle title={text("notFound")} />
       <Section.Body>
         <p>{text("notFoundBody")}</p>
       </Section.Body>
@@ -221,9 +246,10 @@ export function NotFoundScreen() {
 }
 
 export function RouteErrorScreen() {
+  const { text } = useDashboardLanguage();
   return (
     <Section>
-      <Section.Title title="Dashboard nicht verfügbar" level={1} />
+      <Section.Title title={text("dashboardUnavailable")} level={1} />
       <Section.Body>
         <ErrorNotice error={useRouteError()} />
       </Section.Body>

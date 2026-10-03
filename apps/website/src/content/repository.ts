@@ -1,9 +1,13 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
+  DEFAULT_LISTING,
   type HomeBlock,
   homeBlockSchema,
   homeBlockTypes,
   isKnownHomeBlock,
+  type ListedKind,
+  listingSettings,
+  READING_WIDTHS,
   unknownHomeBlocks,
 } from "@layered/schemas";
 import { z } from "zod";
@@ -37,7 +41,9 @@ const entrySchema = z.object({
   translationPath: path.nullish(),
   featured: z.boolean().default(false),
   onHomePage: z.boolean().default(true),
-  readingWidth: z.enum(["narrow", "normal", "wide"]).default("normal"),
+  readingWidth: z.enum(READING_WIDTHS).default("normal"),
+  /** Listed in the other language as well whilst that language has no version a reader can open. */
+  showInOtherLanguage: z.boolean().default(false),
   /**
    * What an entry states about itself beside its prose, as the author's own
    * pairs rather than as fixed fields.
@@ -57,7 +63,13 @@ const entrySchema = z.object({
 });
 const mediaSchema = z.object({
   slug,
-  src: z.string().regex(/^\/media\/[a-zA-Z0-9_./-]+$/),
+  /**
+   * The file's storage key with a slash in front, such as `/migration/cover.webp`
+   * or `/uploads/tl_WnGQ4duhWJVeRjRqMmQ`, which is where it answers below the
+   * media origin. A snapshot written from the export says `/media/…`, which is
+   * where the same files lie in `public/`.
+   */
+  src: z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
   alt: z.string().optional(),
   caption: z.string().optional(),
   width: z.number().positive().optional(),
@@ -75,6 +87,16 @@ const snapshotSchema = z.object({
   topics: z.array(z.object({ id: z.union([z.number(), z.string()]), slug, name: z.string() })),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),
+  /** Addresses of entries that were deleted, which answer 410 rather than 404. */
+  gone: z.array(path).default([]),
+  /**
+   * How the overviews of posts and projects are set up in the dashboard. A
+   * snapshot without them, such as the one committed from the export, uses
+   * the defaults.
+   */
+  listings: z
+    .object({ post: listingSettings, project: listingSettings })
+    .default({ post: DEFAULT_LISTING, project: DEFAULT_LISTING }),
   homeBlocks: z.array(homeBlockSchema).optional(),
 });
 export type Language = z.infer<typeof language>;
@@ -83,12 +105,17 @@ export type Media = z.infer<typeof mediaSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type { HomeBlock };
 
-/** How many entries one page of a listing shows. */
-export const LISTING_PAGE_SIZE = 12;
-
-/** All collection readers share this publication predicate. */
+/**
+ * All collection readers share this publication predicate.
+ *
+ * A public entry is listed in its own language, and in the other one as well
+ * where its author asked for that and the other language has no version a
+ * reader can open, which is what an empty `translationPath` says. Once that
+ * version is public, it is what the other language lists instead.
+ */
 export function isListed(entry: Entry, locale: Language): boolean {
-  return entry.visibility === "public" && entry.language === locale;
+  if (entry.visibility !== "public") return false;
+  return entry.language === locale || (entry.showInOtherLanguage && !entry.translationPath);
 }
 /** Query parsing happens once, before values reach output or collection queries. */
 export function parseListingQuery(params: URLSearchParams) {
@@ -122,7 +149,15 @@ function withoutComponents(source: string): string {
   return source.replace(new RegExp(`\\b(?:${names})\\s*\\([^()]*\\)\\s*`, "g"), "");
 }
 
-export function summaryOf(entry: Entry): string {
+/**
+ * An entry's preview text: its summary, or its first paragraph of prose, as
+ * plain text and shortened at a word.
+ *
+ * @param entry - The entry.
+ * @param length - The most characters it holds, which an overview's settings
+ *   decide for its cards; everywhere else the default.
+ */
+export function summaryOf(entry: Entry, length: number = DEFAULT_LISTING.previewLength): string {
   const source =
     entry.summary?.trim() ||
     entry.body.split(/\n\s*\n/).find((part) => !/^\s*(?:#|```|[A-Z]\w*\()/.test(part)) ||
@@ -133,7 +168,7 @@ export function summaryOf(entry: Entry): string {
     .replace(/[*_`>#]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return plain.length <= 220 ? plain : `${plain.slice(0, 220).replace(/\s+\S*$/, "")}…`;
+  return plain.length <= length ? plain : `${plain.slice(0, length).replace(/\s+\S*$/, "")}…`;
 }
 export function readingTime(entry: Entry): number {
   return Math.max(1, Math.ceil(entry.body.split(/\s+/).length / 220));
@@ -173,22 +208,40 @@ export interface SearchIndexEntry {
 /**
  * Where the media actually are, when they are not beside the site.
  *
- * The snapshot records every asset as `/media/<file>`, which is where they sit
- * on the machine that produced it. A deployment has no such directory: the
- * files live in the object storage, and `MEDIA_ORIGIN` names the prefix they
- * answer under there. Unset means the paths are already right, which is the
- * local case.
+ * The database's snapshot records every asset by its storage key, as `/<key>`,
+ * and the bucket answers each object at its key below `MEDIA_ORIGIN`, so the
+ * address is the two put together. The snapshot committed from the export,
+ * which the site falls back to, records `/media/<file>` instead, and that file
+ * lies below `migration/` in the bucket.
+ *
+ * Unset means the path is already the address, which is the local case: the
+ * development server answers a key from the directory the backend reads, and
+ * `public/` answers the export's `/media/…` paths.
  *
  * Read per call rather than once, so a test can set it and so the value cannot
  * be captured before the environment is complete.
  *
- * @param path - The `/media/...` path as the snapshot records it.
+ * @param path - The path as the snapshot records it, `/<storage key>`.
  * @returns The address a browser should ask for.
  */
 function mediaUrl(path: string): string {
   const origin = process.env.MEDIA_ORIGIN?.replace(/\/+$/, "");
-  return origin ? `${origin}${path.slice("/media".length)}` : path;
+  if (!origin) return path;
+  // A path from the export names the file where the export left it. In the
+  // bucket that file lies below the prefix the upload wrote it to.
+  return path.startsWith(EXPORT_MEDIA_PREFIX)
+    ? `${origin}/${BUCKET_MIGRATION_PREFIX}${path.slice(EXPORT_MEDIA_PREFIX.length)}`
+    : `${origin}${path}`;
 }
+
+/** Where the export's snapshot says a migrated file is. */
+const EXPORT_MEDIA_PREFIX = "/media/";
+
+/**
+ * Where `scripts/publii/upload.mjs` put every migrated file in the bucket, which
+ * is also the start of its storage key in the database.
+ */
+const BUCKET_MIGRATION_PREFIX = "migration/";
 
 /**
  * The same, for a `srcset`, which is a list of `<url> <width>w` pairs.
@@ -216,6 +269,7 @@ export function createRepository(input: unknown) {
   const media = new Map(data.media.map((item) => [item.slug, item]));
   if (media.size !== data.media.length) throw new Error("Duplicate media slug");
   const redirects = new Map(data.redirects.map((item) => [item.source, item.target]));
+  const gone = new Set(data.gone);
   for (const source of redirects.keys()) {
     const seen = new Set([source]);
     let target = redirects.get(source);
@@ -248,8 +302,9 @@ export function createRepository(input: unknown) {
    * always talking about the same set.
    */
   const declaredBlocks = (): HomeBlock[] =>
-    data.homeBlocks ??
-    homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
+    data.homeBlocks?.length
+      ? data.homeBlocks
+      : homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
   return {
     data,
     media: (name: string) => {
@@ -267,6 +322,10 @@ export function createRepository(input: unknown) {
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
     },
     redirect: (name: string) => redirects.get(name),
+    /** How the overview of one kind is set up. */
+    listing: (kind: ListedKind) => data.listings[kind],
+    /** Whether an address belonged to an entry that was deleted. */
+    gone: (name: string) => gone.has(name),
     publicEntries,
     list({
       language: locale,
@@ -281,6 +340,9 @@ export function createRepository(input: unknown) {
       query?: string;
       page?: number;
     }) {
+      // A topic or a search lists posts and projects together, and takes the
+      // posts' page size, because posts are most of what it finds.
+      const pageSize = data.listings[kind === "project" ? "project" : "post"].pageSize;
       const matches = publicEntries(locale).filter(
         (entry) =>
           (!kind || entry.kind === kind) &&
@@ -288,9 +350,9 @@ export function createRepository(input: unknown) {
           (!query || searchText(entry).toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))),
       );
       return {
-        entries: matches.slice((page - 1) * LISTING_PAGE_SIZE, page * LISTING_PAGE_SIZE),
+        entries: matches.slice((page - 1) * pageSize, page * pageSize),
         total: matches.length,
-        pages: Math.ceil(matches.length / LISTING_PAGE_SIZE),
+        pages: Math.ceil(matches.length / pageSize),
         page,
       };
     },

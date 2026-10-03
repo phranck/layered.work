@@ -1,31 +1,29 @@
 :root {
-  --focus-width: 2px;
-  --focus-offset: 3px;
-
-  /* A soft spill outwards, for surfaces that carry the focus of a control
-     inside them. It sits outside the ring rather than replacing it, so the
-     indication survives a background it happens to match. */
-  --focus-glow: 0 0 12px 2px color-mix(in oklab, var(--accent-400) 28%, transparent);
+  /* Focus looks the same on everything: the accent edge and the soft accent
+     halo a text field takes when it is written in. A box-shadow rather than an
+     outline, so it hugs the element's own corners with no gap, and nothing on
+     this site ever shows a ring that reads as the browser's. */
+  --focus-edge: var(--accent-line);
+  --focus-halo: 0 0 0 3px var(--accent-tint-strong);
+  --focus-ring: 0 0 0 1px var(--focus-edge), var(--focus-halo);
 }
 
-/* The application owns focus presentation; keyboard focus remains visible.
-   No element on this site shows the browser's own ring: `outline: none` covers
-   focus by any means, and the ring below is drawn by us for keyboard focus
-   alone. An outline follows the element's own corners, so nothing here states a
-   radius; doing that would round the element itself whilst it has focus and
-   square off anything that is rounder. */
-:focus {
+/* The browser's own ring is never drawn, for focus by any means. */
+:focus,
+:focus-visible {
   outline: none;
 }
+
+/* Keyboard focus, for anything that brings no focus style of its own. A
+   component that draws its edge as a border turns that border to the focus
+   edge instead and takes the halo alone, which is what a text field does. */
 :focus-visible {
-  outline: var(--focus-width) solid var(--accent-400);
-  outline-offset: var(--focus-offset);
+  box-shadow: var(--focus-ring);
 }
 
 /* Focus handed back after an overlay closed. The reader did not navigate here,
    so nothing is drawn until they do; `returnFocusQuietly` sets the attribute and
    drops it again on their next action. */
 [data-focus-quiet]:focus-visible {
-  outline: none;
   box-shadow: none;
 }

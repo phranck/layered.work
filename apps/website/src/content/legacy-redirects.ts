@@ -1,5 +1,4 @@
 import table from "./legacy-redirects.json" with { type: "json" };
-import { LISTING_PAGE_SIZE } from "./repository.js";
 
 /**
  * Addresses the old site answered that its last generated output no longer contains.
@@ -49,8 +48,9 @@ const LEGACY_POSTS_PER_PAGE = 8;
  * 404. The first post the old page showed decides where it lands.
  *
  * @param oldPage - The number in the old address, from 1.
+ * @param pageSize - How many posts a page of the listing shows now, as its settings say.
  * @returns The listing page, from 1.
  */
-export function legacyPostsPage(oldPage: number): number {
-  return Math.floor(((oldPage - 1) * LEGACY_POSTS_PER_PAGE) / LISTING_PAGE_SIZE) + 1;
+export function legacyPostsPage(oldPage: number, pageSize: number): number {
+  return Math.floor(((oldPage - 1) * LEGACY_POSTS_PER_PAGE) / pageSize) + 1;
 }

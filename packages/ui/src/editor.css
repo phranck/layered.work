@@ -5,30 +5,55 @@
  * panel column has a fixed width, because a column of fields does not improve by
  * being wider, and the main column takes everything else.
  *
- * The syntax colours of the writing surface are the one place a component reads
- * a token that is not semantic. They are declared with the workbench scope, and
- * the reason they follow no palette is written there.
+ * The syntax colours of the writing surface are drawn by the editor that is
+ * mounted in it, from the `--md-*` properties of the workbench scope, where the
+ * reason they follow no palette is written.
  */
 
 .editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: var(--space-4);
+  /* The workbench's one step, between the columns and between the parts of
+     each, so no two distances on the screen differ. */
+  gap: var(--workbench-gutter, var(--space-4));
   align-items: start;
 }
 
 .editor__main {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--workbench-gutter, var(--space-3));
   min-width: 0;
 }
 
-/* The panel stays in view whilst the main side scrolls. Offset by the same step
-   the workbench pads its main area with, so it stops where the content starts. */
+/* A panel taller than the room it is given scrolls within itself, and does not
+   hand the scroll on to the page when it reaches its end. */
 .editor__panel {
-  position: sticky;
-  top: var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Each field of the panel opens with its title on a band across the whole card,
+   in the shade the card's header and footer take, so the panel reads as a run
+   of sections rather than as one column of controls. The band reaches past the
+   card's padding to both edges, and its text keeps the place it has without the
+   band: the card's padding plus the inset a label over a control takes. */
+.editor__panel .field:not(.field--inline) > .field__label {
+  margin-inline: calc(-1 * var(--card-padding));
+  padding-block: var(--space-2);
+  padding-inline: calc(var(--card-padding) + var(--control-text-inset));
+  background: var(--card-band-fill);
+  border-block: 1px solid var(--edge-hairline);
+}
+
+/* The first band starts where the header ends, rather than a sliver of padding
+   below it, and the header's rule is the line between the two. */
+.editor__panel .card__body--stack {
+  padding-block-start: 0;
+}
+
+.editor__panel .card__body--stack > .field:first-child > .field__label {
+  border-block-start: 0;
 }
 
 /* --- Toolbar --------------------------------------------------------------- */
@@ -58,10 +83,7 @@
   place-items: center;
   min-width: var(--control-height);
   height: var(--control-height);
-  /* Two pixels above and none below: the lettering is set in Fira Code, whose
-     ascent outweighs its descent, and a line box centred on the em box hangs
-     the caps a pixel high. Measured at 0.9px on 15px. */
-  padding-block: 2px 0;
+  padding-block: 0;
   padding-inline: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -70,9 +92,12 @@
   background: transparent;
   border: 0;
   border-radius: var(--radius-chip);
-  transition:
-    color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
+}
+
+.editor__tool svg {
+  display: block;
+  width: var(--tool-icon, 1.4em);
+  height: var(--tool-icon, 1.4em);
 }
 
 .editor__tool:hover {
@@ -83,52 +108,96 @@
 /* Lettering wider than a glyph gets more air at its sides, or the word touches
    the edge of its own hover shape. */
 .editor__tool--text {
+  /* Two pixels above and none below: the lettering is set in Fira Code, whose
+     ascent outweighs its descent, and a line box centred on the em box hangs
+     the caps a pixel high. Measured at 0.9px on 15px. */
+  padding-block: 2px 0;
   padding-inline: var(--space-3);
 }
 
 /* --- Surface ---------------------------------------------------------------- */
 
+/* No padding of its own: the editor mounted inside pads its scrolling area, so
+   the text scrolls to the edge and the scrollbar sits at it. */
 .editor__surface {
+  display: flex;
+  flex-direction: column;
   min-height: 340px;
-  padding: var(--space-5);
-  overflow-x: auto;
   font-family: var(--font-mono);
   font-feature-settings: var(--mono-ligatures);
   font-size: var(--text-code);
   line-height: 1.7;
   color: var(--text-secondary);
-  white-space: pre-wrap;
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
-.editor__surface .md {
-  color: var(--md-heading);
+/* The text size the author chose for writing, from the code size upwards in the
+   steps of the type scale. The line height is a ratio, so it follows. This sets
+   the surface alone: the site renders the same text at its own sizes. */
+.editor__surface[data-text-size="m"] {
+  font-size: var(--text-base);
 }
-.editor__surface .sc {
-  color: var(--md-shortcode-brace);
+
+.editor__surface[data-text-size="l"] {
+  font-size: var(--text-lg);
 }
-.editor__surface .sc-name {
-  color: var(--md-shortcode-token);
+
+.editor__surface[data-text-size="xl"] {
+  font-size: var(--text-xl);
 }
-.editor__surface .sc-attr {
-  color: var(--md-shortcode-attribute);
+
+/* Being written in looks like a text field being written in, whatever is
+   mounted inside the surface. */
+.editor__surface:focus-within {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
 }
-.editor__surface .sc-str {
-  color: var(--md-shortcode-string);
+
+/* The surface is what shows focus, so whatever takes the focus inside it draws
+   no ring of its own, which would stand as a second frame within the first. */
+.editor__surface :focus-visible {
+  box-shadow: none;
+}
+
+/* --- Wide viewports --------------------------------------------------------
+   Whilst the panel stands beside the text, the editor fills the content area's
+   height and no more: the writing surface takes what the column leaves and its
+   text scrolls inside it, and the panel scrolls inside itself, so the page
+   never grows taller than the window. The surface keeps its least height, so a
+   very short window scrolls the page rather than squeezing the text away. */
+
+@media (width >= 1100px) {
+  .editor {
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .editor__main {
+    min-height: 0;
+  }
+
+  .editor__surface {
+    flex: 1;
+  }
+
+  .editor__panel {
+    align-self: start;
+    max-height: 100%;
+  }
 }
 
 /* --- Narrow viewports ------------------------------------------------------
-   The panel goes under the main side, and stops sticking, because a sticky
-   panel under the content would cover what it belongs to. */
+   The panel goes under the main side, and the page scrolls as a whole. */
 
 @media (width < 1100px) {
   .editor {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .editor__panel {
-    position: static;
   }
 }

@@ -45,7 +45,7 @@ function cell(text) {
 /** The parameters of one component, as a table. */
 function parameterTable(definition) {
   const names = Object.keys(definition.parameters);
-  if (names.length === 0) return ["It takes no parameters."];
+  if (names.length === 0 && !definition.fields) return ["It takes no parameters."];
 
   const rows = names.map((name) => {
     const parameter = definition.parameters[name];
@@ -53,6 +53,14 @@ function parameterTable(definition) {
     const fallback = parameter.default === undefined ? "" : written(parameter.default);
     return `| ${label} | ${cell(parameter.description)} | ${cell(accepts(parameter))} | ${fallback} |`;
   });
+
+  // Fields are named by the author rather than by the register, so they are one
+  // row standing for every name.
+  if (definition.fields) {
+    rows.push(
+      `| any name | ${cell(definition.fields.description)} | ${cell(accepts(definition.fields))} |  |`,
+    );
+  }
 
   const lines = ["| Parameter | What it is for | Takes | Default |", "| --- | --- | --- | --- |", ...rows];
 
@@ -66,19 +74,31 @@ function parameterTable(definition) {
 /** One component, as a section. */
 function section(name) {
   const definition = components[name];
+  const placement = [
+    definition.within ? `Only inside \`${definition.within}\`.` : "",
+    BODY[definition.body],
+    definition.holds
+      ? `The body holds ${definition.holds.map((held) => `\`${held}\``).join(" and ")} lines, and no Markdown.`
+      : "",
+    `Rendered by \`${definition.renders}\`.`,
+  ].filter(Boolean);
+
+  // A part cannot stand on its own, so its example is the line it has in the
+  // whole's example rather than a fence the validator would rightly refuse.
+  const example = definition.within
+    ? [`\`${definition.example}\` is one line of the example under \`${definition.within}\`.`]
+    : ["```", definition.example, "```"];
 
   return [
     `### ${name}`,
     "",
     definition.description,
     "",
-    `${BODY[definition.body]} Rendered by \`${definition.renders}\`.`,
+    placement.join(" "),
     "",
     ...parameterTable(definition),
     "",
-    "```",
-    definition.example,
-    "```",
+    ...example,
   ].join("\n");
 }
 

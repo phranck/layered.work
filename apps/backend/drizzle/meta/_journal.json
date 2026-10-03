@@ -15,6 +15,41 @@
       "when": 1790183979459,
       "tag": "0001_add_project_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790971171626,
+      "tag": "0002_entry_previews",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791033983386,
+      "tag": "0003_topic_redirects",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791034842048,
+      "tag": "0004_entry_bin",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791035594542,
+      "tag": "0005_show_in_other_language",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791036306864,
+      "tag": "0006_storage_keys_name_bucket_objects",
+      "breakpoints": true
     }
   ]
 }

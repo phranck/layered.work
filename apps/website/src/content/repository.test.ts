@@ -1,4 +1,4 @@
-import { homeBlockTypes } from "@layered/schemas";
+import { DEFAULT_LISTING, homeBlockTypes } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
 import { createRepository, parseListingQuery, summaryOf } from "./repository.js";
 
@@ -53,6 +53,13 @@ describe("public content repository", () => {
     expect(repo.blocks().map((block) => block.type)).toEqual([...homeBlockTypes]);
     expect(repo.unknownBlocks()).toEqual([]);
   });
+  it("offers the same defaults when the database answers with an empty list", () => {
+    // The backend reads the home_blocks table and sends what it holds. Nothing
+    // arranged yet is an empty table, and a block switched off is a row, so an
+    // empty list can only mean that nobody has arranged the page.
+    const repo = createRepository({ ...snapshot, homeBlocks: [] });
+    expect(repo.blocks().map((block) => block.type)).toEqual([...homeBlockTypes]);
+  });
   it("excludes non-public states and other languages from every collection", () => {
     const repo = createRepository(snapshot);
     expect(repo.list({ language: "en" }).entries.map((item) => item.id)).toEqual([1]);
@@ -66,6 +73,28 @@ describe("public content repository", () => {
     expect(repo.entry("/entry-2/")?.visibility).toBe("hidden");
     for (const id of [3, 4]) expect(repo.entry(`/entry-${id}/`)).toBeUndefined();
   });
+  it("lists an entry in the other language as well only when asked and while that language has no version", () => {
+    const shown = { ...entry(7), showInOtherLanguage: true };
+    const translated = { ...entry(8), showInOtherLanguage: true, translationPath: "/de/entry-9/" };
+    const repository = createRepository({ ...snapshot, entries: [entry(6), shown, translated] });
+
+    expect(repository.publicEntries("de").map((item) => item.path)).toEqual(["/entry-7/"]);
+    expect(
+      repository
+        .publicEntries("en")
+        .map((item) => item.path)
+        .sort(),
+    ).toEqual(["/entry-6/", "/entry-7/", "/entry-8/"]);
+  });
+
+  it("knows the addresses of deleted entries, and accepts a snapshot that names none", () => {
+    const repository = createRepository({ ...snapshot, gone: ["/deleted/"] });
+    expect(repository.gone("/deleted/")).toBe(true);
+    expect(repository.gone("/entry-1/")).toBe(false);
+    expect(createRepository(snapshot).gone("/deleted/")).toBe(false);
+    expect(() => createRepository({ ...snapshot, gone: ["//evil.test/"] })).toThrow();
+  });
+
   it("resolves only local redirects and rejects duplicate public addresses", () => {
     expect(createRepository(snapshot).redirect("/old/")).toBe("/entry-1/");
     expect(() =>
@@ -73,6 +102,33 @@ describe("public content repository", () => {
     ).toThrow();
     expect(() => createRepository({ ...snapshot, entries: [entry(1), entry(1)] })).toThrow();
   });
+  it("pages an overview by its own page size, and a topic by the posts' one", () => {
+    const repo = createRepository({
+      ...snapshot,
+      entries: Array.from({ length: 7 }, (_, i) => ({ ...entry(i + 1), kind: i < 4 ? "post" : "project" })),
+      listings: {
+        post: { ...DEFAULT_LISTING, pageSize: 3 },
+        project: { ...DEFAULT_LISTING, pageSize: 5, headline: { en: "Work", de: "" } },
+      },
+    });
+    expect(repo.list({ language: "en", kind: "post" }).pages).toBe(2);
+    expect(repo.list({ language: "en", kind: "project" }).pages).toBe(1);
+    expect(repo.list({ language: "en", topic: "hardware" }).entries).toHaveLength(3);
+    expect(repo.listing("project").headline.en).toBe("Work");
+  });
+
+  it("uses the default overviews for a snapshot that names none", () => {
+    expect(createRepository(snapshot).listing("post")).toEqual(DEFAULT_LISTING);
+  });
+
+  it("shortens a preview at a word to the length it is given", () => {
+    const long = createRepository({
+      ...snapshot,
+      entries: [{ ...entry(1), summary: "one two three four five six seven eight nine ten" }],
+    }).entry("/entry-1/");
+    expect(summaryOf(long as never, 20)).toBe("one two three four…");
+  });
+
   it("paginates deterministically without client-side state", () => {
     const repo = createRepository({
       ...snapshot,
@@ -163,28 +219,33 @@ describe("where the media are served from", () => {
     media: [
       {
         slug: "a-picture",
-        src: "/media/a-picture.webp",
-        srcSet: "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+        src: "/migration/a-picture.webp",
+        srcSet: "/migration/a-picture-variant-480.webp 480w, /migration/a-picture-variant-960.webp 960w",
       },
+      { slug: "an-upload", src: "/uploads/tl_WnGQ4duhWJVeRjRqMmQ" },
     ],
   };
 
   it("leaves the paths alone when nothing says otherwise, which is the local case", () => {
     delete process.env.MEDIA_ORIGIN;
     const asset = createRepository(withMedia).media("a-picture");
-    expect(asset?.src).toBe("/media/a-picture.webp");
+    expect(asset?.src).toBe("/migration/a-picture.webp");
     expect(asset?.srcSet).toBe(
-      "/media/a-picture-variant-480.webp 480w, /media/a-picture-variant-960.webp 960w",
+      "/migration/a-picture-variant-480.webp 480w, /migration/a-picture-variant-960.webp 960w",
     );
   });
 
-  it("puts the configured origin in front of every candidate, keeping the widths", () => {
-    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration";
+  it("puts the bucket's origin in front of every key, migrated and uploaded alike, keeping the widths", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket";
     try {
-      const asset = createRepository(withMedia).media("a-picture");
+      const repository = createRepository(withMedia);
+      const asset = repository.media("a-picture");
       expect(asset?.src).toBe("https://storage.example/bucket/migration/a-picture.webp");
       expect(asset?.srcSet).toBe(
         "https://storage.example/bucket/migration/a-picture-variant-480.webp 480w, https://storage.example/bucket/migration/a-picture-variant-960.webp 960w",
+      );
+      expect(repository.media("an-upload")?.src).toBe(
+        "https://storage.example/bucket/uploads/tl_WnGQ4duhWJVeRjRqMmQ",
       );
     } finally {
       delete process.env.MEDIA_ORIGIN;
@@ -192,13 +253,34 @@ describe("where the media are served from", () => {
   });
 
   it("tolerates a trailing slash on the origin rather than doubling it", () => {
-    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/migration/";
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket/";
     try {
       expect(createRepository(withMedia).media("a-picture")?.src).toBe(
         "https://storage.example/bucket/migration/a-picture.webp",
       );
     } finally {
       delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
+  it("finds a file the export names by its old path below the prefix the upload put it under", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket";
+    try {
+      const exported = createRepository({
+        ...snapshot,
+        media: [{ slug: "a-picture", src: "/media/a-picture.webp" }],
+      });
+      expect(exported.media("a-picture")?.src).toBe(
+        "https://storage.example/bucket/migration/a-picture.webp",
+      );
+    } finally {
+      delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
+  it("refuses a path that is not one key below the origin", () => {
+    for (const src of ["//evil.test/x.webp", "/migration/../x", "https://evil.test/x.webp"]) {
+      expect(() => createRepository({ ...snapshot, media: [{ slug: "bad", src }] })).toThrow();
     }
   });
 });
