@@ -168,9 +168,7 @@ const de = {
   statePublicNote: "Für alle sichtbar",
   stateDraftNote: "Nur im Dashboard",
   stateHiddenNote: "Nur über den Link erreichbar",
-  editorAddress: "Adresse",
-  editorAddressHint:
-    "Nur der letzte Teil ist änderbar, und die bisherige Adresse leitet danach weiter. Ältere englische Einträge haben kein Sprachkürzel, alles Neue beginnt mit /en/ oder /de/.",
+  editorSlug: "Slug",
   addressTaken: "Diese Adresse gehört bereits einem anderen Eintrag.",
   editorLanguage: "Sprache",
   languageEn: "Englisch",
@@ -478,9 +476,7 @@ const en: Catalogue = {
   statePublicNote: "Visible to everyone",
   stateDraftNote: "In the dashboard only",
   stateHiddenNote: "Reachable by its link only",
-  editorAddress: "Address",
-  editorAddressHint:
-    "Only the last part can be changed, and the previous address then redirects. Older English entries have no language prefix; everything new starts with /en/ or /de/.",
+  editorSlug: "Slug",
   addressTaken: "This address already belongs to another entry.",
   editorLanguage: "Language",
   languageEn: "English",

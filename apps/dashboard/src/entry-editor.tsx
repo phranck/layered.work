@@ -518,7 +518,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               {preview.isPending ? text("previewPending") : text("preview")}
             </Button>
           </div>
-          <Field label={text("editorAddress")} htmlFor="entry-address" hint={text("editorAddressHint")}>
+          <Field label={text("editorSlug")} htmlFor="entry-address">
             <AddressField
               inputId="entry-address"
               path={entry.path}

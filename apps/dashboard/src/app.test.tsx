@@ -787,7 +787,7 @@ describe("dashboard shell", () => {
     vi.stubGlobal("fetch", request);
     renderDashboard(`/posts/${draftDetail.id}`);
 
-    const field = (await screen.findByLabelText("Adresse")) as HTMLInputElement;
+    const field = (await screen.findByLabelText("Slug")) as HTMLInputElement;
     expect(field.value).toBe("a-draft-about-soldering");
     expect(field.closest(".address-field")?.textContent).toContain("/");
 
@@ -816,7 +816,7 @@ describe("dashboard shell", () => {
     );
     renderDashboard(`/posts/${draftDetail.id}`);
 
-    const field = await screen.findByLabelText("Adresse");
+    const field = await screen.findByLabelText("Slug");
     fireEvent.change(field, { target: { value: "a-page" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
