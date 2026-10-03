@@ -147,68 +147,6 @@ dialog.account-dialog::backdrop {
   gap: var(--space-5);
   min-width: 0;
 }
-.badge {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 5px 9px 3px 7px;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  line-height: 1;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--badge-colour, var(--text-muted));
-  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
-  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
-  border-radius: var(--radius-chip);
-}
-
-.badge::before {
-  width: 5px;
-  height: 5px;
-  content: "";
-  background: currentcolor;
-  border-radius: 50%;
-}
-
-.badge[data-status="public"] {
-  --badge-colour: var(--state-success);
-}
-
-.badge[data-status="draft"] {
-  --badge-colour: var(--state-warning);
-}
-
-.badge[data-status="hidden"] {
-  --badge-colour: var(--state-info);
-}
-
-.badge[data-status="trashed"] {
-  --badge-colour: var(--state-danger);
-}
-
-/* A language code beside a title. German is tinted, because the site's older
-   writing is English and the German entries are the ones a reader looks for. */
-.lang-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-faint);
-  border: 1px solid var(--edge-hairline);
-  border-radius: var(--radius-chip);
-}
-
-.lang-tag[data-language="de"] {
-  color: var(--state-info);
-  border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
-}
-
 /* The other language of the same entry, beside a row's own: present, and
    quieter than the language the row is. */
 .lang-tag--counterpart {

@@ -81,9 +81,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Chips, badges, tags --------------------------------------------------
-   The chip itself is the UI package's `chip.css`. What follows is the site's
-   own use of it. */
+/* --- Chips -----------------------------------------------------------------
+   The chip, the badge and the language tag are the UI package's. What follows
+   is the site's own use of the chip. */
 
 /*
  * The chip that closes a card. It is a target rather than a label, so it is
@@ -104,70 +104,6 @@
   color: var(--accent-300);
   background: var(--accent-tint);
   border-color: var(--accent-line);
-}
-
-/*
- * Status is carried by a dot plus a word, never by colour alone, so the meaning
- * survives a reader who cannot tell the two greens apart.
- */
-.badge {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  /* One pixel more above than below: at a line height of one the em box is
-     shorter than the glyph box, and the caps land a pixel above the centre.
-     Measured at 1.0px on 13px. */
-  padding: 5px 9px 3px 7px;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  line-height: 1;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  border-radius: var(--radius-chip);
-  color: var(--badge-colour, var(--text-muted));
-  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
-  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
-}
-
-.badge::before {
-  width: 5px;
-  height: 5px;
-  content: "";
-  background: currentcolor;
-  border-radius: 50%;
-}
-
-.badge[data-status="public"] {
-  --badge-colour: var(--state-success);
-}
-.badge[data-status="draft"] {
-  --badge-colour: var(--state-warning);
-}
-.badge[data-status="hidden"] {
-  --badge-colour: var(--state-info);
-}
-.badge[data-status="secret"] {
-  --badge-colour: var(--accent-400);
-}
-
-.lang-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 6px;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-faint);
-  border: 1px solid var(--edge-hairline);
-  border-radius: 5px;
-}
-
-.lang-tag[data-language="de"] {
-  color: var(--state-info);
-  border-color: color-mix(in oklab, var(--state-info) 34%, transparent);
 }
 
 /* The first band opens a shade lighter than the page and sinks into it, so the
