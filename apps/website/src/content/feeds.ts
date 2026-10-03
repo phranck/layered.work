@@ -8,8 +8,19 @@ export function xml(value: string): string {
       ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character] ?? character,
   );
 }
+/**
+ * Every post and project in both languages, newest first, each once: an entry
+ * listed in the other language as well appears in both lists and in the feed
+ * a single time.
+ */
 function feedEntries(repository: ContentRepository) {
-  return [...repository.publicEntries("en"), ...repository.publicEntries("de")]
+  const byPath = new Map(
+    [...repository.publicEntries("en"), ...repository.publicEntries("de")].map((entry) => [
+      entry.path,
+      entry,
+    ]),
+  );
+  return [...byPath.values()]
     .filter((entry) => entry.kind !== "page")
     .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
 }

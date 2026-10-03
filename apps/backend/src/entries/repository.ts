@@ -167,6 +167,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
       body: entryTranslations.body,
       state: entryTranslations.state,
       readingWidth: entryTranslations.readingWidth,
+      showInOtherLanguage: entryTranslations.showInOtherLanguage,
       publishedAt: entryTranslations.publishedAt,
       modifiedAt: entries.modifiedAt,
       pictureId: media.id,
@@ -220,6 +221,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     body: row.body,
     state: row.state,
     readingWidth: row.readingWidth,
+    showInOtherLanguage: row.showInOtherLanguage,
     publishedAt: row.publishedAt?.toISOString() ?? null,
     modifiedAt: row.modifiedAt.toISOString(),
     path: current?.path ?? null,
@@ -302,6 +304,7 @@ export async function saveEntry(
         body: entryTranslations.body,
         state: entryTranslations.state,
         readingWidth: entryTranslations.readingWidth,
+        showInOtherLanguage: entryTranslations.showInOtherLanguage,
         publishedAt: entryTranslations.publishedAt,
         trashedAt: entryTranslations.trashedAt,
       })

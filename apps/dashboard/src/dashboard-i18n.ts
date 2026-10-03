@@ -137,6 +137,9 @@ const de = {
     `${count === 1 ? "Ein Navigationspunkt zeigt" : `${count} Navigationspunkte zeigen`} auf diesen Eintrag.`,
   editorInBin: "Im Papierkorb",
   editorTranslationInBin: (language: string) => `Die Fassung auf ${language} liegt im Papierkorb.`,
+  editorShowInOtherLanguage: (language: string) => `Auch auf ${language} zeigen`,
+  editorShowInOtherLanguageHint: (language: string) =>
+    `Erscheint auch in den Listen, Feeds und der Suche auf ${language}, mit seiner Sprache markiert, bis es dort eine veröffentlichte Fassung gibt.`,
   emptyBin: "Papierkorb leeren",
   emptyBinTitle: "Papierkorb leeren",
   emptyBinBody: (count: number) =>
@@ -439,6 +442,9 @@ const en: Catalogue = {
     `${count === 1 ? "One navigation item points" : `${count} navigation items point`} at this entry.`,
   editorInBin: "In the bin",
   editorTranslationInBin: (language) => `The ${language} version is in the bin.`,
+  editorShowInOtherLanguage: (language) => `Also show in ${language}`,
+  editorShowInOtherLanguageHint: (language) =>
+    `Appears in the ${language} listings, feeds and search as well, marked with its language, until a ${language} version is published.`,
   emptyBin: "Empty the bin",
   emptyBinTitle: "Empty the bin",
   emptyBinBody: (count) =>

@@ -212,6 +212,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
         featured: row.featured,
         onHomePage: row.onHomePage,
         readingWidth: row.readingWidth,
+        showInOtherLanguage: false,
       },
     ],
     topics: assigned,

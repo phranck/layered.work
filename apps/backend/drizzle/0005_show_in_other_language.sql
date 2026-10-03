@@ -1,0 +1,1 @@
+ALTER TABLE "entry_translations" ADD COLUMN "show_in_other_language" boolean DEFAULT false NOT NULL;

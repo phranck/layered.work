@@ -53,7 +53,7 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
 ) : block.type==="project_grid"||block.type==="post_grid" ? (
   <Section.Band>
     <Section.Title eyebrow={gridKicker(block.type)} title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
     {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
   </Section.Band>
 ) : block.type==="topic_bar" ? (

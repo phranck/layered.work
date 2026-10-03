@@ -73,6 +73,20 @@ describe("public content repository", () => {
     expect(repo.entry("/entry-2/")?.visibility).toBe("hidden");
     for (const id of [3, 4]) expect(repo.entry(`/entry-${id}/`)).toBeUndefined();
   });
+  it("lists an entry in the other language as well only when asked and while that language has no version", () => {
+    const shown = { ...entry(7), showInOtherLanguage: true };
+    const translated = { ...entry(8), showInOtherLanguage: true, translationPath: "/de/entry-9/" };
+    const repository = createRepository({ ...snapshot, entries: [entry(6), shown, translated] });
+
+    expect(repository.publicEntries("de").map((item) => item.path)).toEqual(["/entry-7/"]);
+    expect(
+      repository
+        .publicEntries("en")
+        .map((item) => item.path)
+        .sort(),
+    ).toEqual(["/entry-6/", "/entry-7/", "/entry-8/"]);
+  });
+
   it("knows the addresses of deleted entries, and accepts a snapshot that names none", () => {
     const repository = createRepository({ ...snapshot, gone: ["/deleted/"] });
     expect(repository.gone("/deleted/")).toBe(true);

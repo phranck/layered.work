@@ -6,7 +6,7 @@ The content itself is migrated from the old Publii site by a pipeline that stays
 
 The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the bin or was deleted from it.
 
-Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, and `template`. Dates are ISO strings or null. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
+Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, `showInOtherLanguage`, and `template`. `showInOtherLanguage` lists a public entry in the other language's listings, feeds and search as well, marked with its language, whilst that language has no published version of it. Dates are ISO strings or null. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
 
 Visibility is `public`, `hidden`, `draft`, or `trashed`. All 21 records remain in the aggregate so the report can account for them; route and listing policies exclude drafts and trash, and exclude hidden entries from public listings. An `excluded_homepage` flag yields `onHomePage: false`.
 

@@ -36,6 +36,13 @@
       "when": 1791034842048,
       "tag": "0004_entry_bin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791035594542,
+      "tag": "0005_show_in_other_language",
+      "breakpoints": true
     }
   ]
 }

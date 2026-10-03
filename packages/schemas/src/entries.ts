@@ -92,6 +92,11 @@ export const entryDetail = z.object({
   body: z.string(),
   state: z.enum(PUBLICATION_STATES),
   readingWidth: z.enum(READING_WIDTHS),
+  /**
+   * Whether the other language's listings show it as well whilst that language
+   * has no published version of its own.
+   */
+  showInOtherLanguage: z.boolean(),
   /** When it first became public, or null whilst it never has been. */
   publishedAt: z.iso.datetime().nullable(),
   /** When anything about the entry last changed. */
@@ -151,6 +156,7 @@ export const saveEntryBody = body({
   body: z.string().max(MaxLength.Body),
   state: z.enum(PUBLICATION_STATES),
   readingWidth: z.enum(READING_WIDTHS),
+  showInOtherLanguage: z.boolean(),
   topicIds: z.array(z.uuid()).max(MAX_TOPICS_PER_ENTRY),
 });
 export type SaveEntryBody = z.infer<typeof saveEntryBody>;

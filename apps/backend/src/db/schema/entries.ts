@@ -78,6 +78,14 @@ export const entryTranslations = pgTable(
     state: publicationState().notNull().default("draft"),
     readingWidth: readingWidth("reading_width").notNull().default("normal"),
 
+    /**
+     * Whether the other language's listings, feeds and search show this
+     * translation as well, marked with its language, whilst that language has
+     * no published version of its own. A German reader still finds an English
+     * post that was never translated.
+     */
+    showInOtherLanguage: boolean("show_in_other_language").notNull().default(false),
+
     /** When it first became public. Null whilst it never has been. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
 

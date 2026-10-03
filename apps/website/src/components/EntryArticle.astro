@@ -40,5 +40,5 @@ const topicName = (slug: string) => repository.data.topics.find((topic) => topic
     <ContentRenderer {nodes} media={repository.media} />
   </div>
 </article>
-{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} image={related.featuredImage ? repository.media(related.featuredImage) : undefined} />)}</div></Section.Page>}
+{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} {language} image={related.featuredImage ? repository.media(related.featuredImage) : undefined} />)}</div></Section.Page>}
 <ModelViewer />

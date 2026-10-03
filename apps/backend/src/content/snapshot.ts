@@ -60,6 +60,8 @@ export interface PublicEntry {
   featured: boolean;
   onHomePage: boolean;
   readingWidth: string;
+  /** Listed in the other language as well whilst that language has no version a reader can open. */
+  showInOtherLanguage: boolean;
 }
 
 /** One asset, in the shape the site's repository parses. */
@@ -245,6 +247,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       body: entryTranslations.body,
       state: entryTranslations.state,
       readingWidth: entryTranslations.readingWidth,
+      showInOtherLanguage: entryTranslations.showInOtherLanguage,
       publishedAt: entryTranslations.publishedAt,
       featuredMediaId: entryTranslations.featuredMediaId,
       kind: entries.kind,
@@ -323,6 +326,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       featured: row.featured,
       onHomePage: row.onHomePage,
       readingWidth: row.readingWidth,
+      showInOtherLanguage: row.showInOtherLanguage,
     };
   });
 

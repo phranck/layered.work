@@ -8,7 +8,7 @@ import {
   type ReadingWidth,
   type SaveEntryBody,
 } from "@layered/schemas";
-import { Button, Card, Choice, Editor, Field, Input, Section, Segmented } from "@layered/ui";
+import { Button, Card, Choice, Editor, Field, Input, Section, Segmented, Switch } from "@layered/ui";
 import {
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
@@ -96,6 +96,7 @@ function draftOf(entry: EntryDetail): SaveEntryBody {
     body: entry.body,
     state: entry.state,
     readingWidth: entry.readingWidth,
+    showInOtherLanguage: entry.showInOtherLanguage,
     topicIds: entry.topics.map((topic) => topic.id),
   };
 }
@@ -525,6 +526,24 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               </>
             )}
           </Field>
+          {/* Only whilst there is no other language to show instead. */}
+          {!entry.counterpart && (
+            <Field
+              label={text("editorShowInOtherLanguage", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
+              htmlFor="entry-show-in-other-language"
+              hint={text("editorShowInOtherLanguageHint", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
+            >
+              <Switch
+                id="entry-show-in-other-language"
+                aria-label={text(
+                  "editorShowInOtherLanguage",
+                  text(LANGUAGE_TEXT[otherLanguage(entry.language)]),
+                )}
+                checked={draft.showInOtherLanguage}
+                onCheckedChange={(showInOtherLanguage) => update({ showInOtherLanguage })}
+              />
+            </Field>
+          )}
           <Field
             label={text("readingWidth")}
             hint={text("readingWidthHint", READING_WIDTH_CHARACTERS[draft.readingWidth])}

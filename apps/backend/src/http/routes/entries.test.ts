@@ -129,6 +129,7 @@ runs("the entry list", () => {
           body: "Now it says something.",
           state: "public",
           readingWidth: "wide",
+          showInOtherLanguage: false,
           topicIds: [],
           ...value,
         }),
@@ -189,6 +190,7 @@ runs("the entry list", () => {
         body: "",
         state: "public",
         readingWidth: "normal",
+        showInOtherLanguage: false,
         topicIds,
       }),
     });
@@ -214,6 +216,36 @@ runs("the entry list", () => {
     expect(logged.map((row) => row.detail)).toContainEqual({ changedKeys: ["topicIds"] });
   });
 
+  it("stores whether a translation is shown in the other language, logs it, and hands it to the site", async () => {
+    const cookie = await signedInCookie();
+    const page = (await list("page", cookie))[0];
+    const response = await app.request(`/entries/${page?.id}`, {
+      method: "PUT",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "A page",
+        summary: null,
+        body: "",
+        state: "public",
+        readingWidth: "normal",
+        showInOtherLanguage: true,
+        topicIds: [],
+      }),
+    });
+    expect(entryDetail.parse(((await response.json()) as { data: unknown }).data).showInOtherLanguage).toBe(
+      true,
+    );
+
+    const database = await testDatabase();
+    const snapshot = await readPublicSnapshot(database);
+    expect(snapshot.entries.find((entry) => entry.title === "A page")?.showInOtherLanguage).toBe(true);
+    const logged = await database
+      .select({ detail: auditLog.detail })
+      .from(auditLog)
+      .where(eq(auditLog.subjectId, page?.id ?? ""));
+    expect(logged.map((row) => row.detail)).toEqual([{ changedKeys: ["showInOtherLanguage"] }]);
+  });
+
   it("refuses a save that carries a field it does not take or a state it does not know", async () => {
     const cookie = await signedInCookie();
     const draft = (await list("post", cookie)).find((row) => row.state === "draft");
@@ -224,18 +256,43 @@ runs("the entry list", () => {
         body: "",
         state: "public",
         readingWidth: "normal",
+        showInOtherLanguage: false,
         topicIds: [],
         path: "/x/",
       },
-      { title: "T", summary: null, body: "", state: "protected", readingWidth: "normal", topicIds: [] },
-      { title: "", summary: null, body: "", state: "draft", readingWidth: "normal", topicIds: [] },
-      { title: "T", summary: null, body: "", state: "draft", readingWidth: "normal" },
+      {
+        title: "T",
+        summary: null,
+        body: "",
+        state: "protected",
+        readingWidth: "normal",
+        showInOtherLanguage: false,
+        topicIds: [],
+      },
+      {
+        title: "",
+        summary: null,
+        body: "",
+        state: "draft",
+        readingWidth: "normal",
+        showInOtherLanguage: false,
+        topicIds: [],
+      },
       {
         title: "T",
         summary: null,
         body: "",
         state: "draft",
         readingWidth: "normal",
+        showInOtherLanguage: false,
+      },
+      {
+        title: "T",
+        summary: null,
+        body: "",
+        state: "draft",
+        readingWidth: "normal",
+        showInOtherLanguage: false,
         topicIds: ["0199f064-43b7-79a8-917f-eefc8c852400"],
       },
     ]) {
@@ -353,6 +410,7 @@ runs("the entry list", () => {
         body: "",
         state: "public",
         readingWidth: "normal",
+        showInOtherLanguage: false,
         topicIds: [],
       }),
     });

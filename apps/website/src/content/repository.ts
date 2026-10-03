@@ -39,6 +39,8 @@ const entrySchema = z.object({
   featured: z.boolean().default(false),
   onHomePage: z.boolean().default(true),
   readingWidth: z.enum(READING_WIDTHS).default("normal"),
+  /** Listed in the other language as well whilst that language has no version a reader can open. */
+  showInOtherLanguage: z.boolean().default(false),
   /**
    * What an entry states about itself beside its prose, as the author's own
    * pairs rather than as fixed fields.
@@ -89,9 +91,17 @@ export type { HomeBlock };
 /** How many entries one page of a listing shows. */
 export const LISTING_PAGE_SIZE = 12;
 
-/** All collection readers share this publication predicate. */
+/**
+ * All collection readers share this publication predicate.
+ *
+ * A public entry is listed in its own language, and in the other one as well
+ * where its author asked for that and the other language has no version a
+ * reader can open, which is what an empty `translationPath` says. Once that
+ * version is public, it is what the other language lists instead.
+ */
 export function isListed(entry: Entry, locale: Language): boolean {
-  return entry.visibility === "public" && entry.language === locale;
+  if (entry.visibility !== "public") return false;
+  return entry.language === locale || (entry.showInOtherLanguage && !entry.translationPath);
 }
 /** Query parsing happens once, before values reach output or collection queries. */
 export function parseListingQuery(params: URLSearchParams) {

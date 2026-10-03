@@ -108,6 +108,7 @@ const draftDetail = {
   body: "First line of the draft.",
   state: "draft",
   readingWidth: "normal",
+  showInOtherLanguage: false,
   publishedAt: null,
   modifiedAt: "2025-09-01T00:00:00.000Z",
   path: "/a-draft-about-soldering/",
@@ -771,6 +772,49 @@ describe("dashboard shell", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it("offers to show an entry in the other language only while it has no counterpart, and saves the choice", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({ data: { ...draftDetail, ...JSON.parse(String(init.body)) } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    const toggle = await screen.findByRole("switch", { name: "Auch auf Deutsch zeigen" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({ showInOtherLanguage: true });
+  });
+
+  it("does not offer the other language's lists once that language exists", async () => {
+    const translated = {
+      ...draftDetail,
+      counterpart: { id: "6e7f8091-a2b3-4c4d-9e5f-6a7b8c9d0e1f", language: "de", title: "Ein Entwurf" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).endsWith(`/entries/${draftDetail.id}`)
+            ? json({ data: translated })
+            : successfulGet(input),
+        ),
+      ),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    await screen.findByRole("link", { name: /„Ein Entwurf“ öffnen/ });
+    expect(screen.queryByRole("switch")).toBeNull();
   });
 
   it("moves an entry to the bin after saying what that affects, and goes back to the list", async () => {

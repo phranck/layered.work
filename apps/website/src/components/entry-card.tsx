@@ -1,11 +1,31 @@
 import { Card } from "@layered/ui";
 import { ArticleIcon } from "@layered/ui/icons";
-import { dateLabel, type Entry, type Media, readingTime, summaryOf } from "../content/repository.js";
+import {
+  dateLabel,
+  type Entry,
+  type Language,
+  type Media,
+  readingTime,
+  summaryOf,
+} from "../content/repository.js";
 
-/** One composed card for all public collections, with real entry addresses. */
-export function EntryCard({ entry, image }: { entry: Entry; image?: Media }) {
+/** Each language's name, in the language of the page it is named on. */
+const LANGUAGE_NAMES: Record<Language, Record<Language, string>> = {
+  en: { en: "English", de: "German" },
+  de: { en: "Englisch", de: "Deutsch" },
+};
+
+/**
+ * One composed card for all public collections, with real entry addresses.
+ *
+ * Given the language of the page it stands on, a card for an entry in the other
+ * language says so with a language tag, and marks its text with that language,
+ * so a reader knows before opening it and a screen reader pronounces it right.
+ */
+export function EntryCard({ entry, image, language }: { entry: Entry; image?: Media; language?: Language }) {
+  const foreign = language !== undefined && entry.language !== language;
   return (
-    <Card.Link href={entry.path} className="entry-card">
+    <Card.Link href={entry.path} className="entry-card" lang={foreign ? entry.language : undefined}>
       {image && (
         <div className="card__media">
           <img
@@ -25,6 +45,15 @@ export function EntryCard({ entry, image }: { entry: Entry; image?: Media }) {
           <div className="meta">
             <time dateTime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time>
             <span>{readingTime(entry)} min</span>
+            {foreign && (
+              <span
+                className="lang-tag"
+                data-language={entry.language}
+                title={LANGUAGE_NAMES[language][entry.language]}
+              >
+                {entry.language}
+              </span>
+            )}
           </div>
           <h3 className="title-card">{entry.title}</h3>
           <p className="entry-card__summary">{summaryOf(entry)}</p>
