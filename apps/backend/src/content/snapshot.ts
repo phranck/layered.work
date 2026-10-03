@@ -1,11 +1,12 @@
 import { mediaReferences } from "@layered/content";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   entries,
   entryTopics,
   entryTranslations,
   formerTopicSlugs,
+  gonePaths,
   homeBlocks,
   media,
   mediaTranslations,
@@ -35,6 +36,8 @@ export interface PublicSnapshot {
   topics: { id: string; slug: string; name: string }[];
   media: PublicMedia[];
   redirects: { source: string; target: string }[];
+  /** Addresses of translations in the bin or deleted for good, which answer 410. */
+  gone: string[];
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
 }
 
@@ -204,6 +207,28 @@ async function formerTopicAddresses(
 }
 
 /**
+ * The addresses that answer 410: every address, current or former, of a
+ * translation in the bin, and every address of one deleted for good.
+ *
+ * An address something reachable answers at or redirects from is left out,
+ * because it was given to something new and is that thing's now.
+ *
+ * @param database - The database to read from.
+ * @param taken - The addresses the snapshot already answers at or redirects from.
+ */
+async function goneAddresses(database: Database, taken: ReadonlySet<string>): Promise<string[]> {
+  const binned = await database
+    .select({ path: paths.path })
+    .from(paths)
+    .innerJoin(entryTranslations, eq(entryTranslations.id, paths.translationId))
+    .where(isNotNull(entryTranslations.trashedAt));
+  const deleted = await database.select({ path: gonePaths.path }).from(gonePaths);
+  return [...new Set([...binned, ...deleted].map((row) => row.path))]
+    .filter((path) => !taken.has(path))
+    .sort();
+}
+
+/**
  * Reads the published content.
  *
  * @param database - The database to read from.
@@ -229,7 +254,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .where(inArray(entryTranslations.state, [...READABLE]));
+    .where(and(inArray(entryTranslations.state, [...READABLE]), isNull(entryTranslations.trashedAt)));
 
   const translationIds = translations.map((row) => row.translationId);
   const currentPaths = new Map<string, string>();
@@ -323,6 +348,10 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     topics: publicTopics,
     media: publishedMedia,
     redirects: former,
+    gone: await goneAddresses(
+      database,
+      new Set([...currentPaths.values(), ...former.map((item) => item.source)]),
+    ),
     homeBlocks: blocks.map((block) => ({
       type: block.type,
       enabled: block.enabled,

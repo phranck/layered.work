@@ -43,7 +43,10 @@ describe("readDashboardCounts", () => {
     );
     expect(statement).toContain('where "navigations"."placement" = \'main\'');
     expect(statement).toContain('from "navigations" where "navigations"."placement" = \'footer\'');
-    expect(statement).not.toContain("entry_translations");
+    // Entries are counted, not their translations, and only while one of their
+    // languages is outside the bin.
+    expect(statement).not.toContain('count(*)::int from "entry_translations"');
+    expect(statement).toContain('"entry_translations"."trashed_at" is null');
     expect(statement).not.toContain("enabled");
   });
 });

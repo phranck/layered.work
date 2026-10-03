@@ -1,7 +1,8 @@
 import { type EntryList, entryDetail, entryList, readApiError } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { auditLog, paths } from "../../db/schema/index.js";
+import { readPublicSnapshot } from "../../content/snapshot.js";
+import { auditLog, entries, media, mediaReferences, paths } from "../../db/schema/index.js";
 import { slugFromTitle } from "../../entries/repository.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
@@ -308,6 +309,100 @@ runs("the entry list", () => {
       headers: { cookie: await signedInCookie() },
     });
     expect(response.status).toBe(404);
+  });
+
+  it("moves one language to the bin: gone from the site and the counterpart, back at the same address", async () => {
+    const cookie = await signedInCookie();
+    const rows = await list("post", cookie);
+    const english = rows.find((row) => row.title === "Published in English");
+    const german = rows.find((row) => row.language === "de");
+    const send = (path: string, method = "POST") => app.request(path, { method, headers: { cookie } });
+
+    const impact = await send(`/entries/${english?.id}/trash-impact`, "GET");
+    expect(((await impact.json()) as { data: unknown }).data).toEqual({
+      mediaReferences: 1,
+      navigationItems: 0,
+    });
+
+    const trashed = entryDetail.parse(
+      ((await (await send(`/entries/${english?.id}/trash`)).json()) as { data: unknown }).data,
+    );
+    expect(trashed.trashed).toBe(true);
+
+    const database = await testDatabase();
+    const snapshot = await readPublicSnapshot(database);
+    expect(snapshot.entries.map((entry) => entry.title).sort()).toEqual(["A page", "Auf Deutsch versteckt"]);
+    expect(snapshot.entries.find((entry) => entry.language === "de")?.translationPath).toBeNull();
+    expect(snapshot.gone).toEqual(["/published-in-english/"]);
+
+    const survivor = entryDetail.parse(
+      ((await (await send(`/entries/${german?.id}`, "GET")).json()) as { data: unknown }).data,
+    );
+    expect(survivor).toMatchObject({ counterpart: null, counterpartTrashed: true });
+
+    const listed = await list("post", cookie);
+    expect(listed.find((row) => row.id === english?.id)?.trashed).toBe(true);
+    expect(listed.find((row) => row.id === german?.id)?.translated).toBe(false);
+
+    const save = await app.request(`/entries/${english?.id}`, {
+      method: "PUT",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "T",
+        summary: null,
+        body: "",
+        state: "public",
+        readingWidth: "normal",
+        topicIds: [],
+      }),
+    });
+    expect(save.status).toBe(409);
+
+    const restored = entryDetail.parse(
+      ((await (await send(`/entries/${english?.id}/restore`)).json()) as { data: unknown }).data,
+    );
+    expect(restored).toMatchObject({ trashed: false, state: "public", path: "/published-in-english/" });
+    expect((await readPublicSnapshot(database)).gone).toEqual([]);
+
+    const logged = await database
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.subjectId, english?.id ?? ""));
+    expect(logged.map((row) => row.action)).toEqual(["entry.trashed", "entry.restored"]);
+  });
+
+  it("empties the bin of one list: the rows go, the files are released, and the addresses stay gone", async () => {
+    const cookie = await signedInCookie();
+    const rows = await list("post", cookie);
+    const english = rows.find((row) => row.title === "Published in English");
+    const german = rows.find((row) => row.language === "de");
+    const database = await testDatabase();
+    const [picture] = await database
+      .select({ id: media.id })
+      .from(media)
+      .where(eq(media.slug, "soldering-iron"));
+    await database
+      .insert(mediaReferences)
+      .values({ translationId: english?.id ?? "", mediaId: picture?.id ?? "" });
+    for (const row of [english, german]) {
+      await app.request(`/entries/${row?.id}/trash`, { method: "POST", headers: { cookie } });
+    }
+    // The bin keeps what it holds until it is emptied.
+    expect(await database.select().from(mediaReferences)).toHaveLength(1);
+    const page = (await list("page", cookie))[0];
+    await app.request(`/entries/${page?.id}/trash`, { method: "POST", headers: { cookie } });
+
+    const emptied = await app.request("/entries/bin?kind=post", { method: "DELETE", headers: { cookie } });
+    expect(((await emptied.json()) as { data: unknown }).data).toEqual({ deleted: 2 });
+
+    expect((await list("post", cookie)).map((row) => row.title)).toEqual(["A draft"]);
+    expect((await list("page", cookie)).map((row) => row.trashed)).toEqual([true]);
+
+    const snapshot = await readPublicSnapshot(database);
+    expect(snapshot.gone).toEqual(["/a-page/", "/de/auf-deutsch-versteckt/", "/published-in-english/"]);
+    expect(await database.select().from(mediaReferences)).toEqual([]);
+    const remaining = await database.select({ id: entries.id }).from(entries);
+    expect(remaining).toHaveLength(2);
   });
 
   it("refuses a request without a session", async () => {

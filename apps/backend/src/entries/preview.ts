@@ -217,6 +217,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     topics: assigned,
     media,
     redirects: [],
+    gone: [],
     homeBlocks: [],
   };
 }

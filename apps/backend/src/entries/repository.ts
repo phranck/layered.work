@@ -1,11 +1,13 @@
 import {
+  type EmptiedBin,
   type EntryDetail,
   type EntryKind,
   type EntryList,
+  type EntryTrashImpact,
   ErrorCode,
   type SaveEntryBody,
 } from "@layered/schemas";
-import { and, desc, eq, inArray, ne, type SQLWrapper, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne, type SQLWrapper, sql } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
 import type { database } from "../db/connect.js";
 import {
@@ -13,7 +15,10 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  gonePaths,
   media,
+  mediaReferences,
+  navigationItems,
   paths,
   topics,
   topicTranslations,
@@ -104,10 +109,13 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
       // The other language of the same entry. The inner table is aliased, so the
       // bare table name inside the subquery still means the outer row.
       topics: topicNames(entries.id, entryTranslations.language),
+      // A language in the bin is not a translation a reader can switch to.
       translated: sql<boolean>`exists (
         select 1 from ${entryTranslations} as "sibling"
         where "sibling"."entry_id" = ${entries.id} and "sibling"."id" <> ${entryTranslations.id}
+          and "sibling"."trashed_at" is null
       )`,
+      trashedAt: entryTranslations.trashedAt,
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
@@ -132,6 +140,7 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
     thumbnailUrl: row.pictureId ? mediaContentUrl(row.pictureId) : null,
     translated: row.translated,
     topics: row.topics,
+    trashed: row.trashedAt !== null,
   }));
 }
 
@@ -161,6 +170,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
       publishedAt: entryTranslations.publishedAt,
       modifiedAt: entries.modifiedAt,
       pictureId: media.id,
+      trashedAt: entryTranslations.trashedAt,
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
@@ -182,15 +192,17 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     .where(and(eq(paths.translationId, id), eq(paths.isCurrent, true)))
     .limit(1);
 
-  const [counterpart] = await db
+  const [other] = await db
     .select({
       id: entryTranslations.id,
       language: entryTranslations.language,
       title: entryTranslations.title,
+      trashedAt: entryTranslations.trashedAt,
     })
     .from(entryTranslations)
     .where(and(eq(entryTranslations.entryId, row.entryId), ne(entryTranslations.id, id)))
     .limit(1);
+  const counterpart = other && other.trashedAt === null ? other : undefined;
 
   const [named] = await db
     .select({ topics: topicIdsAndNames(entries.id, entryTranslations.language) })
@@ -213,7 +225,11 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     path: current?.path ?? null,
     pictureUrl: row.pictureId ? mediaContentUrl(row.pictureId) : null,
     topics: named?.topics ?? [],
-    counterpart: counterpart ?? null,
+    counterpart: counterpart
+      ? { id: counterpart.id, language: counterpart.language, title: counterpart.title }
+      : null,
+    counterpartTrashed: other !== undefined && other.trashedAt !== null,
+    trashed: row.trashedAt !== null,
   };
 }
 
@@ -287,11 +303,15 @@ export async function saveEntry(
         state: entryTranslations.state,
         readingWidth: entryTranslations.readingWidth,
         publishedAt: entryTranslations.publishedAt,
+        trashedAt: entryTranslations.trashedAt,
       })
       .from(entryTranslations)
       .where(eq(entryTranslations.id, id))
       .limit(1);
     if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
+    // A translation in the bin is restored before it is written to, so a save
+    // can never publish something the reader believes is deleted.
+    if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the bin.");
 
     const now = new Date();
     const becomesPublic = value.state === "public" && current.state !== "public";
@@ -450,4 +470,131 @@ export async function createTranslation(db: Database, id: string, actorUserId: s
     return translation.id;
   });
   return readEntry(db, created);
+}
+
+/**
+ * What moving a translation to the bin will affect: the files it names, which
+ * the bin keeps until it is emptied, and the navigation items pointing at its
+ * entry.
+ *
+ * @param db - The database.
+ * @param id - The translation.
+ * @throws `not_found` where there is no such translation.
+ */
+export async function trashImpact(db: Database, id: string): Promise<EntryTrashImpact> {
+  const [row] = await db
+    .select({
+      entryId: entryTranslations.entryId,
+      mediaReferences: sql<number>`(
+        select count(distinct "named"."media_id")::int from (
+          select ${mediaReferences.mediaId} as "media_id" from ${mediaReferences}
+            where ${mediaReferences.translationId} = ${entryTranslations.id}
+          union select ${entryTranslations.featuredMediaId}
+        ) as "named" where "named"."media_id" is not null
+      )`,
+      navigationItems: sql<number>`(
+        select count(*)::int from ${navigationItems} where ${navigationItems.entryId} = ${entryTranslations.entryId}
+      )`,
+    })
+    .from(entryTranslations)
+    .where(eq(entryTranslations.id, id))
+    .limit(1);
+  if (!row) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
+  return { mediaReferences: row.mediaReferences, navigationItems: row.navigationItems };
+}
+
+/**
+ * Moves a translation to the bin, or takes it out again.
+ *
+ * Nothing but the mark changes, so a translation comes back with its state, its
+ * addresses and its files exactly as it left. Moving one that is already where
+ * it is asked to go changes nothing and logs nothing.
+ *
+ * @param db - The database.
+ * @param id - The translation.
+ * @param trashed - True to move it to the bin, false to restore it.
+ * @param actorUserId - The account that asked, for the audit log.
+ * @returns The translation as it now stands.
+ * @throws `not_found` where there is no such translation.
+ */
+export async function setTrashed(
+  db: Database,
+  id: string,
+  trashed: boolean,
+  actorUserId: string,
+): Promise<EntryDetail> {
+  await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ entryId: entryTranslations.entryId, trashedAt: entryTranslations.trashedAt })
+      .from(entryTranslations)
+      .where(eq(entryTranslations.id, id))
+      .limit(1);
+    if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
+    if ((current.trashedAt !== null) === trashed) return;
+
+    const now = new Date();
+    await tx
+      .update(entryTranslations)
+      .set({ trashedAt: trashed ? now : null })
+      .where(eq(entryTranslations.id, id));
+    await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
+    await tx.insert(auditLog).values({
+      actorUserId,
+      action: trashed ? "entry.trashed" : "entry.restored",
+      subjectType: "entry_translations",
+      subjectId: id,
+    });
+  });
+  return readEntry(db, id);
+}
+
+/**
+ * Deletes every translation of one kind that is in the bin, for good.
+ *
+ * Their addresses move to `gone_paths` first, so they answer 410 afterwards. The
+ * rows go with everything that cascades from them, which is what releases the
+ * files they named. An entry left with no translation at all goes as well,
+ * because a piece of work in no language is nothing.
+ *
+ * @param db - The database.
+ * @param kind - Posts, pages or projects, because the bin is a filter on one list.
+ * @param actorUserId - The account that emptied it, for the audit log.
+ * @returns How many translations were deleted.
+ */
+export async function emptyBin(db: Database, kind: EntryKind, actorUserId: string): Promise<EmptiedBin> {
+  return db.transaction(async (tx) => {
+    const binned = await tx
+      .select({ id: entryTranslations.id, entryId: entryTranslations.entryId })
+      .from(entryTranslations)
+      .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
+      .where(and(eq(entries.kind, kind), isNotNull(entryTranslations.trashedAt)));
+    if (binned.length === 0) return { deleted: 0 };
+    const ids = binned.map((row) => row.id);
+
+    const addresses = await tx
+      .select({ path: paths.path })
+      .from(paths)
+      .where(inArray(paths.translationId, ids));
+    if (addresses.length > 0) await tx.insert(gonePaths).values(addresses).onConflictDoNothing();
+
+    await tx.delete(entryTranslations).where(inArray(entryTranslations.id, ids));
+    const entryIds = [...new Set(binned.map((row) => row.entryId))];
+    await tx
+      .delete(entries)
+      .where(
+        and(
+          inArray(entries.id, entryIds),
+          sql`not exists (select 1 from ${entryTranslations} where ${entryTranslations.entryId} = ${entries.id})`,
+        ),
+      );
+    await tx.insert(auditLog).values(
+      ids.map((subjectId) => ({
+        actorUserId,
+        action: "entry.purged",
+        subjectType: "entry_translations",
+        subjectId,
+      })),
+    );
+    return { deleted: ids.length };
+  });
 }

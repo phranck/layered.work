@@ -13,6 +13,7 @@ function row(overrides: Partial<EntryListItem>): EntryListItem {
     thumbnailUrl: null,
     translated: false,
     topics: [],
+    trashed: false,
     ...overrides,
   };
 }
@@ -38,6 +39,20 @@ describe("filtering an entry list", () => {
     const found = filterEntries(rows, { search: "", state: "hidden", language: "de" });
     expect(found.map((entry) => entry.title)).toEqual(["NeXTSTEP auf einem Raspberry Pi"]);
     expect(filterEntries(rows, { search: "", state: "hidden", language: "en" })).toEqual([]);
+  });
+});
+
+describe("the bin in an entry list", () => {
+  const binned = [...rows, row({ title: "Thrown away", trashed: true })];
+
+  it("is left out of every choice but its own", () => {
+    expect(filterEntries(binned, { search: "", state: "all", language: "all" })).toHaveLength(3);
+    expect(filterEntries(binned, { search: "", state: "public", language: "all" })).toHaveLength(1);
+  });
+
+  it("is all the bin filter shows", () => {
+    const found = filterEntries(binned, { search: "", state: "bin", language: "all" });
+    expect(found.map((entry) => entry.title)).toEqual(["Thrown away"]);
   });
 });
 

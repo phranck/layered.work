@@ -11,6 +11,7 @@
  */
 
 import type { IconProps as PhosphorIconProps } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon as ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
 import { ArrowsMergeIcon as ArrowsMerge } from "@phosphor-icons/react/dist/ssr/ArrowsMerge";
 import { ArrowsOutLineVerticalIcon as ArrowsOutLineVertical } from "@phosphor-icons/react/dist/ssr/ArrowsOutLineVertical";
@@ -31,6 +32,7 @@ import { FloppyDiskIcon as FloppyDisk } from "@phosphor-icons/react/dist/ssr/Flo
 import { GearIcon as Gear } from "@phosphor-icons/react/dist/ssr/Gear";
 import { GlobeIcon as Globe } from "@phosphor-icons/react/dist/ssr/Globe";
 import { GridFourIcon as GridFour } from "@phosphor-icons/react/dist/ssr/GridFour";
+import { HouseIcon as House } from "@phosphor-icons/react/dist/ssr/House";
 import { ImageIcon as Image } from "@phosphor-icons/react/dist/ssr/Image";
 import { ImagesIcon as Images } from "@phosphor-icons/react/dist/ssr/Images";
 import { InfoIcon as Info } from "@phosphor-icons/react/dist/ssr/Info";
@@ -86,6 +88,7 @@ function duotone(Icon: ComponentType<PhosphorIconProps>, name: string) {
   return Duotone;
 }
 
+export const ArrowCounterClockwiseIcon = duotone(ArrowCounterClockwise, "ArrowCounterClockwiseIcon");
 export const ArrowLeftIcon = duotone(ArrowLeft, "ArrowLeftIcon");
 export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsOutLineVerticalIcon");
 export const ArrowsMergeIcon = duotone(ArrowsMerge, "ArrowsMergeIcon");
@@ -106,6 +109,7 @@ export const FloppyDiskIcon = duotone(FloppyDisk, "FloppyDiskIcon");
 export const GearIcon = duotone(Gear, "GearIcon");
 export const GlobeIcon = duotone(Globe, "GlobeIcon");
 export const GridFourIcon = duotone(GridFour, "GridFourIcon");
+export const HouseIcon = duotone(House, "HouseIcon");
 export const ImageIcon = duotone(Image, "ImageIcon");
 export const ImagesIcon = duotone(Images, "ImagesIcon");
 export const InfoIcon = duotone(Info, "InfoIcon");

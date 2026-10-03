@@ -9,14 +9,18 @@ import {
   createUploadBody,
   type DashboardCounts,
   dashboardCounts,
+  type EmptiedBin,
   type EntryDetail,
   type EntryKind,
   type EntryList,
   type EntryPreview,
+  type EntryTrashImpact,
   type ErrorCode,
+  emptiedBin,
   entryDetail,
   entryList,
   entryPreview,
+  entryTrashImpact,
   type MailSettings,
   mergeTopicBody,
   type PreviewEntryBody,
@@ -101,6 +105,12 @@ export interface DashboardApi {
   createTranslation(id: string): Promise<EntryDetail>;
   /** Keeps what the editor holds as a preview, and returns the address that shows it. */
   createPreview(id: string, value: PreviewEntryBody): Promise<EntryPreview>;
+  /** What moving a translation to the bin affects, for the question asked first. */
+  fetchTrashImpact(id: string): Promise<EntryTrashImpact>;
+  /** Moves a translation to the bin, or out of it, and returns it as it now stands. */
+  setTrashed(id: string, trashed: boolean): Promise<EntryDetail>;
+  /** Deletes every translation of one kind in the bin, for good. */
+  emptyBin(kind: EntryKind): Promise<EmptiedBin>;
   /** Every topic with its names, addresses and how many entries carry it. */
   fetchTopics(): Promise<TopicList>;
   /** Creates a topic from a name typed while writing, or returns the one with that name. */
@@ -223,6 +233,18 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async createPreview(id, value) {
       const sent = jsonBody("POST", previewEntryBody.parse(value));
       return dataOf(await request(`/entries/${encodeURIComponent(id)}/previews`, sent, true), entryPreview);
+    },
+    async fetchTrashImpact(id) {
+      const path = `/entries/${encodeURIComponent(id)}/trash-impact`;
+      return dataOf(await request(path, undefined, true), entryTrashImpact);
+    },
+    async setTrashed(id, trashed) {
+      const path = `/entries/${encodeURIComponent(id)}/${trashed ? "trash" : "restore"}`;
+      return dataOf(await request(path, { method: "POST" }, true), entryDetail);
+    },
+    async emptyBin(kind) {
+      const params = new URLSearchParams({ kind });
+      return dataOf(await request(`/entries/bin?${params}`, { method: "DELETE" }, true), emptiedBin);
     },
     async createTranslation(id) {
       const path = `/entries/${encodeURIComponent(id)}/translation`;

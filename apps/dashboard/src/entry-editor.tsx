@@ -10,6 +10,7 @@ import {
 } from "@layered/schemas";
 import { Button, Card, Choice, Editor, Field, Input, Section, Segmented } from "@layered/ui";
 import {
+  ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
   CodeIcon,
   EyeIcon,
@@ -22,6 +23,7 @@ import {
   TextBIcon,
   TextHTwoIcon,
   TextItalicIcon,
+  TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -176,6 +178,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const editor = useRef<ContentEditorHandle>(null);
+  const navigate = useNavigate();
   const [saved, setSaved] = useState(() => draftOf(entry));
   const [draft, setDraft] = useState(saved);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
@@ -202,7 +205,8 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   // A draft saves itself once typing pauses. Only when both what is stored and
   // what is being written are drafts, so choosing "public" is never saved by
   // waiting.
-  const autosaving = saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
+  const autosaving =
+    !entry.trashed && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
   useEffect(() => {
     if (!autosaving) return;
     const timer = setTimeout(() => save.mutate({ value: draft, automatic: true }), AUTOSAVE_DELAY_MS);
@@ -211,7 +215,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 
   // Command-S does what the Save button does, and nothing while it is disabled.
   useSaveShortcut(() => {
-    if (dirty && !save.isPending) save.mutate({ value: draft, automatic: false });
+    if (!entry.trashed && dirty && !save.isPending) save.mutate({ value: draft, automatic: false });
   });
 
   // Closing the tab or reloading with something unsaved asks the browser's own question.
@@ -222,14 +226,43 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  // Leaving inside the dashboard asks the dashboard's own question.
+  // Leaving inside the dashboard asks the dashboard's own question, except for
+  // an entry in the bin, which cannot be saved, and after moving it there,
+  // which was asked about already.
+  const trashedHere = useRef(false);
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname,
+    ({ currentLocation, nextLocation }) =>
+      dirty && !entry.trashed && !trashedHere.current && currentLocation.pathname !== nextLocation.pathname,
   );
+
+  const [askingToTrash, setAskingToTrash] = useState(false);
+  const refreshLists = () => {
+    void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  };
+  const trash = useMutation({
+    mutationFn: () => api.setTrashed(entry.id, true),
+    onError: (error) => notifyError(error),
+    onSuccess: () => {
+      trashedHere.current = true;
+      refreshLists();
+      void queryClient.invalidateQueries({ queryKey: ["entry"] });
+      notify({ tone: "success", message: text("trashedNotice") });
+      navigate(`/${area.path}`);
+    },
+  });
+  const restore = useMutation({
+    mutationFn: () => api.setTrashed(entry.id, false),
+    onError: (error) => notifyError(error),
+    onSuccess: (stored) => {
+      queryClient.setQueryData(entryKey(entry.id), stored);
+      refreshLists();
+      notify({ tone: "success", message: text("restored") });
+    },
+  });
 
   // The other language is created as a draft and opened at once, because that
   // is where its writing happens. Leaving with unsaved changes still asks first.
-  const navigate = useNavigate();
   const translate = useMutation({
     mutationFn: () => api.createTranslation(entry.id),
     onError: (error) => notifyError(error),
@@ -293,35 +326,53 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
       </BackToList>
       {/* What the entry's state is and what can be done with it, at the end of
           the bar, where they stay in view however far the text is scrolled. */}
-      <HeaderEnd>
-        <span className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
-          {status}
-        </span>
-        <Button
-          tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
-          disabled={!dirty || save.isPending}
-          icon={<FloppyDiskIcon />}
-          onClick={() => save.mutate({ value: draft, automatic: false })}
-        >
-          {text("save")}
-        </Button>
-        {!(saved.state === "public" && draft.state === "public") && (
+      {entry.trashed ? (
+        // In the bin nothing is written or published; the one thing to do is
+        // to take it out again.
+        <HeaderEnd>
+          <span className="badge" data-status="trashed" role="status">
+            {text("editorInBin")}
+          </span>
           <Button
             tone="primary"
-            disabled={save.isPending}
-            icon={<GlobeIcon />}
-            onClick={() => {
-              // The draft takes the new state as well, so what is shown and
-              // what is stored agree once the save returns.
-              const value: SaveEntryBody = { ...draft, state: "public" };
-              setDraft(value);
-              save.mutate({ value, automatic: false });
-            }}
+            icon={<ArrowCounterClockwiseIcon />}
+            disabled={restore.isPending}
+            onClick={() => restore.mutate()}
           >
-            {save.isPending ? text("publishPending") : text("publish")}
+            {restore.isPending ? text("restorePending") : text("restore")}
           </Button>
-        )}
-      </HeaderEnd>
+        </HeaderEnd>
+      ) : (
+        <HeaderEnd>
+          <span className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
+            {status}
+          </span>
+          <Button
+            tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
+            disabled={!dirty || save.isPending}
+            icon={<FloppyDiskIcon />}
+            onClick={() => save.mutate({ value: draft, automatic: false })}
+          >
+            {text("save")}
+          </Button>
+          {!(saved.state === "public" && draft.state === "public") && (
+            <Button
+              tone="primary"
+              disabled={save.isPending}
+              icon={<GlobeIcon />}
+              onClick={() => {
+                // The draft takes the new state as well, so what is shown and
+                // what is stored agree once the save returns.
+                const value: SaveEntryBody = { ...draft, state: "public" };
+                setDraft(value);
+                save.mutate({ value, automatic: false });
+              }}
+            >
+              {save.isPending ? text("publishPending") : text("publish")}
+            </Button>
+          )}
+        </HeaderEnd>
+      )}
       <Editor>
         <Editor.Main>
           {/* The label beside its field rather than over it, so the title takes
@@ -429,7 +480,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
           </Field>
           {/* Under the state, because what a reader would see is the question the
               state raises, whichever state it is. */}
-          <div className="entry-editor__preview">
+          <div className="entry-editor__action">
             <Button icon={<EyeIcon weight="duotone" />} disabled={preview.isPending} onClick={openPreview}>
               {preview.isPending ? text("previewPending") : text("preview")}
             </Button>
@@ -455,6 +506,10 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                 </span>
                 {text("editorOpenCounterpart", entry.counterpart.title)}
               </a>
+            ) : entry.counterpartTrashed ? (
+              <span className="entry-editor__note">
+                {text("editorTranslationInBin", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
+              </span>
             ) : (
               <>
                 <span className="entry-editor__note">{text("editorTranslationNone")}</span>
@@ -489,8 +544,24 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               onChange={(topicIds) => update({ topicIds })}
             />
           </Field>
+          {!entry.trashed && (
+            <div className="entry-editor__action entry-editor__action--apart">
+              <Button tone="danger" icon={<TrashIcon />} onClick={() => setAskingToTrash(true)}>
+                {text("trash")}
+              </Button>
+            </div>
+          )}
         </Editor.Panel>
       </Editor>
+      {askingToTrash && (
+        <TrashDialog
+          entry={entry}
+          title={draft.title.trim() || text("editorTitleMissing")}
+          pending={trash.isPending}
+          onConfirm={() => trash.mutate()}
+          onClose={() => setAskingToTrash(false)}
+        />
+      )}
       {blocker.state === "blocked" && (
         <CardDialog labelId="leave-entry-title" onClose={() => blocker.reset()}>
           <Card.Header id="leave-entry-title" title={text("leaveTitle")} />
@@ -517,5 +588,62 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
         </CardDialog>
       )}
     </>
+  );
+}
+
+/**
+ * The question before a translation goes to the bin: what that does on the
+ * site, what happens to the other language, how many files it releases once the
+ * bin is emptied, and whether navigation points at it.
+ *
+ * The figures are asked for when the dialog opens, so they describe the entry
+ * as it is stored at that moment.
+ */
+function TrashDialog({
+  entry,
+  title,
+  pending,
+  onConfirm,
+  onClose,
+}: {
+  entry: EntryDetail;
+  title: string;
+  pending: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const api = useDashboardApi();
+  const { text } = useDashboardLanguage();
+  const impact = useQuery({
+    queryKey: ["trash-impact", entry.id],
+    queryFn: () => api.fetchTrashImpact(entry.id),
+  });
+  return (
+    <CardDialog labelId="trash-entry-title" onClose={onClose}>
+      <Card.Header id="trash-entry-title" title={text("trashTitle", title)} />
+      <Card.Body className="settings-form">
+        <p>{text("trashBody")}</p>
+        {entry.counterpart && (
+          <p>{text("trashOtherLanguage", text(LANGUAGE_TEXT[entry.counterpart.language]))}</p>
+        )}
+        {impact.isError && <ErrorNotice error={impact.error} />}
+        {impact.data && <p>{text("trashMedia", impact.data.mediaReferences)}</p>}
+        {impact.data && impact.data.navigationItems > 0 && (
+          <p>{text("trashNavigation", impact.data.navigationItems)}</p>
+        )}
+      </Card.Body>
+      <Card.Footer
+        actions={
+          <>
+            <Button icon={<XIcon />} onClick={onClose} autoFocus>
+              {text("cancel")}
+            </Button>
+            <Button tone="danger" icon={<TrashIcon />} disabled={pending || !impact.data} onClick={onConfirm}>
+              {pending ? text("trashPending") : text("trash")}
+            </Button>
+          </>
+        }
+      />
+    </CardDialog>
   );
 }

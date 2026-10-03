@@ -1,5 +1,5 @@
 import { SEARCH_HIT_LIMIT, type SearchResults } from "@layered/schemas";
-import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
 import type { database } from "../db/connect.js";
 import { containing } from "../db/like.js";
@@ -44,7 +44,9 @@ export async function searchEverything(db: Database, text: string): Promise<Sear
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .where(or(ilike(entryTranslations.title, pattern), topicMatches))
+    .where(
+      and(isNull(entryTranslations.trashedAt), or(ilike(entryTranslations.title, pattern), topicMatches)),
+    )
     .orderBy(
       desc(sql`coalesce(${entryTranslations.publishedAt}, ${entries.createdAt})`),
       desc(entryTranslations.id),

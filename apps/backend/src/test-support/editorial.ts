@@ -6,6 +6,7 @@ import {
   entryTranslations,
   media,
   mediaTranslations,
+  paths,
   topics,
   topicTranslations,
   users,
@@ -26,6 +27,8 @@ import { emptyTestDatabase, testDatabase } from "./database.js";
  * - A draft post in English only, about "Soldering", a topic named in English
  *   only.
  * - A public page.
+ * - The pair and the page answer at `/published-in-english/`,
+ *   `/de/auf-deutsch-versteckt/` and `/a-page/`; the draft has no address yet.
  * - A PNG whose English alt text is "A soldering iron on the bench", and a PDF.
  */
 
@@ -91,31 +94,39 @@ export async function seedEditorialLibrary(): Promise<void> {
     ])
     .returning({ id: entries.id });
 
-  await database.insert(entryTranslations).values([
-    {
-      entryId: pair?.id ?? "",
-      language: "en",
-      title: "Published in English",
-      state: "public",
-      publishedAt: new Date("2025-05-01T00:00:00Z"),
-      featuredMediaId: picture?.id,
-    },
-    {
-      entryId: pair?.id ?? "",
-      language: "de",
-      title: "Auf Deutsch versteckt",
-      state: "hidden",
-      publishedAt: new Date("2025-06-01T00:00:00Z"),
-      featuredMediaId: document?.id,
-    },
-    { entryId: single?.id ?? "", language: "en", title: "A draft", state: "draft" },
-    {
-      entryId: page?.id ?? "",
-      language: "en",
-      title: "A page",
-      state: "public",
-      publishedAt: new Date("2024-01-01T00:00:00Z"),
-    },
+  const [english, german, , pageTranslation] = await database
+    .insert(entryTranslations)
+    .values([
+      {
+        entryId: pair?.id ?? "",
+        language: "en",
+        title: "Published in English",
+        state: "public",
+        publishedAt: new Date("2025-05-01T00:00:00Z"),
+        featuredMediaId: picture?.id,
+      },
+      {
+        entryId: pair?.id ?? "",
+        language: "de",
+        title: "Auf Deutsch versteckt",
+        state: "hidden",
+        publishedAt: new Date("2025-06-01T00:00:00Z"),
+        featuredMediaId: document?.id,
+      },
+      { entryId: single?.id ?? "", language: "en", title: "A draft", state: "draft" },
+      {
+        entryId: page?.id ?? "",
+        language: "en",
+        title: "A page",
+        state: "public",
+        publishedAt: new Date("2024-01-01T00:00:00Z"),
+      },
+    ])
+    .returning({ id: entryTranslations.id });
+  await database.insert(paths).values([
+    { translationId: english?.id ?? "", path: "/published-in-english/" },
+    { translationId: german?.id ?? "", path: "/de/auf-deutsch-versteckt/" },
+    { translationId: pageTranslation?.id ?? "", path: "/a-page/" },
   ]);
 
   const [retro, soldering] = await database.insert(topics).values([{}, {}]).returning({ id: topics.id });

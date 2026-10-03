@@ -2,7 +2,15 @@ import { entryIdParam, entryListQuery, previewEntryBody, saveEntryBody } from "@
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
 import { createPreview } from "../../entries/preview.js";
-import { createTranslation, listEntries, readEntry, saveEntry } from "../../entries/repository.js";
+import {
+  createTranslation,
+  emptyBin,
+  listEntries,
+  readEntry,
+  saveEntry,
+  setTrashed,
+  trashImpact,
+} from "../../entries/repository.js";
 import { principalOf, requireSession } from "../require-session.js";
 import { ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -46,4 +54,22 @@ entriesRoutes.post("/:id/translation", validate("param", entryIdParam), async (c
 
 entriesRoutes.put("/:id", validate("param", entryIdParam), validate("json", saveEntryBody), async (c) =>
   ok(c, await saveEntry(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId)),
+);
+
+// What moving it to the bin affects, for the question asked first.
+entriesRoutes.get("/:id/trash-impact", validate("param", entryIdParam), async (c) =>
+  ok(c, await trashImpact(database(), c.req.valid("param").id)),
+);
+
+entriesRoutes.post("/:id/trash", validate("param", entryIdParam), async (c) =>
+  ok(c, await setTrashed(database(), c.req.valid("param").id, true, principalOf(c).userId)),
+);
+
+entriesRoutes.post("/:id/restore", validate("param", entryIdParam), async (c) =>
+  ok(c, await setTrashed(database(), c.req.valid("param").id, false, principalOf(c).userId)),
+);
+
+// Empties the bin of one list, for good.
+entriesRoutes.delete("/bin", validate("query", entryListQuery), async (c) =>
+  ok(c, await emptyBin(database(), c.req.valid("query").kind, principalOf(c).userId)),
 );

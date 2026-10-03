@@ -4,7 +4,7 @@ The content itself is migrated from the old Publii site by a pipeline that stays
 
 ## The content snapshot
 
-The snapshot contains arrays named `entries`, `topics`, `media`, and `redirects`.
+The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the bin or was deleted from it.
 
 Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, and `template`. Dates are ISO strings or null. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
 
@@ -38,6 +38,7 @@ That output cannot contain an address the site stopped generating earlier, and s
 | `/media/files/claude-fonts-preview.html` | 308 to the staged media address | The file survives the migration under its media slug. |
 | `/feed.xml`, `/feed.json`, `/sitemap.xml`, `/robots.txt` | 200 | These keep their addresses exactly. |
 | The six addresses in `legacy-redirects.json` | 308 | Observed in the Internet Archive, absent from the final output. Each row carries its own reason. |
+| Every address of an entry in the dashboard's bin, or deleted from it for good | 410 | The entry was here and is gone, which tells a search engine to drop the address rather than retry it. The page offers the home page and the search. An address of an entry deleted for good stays in `gone_paths`, and one given to a new entry later belongs to that entry. |
 | `/404.html` | 404 | Publii served its error page at a real address. Nothing links to it and a redirect would only disguise the status. |
 
 Two things are deliberately outside this list. Static assets such as the favicons, the web manifest and the images under `/media/` are not page addresses and are not crawled by the check. The old site had no search page: its search ran in the browser on the pages themselves, so there is no address to preserve.

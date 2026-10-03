@@ -61,6 +61,8 @@ export const entryListItem = z.object({
    * topic has a name in it, so a search finds a post by what it is about.
    */
   topics: z.array(z.string()),
+  /** Whether it is in the bin, gone from the site until it is restored or the bin is emptied. */
+  trashed: z.boolean(),
 });
 export type EntryListItem = z.infer<typeof entryListItem>;
 
@@ -104,10 +106,30 @@ export const entryDetail = z.object({
    * shows the other one, so the editor can say so rather than pass it off.
    */
   topics: z.array(z.object({ id: z.uuid(), name: z.string(), named: z.boolean() })),
-  /** The other language of the same entry, or null where there is none yet. */
+  /** The other language of the same entry, or null where there is none or it is in the bin. */
   counterpart: z.object({ id: z.uuid(), language: z.enum(CONTENT_LANGUAGES), title: z.string() }).nullable(),
+  /** Whether the other language exists and is in the bin, so it cannot be created again. */
+  counterpartTrashed: z.boolean(),
+  /** Whether this translation is in the bin. */
+  trashed: z.boolean(),
 });
 export type EntryDetail = z.infer<typeof entryDetail>;
+
+/**
+ * What moving a translation to the bin will affect, for the question asked
+ * before it happens.
+ */
+export const entryTrashImpact = z.object({
+  /** How many files it names, which are released for deletion once the bin is emptied. */
+  mediaReferences: z.number().int().nonnegative(),
+  /** How many navigation items point at its entry. */
+  navigationItems: z.number().int().nonnegative(),
+});
+export type EntryTrashImpact = z.infer<typeof entryTrashImpact>;
+
+/** What emptying the bin answers with: how many translations were deleted for good. */
+export const emptiedBin = z.object({ deleted: z.number().int().nonnegative() });
+export type EmptiedBin = z.infer<typeof emptiedBin>;
 
 /** How many topics one entry may carry. A list longer than this describes nothing. */
 export const MAX_TOPICS_PER_ENTRY = 20;

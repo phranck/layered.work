@@ -91,6 +91,17 @@ export const entryTranslations = pgTable(
      * Publii had one.
      */
     featuredMediaId: uuid("featured_media_id").references(() => media.id, { onDelete: "restrict" }),
+
+    /**
+     * When it was moved to the bin, or null whilst it is not there.
+     *
+     * A column rather than a fourth publication state, because the state is
+     * what it returns to when it is restored. In the bin it is gone from the
+     * site exactly as a draft is, and its addresses answer 410. Its rows, its
+     * addresses and its media references stay until the bin is emptied, which
+     * is what makes restoring it possible.
+     */
+    trashedAt: timestamp("trashed_at", { withTimezone: true }),
   },
   (table) => [
     unique("entry_translations_one_per_language").on(table.entryId, table.language),
@@ -139,6 +150,22 @@ export const paths = pgTable(
     uniqueIndex("paths_one_current_per_translation").on(table.translationId).where(sql`${table.isCurrent}`),
   ],
 );
+
+/**
+ * Every address of a translation that was deleted for good, so it answers 410
+ * rather than 404.
+ *
+ * Emptying the bin removes a translation and, through the cascade, its rows in
+ * `paths`. What the site needs afterwards is only the fact that the address
+ * was here and is gone, which is what a search engine needs to drop it cleanly,
+ * so the addresses move here first. An address given to something new later
+ * is that thing's again, and the site answers with it rather than with 410.
+ */
+export const gonePaths = pgTable("gone_paths", {
+  /** The path as it appears after the host, leading slash included. */
+  path: text().primaryKey(),
+  goneAt: instant("gone_at"),
+});
 
 /**
  * A subject an entry is about.

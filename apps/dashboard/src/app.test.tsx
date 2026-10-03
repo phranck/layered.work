@@ -57,6 +57,7 @@ const posts = [
     thumbnailUrl: null,
     translated: true,
     topics: [],
+    trashed: false,
   },
   {
     id: "2f3e4d5c-6b7a-4891-a0b1-c2d3e4f5a6b7",
@@ -68,6 +69,7 @@ const posts = [
     thumbnailUrl: null,
     translated: true,
     topics: [],
+    trashed: false,
   },
   {
     id: "3a4b5c6d-7e8f-4901-b2c3-d4e5f6a7b8c9",
@@ -79,6 +81,7 @@ const posts = [
     thumbnailUrl: null,
     translated: false,
     topics: [],
+    trashed: false,
   },
 ];
 
@@ -111,6 +114,8 @@ const draftDetail = {
   pictureUrl: null,
   topics: [{ id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e", name: "Electronics", named: true }],
   counterpart: null,
+  counterpartTrashed: false,
+  trashed: false,
 };
 
 /** The topics, one of which the draft has and one of which has no German name. */
@@ -766,6 +771,65 @@ describe("dashboard shell", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it("moves an entry to the bin after saying what that affects, and goes back to the list", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/trash-impact"))
+        return Promise.resolve(json({ data: { mediaReferences: 2, navigationItems: 1 } }));
+      if (url.endsWith(`/entries/${draftDetail.id}/trash`) && init?.method === "POST")
+        return Promise.resolve(json({ data: { ...draftDetail, trashed: true } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "In den Papierkorb" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "„A draft about soldering“ in den Papierkorb legen",
+    });
+    expect(await within(dialog).findByText(/die 2 Dateien, auf die er verweist/)).toBeTruthy();
+    expect(within(dialog).getByText("Ein Navigationspunkt zeigt auf diesen Eintrag.")).toBeTruthy();
+    expect(request.mock.calls.some(([url]) => String(url).endsWith("/trash"))).toBe(false);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "In den Papierkorb" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/posts"));
+  });
+
+  it("shows the bin as a filter, restores a row from it, and asks before emptying it", async () => {
+    const binned = { ...posts[2], trashed: true };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/entries?kind=post"))
+        return Promise.resolve(json({ data: [posts[0], posts[1], binned] }));
+      if (url.endsWith("/restore") && init?.method === "POST")
+        return Promise.resolve(json({ data: draftDetail }));
+      if (url.includes("/entries/bin?kind=post") && init?.method === "DELETE")
+        return Promise.resolve(json({ data: { deleted: 1 } }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    const table = await screen.findByRole("table");
+    expect(within(table).queryByText("A draft about soldering")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "bin" } });
+    expect(within(table).getByText("A draft about soldering")).toBeTruthy();
+    expect(within(table).getByText("Im Papierkorb")).toBeTruthy();
+
+    fireEvent.click(within(table).getByRole("button", { name: "Wiederherstellen" }));
+    await waitFor(() =>
+      expect(request.mock.calls.some(([url]) => String(url).endsWith(`/entries/${binned.id}/restore`))).toBe(
+        true,
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Papierkorb leeren" }));
+    const dialog = await screen.findByRole("dialog", { name: "Papierkorb leeren" });
+    expect(within(dialog).getByText(/Eine Fassung wird endgültig gelöscht/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Papierkorb leeren" }));
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(true));
   });
 
   it("creates the other language from the panel and opens it", async () => {

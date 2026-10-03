@@ -6,8 +6,14 @@ import {
   type PublicationState,
 } from "@layered/schemas";
 import { Button, Card, Row, Section, Segmented, Select } from "@layered/ui";
-import { MagnifyingGlassIcon, PencilSimpleIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowCounterClockwiseIcon,
+  MagnifyingGlassIcon,
+  PencilSimpleIcon,
+  TrashIcon,
+  XIcon,
+} from "@layered/ui/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { HeaderStart } from "./app-bar-slots.js";
@@ -15,13 +21,18 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { CardDialog } from "./modal.js";
+import { useNotify } from "./notifications.js";
 import { type DashboardArea, groupOf } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
 
-/** What the reader narrowed the list to. `all` leaves that dimension open. */
+/**
+ * What the reader narrowed the list to. `all` leaves that dimension open, and
+ * `bin` shows what is in the bin, which every other choice leaves out.
+ */
 export interface EntryFilter {
   search: string;
-  state: PublicationState | "all";
+  state: PublicationState | "all" | "bin";
   language: ContentLanguage | "all";
 }
 
@@ -34,7 +45,7 @@ const OPEN_FILTER: EntryFilter = { search: "", state: "all", language: "all" };
  * The search matches anywhere in the title or in a topic's name and ignores
  * case, because a reader types the word they remember rather than how the title
  * begins, and often remembers what a post was about rather than what it was
- * called.
+ * called. A row in the bin is shown only where the reader asked for the bin.
  *
  * @param rows - The whole list.
  * @param filter - What the reader narrowed it to.
@@ -43,7 +54,8 @@ export function filterEntries(rows: readonly EntryListItem[], filter: EntryFilte
   const search = filter.search.trim().toLocaleLowerCase();
   return rows.filter(
     (row) =>
-      (filter.state === "all" || row.state === filter.state) &&
+      row.trashed === (filter.state === "bin") &&
+      (filter.state === "all" || filter.state === "bin" || row.state === filter.state) &&
       (filter.language === "all" || row.language === filter.language) &&
       (search === "" ||
         row.title.toLocaleLowerCase().includes(search) ||
@@ -133,6 +145,8 @@ function Stat({ label, value, note }: { label: string; value: number; note: stri
 export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
   const api = useDashboardApi();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { notify, notifyError } = useNotify();
   const { language, text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
   const list = useQuery({ queryKey: entryListKey(kind), queryFn: () => api.fetchEntries(kind) });
@@ -149,6 +163,32 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const body = useRef<HTMLTableSectionElement>(null);
 
   const open = (row: EntryListItem) => navigate(`/${area.path}/${row.id}`);
+
+  // Restoring and emptying both change what every list and the sidebar's
+  // counts show, so both refresh all of them.
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["entries"] });
+    void queryClient.invalidateQueries({ queryKey: ["entry"] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  };
+  const restore = useMutation({
+    mutationFn: (id: string) => api.setTrashed(id, false),
+    onError: (error) => notifyError(error),
+    onSuccess: () => {
+      refresh();
+      notify({ tone: "success", message: text("restored") });
+    },
+  });
+  const [emptying, setEmptying] = useState(false);
+  const empty = useMutation({
+    mutationFn: () => api.emptyBin(kind),
+    onError: (error) => notifyError(error),
+    onSuccess: ({ deleted }) => {
+      refresh();
+      setEmptying(false);
+      notify({ tone: "success", message: text("binEmptied", deleted) });
+    },
+  });
 
   // The rows are the search's results, so the arrow keys walk from the field
   // into them and between them, and back up into the field from the first.
@@ -230,6 +270,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 options={[
                   { value: "all", label: text("filterAll") },
                   ...PUBLICATION_STATES.map((state) => ({ value: state, label: text(STATE_TEXT[state]) })),
+                  { value: "bin", label: text("filterBin") },
                 ]}
               />
               <Segmented
@@ -244,6 +285,11 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                   { value: "de", label: "DE" },
                 ]}
               />
+              {filter.state === "bin" && rows.length > 0 && (
+                <Button tone="danger" icon={<TrashIcon />} onClick={() => setEmptying(true)}>
+                  {text("emptyBin")}
+                </Button>
+              )}
             </>
           }
         />
@@ -255,7 +301,11 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         {list.isSuccess && rows.length === 0 && (
           <Card.Body>
             <p className="unfinished">
-              {list.data.length === 0 ? text("entriesEmpty") : text("entriesNoMatch")}
+              {filter.state === "bin" && !filter.search.trim()
+                ? text("binEmpty")
+                : list.data.length === 0
+                  ? text("entriesEmpty")
+                  : text("entriesNoMatch")}
             </p>
           </Card.Body>
         )}
@@ -287,8 +337,8 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                     </Row.Bare>
                   </td>
                   <td>
-                    <span className="badge" data-status={row.state}>
-                      {text(STATE_TEXT[row.state])}
+                    <span className="badge" data-status={row.trashed ? "trashed" : row.state}>
+                      {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
                     </span>
                   </td>
                   <td>
@@ -312,15 +362,27 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                   </td>
                   <td>
                     <div className="actions">
-                      <Button.Icon
-                        label={text("editEntry")}
-                        icon={<PencilSimpleIcon weight="duotone" />}
-                        tabIndex={-1}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          open(row);
-                        }}
-                      />
+                      {row.trashed ? (
+                        <Button.Icon
+                          label={text("restore")}
+                          icon={<ArrowCounterClockwiseIcon />}
+                          disabled={restore.isPending}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            restore.mutate(row.id);
+                          }}
+                        />
+                      ) : (
+                        <Button.Icon
+                          label={text("editEntry")}
+                          icon={<PencilSimpleIcon weight="duotone" />}
+                          tabIndex={-1}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            open(row);
+                          }}
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -329,6 +391,31 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           </table>
         )}
       </Card>
+      {emptying && (
+        <CardDialog labelId="empty-bin-title" onClose={() => setEmptying(false)}>
+          <Card.Header id="empty-bin-title" title={text("emptyBinTitle")} />
+          <Card.Body>
+            <p>{text("emptyBinBody", rows.length)}</p>
+          </Card.Body>
+          <Card.Footer
+            actions={
+              <>
+                <Button icon={<XIcon />} onClick={() => setEmptying(false)} autoFocus>
+                  {text("cancel")}
+                </Button>
+                <Button
+                  tone="danger"
+                  icon={<TrashIcon />}
+                  disabled={empty.isPending}
+                  onClick={() => empty.mutate()}
+                >
+                  {empty.isPending ? text("emptyBinPending") : text("emptyBin")}
+                </Button>
+              </>
+            }
+          />
+        </CardDialog>
+      )}
     </>
   );
 }

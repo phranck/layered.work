@@ -73,6 +73,14 @@ describe("public content repository", () => {
     expect(repo.entry("/entry-2/")?.visibility).toBe("hidden");
     for (const id of [3, 4]) expect(repo.entry(`/entry-${id}/`)).toBeUndefined();
   });
+  it("knows the addresses of deleted entries, and accepts a snapshot that names none", () => {
+    const repository = createRepository({ ...snapshot, gone: ["/deleted/"] });
+    expect(repository.gone("/deleted/")).toBe(true);
+    expect(repository.gone("/entry-1/")).toBe(false);
+    expect(createRepository(snapshot).gone("/deleted/")).toBe(false);
+    expect(() => createRepository({ ...snapshot, gone: ["//evil.test/"] })).toThrow();
+  });
+
   it("resolves only local redirects and rejects duplicate public addresses", () => {
     expect(createRepository(snapshot).redirect("/old/")).toBe("/entry-1/");
     expect(() =>

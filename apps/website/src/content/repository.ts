@@ -76,6 +76,8 @@ const snapshotSchema = z.object({
   topics: z.array(z.object({ id: z.union([z.number(), z.string()]), slug, name: z.string() })),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),
+  /** Addresses of entries that were deleted, which answer 410 rather than 404. */
+  gone: z.array(path).default([]),
   homeBlocks: z.array(homeBlockSchema).optional(),
 });
 export type Language = z.infer<typeof language>;
@@ -217,6 +219,7 @@ export function createRepository(input: unknown) {
   const media = new Map(data.media.map((item) => [item.slug, item]));
   if (media.size !== data.media.length) throw new Error("Duplicate media slug");
   const redirects = new Map(data.redirects.map((item) => [item.source, item.target]));
+  const gone = new Set(data.gone);
   for (const source of redirects.keys()) {
     const seen = new Set([source]);
     let target = redirects.get(source);
@@ -269,6 +272,8 @@ export function createRepository(input: unknown) {
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
     },
     redirect: (name: string) => redirects.get(name),
+    /** Whether an address belonged to an entry that was deleted. */
+    gone: (name: string) => gone.has(name),
     publicEntries,
     list({
       language: locale,

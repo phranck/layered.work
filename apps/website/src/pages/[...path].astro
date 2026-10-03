@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { renderContent, rendersComponent } from "@layered/content";
 import { Button, Section } from "@layered/ui";
-import { MagnifyingGlassIcon } from "@layered/ui/icons";
+import { HouseIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
 import { createElement } from "react";
 import SiteLayout from "../layouts/SiteLayout.astro";
 import EntryArticle from "../components/EntryArticle.astro";
@@ -67,8 +67,11 @@ const entry=!home&&!listing&&!topics?repository?.entry(path):undefined;
 let page=1,query="",invalidQuery=false;
 if(listing){try{({page,query}=parseListingQuery(Astro.url.searchParams));}catch{invalidQuery=true;Astro.response.status=400;}}
 const found=home||listing||topics||!!entry;
-if(repository&&!found)Astro.response.status=404;
-const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):(de?"Seite nicht gefunden":"Page not found")));
+// An address whose entry was deleted answers 410, which tells a search engine
+// it was here and is gone, so it drops the address rather than retrying it.
+const gone=!found&&!!repository?.gone(path);
+if(repository&&!found)Astro.response.status=gone?410:404;
+const title=errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found")));
 const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=siteNavigation(language);
 const footer=siteFooter(language);
@@ -81,7 +84,7 @@ if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noind
 ---
 <SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
   {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
-  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions"><Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
+  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
     {home&&<HomeContent {repository} {language} />}
     {listing&&<ListingContent {repository} {language} {title} {kind} topic={topicSlug} {page} {query} {search} />}
     {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>}

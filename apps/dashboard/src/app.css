@@ -183,6 +183,10 @@ dialog.account-dialog::backdrop {
   --badge-colour: var(--state-info);
 }
 
+.badge[data-status="trashed"] {
+  --badge-colour: var(--state-danger);
+}
+
 /* A language code beside a title. German is tinted, because the site's older
    writing is English and the German entries are the ones a reader looks for. */
 .lang-tag {
@@ -653,15 +657,23 @@ dialog.account-dialog::backdrop {
   flex: 1;
 }
 
-/* The preview stands across the panel's width under the state, as the one
-   action in a column of fields, so it reads as belonging to all of them. */
-.entry-editor__preview {
+/* An action in the panel stands across its width, as the one action in a
+   column of fields, so it reads as belonging to all of them: the preview under
+   the state, and the move to the bin at the panel's end, apart from the rest. */
+.entry-editor__action {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.entry-editor__preview .button {
+/* The move to the bin is set off from the fields above it by a rule, so it is
+   not reached by somebody working down the panel. */
+.entry-editor__action--apart {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--edge-hairline);
+}
+
+.entry-editor__action .button {
   justify-content: center;
   width: 100%;
 }

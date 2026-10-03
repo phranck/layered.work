@@ -116,6 +116,34 @@ const de = {
   editEntry: "Bearbeiten",
   entriesEmpty: "Hier gibt es noch keine Einträge.",
   entriesNoMatch: "Kein Eintrag passt zu Suche und Filter.",
+  filterBin: "Papierkorb",
+  stateTrashed: "Im Papierkorb",
+  binEmpty: "Der Papierkorb ist leer.",
+  restore: "Wiederherstellen",
+  restorePending: "Wird wiederhergestellt…",
+  restored: "Wiederhergestellt",
+  trash: "In den Papierkorb",
+  trashPending: "Wird verschoben…",
+  trashedNotice: "In den Papierkorb gelegt",
+  trashTitle: (title: string) => `„${title}“ in den Papierkorb legen`,
+  trashBody:
+    "Der Eintrag verschwindet von der Website, aus allen Listen, den Feeds, der Sitemap und der Suche, und seine Adresse meldet, dass er gelöscht wurde. Aus dem Papierkorb lässt er sich mit derselben Adresse wiederherstellen.",
+  trashOtherLanguage: (language: string) => `Die Fassung auf ${language} bleibt, wie sie ist.`,
+  trashMedia: (count: number) =>
+    count === 0
+      ? "Er verweist auf keine Datei."
+      : `Wird der Papierkorb geleert, ${count === 1 ? "wird die Datei" : `werden die ${count} Dateien`}, auf die er verweist, für das Löschen freigegeben.`,
+  trashNavigation: (count: number) =>
+    `${count === 1 ? "Ein Navigationspunkt zeigt" : `${count} Navigationspunkte zeigen`} auf diesen Eintrag.`,
+  editorInBin: "Im Papierkorb",
+  editorTranslationInBin: (language: string) => `Die Fassung auf ${language} liegt im Papierkorb.`,
+  emptyBin: "Papierkorb leeren",
+  emptyBinTitle: "Papierkorb leeren",
+  emptyBinBody: (count: number) =>
+    `${count === 1 ? "Eine Fassung wird" : `${count} Fassungen werden`} endgültig gelöscht. Ihre Adressen melden danach, dass sie gelöscht wurden, und die Dateien, auf die sie verweisen, sind für das Löschen freigegeben. Das lässt sich nicht rückgängig machen.`,
+  emptyBinPending: "Wird geleert…",
+  binEmptied: (count: number) =>
+    count === 1 ? "Eine Fassung endgültig gelöscht" : `${count} Fassungen endgültig gelöscht`,
   // Entry editor
   editorTitle: "Titel",
   editorTitleMissing: "Ohne Titel",
@@ -390,6 +418,34 @@ const en: Catalogue = {
   editEntry: "Edit",
   entriesEmpty: "There are no entries here yet.",
   entriesNoMatch: "No entry matches the search and the filters.",
+  filterBin: "Bin",
+  stateTrashed: "In the bin",
+  binEmpty: "The bin is empty.",
+  restore: "Restore",
+  restorePending: "Restoring…",
+  restored: "Restored",
+  trash: "Move to the bin",
+  trashPending: "Moving…",
+  trashedNotice: "Moved to the bin",
+  trashTitle: (title) => `Move “${title}” to the bin`,
+  trashBody:
+    "The entry disappears from the website, from every listing, the feeds, the sitemap and the search, and its address says that it was deleted. It can be restored from the bin at the same address.",
+  trashOtherLanguage: (language) => `The ${language} version stays as it is.`,
+  trashMedia: (count) =>
+    count === 0
+      ? "It names no file."
+      : `When the bin is emptied, ${count === 1 ? "the file it names is" : `the ${count} files it names are`} released for deletion.`,
+  trashNavigation: (count) =>
+    `${count === 1 ? "One navigation item points" : `${count} navigation items point`} at this entry.`,
+  editorInBin: "In the bin",
+  editorTranslationInBin: (language) => `The ${language} version is in the bin.`,
+  emptyBin: "Empty the bin",
+  emptyBinTitle: "Empty the bin",
+  emptyBinBody: (count) =>
+    `${count === 1 ? "One version is" : `${count} versions are`} deleted for good. Their addresses say afterwards that they were deleted, and the files they name are released for deletion. This cannot be undone.`,
+  emptyBinPending: "Emptying…",
+  binEmptied: (count) =>
+    count === 1 ? "One version deleted for good" : `${count} versions deleted for good`,
   editorTitle: "Title",
   editorTitleMissing: "Untitled",
   editorText: "Text",

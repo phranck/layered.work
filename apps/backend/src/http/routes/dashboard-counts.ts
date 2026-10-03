@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { database } from "../../db/connect.js";
 import {
   entries,
+  entryTranslations,
   homeBlocks,
   media,
   navigationItems,
@@ -17,18 +18,23 @@ type StoredDashboardCounts = Omit<DashboardCounts, "forms" | "submissions" | "ma
 /**
  * Reads sidebar totals from their owning rows.
  *
- * Entry translations are deliberately absent: an entry is one work however
- * many languages it has. Disabled blocks and accounts remain rows an editor
+ * Entry translations are not counted: an entry is one work however many
+ * languages it has, and it counts while one of them is outside the bin. Disabled blocks and accounts remain rows an editor
  * manages, so the administrative total includes them.
  */
 export async function readDashboardCounts(
   db: Pick<ReturnType<typeof database>, "execute">,
 ): Promise<DashboardCounts> {
+  // An entry counts while one of its languages is outside the bin.
+  const kept = sql`exists (
+    select 1 from ${entryTranslations}
+    where ${entryTranslations.entryId} = ${entries.id} and ${entryTranslations.trashedAt} is null
+  )`;
   const [stored] = await db.execute<StoredDashboardCounts>(sql`
     select
-      (select count(*)::int from ${entries} where ${entries.kind} = 'post') as posts,
-      (select count(*)::int from ${entries} where ${entries.kind} = 'page') as pages,
-      (select count(*)::int from ${entries} where ${entries.kind} = 'project') as projects,
+      (select count(*)::int from ${entries} where ${entries.kind} = 'post' and ${kept}) as posts,
+      (select count(*)::int from ${entries} where ${entries.kind} = 'page' and ${kept}) as pages,
+      (select count(*)::int from ${entries} where ${entries.kind} = 'project' and ${kept}) as projects,
       (select count(*)::int from ${topics}) as tags,
       (select count(*)::int from ${media}) as media,
       (select count(*)::int from ${homeBlocks}) as blocks,
