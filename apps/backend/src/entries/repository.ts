@@ -266,7 +266,7 @@ export function addressWithSlug(current: string | null, language: ContentLanguag
  * turns it into a redirect. Taking back one of its own former addresses makes
  * that row current again. An address another translation holds, current or
  * former, is refused, because it would take a working link from that one, and
- * so is an overview's address, which the overview always answers at. An
+ * so is an address the site reserves for itself. An
  * address that answered 410 since its entry was deleted belongs to this one
  * from now on.
  *
@@ -287,7 +287,7 @@ async function setAddress(
   const wanted = addressWithSlug(current?.path ?? null, language, slug);
   if (current?.path === wanted) return false;
   if (RESERVED_PATHS.includes(wanted)) {
-    throw new HttpError(ErrorCode.Conflict, "This address belongs to an overview of the site.");
+    throw new HttpError(ErrorCode.Conflict, "This address is reserved by the site.");
   }
 
   const [holder] = await tx
@@ -622,8 +622,8 @@ export async function emptyBin(db: Database, kind: EntryKind, actorUserId: strin
     if (binned.length === 0) return { deleted: 0 };
     const ids = binned.map((row) => row.id);
 
-    // An overview's address belongs to the overview, so it goes on answering
-    // with that rather than with 410.
+    // A reserved address belongs to the site, so it goes on answering with
+    // what the site puts there rather than with 410.
     const addresses = (
       await tx.select({ path: paths.path }).from(paths).where(inArray(paths.translationId, ids))
     ).filter((row) => !RESERVED_PATHS.includes(row.path));

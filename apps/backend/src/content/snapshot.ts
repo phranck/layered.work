@@ -218,7 +218,7 @@ async function formerTopicAddresses(
  *
  * An address something reachable answers at or redirects from is left out,
  * because it was given to something new and is that thing's now, and so is an
- * overview's address, which always answers with the overview.
+ * address the site reserves for itself.
  *
  * @param database - The database to read from.
  * @param taken - The addresses the snapshot already answers at or redirects from.
