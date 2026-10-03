@@ -5,13 +5,14 @@ import { join } from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { readApiError } from "@layered/schemas";
+import { dashboardApiOrigin } from "./config.mjs";
 import { prepareDeployment } from "./deploy.mjs";
 import viteConfig from "./vite.config.mjs";
 
 test("the dashboard ships shared assets and nginx policy with SPA fallback", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "layered-dashboard-build-"));
   try {
-    await prepareDeployment(pathToFileURL(`${workspace}/dist/`), "http://backend:3000");
+    await prepareDeployment(pathToFileURL(`${workspace}/dist/`), "http://backend.zerops:3000");
     const fonts = await readFile(join(workspace, "dist/fonts.css"), "utf8");
     for (const family of ["Barlow", "Barlow Condensed", "FiraCode Nerd Font"]) {
       assert.ok(fonts.includes(`font-family: "${family}"`));
@@ -68,7 +69,12 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
     assert.match(nginx, /connect-src 'self' https:\/\/umami.layered.work;/);
     assert.doesNotMatch(nginx, /connect-src[^;]*(?:backend|undefined)/);
     assert.match(nginx, /location \/api\//);
-    assert.match(nginx, /proxy_pass http:\/\/backend:3000\//);
+    assert.match(nginx, /resolver 10\.18\.128\.1 valid=5s ipv6=off;/);
+    assert.match(nginx, /set \$dashboard_api_origin http:\/\/backend\.zerops:3000;/);
+    assert.ok(nginx.includes("rewrite ^/api/(.*)$ /$1 break;"));
+    assert.match(nginx, /proxy_pass \$dashboard_api_origin;/);
+    assert.match(nginx, /proxy_redirect http:\/\/backend\.zerops:3000\/ \/api\/;/);
+    assert.doesNotMatch(nginx, /proxy_pass http:\/\/backend(?:\.zerops)?:3000\//);
     assert.match(nginx, /proxy_set_header X-Forwarded-For \$http_x_forwarded_for/);
     assert.match(nginx, /proxy_intercept_errors off/);
     assert.match(nginx, /proxy_cache off/);
@@ -97,6 +103,21 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
+});
+
+test("the production proxy uses the complete Zerops service name for runtime DNS", async () => {
+  const previous = process.env.API_ORIGIN;
+  delete process.env.API_ORIGIN;
+  try {
+    assert.equal(dashboardApiOrigin("build"), "http://backend.zerops:3000");
+  } finally {
+    if (previous === undefined) delete process.env.API_ORIGIN;
+    else process.env.API_ORIGIN = previous;
+  }
+  const zerops = await readFile(new URL("../../zerops.yml", import.meta.url), "utf8");
+  assert.match(zerops, /API_ORIGIN: http:\/\/backend\.zerops:3000/);
+  const dashboardService = zerops.split("  - setup: dashboard\n")[1];
+  assert.match(dashboardService, /readinessCheck:[\s\S]*?path: \/api\/health\/ready/);
 });
 
 test("development and production bundles use the same-origin API transport", () => {
