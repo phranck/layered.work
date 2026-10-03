@@ -18,6 +18,8 @@ import {
   GlobeIcon,
   LinkIcon,
   ListBulletsIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
   PlusIcon,
   QuotesIcon,
   TextBIcon,
@@ -33,6 +35,7 @@ import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { steppedTextSize, useEditorTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -180,6 +183,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const { notify, notifyError } = useNotify();
   const editor = useRef<ContentEditorHandle>(null);
   const navigate = useNavigate();
+  const [textSize, setTextSize] = useEditorTextSize();
   const [saved, setSaved] = useState(() => draftOf(entry));
   const [draft, setDraft] = useState(saved);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
@@ -450,9 +454,27 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
                   );
                 }),
               ),
+              // The size the text is written at, last, apart from the tools
+              // that change the text itself.
+              [
+                <Editor.Tool
+                  key="text-smaller"
+                  label={text("editorTextSmaller")}
+                  icon={<MagnifyingGlassMinusIcon />}
+                  disabled={steppedTextSize(textSize, -1) === textSize}
+                  onClick={() => setTextSize(steppedTextSize(textSize, -1))}
+                />,
+                <Editor.Tool
+                  key="text-larger"
+                  label={text("editorTextLarger")}
+                  icon={<MagnifyingGlassPlusIcon />}
+                  disabled={steppedTextSize(textSize, 1) === textSize}
+                  onClick={() => setTextSize(steppedTextSize(textSize, 1))}
+                />,
+              ],
             ]}
           />
-          <Editor.Surface>
+          <Editor.Surface data-text-size={textSize}>
             <ContentEditor
               editorRef={editor}
               value={draft.body}

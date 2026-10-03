@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
 import { expirationLoginLocation } from "./auth-routing.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
+import { EDITOR_TEXT_SIZE_KEY } from "./editor-text-size.js";
 import { createDashboardMemoryRouter } from "./router.js";
 import { SIDEBAR_ORDER_KEY } from "./sidebar-order.js";
 
@@ -772,6 +773,29 @@ describe("dashboard shell", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it("sets the writing surface's text size from the toolbar and keeps it for the next visit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    const smaller = await screen.findByRole("button", { name: "Text im Editor kleiner" });
+    const larger = screen.getByRole("button", { name: "Text im Editor größer" });
+    const surface = document.querySelector(".editor__surface") as HTMLElement;
+    expect(surface.dataset.textSize).toBe("s");
+    expect((smaller as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(larger);
+    fireEvent.click(larger);
+    expect(surface.dataset.textSize).toBe("l");
+    expect(localStorage.getItem(EDITOR_TEXT_SIZE_KEY)).toBe("l");
+
+    cleanup();
+    renderDashboard(`/posts/${draftDetail.id}`);
+    await screen.findByRole("button", { name: "Text im Editor größer" });
+    expect((document.querySelector(".editor__surface") as HTMLElement).dataset.textSize).toBe("l");
   });
 
   it("offers to show an entry in the other language only while it has no counterpart, and saves the choice", async () => {

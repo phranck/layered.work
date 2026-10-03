@@ -136,6 +136,21 @@
     box-shadow var(--duration-fast) var(--ease);
 }
 
+/* The text size the author chose for writing, from the code size upwards in the
+   steps of the type scale. The line height is a ratio, so it follows. This sets
+   the surface alone: the site renders the same text at its own sizes. */
+.editor__surface[data-text-size="m"] {
+  font-size: var(--text-base);
+}
+
+.editor__surface[data-text-size="l"] {
+  font-size: var(--text-lg);
+}
+
+.editor__surface[data-text-size="xl"] {
+  font-size: var(--text-xl);
+}
+
 /* Being written in looks like a text field being written in, whatever is
    mounted inside the surface. */
 .editor__surface:focus-within {
