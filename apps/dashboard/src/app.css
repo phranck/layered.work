@@ -196,13 +196,15 @@ dialog.account-dialog::backdrop {
   color: var(--text-muted);
 }
 
-/* A search field with its icon inside: the wrapper carries the frame and the
-   focus, so the icon and the input sit on one surface rather than two. */
-.search-field {
+/* A field with something fixed inside its frame: a search field with its icon,
+   an address with the part of it that cannot change. The wrapper carries the
+   frame and the focus, so what is fixed and what is typed sit on one surface
+   rather than two. */
+.search-field,
+.address-field {
   display: flex;
   gap: var(--space-3);
   align-items: center;
-  width: 260px;
   height: var(--input-height);
   padding-inline: var(--space-3);
   color: var(--text-faint);
@@ -214,12 +216,18 @@ dialog.account-dialog::backdrop {
     box-shadow var(--duration-fast) var(--ease);
 }
 
-.search-field:focus-within {
+.search-field {
+  width: 260px;
+}
+
+.search-field:focus-within,
+.address-field:focus-within {
   border-color: var(--focus-edge);
   box-shadow: var(--focus-halo);
 }
 
-.search-field .input {
+.search-field .input,
+.address-field .input {
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -228,8 +236,32 @@ dialog.account-dialog::backdrop {
   border: 0;
 }
 
-.search-field .input:focus-visible {
+.search-field .input:focus-visible,
+.address-field .input:focus-visible {
   box-shadow: none;
+}
+
+/* The address reads as one path, so its fixed parts and the typed segment sit
+   flush in the face addresses are set in. */
+.address-field {
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+}
+
+.address-field .input {
+  font: inherit;
+  color: var(--text-primary);
+}
+
+.address-field__fixed {
+  flex: none;
+}
+
+/* A segment that cannot be saved as it stands, such as one ending in a hyphen,
+   says so with the warning edge until it is finished. */
+.address-field:has(.input[aria-invalid]) {
+  border-color: var(--state-warning);
 }
 
 /* The browser's own clear button is a second, foreign control inside a field

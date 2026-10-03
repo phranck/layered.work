@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { body, MaxLength, text } from "./request.js";
+import { SLUG_PATTERN } from "./slug.js";
 
 /**
  * Entries as the dashboard lists them.
@@ -103,6 +104,11 @@ export const entryDetail = z.object({
   modifiedAt: z.iso.datetime(),
   /** The address it answers at, or null where it has none. */
   path: z.string().nullable(),
+  /**
+   * The last segment of that address, or the one its title would give where it
+   * has no address yet, which is what the editor offers to change.
+   */
+  slug: z.string(),
   /** Its picture, where it has one the dashboard can show. */
   pictureUrl: z.string().nullable(),
   /**
@@ -144,8 +150,9 @@ export const MAX_TOPICS_PER_ENTRY = 20;
  *
  * The whole of what the editor changes, every time, so a save is one statement
  * of the translation rather than a patch that depends on what came before. The
- * entry's kind, its language and its address are not here: none of them is
- * changed by writing.
+ * entry's kind and its language are not here: neither is changed by writing.
+ * Of the address only the last segment is, because the language prefix and any
+ * section before it follow from what the entry is.
  *
  * The topics belong to the entry rather than to this translation, so saving
  * either language sets them for both, which is what the panel shows.
@@ -158,6 +165,11 @@ export const saveEntryBody = body({
   readingWidth: z.enum(READING_WIDTHS),
   showInOtherLanguage: z.boolean(),
   topicIds: z.array(z.uuid()).max(MAX_TOPICS_PER_ENTRY),
+  /**
+   * The last segment of the address. A changed one becomes the current address
+   * and the old one keeps answering as a redirect.
+   */
+  slug: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
 });
 export type SaveEntryBody = z.infer<typeof saveEntryBody>;
 

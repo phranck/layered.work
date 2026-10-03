@@ -1,4 +1,5 @@
 import {
+  type ContentLanguage,
   type EmptiedBin,
   type EntryDetail,
   type EntryKind,
@@ -226,6 +227,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     publishedAt: row.publishedAt?.toISOString() ?? null,
     modifiedAt: row.modifiedAt.toISOString(),
     path: current?.path ?? null,
+    slug: current?.path.split("/").filter(Boolean).at(-1) ?? slugFromTitle(row.title),
     pictureUrl: row.pictureId ? mediaContentUrl(row.pictureId) : null,
     topics: named?.topics ?? [],
     counterpart: counterpart
@@ -237,6 +239,69 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
 }
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * The address a translation answers at with its last segment replaced.
+ *
+ * Every segment before the last stays, because it follows from what the entry
+ * is: its language prefix, or the section a migrated project sits in. A
+ * translation without an address gets one carrying its language, as everything
+ * written after the migration does.
+ *
+ * @param current - Its current address, or null where it has none.
+ * @param language - Its language.
+ * @param slug - The new last segment.
+ */
+export function addressWithSlug(current: string | null, language: ContentLanguage, slug: string): string {
+  const parents = current ? current.split("/").filter(Boolean).slice(0, -1) : [language];
+  return `/${[...parents, slug].join("/")}/`;
+}
+
+/**
+ * Gives a translation the address its slug asks for, inside the transaction
+ * that saves it.
+ *
+ * The address it leaves keeps its row as a former address, so the snapshot
+ * turns it into a redirect. Taking back one of its own former addresses makes
+ * that row current again. An address another translation holds, current or
+ * former, is refused, because it would take a working link from that one. An
+ * address that answered 410 since its entry was deleted belongs to this one
+ * from now on.
+ *
+ * @returns Whether the address changed, for the audit log.
+ * @throws `conflict` where another translation holds the address.
+ */
+async function setAddress(
+  tx: Transaction,
+  translationId: string,
+  language: ContentLanguage,
+  slug: string,
+): Promise<boolean> {
+  const [current] = await tx
+    .select({ id: paths.id, path: paths.path })
+    .from(paths)
+    .where(and(eq(paths.translationId, translationId), eq(paths.isCurrent, true)))
+    .limit(1);
+  const wanted = addressWithSlug(current?.path ?? null, language, slug);
+  if (current?.path === wanted) return false;
+
+  const [holder] = await tx
+    .select({ id: paths.id, translationId: paths.translationId })
+    .from(paths)
+    .where(eq(paths.path, wanted))
+    .limit(1);
+  if (holder && holder.translationId !== translationId) {
+    throw new HttpError(ErrorCode.Conflict, "This address belongs to another entry.");
+  }
+
+  // The current row steps back first, because a translation has one current
+  // address at a time and the index holds it to that.
+  if (current) await tx.update(paths).set({ isCurrent: false }).where(eq(paths.id, current.id));
+  if (holder) await tx.update(paths).set({ isCurrent: true }).where(eq(paths.id, holder.id));
+  else await tx.insert(paths).values({ translationId, path: wanted });
+  await tx.delete(gonePaths).where(eq(gonePaths.path, wanted));
+  return true;
+}
 
 /**
  * Sets which topics an entry carries, inside the transaction that saves it.
@@ -282,7 +347,8 @@ async function setEntryTopics(
  * changed. The audit log names which fields changed and never their values,
  * and a translation becoming public is its own line, because who published
  * what and when is the question that log exists to answer. The topics are the
- * entry's, so saving one language sets them for both.
+ * entry's, so saving one language sets them for both. A changed slug moves the
+ * translation to a new address and leaves the old one as a redirect.
  *
  * @param db - The database.
  * @param id - The translation.
@@ -308,6 +374,7 @@ export async function saveEntry(
         showInOtherLanguage: entryTranslations.showInOtherLanguage,
         publishedAt: entryTranslations.publishedAt,
         trashedAt: entryTranslations.trashedAt,
+        language: entryTranslations.language,
       })
       .from(entryTranslations)
       .where(eq(entryTranslations.id, id))
@@ -319,7 +386,7 @@ export async function saveEntry(
 
     const now = new Date();
     const becomesPublic = value.state === "public" && current.state !== "public";
-    const { topicIds, ...fields } = value;
+    const { topicIds, slug, ...fields } = value;
     await tx
       .update(entryTranslations)
       .set({
@@ -334,6 +401,7 @@ export async function saveEntry(
       (key) => current[key] !== fields[key],
     );
     if (topicsChanged) changedKeys.push("topicIds");
+    if (await setAddress(tx, id, current.language, slug)) changedKeys.push("slug");
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({
         actorUserId,

@@ -31,6 +31,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
+import { AddressField, isSavableSlug } from "./address-field.js";
+import { DashboardApiError } from "./api.js";
 import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -101,6 +103,7 @@ function draftOf(entry: EntryDetail): SaveEntryBody {
     readingWidth: entry.readingWidth,
     showInOtherLanguage: entry.showInOtherLanguage,
     topicIds: entry.topics.map((topic) => topic.id),
+    slug: entry.slug,
   };
 }
 
@@ -193,8 +196,12 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   const save = useMutation({
     mutationFn: ({ value }: { value: SaveEntryBody; automatic: boolean }) => api.saveEntry(entry.id, value),
     // A save by hand is news; one the editor made by itself is not, and the
-    // state beside the Save button already says when it happened.
-    onError: (error) => notifyError(error),
+    // state beside the Save button already says when it happened. The one
+    // conflict a save can meet here is an address another entry holds.
+    onError: (error) =>
+      error instanceof DashboardApiError && error.code === "conflict"
+        ? notify({ tone: "danger", message: text("addressTaken") })
+        : notifyError(error),
     onSuccess: (stored, { automatic }) => {
       if (!automatic) notify({ tone: "success", message: text("saved") });
       const now = draftOf(stored);
@@ -210,8 +217,11 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
   // A draft saves itself once typing pauses. Only when both what is stored and
   // what is being written are drafts, so choosing "public" is never saved by
   // waiting.
+  // An address still being typed, such as one ending in a hyphen, is not saved
+  // by any of the ways a save starts.
+  const savable = !entry.trashed && isSavableSlug(draft.slug);
   const autosaving =
-    !entry.trashed && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
+    savable && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
   useEffect(() => {
     if (!autosaving) return;
     const timer = setTimeout(() => save.mutate({ value: draft, automatic: true }), AUTOSAVE_DELAY_MS);
@@ -220,7 +230,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
 
   // Command-S does what the Save button does, and nothing while it is disabled.
   useSaveShortcut(() => {
-    if (!entry.trashed && dirty && !save.isPending) save.mutate({ value: draft, automatic: false });
+    if (savable && dirty && !save.isPending) save.mutate({ value: draft, automatic: false });
   });
 
   // Closing the tab or reloading with something unsaved asks the browser's own question.
@@ -354,7 +364,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
           </span>
           <Button
             tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
-            disabled={!dirty || save.isPending}
+            disabled={!savable || !dirty || save.isPending}
             icon={<FloppyDiskIcon />}
             onClick={() => save.mutate({ value: draft, automatic: false })}
           >
@@ -363,7 +373,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
           {!(saved.state === "public" && draft.state === "public") && (
             <Button
               tone="primary"
-              disabled={save.isPending}
+              disabled={!savable || save.isPending}
               icon={<GlobeIcon />}
               onClick={() => {
                 // The draft takes the new state as well, so what is shown and
@@ -508,6 +518,16 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
               {preview.isPending ? text("previewPending") : text("preview")}
             </Button>
           </div>
+          <Field label={text("editorAddress")} htmlFor="entry-address" hint={text("editorAddressHint")}>
+            <AddressField
+              inputId="entry-address"
+              path={entry.path}
+              language={entry.language}
+              title={draft.title}
+              value={draft.slug}
+              onChange={(slug) => update({ slug })}
+            />
+          </Field>
           <Field label={text("editorLanguage")}>
             <span className="entry-editor__value">
               <span className="lang-tag" data-language={entry.language}>

@@ -129,6 +129,7 @@ runs("the entry list", () => {
           state: "public",
           readingWidth: "wide",
           showInOtherLanguage: false,
+          slug: "a-draft",
           topicIds: [],
           ...value,
         }),
@@ -191,6 +192,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds,
+        slug: "published-in-english",
       }),
     });
     expect(response.status).toBe(200);
@@ -229,6 +231,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: true,
         topicIds: [],
+        slug: "a-page",
       }),
     });
     expect(entryDetail.parse(((await response.json()) as { data: unknown }).data).showInOtherLanguage).toBe(
@@ -245,6 +248,98 @@ runs("the entry list", () => {
     expect(logged.map((row) => row.detail)).toEqual([{ changedKeys: ["showInOtherLanguage"] }]);
   });
 
+  describe("changing an address", () => {
+    /** Saves the English post of the pair under a slug, everything else as the library has it. */
+    const saveSlug = async (cookie: string, id: string, slug: string) =>
+      app.request(`/entries/${id}`, {
+        method: "PUT",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({
+          title: "Published in English",
+          summary: null,
+          body: "",
+          state: "public",
+          readingWidth: "normal",
+          showInOtherLanguage: false,
+          topicIds: [],
+          slug,
+        }),
+      });
+
+    it("moves the translation to the new address, keeps its section, and redirects the old one", async () => {
+      const cookie = await signedInCookie();
+      const english = (await list("post", cookie)).find((row) => row.title === "Published in English");
+      const database = await testDatabase();
+      await database
+        .update(paths)
+        .set({ path: "/projects/published-in-english/" })
+        .where(eq(paths.path, "/published-in-english/"));
+
+      const response = await saveSlug(cookie, english?.id ?? "", "renamed");
+      expect(entryDetail.parse(((await response.json()) as { data: unknown }).data)).toMatchObject({
+        path: "/projects/renamed/",
+        slug: "renamed",
+      });
+
+      const snapshot = await readPublicSnapshot(database);
+      expect(snapshot.redirects).toContainEqual({
+        source: "/projects/published-in-english/",
+        target: "/projects/renamed/",
+      });
+      const logged = await database
+        .select({ detail: auditLog.detail })
+        .from(auditLog)
+        .where(eq(auditLog.subjectId, english?.id ?? ""));
+      expect(logged.map((row) => row.detail)).toContainEqual({ changedKeys: ["topicIds", "slug"] });
+    });
+
+    it("takes back one of its own former addresses rather than writing it twice", async () => {
+      const cookie = await signedInCookie();
+      const english = (await list("post", cookie)).find((row) => row.title === "Published in English");
+      await saveSlug(cookie, english?.id ?? "", "renamed");
+      const back = await saveSlug(cookie, english?.id ?? "", "published-in-english");
+      expect(entryDetail.parse(((await back.json()) as { data: unknown }).data).path).toBe(
+        "/published-in-english/",
+      );
+
+      const database = await testDatabase();
+      const rows = await database
+        .select({ path: paths.path, isCurrent: paths.isCurrent })
+        .from(paths)
+        .where(eq(paths.translationId, english?.id ?? ""));
+      expect(rows.sort((a, b) => a.path.localeCompare(b.path))).toEqual([
+        { path: "/published-in-english/", isCurrent: true },
+        { path: "/renamed/", isCurrent: false },
+      ]);
+    });
+
+    it("refuses an address another entry holds, current or former", async () => {
+      const cookie = await signedInCookie();
+      const english = (await list("post", cookie)).find((row) => row.title === "Published in English");
+      expect((await saveSlug(cookie, english?.id ?? "", "a-page")).status).toBe(409);
+
+      const page = (await list("page", cookie))[0];
+      const database = await testDatabase();
+      await database
+        .insert(paths)
+        .values({ translationId: page?.id ?? "", path: "/old-page/", isCurrent: false });
+      expect((await saveSlug(cookie, english?.id ?? "", "old-page")).status).toBe(409);
+    });
+
+    it("gives a translation without an address one carrying its language", async () => {
+      const cookie = await signedInCookie();
+      const draft = (await list("post", cookie)).find((row) => row.title === "A draft");
+      const opened = entryDetail.parse(
+        (
+          (await (await app.request(`/entries/${draft?.id}`, { headers: { cookie } })).json()) as {
+            data: unknown;
+          }
+        ).data,
+      );
+      expect(opened).toMatchObject({ path: null, slug: "a-draft" });
+    });
+  });
+
   it("refuses a save that carries a field it does not take or a state it does not know", async () => {
     const cookie = await signedInCookie();
     const draft = (await list("post", cookie)).find((row) => row.state === "draft");
@@ -257,6 +352,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        slug: "t",
         path: "/x/",
       },
       {
@@ -267,6 +363,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        slug: "t",
       },
       {
         title: "",
@@ -276,6 +373,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        slug: "t",
       },
       {
         title: "T",
@@ -284,6 +382,7 @@ runs("the entry list", () => {
         state: "draft",
         readingWidth: "normal",
         showInOtherLanguage: false,
+        slug: "t",
       },
       {
         title: "T",
@@ -293,6 +392,17 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: ["0199f064-43b7-79a8-917f-eefc8c852400"],
+        slug: "t",
+      },
+      {
+        title: "T",
+        summary: null,
+        body: "",
+        state: "draft",
+        readingWidth: "normal",
+        showInOtherLanguage: false,
+        topicIds: [],
+        slug: "Not a slug",
       },
     ]) {
       const response = await app.request(`/entries/${draft?.id}`, {
@@ -411,6 +521,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        slug: "published-in-english",
       }),
     });
     expect(save.status).toBe(409);

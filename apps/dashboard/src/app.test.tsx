@@ -113,6 +113,7 @@ const draftDetail = {
   publishedAt: null,
   modifiedAt: "2025-09-01T00:00:00.000Z",
   path: "/a-draft-about-soldering/",
+  slug: "a-draft-about-soldering",
   pictureUrl: null,
   topics: [{ id: "5d6e7f80-91a2-4b3c-8d4e-5f6a7b8c9d0e", name: "Electronics", named: true }],
   counterpart: null,
@@ -773,6 +774,56 @@ describe("dashboard shell", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it("edits the last segment of the address, writes it as a slug, and saves it", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({ data: { ...draftDetail, ...JSON.parse(String(init.body)) } })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    const field = (await screen.findByLabelText("Adresse")) as HTMLInputElement;
+    expect(field.value).toBe("a-draft-about-soldering");
+    expect(field.closest(".address-field")?.textContent).toContain("/");
+
+    fireEvent.change(field, { target: { value: "Über Lötkolben " } });
+    expect(field.value).toBe("ueber-loetkolben-");
+    expect((screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.blur(field);
+    expect(field.value).toBe("ueber-loetkolben");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({ slug: "ueber-loetkolben" });
+  });
+
+  it("says plainly when the address belongs to another entry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === "PUT"
+            ? json({ error: { code: "conflict", message: "Taken.", id: "slug-1" } }, 409)
+            : successfulGet(input),
+        ),
+      ),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    const field = await screen.findByLabelText("Adresse");
+    fireEvent.change(field, { target: { value: "a-page" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText("Diese Adresse gehört bereits einem anderen Eintrag.", {
+        selector: ".notification__message",
+      }),
+    ).toBeTruthy();
   });
 
   it("sets the writing surface's text size from the toolbar and keeps it for the next visit", async () => {
