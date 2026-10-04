@@ -113,7 +113,7 @@
       "visibility": "public"
     },
     {
-      "body": "[This project](https://chaos.social/@layered/113630118037120881) is a labor of love that I've been working on for a very long time. Not continuously, but every now and then, as my free time allowed. At some point, I published a few screenshots (this is the [very first version](https://pixelfed.social/p/phranck/484836749907556997)) of my 3D model and immediately received a lot of encouragement and some messages that people would buy this (functional) computer model.  \n  \nSo, here we are. The first steps have been taken, and it is time to gather potential buyers.  \n  \nIf you like this project and are interested in buying your own personal NeXTcube mini, MegaPixel Display or SoundBox on a scale of 1:2, please sign up. You will be kept up to date on the project and will receive information as soon as sales begin.  \n  \nBtw: If you like, you can follow the current design process in this [live rendering](https://collaborate.shapr3d.com/v/WhipZ_U9mH4FY6FYRLn0w). Here you can see which parts the model consists of and which parts are currently available (not all are sold).\n\n### NeXT mini Hardware Interest\n\nIf you like this project and are interested in purchasing your own personal NeXTcube mini and/or a 1:2 scale Megapixel display, please sign up. You will be kept up to date with the project and will receive information as soon as sales start. This form is only used to give me an overview of the possible interests of potential buyers. It enables me to do better planning.\n\n**Notify me about the sales launch.** I accept the data privacy statement shown below.\n\nWe use Brevo as our marketing platform. By submitting this form you agree that the personal data you provided will be transferred to Brevo for processing in accordance with [Brevo's Privacy Policy.](https://www.brevo.com/en/legal/privacypolicy/)",
+      "body": "[This project](https://chaos.social/@layered/113630118037120881) is a labor of love that I've been working on for a very long time. Not continuously, but every now and then, as my free time allowed. At some point, I published a few screenshots (this is the [very first version](https://pixelfed.social/p/phranck/484836749907556997)) of my 3D model and immediately received a lot of encouragement and some messages that people would buy this (functional) computer model.  \n  \nSo, here we are. The first steps have been taken, and it is time to gather potential buyers.  \n  \nIf you like this project and are interested in buying your own personal NeXTcube mini, MegaPixel Display or SoundBox on a scale of 1:2, please sign up. You will be kept up to date on the project and will receive information as soon as sales begin.  \n  \nBtw: If you like, you can follow the current design process in this [live rendering](https://collaborate.shapr3d.com/v/WhipZ_U9mH4FY6FYRLn0w). Here you can see which parts the model consists of and which parts are currently available (not all are sold).\n\n### NeXT mini Hardware Interest\n\nIf you like this project and are interested in purchasing your own personal NeXTcube mini and/or a 1:2 scale Megapixel display, please sign up. You will be kept up to date with the project and will receive information as soon as sales start. This form is only used to give me an overview of the possible interests of potential buyers. It enables me to do better planning.\n\nForm(\"next-mini-hardware-interest\")",
       "featured": true,
       "featuredImage": "nextcube-mini",
       "id": 17,
@@ -3268,6 +3268,172 @@
     {
       "source": "/ki-bedienungsanleitung/",
       "target": "/de/ki-bedienungsanleitung/"
+    }
+  ],
+  "forms": [
+    {
+      "slug": "next-mini-hardware-interest",
+      "name": "NeXT mini Hardware Interest",
+      "successMessage": {
+        "en": "You have been successfully added to the list of people interested in NeXT mini hardware.",
+        "de": "Du stehst jetzt auf der Interessentenliste für NeXT mini Hardware."
+      },
+      "fields": [
+        {
+          "key": "first-name",
+          "label": {
+            "en": "Firstname",
+            "de": "Vorname"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": true,
+          "type": "shortText",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": null
+        },
+        {
+          "key": "last-name",
+          "label": {
+            "en": "Lastname",
+            "de": "Nachname"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": false,
+          "type": "shortText",
+          "minLength": 0,
+          "maxLength": 200,
+          "pattern": null
+        },
+        {
+          "key": "email",
+          "label": {
+            "en": "Email Address",
+            "de": "E-Mail-Adresse"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": true,
+          "type": "email",
+          "minLength": 3,
+          "maxLength": 254,
+          "pattern": null
+        },
+        {
+          "key": "newsletter",
+          "label": {
+            "en": "Newsletter",
+            "de": "Newsletter"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": false,
+          "type": "consent",
+          "notice": {
+            "en": "Notify me about the sales launch. I agree that my email address may be stored for this update.",
+            "de": "Informiere mich über den Verkaufsstart. Ich stimme zu, dass meine E-Mail-Adresse dafür gespeichert wird."
+          },
+          "revision": "v1"
+        },
+        {
+          "key": "hardware",
+          "label": {
+            "en": "Which NeXT mini hardware would you buy?",
+            "de": "Welche NeXT mini Hardware würdest du kaufen?"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": true,
+          "type": "multipleChoice",
+          "options": [
+            {
+              "value": "nextcube-mini",
+              "label": {
+                "en": "NeXTcube mini",
+                "de": "NeXTcube mini"
+              }
+            },
+            {
+              "value": "megapixel-display",
+              "label": {
+                "en": "MegaPixel Display",
+                "de": "MegaPixel Display"
+              }
+            },
+            {
+              "value": "soundbox",
+              "label": {
+                "en": "SoundBox",
+                "de": "SoundBox"
+              }
+            }
+          ]
+        },
+        {
+          "key": "enclosure-finish",
+          "label": {
+            "en": "This is a 3D printed product. Do you prefer:",
+            "de": "Dieses Produkt wird 3D-gedruckt. Was bevorzugst du?"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": true,
+          "type": "multipleChoice",
+          "options": [
+            {
+              "value": "plain-printed",
+              "label": {
+                "en": "Plain printed enclosure.",
+                "de": "Einfach gedrucktes Gehäuse."
+              }
+            },
+            {
+              "value": "refinished-painted",
+              "label": {
+                "en": "Completely refinished and spray painted (more expensive).",
+                "de": "Vollständig nachbearbeitet und lackiert (teurer)."
+              }
+            },
+            {
+              "value": "either",
+              "label": {
+                "en": "Doesn't matter. I'm fine with both variants.",
+                "de": "Egal, beide Varianten sind für mich in Ordnung."
+              }
+            }
+          ]
+        },
+        {
+          "key": "comment",
+          "label": {
+            "en": "Your comment",
+            "de": "Dein Kommentar"
+          },
+          "hint": {
+            "en": "",
+            "de": ""
+          },
+          "required": false,
+          "type": "longText",
+          "minLength": 0,
+          "maxLength": 500,
+          "pattern": null
+        }
+      ]
     }
   ]
 }
