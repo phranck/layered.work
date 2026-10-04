@@ -13,6 +13,7 @@ import {
 } from "@layered/schemas";
 import { and, desc, eq, inArray, isNotNull, ne, type SQLWrapper, sql } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
+import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
 import {
   auditLog,
@@ -37,6 +38,7 @@ export async function createEntry(
   db: Database,
   value: CreateEntryBody,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<EntryDetail> {
   const { defaultLanguage } = (await readSettings(db)).site;
   const translationId = await db.transaction(async (tx) => {
@@ -48,7 +50,7 @@ export async function createEntry(
       .returning({ id: entryTranslations.id });
     if (!translation) throw new Error("The translation was not written.");
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: "entry.created",
       subjectType: "entry_translations",
       subjectId: translation.id,
@@ -395,6 +397,7 @@ export async function saveEntry(
   id: string,
   value: SaveEntryBody,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<EntryDetail> {
   await db.transaction(async (tx) => {
     const [current] = await tx
@@ -438,7 +441,7 @@ export async function saveEntry(
     if (await setAddress(tx, id, current.language, slug)) changedKeys.push("slug");
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({
-        actorUserId,
+        ...auditActor(actorUserId, actorTokenId),
         action: "entry.updated",
         subjectType: "entry_translations",
         subjectId: id,
@@ -447,7 +450,7 @@ export async function saveEntry(
     }
     if (becomesPublic) {
       await tx.insert(auditLog).values({
-        actorUserId,
+        ...auditActor(actorUserId, actorTokenId),
         action: "entry.published",
         subjectType: "entry_translations",
         subjectId: id,
@@ -480,7 +483,12 @@ const ADDRESS_ATTEMPTS = 9;
  * @returns The other language, as the editor opens it.
  * @throws `not_found` where the source does not exist, `conflict` where no address is free.
  */
-export async function createTranslation(db: Database, id: string, actorUserId: string): Promise<EntryDetail> {
+export async function createTranslation(
+  db: Database,
+  id: string,
+  actorUserId: string,
+  actorTokenId?: string,
+): Promise<EntryDetail> {
   const created = await db.transaction(async (tx) => {
     const [source] = await tx
       .select({
@@ -541,7 +549,7 @@ export async function createTranslation(db: Database, id: string, actorUserId: s
     await tx.insert(paths).values({ translationId: translation.id, path });
     await tx.update(entries).set({ modifiedAt: new Date() }).where(eq(entries.id, source.entryId));
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: "entry.translated",
       subjectType: "entry_translations",
       subjectId: translation.id,
@@ -602,6 +610,7 @@ export async function setTrashed(
   id: string,
   trashed: boolean,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<EntryDetail> {
   await db.transaction(async (tx) => {
     const [current] = await tx
@@ -619,7 +628,7 @@ export async function setTrashed(
       .where(eq(entryTranslations.id, id));
     await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: trashed ? "entry.trashed" : "entry.restored",
       subjectType: "entry_translations",
       subjectId: id,
@@ -641,7 +650,12 @@ export async function setTrashed(
  * @param actorUserId - The account that emptied it, for the audit log.
  * @returns How many translations were deleted.
  */
-export async function emptyTrash(db: Database, kind: EntryKind, actorUserId: string): Promise<EmptiedTrash> {
+export async function emptyTrash(
+  db: Database,
+  kind: EntryKind,
+  actorUserId: string,
+  actorTokenId?: string,
+): Promise<EmptiedTrash> {
   return db.transaction(async (tx) => {
     const inTrash = await tx
       .select({ id: entryTranslations.id, entryId: entryTranslations.entryId })
@@ -670,7 +684,7 @@ export async function emptyTrash(db: Database, kind: EntryKind, actorUserId: str
       );
     await tx.insert(auditLog).values(
       ids.map((subjectId) => ({
-        actorUserId,
+        ...auditActor(actorUserId, actorTokenId),
         action: "entry.purged",
         subjectType: "entry_translations",
         subjectId,

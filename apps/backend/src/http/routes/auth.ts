@@ -59,7 +59,7 @@ export const SIGN_IN_PER_ADDRESS = { name: "sign-in-address", limit: 30, windowS
 export const SIGN_IN_PER_ACCOUNT = { name: "sign-in-account", limit: 8, windowSeconds: 600 };
 
 /** How the principal is shown to the browser. */
-function asSignedIn(principal: Principal): SignedInAs {
+function asSignedIn(principal: Pick<Principal, "userId" | "email" | "displayName" | "role">): SignedInAs {
   return {
     id: principal.userId,
     email: principal.email,

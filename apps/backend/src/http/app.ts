@@ -8,6 +8,7 @@ import { corsForInterfaces, safetyHeaders } from "./headers.js";
 import { health } from "./health.js";
 import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
+import { accessTokenRoutes } from "./routes/access-tokens.js";
 import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
@@ -75,6 +76,7 @@ app.use("*", async (c, next) => {
 app.route("/health", health);
 app.route("/auth", auth);
 app.route("/account", account);
+app.route("/access-tokens", accessTokenRoutes);
 app.route("/dashboard", dashboard);
 app.route("/entries", entriesRoutes);
 app.route("/forms", publicFormsRoutes);

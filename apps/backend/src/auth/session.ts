@@ -34,6 +34,8 @@ export type Principal = {
   email: string;
   displayName: string;
   role: "owner" | "editor";
+  tokenId?: undefined;
+  scopes?: undefined;
 };
 
 /** The database this module is given, rather than one it opens. */

@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ComponentType } from "react";
 import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject, redirect } from "react-router";
+import { AccessTokensScreen } from "./access-tokens.js";
 import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
@@ -24,6 +25,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,
   submissions: SubmissionsScreen,
+  "api-tokens": AccessTokensScreen,
 };
 
 export interface DashboardRouterOptions {

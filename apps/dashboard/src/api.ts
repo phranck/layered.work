@@ -34,6 +34,10 @@ import {
   formList,
   formSubmission,
   formSubmissionList,
+  type IssuedToken,
+  type IssueTokenBody,
+  issuedToken,
+  issueTokenBody,
   type ListingSettings,
   type MailSettings,
   type MailTemplate,
@@ -62,9 +66,12 @@ import {
   settingsView,
   signedInAs,
   type TestMailResult,
+  type TokenSummary,
   type TopicList,
   type TopicListItem,
   testMailResult,
+  tokenList,
+  tokenSummary,
   topicList,
   topicListItem,
   type UpdateAccountBody,
@@ -170,6 +177,9 @@ export interface DashboardApi {
   ): Promise<SettingsView>;
   /** Sends a test message to the signed-in owner and reports what SMTP2GO answered. */
   sendTestMail(): Promise<TestMailResult>;
+  fetchAccessTokens(): Promise<TokenSummary[]>;
+  issueAccessToken(value: IssueTokenBody): Promise<IssuedToken>;
+  revokeAccessToken(id: string): Promise<TokenSummary>;
   fetchMailTemplates(): Promise<MailTemplate[]>;
   saveMailTemplate(kind: MailTemplateKind, value: SaveMailTemplateBody): Promise<MailTemplate>;
   previewMailTemplate(
@@ -364,6 +374,21 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async sendTestMail() {
       return dataOf(await request("/settings/mail/test", { method: "POST" }, true), testMailResult);
+    },
+    async fetchAccessTokens() {
+      return dataOf(await request("/access-tokens", undefined, true), tokenList);
+    },
+    async issueAccessToken(value) {
+      return dataOf(
+        await request("/access-tokens", jsonBody("POST", issueTokenBody.parse(value)), true),
+        issuedToken,
+      );
+    },
+    async revokeAccessToken(id) {
+      return dataOf(
+        await request(`/access-tokens/${encodeURIComponent(id)}`, { method: "DELETE" }, true),
+        tokenSummary,
+      );
     },
     async fetchMailTemplates() {
       return dataOf(await request("/mail-templates", undefined, true), mailTemplateList);

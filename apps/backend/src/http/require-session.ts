@@ -1,5 +1,6 @@
 import { ErrorCode } from "@layered/schemas";
 import { createMiddleware } from "hono/factory";
+import type { TokenPrincipal } from "../auth/access-token.js";
 import { getSessionCookie } from "../auth/cookie.js";
 import { type Principal, readSession } from "../auth/session.js";
 import { database } from "../db/connect.js";
@@ -21,7 +22,7 @@ import { HttpError } from "./response.js";
  */
 declare module "hono" {
   interface ContextVariableMap {
-    principal?: Principal;
+    principal?: Principal | TokenPrincipal;
   }
 }
 
@@ -72,7 +73,9 @@ export const requireOwner = createMiddleware(async (c, next) => {
  *
  * @param c - The request.
  */
-export function principalOf(c: { get: (key: "principal") => Principal | undefined }): Principal {
+export function principalOf(c: {
+  get: (key: "principal") => Principal | TokenPrincipal | undefined;
+}): Principal | TokenPrincipal {
   const principal = c.get("principal");
   if (!principal) {
     throw new HttpError(

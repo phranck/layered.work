@@ -8,6 +8,7 @@ import {
   type TopicListItem,
 } from "@layered/schemas";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
 import {
   auditLog,
@@ -123,6 +124,7 @@ export async function createTopic(
   db: Database,
   value: CreateTopicBody,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<TopicListItem> {
   const id = await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -151,7 +153,7 @@ export async function createTopic(
       .insert(topicTranslations)
       .values({ topicId: created.id, language: value.language, name: value.name, slug });
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: "topic.created",
       subjectType: "topics",
       subjectId: created.id,
@@ -180,6 +182,7 @@ export async function saveTopic(
   id: string,
   value: SaveTopicBody,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<TopicListItem> {
   await db.transaction(async (tx) => {
     const [topic] = await tx.select({ id: topics.id }).from(topics).where(eq(topics.id, id)).limit(1);
@@ -234,7 +237,7 @@ export async function saveTopic(
 
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({
-        actorUserId,
+        ...auditActor(actorUserId, actorTokenId),
         action: "topic.updated",
         subjectType: "topics",
         subjectId: id,
@@ -264,6 +267,7 @@ export async function mergeTopic(
   id: string,
   into: string,
   actorUserId: string,
+  actorTokenId?: string,
 ): Promise<TopicListItem> {
   if (id === into) throw new HttpError(ErrorCode.InvalidRequest, "A topic cannot be merged into itself.");
   await db.transaction(async (tx) => {
@@ -298,7 +302,7 @@ export async function mergeTopic(
     await tx.update(navigationItems).set({ topicId: into }).where(eq(navigationItems.topicId, id));
     await tx.delete(topics).where(eq(topics.id, id));
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: "topic.merged",
       subjectType: "topics",
       subjectId: into,
@@ -317,7 +321,12 @@ export async function mergeTopic(
  * @param actorUserId - The account that deleted it, for the audit log.
  * @throws `not_found` where there is no such topic.
  */
-export async function deleteTopic(db: Database, id: string, actorUserId: string): Promise<void> {
+export async function deleteTopic(
+  db: Database,
+  id: string,
+  actorUserId: string,
+  actorTokenId?: string,
+): Promise<void> {
   await db.transaction(async (tx) => {
     const [carried] = await tx
       .select({ count: sql<number>`count(*)::int` })
@@ -326,7 +335,7 @@ export async function deleteTopic(db: Database, id: string, actorUserId: string)
     const deleted = await tx.delete(topics).where(eq(topics.id, id)).returning({ id: topics.id });
     if (deleted.length === 0) throw new HttpError(ErrorCode.NotFound, "There is no topic with this id.");
     await tx.insert(auditLog).values({
-      actorUserId,
+      ...auditActor(actorUserId, actorTokenId),
       action: "topic.deleted",
       subjectType: "topics",
       subjectId: id,
