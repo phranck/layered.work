@@ -169,6 +169,9 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(entries[3]["visibility"], "draft")
         self.assertEqual(entries[4]["visibility"], "trashed")
         self.assertEqual(entries[1]["publishedAt"], "1970-01-01T00:00:01Z")
+        self.assertEqual(entries[1]["createdAt"], "1970-01-01T00:00:01Z")
+        self.assertEqual(entries[1]["updatedAt"], "1970-01-01T00:00:02Z")
+        self.assertEqual(entries[2]["createdAt"], "1970-01-01T00:00:03Z")
         self.assertEqual(entries[2]["translationPath"], "/original/")
         self.assertEqual(
             site["redirects"],

@@ -15,6 +15,7 @@ function agreeing(): { source: Source; target: Target } {
           title: "First",
           state: "public",
           createdAt: "2025-01-01T00:00:00.000Z",
+          modifiedAt: "2025-01-04T00:00:00.000Z",
           topics: ["a"],
         },
         {
@@ -22,14 +23,23 @@ function agreeing(): { source: Source; target: Target } {
           title: "Erste",
           state: "hidden",
           createdAt: "2025-01-02T00:00:00.000Z",
+          modifiedAt: "2025-01-05T00:00:00.000Z",
           topics: ["a"],
         },
-        { slug: "later", title: "Later", state: "draft", createdAt: "2025-01-03T00:00:00.000Z", topics: [] },
+        {
+          slug: "later",
+          title: "Later",
+          state: "draft",
+          createdAt: "2025-01-03T00:00:00.000Z",
+          modifiedAt: "2025-01-03T00:00:00.000Z",
+          topics: [],
+        },
         {
           slug: "in-trash",
           title: "In the trash",
           state: "trashed",
           createdAt: "2025-01-04T00:00:00.000Z",
+          modifiedAt: "2025-01-04T00:00:00.000Z",
           topics: [],
         },
       ],
@@ -48,6 +58,8 @@ function agreeing(): { source: Source; target: Target } {
           title: "First",
           state: "public",
           publishedAt: "2025-01-01T00:00:00.000Z",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          modifiedAt: "2025-01-05T00:00:00.000Z",
         },
         {
           entryId: "pair",
@@ -56,6 +68,8 @@ function agreeing(): { source: Source; target: Target } {
           title: "Erste",
           state: "hidden",
           publishedAt: "2025-01-02T00:00:00.000Z",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          modifiedAt: "2025-01-05T00:00:00.000Z",
         },
         {
           entryId: "draft",
@@ -64,6 +78,8 @@ function agreeing(): { source: Source; target: Target } {
           title: "Later",
           state: "draft",
           publishedAt: "2025-01-03T00:00:00.000Z",
+          createdAt: "2025-01-03T00:00:00.000Z",
+          modifiedAt: "2025-01-03T00:00:00.000Z",
         },
       ],
       topics: ["a"],
@@ -101,6 +117,7 @@ describe("comparing Publii with the database", () => {
       title: "Projects",
       state: "public",
       createdAt: "2025-01-05T00:00:00.000Z",
+      modifiedAt: "2025-01-05T00:00:00.000Z",
       topics: [],
       overview: "project",
     });
@@ -153,6 +170,23 @@ describe("comparing Publii with the database", () => {
     expect(problems).toHaveLength(3);
   });
 
+  it("checks entry creation and modification against every translation in Publii", () => {
+    const { source, target } = agreeing();
+    const [first, second] = target.translations;
+    if (!first || !second) throw new Error("fixture");
+    first.createdAt = "2025-01-02T00:00:00.000Z";
+    second.modifiedAt = "2025-01-04T00:00:00.000Z";
+
+    const result = compare(source, target);
+    expect(result.passed).toBe(false);
+    expect(result.entries.find((row) => row.slug === "first")?.problems).toContain(
+      "created at 2025-01-02T00:00:00.000Z, expected 2025-01-01T00:00:00.000Z",
+    );
+    expect(result.entries.find((row) => row.slug === "erste")?.problems).toContain(
+      "modified at 2025-01-04T00:00:00.000Z, expected 2025-01-05T00:00:00.000Z",
+    );
+  });
+
   it("notices a lost topic", () => {
     const { source, target } = agreeing();
     target.topicsByEntry = new Map();
@@ -169,6 +203,8 @@ describe("comparing Publii with the database", () => {
       title: "In the trash",
       state: "public",
       publishedAt: null,
+      createdAt: "2025-01-04T00:00:00.000Z",
+      modifiedAt: "2025-01-04T00:00:00.000Z",
     });
 
     expect(compare(source, target).passed).toBe(false);

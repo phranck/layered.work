@@ -55,6 +55,7 @@ export interface PublicEntry {
   language: "en" | "de";
   visibility: "public" | "hidden";
   kind: "post" | "page" | "project";
+  createdAt: string;
   publishedAt: string | null;
   updatedAt: string | null;
   summary: string | null;
@@ -285,6 +286,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       kind: entries.kind,
       featured: entries.featured,
       onHomePage: entries.onHomePage,
+      createdAt: entries.createdAt,
       modifiedAt: entries.modifiedAt,
     })
     .from(entryTranslations)
@@ -348,6 +350,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       language: row.language,
       visibility: row.state as "public" | "hidden",
       kind: row.kind,
+      createdAt: row.createdAt.toISOString(),
       publishedAt: row.publishedAt?.toISOString() ?? null,
       updatedAt: row.modifiedAt?.toISOString() ?? null,
       summary: row.summary,

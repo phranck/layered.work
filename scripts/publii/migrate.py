@@ -834,6 +834,7 @@ def export(
             "language": languages[row["id"]],
             "visibility": visibility,
             "kind": kind,
+            "createdAt": stamp(row["created_at"]),
             "publishedAt": stamp(row["created_at"]),
             "updatedAt": stamp(row["modified_at"]),
             "summary": None,

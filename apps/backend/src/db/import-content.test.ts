@@ -327,4 +327,59 @@ runs("importing a snapshot", () => {
       topics: (await database.select().from(topics)).length,
     }).toEqual(before);
   });
+
+  it("keeps the earliest creation and latest modification of a translated entry on repeated import", async () => {
+    const database = await testDatabase();
+    const example = snapshot.entries[0];
+    if (!example) throw new Error("The published snapshot holds no entries");
+    const english = {
+      ...example,
+      id: "date-english",
+      slug: "date-english",
+      path: "/date-english/",
+      language: "en" as const,
+      createdAt: "2020-01-02T00:00:00.000Z",
+      updatedAt: "2020-01-04T00:00:00.000Z",
+      translationPath: "/de/date-german/",
+      topics: [],
+      featuredImage: null,
+    };
+    const german = {
+      ...english,
+      id: "date-german",
+      slug: "date-german",
+      path: "/de/date-german/",
+      language: "de" as const,
+      createdAt: "2020-01-01T00:00:00.000Z",
+      updatedAt: "2020-01-05T00:00:00.000Z",
+      translationPath: english.path,
+    };
+    const fixture: Snapshot = { entries: [english, german], topics: [], media: [], redirects: [] };
+    const stored = async () => {
+      const [row] = await database
+        .select({ id: entries.id, createdAt: entries.createdAt, modifiedAt: entries.modifiedAt })
+        .from(entries)
+        .innerJoin(entryTranslations, eq(entryTranslations.entryId, entries.id))
+        .innerJoin(paths, eq(paths.translationId, entryTranslations.id))
+        .where(eq(paths.path, english.path));
+      return row;
+    };
+
+    await importContent(database, fixture);
+    const before = await stored();
+    expect(before?.createdAt.toISOString()).toBe(german.createdAt);
+    expect(before?.modifiedAt.toISOString()).toBe(german.updatedAt);
+
+    await importContent(database, {
+      ...fixture,
+      entries: [
+        { ...english, createdAt: "2019-01-02T00:00:00.000Z", updatedAt: "2021-01-04T00:00:00.000Z" },
+        { ...german, createdAt: "2019-01-01T00:00:00.000Z", updatedAt: "2021-01-05T00:00:00.000Z" },
+      ],
+    });
+    const after = await stored();
+    expect(after?.id).toBe(before?.id);
+    expect(after?.createdAt.toISOString()).toBe("2019-01-01T00:00:00.000Z");
+    expect(after?.modifiedAt.toISOString()).toBe("2021-01-05T00:00:00.000Z");
+  });
 });
