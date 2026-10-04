@@ -2,10 +2,11 @@ import { ErrorCode, submitFormBody, validateFormValues } from "@layered/schemas"
 import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
-import { formSubmissions } from "../../db/schema/index.js";
+import { formSubmissions, mailJobs } from "../../db/schema/index.js";
 import { issueFormChallenge, verifyFormChallenge } from "../../forms/challenge.js";
 import { readFormBySlug } from "../../forms/repository.js";
 import { logger } from "../../logger.js";
+import { formNotification } from "../../mail/notification.js";
 import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
 import { HttpError, ok } from "../response.js";
@@ -73,13 +74,38 @@ publicFormsRoutes.post(
       windowSeconds: 10,
       keys: (context) => [`${slug}:${byAddress(context)}`],
     });
-    if (form.storeSubmissions) {
-      await db.insert(formSubmissions).values({
-        formId: form.id,
-        values: checked.values,
-        consents: checked.consents,
-        sourceHash: sourceFingerprint(sourceAddress(c)),
-      });
+    if (form.storeSubmissions || form.notificationEmail) {
+      try {
+        await db.transaction(async (tx) => {
+          const [submission] = form.storeSubmissions
+            ? await tx
+                .insert(formSubmissions)
+                .values({
+                  formId: form.id,
+                  values: checked.values,
+                  consents: checked.consents,
+                  sourceHash: sourceFingerprint(sourceAddress(c)),
+                })
+                .returning({ id: formSubmissions.id })
+            : [];
+          if (form.notificationEmail) {
+            await tx.insert(mailJobs).values({
+              formId: form.id,
+              submissionId: submission?.id,
+              recipient: form.notificationEmail,
+              ...formNotification(form, checked.values, body.language, checked.consents),
+            });
+          }
+        });
+      } catch {
+        // A driver error may include SQL parameters with the recipient or
+        // submitted text. Keep its public and logged cause free of both.
+        throw new HttpError(
+          ErrorCode.Internal,
+          "The submission could not be saved.",
+          new Error("The form and mail job transaction failed."),
+        );
+      }
     }
     return ok(c, { successMessage: form.successMessage[body.language] });
   },

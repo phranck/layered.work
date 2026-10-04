@@ -8,9 +8,9 @@ import {
 } from "@layered/schemas";
 import { Hono } from "hono";
 import { getAccountProfile } from "../../account/repository.js";
-import { config } from "../../config.js";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { readMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import { readSettings, saveSettings } from "../../settings/repository.js";
 import { principalOf, requireOwner, requireSession } from "../require-session.js";
@@ -60,17 +60,16 @@ for (const group of Object.values(LISTING_GROUP)) {
  * outcome and never the address.
  */
 settingsRoutes.post("/mail/test", requireOwner, async (c) => {
-  const apiKey = config.SMTP2GO_API_KEY;
-  if (!apiKey)
+  const mailConfiguration = await readMailConfiguration(database());
+  if (!mailConfiguration.ready && mailConfiguration.reason === "key")
     throw new HttpError(ErrorCode.Conflict, "No SMTP2GO key is configured, so nothing can be sent.");
-  const { mail } = await readSettings(database());
-  if (!mail.senderAddress) {
+  if (!mailConfiguration.ready) {
     throw new HttpError(ErrorCode.Conflict, "Save a sender address before sending a test message.");
   }
 
   const recipient = (await getAccountProfile(database(), principalOf(c).userId)).email;
-  const outcome = await sendThroughSmtp2go(apiKey, {
-    sender: `${mail.senderName} <${mail.senderAddress}>`,
+  const outcome = await sendThroughSmtp2go(mailConfiguration.apiKey, {
+    sender: mailConfiguration.sender,
     to: recipient,
     subject: "Test message from the layered.work dashboard",
     text: "This message was sent from the dashboard's mail settings to check that sending works.",
