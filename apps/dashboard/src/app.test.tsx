@@ -385,6 +385,41 @@ describe("dashboard shell", () => {
     expect(screen.getByText("Kein Eintrag passt zu Suche und Filter.")).toBeTruthy();
   });
 
+  it.each([
+    ["posts", "post"],
+    ["pages", "page"],
+    ["projects", "project"],
+  ] as const)("creates a %s entry from its list and focuses the new title", async (area, kind) => {
+    const created = {
+      ...draftDetail,
+      id: "714d9c21-e4ac-4e03-8c7d-b358b82fe002",
+      entryId: "b288274f-3819-4f10-baf6-9e67308626c1",
+      kind,
+      title: "Ohne Titel",
+      body: "",
+      path: null,
+      slug: "ohne-titel",
+      topics: [],
+    };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/entries") && init?.method === "POST")
+        return Promise.resolve(json({ data: created }));
+      if (String(input).endsWith(`/entries/${created.id}`)) return Promise.resolve(json({ data: created }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard(`/${area}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Neu" }));
+    const title = await screen.findByRole("textbox", { name: "Titel" });
+    await waitFor(() => expect(document.activeElement).toBe(title));
+    expect(router.state.location.pathname).toBe(`/${area}/${created.id}`);
+    const createCall = request.mock.calls.find(
+      ([input, init]) => String(input).endsWith("/entries") && init?.method === "POST",
+    );
+    expect(JSON.parse(String(createCall?.[1]?.body))).toEqual({ kind, title: "Ohne Titel" });
+  });
+
   it("focuses the list's search on Command-K and gives the focus back on Escape", async () => {
     vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
     vi.stubGlobal(

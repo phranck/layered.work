@@ -10,15 +10,17 @@ import {
   ArrowCounterClockwiseIcon,
   MagnifyingGlassIcon,
   PencilSimpleIcon,
+  PlusIcon,
   TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { ScreenTitle } from "./app-bar-slots.js";
+import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
@@ -194,6 +196,15 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
     void queryClient.invalidateQueries({ queryKey: ["entry"] });
     void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
   };
+  const create = useMutation({
+    mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),
+    onError: (error) => notifyError(error),
+    onSuccess: (created) => {
+      queryClient.setQueryData(entryKey(created.id), created);
+      refresh();
+      navigate(`/${area.path}/${created.id}`, { state: { focusTitle: true } });
+    },
+  });
   const restore = useMutation({
     mutationFn: (id: string) => api.setTrashed(id, false),
     onError: (error) => notifyError(error),
@@ -243,6 +254,16 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   return (
     <>
       <ScreenTitle title={title} />
+      <HeaderEnd>
+        <Button
+          tone="primary"
+          icon={<PlusIcon />}
+          disabled={create.isPending}
+          onClick={() => create.mutate()}
+        >
+          {create.isPending ? text("newEntryPending") : text("newEntry")}
+        </Button>
+      </HeaderEnd>
       <div className="stat-row">
         <Stat
           label={text("statPublished")}
