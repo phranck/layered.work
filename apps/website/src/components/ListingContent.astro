@@ -20,7 +20,7 @@ const introduction=introductionText?renderContent(introductionText):[];
 ---
 <Section.Page>
   <Section.Lead title={title} />
-  {introduction.length>0&&<div class="listing-introduction content-prose"><ContentRenderer nodes={introduction} media={repository.media} /></div>}
+  {introduction.length>0&&<div class="listing-introduction content-prose"><ContentRenderer nodes={introduction} media={repository.media} resolveUrl={repository.contentUrl} /></div>}
   {search&&<form class="search-form" method="get"><label for="site-search">{de?"Suchbegriff":"Search for"}</label><div class="search-form__row"><input id="site-search" class="field" type="search" name="q" maxlength="120" value={query} /><Button type="submit" icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Suchen":"Search"}</Button></div></form>}
   <div class="listing-toolbar" hidden data-view-toolbar>
     <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon,{weight:"duotone"})}>{de?"Raster":"Grid"}</Button>

@@ -278,6 +278,19 @@ describe("where the media are served from", () => {
     }
   });
 
+  it("routes authored legacy file links to the bucket without changing page links", () => {
+    process.env.MEDIA_ORIGIN = "https://storage.example/bucket";
+    try {
+      const repository = createRepository(withMedia);
+      expect(repository.contentUrl("/media/cheat-sheet-nano.pdf")).toBe(
+        "https://storage.example/bucket/migration/cheat-sheet-nano.pdf",
+      );
+      expect(repository.contentUrl("/projects/")).toBe("/projects/");
+    } finally {
+      delete process.env.MEDIA_ORIGIN;
+    }
+  });
+
   it("refuses a path that is not one key below the origin", () => {
     for (const src of ["//evil.test/x.webp", "/migration/../x", "https://evil.test/x.webp"]) {
       expect(() => createRepository({ ...snapshot, media: [{ slug: "bad", src }] })).toThrow();

@@ -7,8 +7,10 @@ export type { MediaAsset, MediaResolver } from "./content-shared.js";
 export interface ContentRendererProps {
   nodes: readonly RenderNode[];
   media: MediaResolver;
+  /** Resolve safe authored links to the address that serves their content. */
+  resolveUrl?: (url: string) => string;
 }
 /** Render the shared content model as safe, server-renderable site components. */
-export function ContentRenderer({ nodes, media }: ContentRendererProps) {
-  return <div className="content-prose">{renderNodes(nodes, media)}</div>;
+export function ContentRenderer({ nodes, media, resolveUrl }: ContentRendererProps) {
+  return <div className="content-prose">{renderNodes(nodes, media, resolveUrl)}</div>;
 }

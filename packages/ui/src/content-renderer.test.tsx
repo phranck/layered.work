@@ -82,6 +82,19 @@ describe("content renderer", () => {
     expect(html).toContain('href="/media/manual.pdf"');
     expect(html).toContain("Manual");
   });
+  it("resolves prose links and images through the caller's media origin", () => {
+    const html = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={renderContent("[Download](/media/manual.pdf)\n\n![Preview](/media/preview.webp)")}
+        media={media}
+        resolveUrl={(url) =>
+          url.startsWith("/media/") ? `https://storage.example/migration/${url.slice(7)}` : url
+        }
+      />,
+    );
+    expect(html).toContain('href="https://storage.example/migration/manual.pdf"');
+    expect(html).toContain('src="https://storage.example/migration/preview.webp"');
+  });
   it("renders raw HTML and code as text, and names missing components", () => {
     const html = draw('<script>alert("x")</script>\n\n```js\n<script>\n```\n\nMissingThing()');
     expect(html).not.toContain("<script>");
