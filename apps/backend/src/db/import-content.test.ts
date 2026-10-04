@@ -9,6 +9,7 @@ import { LISTING_PATHS, listingSettings } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { selectObjects } from "../../../../scripts/publii/upload.mjs";
 import {
   closeTestDatabase,
   emptyTestDatabase,
@@ -79,12 +80,28 @@ function migrationOutput(): Snapshot {
   };
 }
 
-// The upload in scripts/publii holds the same key in its own test. That script
-// stays on the machine that ran the migration, so the two sides meet at this
-// literal rather than through an import.
 describe("the storage key of a migrated file", () => {
   it("is the key the upload gave its object in the bucket", () => {
-    expect(migratedStorageKey("/media/cover.webp")).toBe("migration/cover.webp");
+    const src = "/media/cover.webp";
+    const { objects } = selectObjects(
+      {
+        entries: [{ body: 'Image("cover")' }],
+        media: [
+          {
+            slug: "cover",
+            src,
+            source: "posts/1/cover.webp",
+            filename: "cover.webp",
+            mime: "image/webp",
+            bytes: 100,
+            sha256: "a".repeat(64),
+          },
+        ],
+      },
+      { variants: [] },
+    );
+    expect(objects).toHaveLength(1);
+    expect(migratedStorageKey(src)).toBe(objects[0]?.key);
   });
 });
 
