@@ -12,7 +12,8 @@
       "!apps/website/content",
       "!apps/website/public/draco",
       "!apps/website/public/basis",
-      "!migration-out"
+      "!migration-out",
+      "!.claude"
     ]
   },
   "formatter": {
