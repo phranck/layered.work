@@ -1,0 +1,29 @@
+.form-controls {
+  display: grid;
+  gap: var(--space-4);
+}
+.form-controls__field fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.form-controls__field legend {
+  margin-block-end: var(--space-2);
+  font-weight: 600;
+}
+.form-controls__choices {
+  display: grid;
+  gap: var(--space-2);
+}
+.form-controls__choices label,
+.form-controls__consent {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+}
+.form-controls__error {
+  margin: 0;
+  color: var(--text-danger, #b42318);
+}

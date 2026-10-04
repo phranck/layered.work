@@ -5,6 +5,7 @@ import SiteLayout from "../../layouts/SiteLayout.astro";
 import EntryArticle from "../../components/EntryArticle.astro";
 import { siteFooter, siteNavigation } from "../../components/site-navigation.js";
 import { loadPreview } from "../../content/preview.js";
+import { formsForPage } from "../../content/forms.js";
 import { summaryOf } from "../../content/repository.js";
 import "../../styles/pages.css";
 
@@ -28,6 +29,7 @@ if (!entry) Astro.response.status = 404;
 const language = entry?.language ?? "en";
 const de = language === "de";
 const nodes = entry ? renderContent(entry.body, { language: entry.language }) : [];
+const forms = entry && repository ? await formsForPage(repository, nodes, entry.language, undefined, true) : {};
 // Read by the middleware once this response exists, as on the published page.
 Astro.locals.rendersModel = rendersComponent(nodes, "Model");
 Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
@@ -52,7 +54,7 @@ Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
             : "This is the entry as the editor held it when the preview was opened. The link lasts an hour and is linked from nowhere."}
         </Note>
       </Section.Page>
-      <EntryArticle {repository} {entry} {nodes} />
+      <EntryArticle {repository} {entry} {nodes} {forms} />
     </>
   ) : (
     <Section.Page>

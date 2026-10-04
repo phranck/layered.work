@@ -27,4 +27,8 @@ describe("finding the files a document names", () => {
     const text = 'Image("front") is how.\n\n```\nImage("example")\n```\n\nWidget("nothing")';
     expect(mediaReferences(text).map((reference) => reference.slug)).toEqual(["front"]);
   });
+
+  it("does not treat a form name as a media file", () => {
+    expect(mediaReferences('Form("next-mini-hardware-interest")')).toEqual([]);
+  });
 });

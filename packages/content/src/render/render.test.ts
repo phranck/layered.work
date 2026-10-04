@@ -471,6 +471,7 @@ describe("every component the register declares", () => {
     Grid: ["Grid {\n  Hallo.\n}", ['Grid → Grid {"columns":2,"spacing":"5"}', "  p", '    text "Hallo."']],
     Spacer: ["Spacer(3)", ['Spacer → Spacer {"size":"3"}']],
     Divider: ["Divider()", ["Divider → Divider {}"]],
+    Form: ['Form("next-mini-interest")', ['Form → Form {"name":"next-mini-interest"}']],
     Image: [
       'Image("front", caption: "Die Front")',
       ['Image → Figure {"caption":"Die Front","slug":"front"}'],

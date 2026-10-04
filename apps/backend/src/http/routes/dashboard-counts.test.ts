@@ -10,6 +10,7 @@ describe("readDashboardCounts", () => {
         pages: 1,
         projects: 9,
         tags: 3,
+        forms: 10,
         media: 4,
         blocks: 5,
         mainNav: 6,
@@ -28,7 +29,7 @@ describe("readDashboardCounts", () => {
       mainNav: 6,
       footerNav: 7,
       social: 8,
-      forms: null,
+      forms: 10,
       submissions: null,
       mailTemplates: null,
     });

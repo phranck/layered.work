@@ -5,8 +5,10 @@ import {
   accountMediaPage,
   accountProfile,
   type CreateEntryBody,
+  type CreateFormBody,
   type CreateTopicBody,
   createEntryBody,
+  createFormBody,
   createTopicBody,
   createUploadBody,
   type DashboardCounts,
@@ -23,6 +25,10 @@ import {
   entryList,
   entryPreview,
   entryTrashImpact,
+  type FormDetail,
+  type FormList,
+  formDetail,
+  formList,
   type ListingSettings,
   type MailSettings,
   mergeTopicBody,
@@ -30,6 +36,7 @@ import {
   previewEntryBody,
   readApiError,
   type SaveEntryBody,
+  type SaveFormBody,
   type SaveTopicBody,
   type SearchResults,
   type SettingsView,
@@ -37,6 +44,7 @@ import {
   type SignInBody,
   type SiteSettings,
   saveEntryBody,
+  saveFormBody,
   saveTopicBody,
   searchResults,
   settingsView,
@@ -98,6 +106,10 @@ interface ResponseSchema<Value> {
 export interface DashboardApi {
   fetchSession(): Promise<SignedInAs | null>;
   fetchDashboardCounts(): Promise<DashboardCounts>;
+  fetchForms(): Promise<FormList>;
+  fetchForm(id: string): Promise<FormDetail>;
+  createForm(value: CreateFormBody): Promise<FormDetail>;
+  saveForm(id: string, value: SaveFormBody): Promise<FormDetail>;
   fetchAccount(): Promise<AccountProfile>;
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
@@ -218,6 +230,21 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async fetchDashboardCounts() {
       return dataOf(await request("/dashboard/counts", undefined, true), dashboardCounts);
+    },
+    async fetchForms() {
+      return dataOf(await request("/forms", undefined, true), formList);
+    },
+    async fetchForm(id) {
+      return dataOf(await request(`/forms/${encodeURIComponent(id)}`, undefined, true), formDetail);
+    },
+    async createForm(value) {
+      return dataOf(await request("/forms", jsonBody("POST", createFormBody.parse(value)), true), formDetail);
+    },
+    async saveForm(id, value) {
+      return dataOf(
+        await request(`/forms/${encodeURIComponent(id)}`, jsonBody("PUT", saveFormBody.parse(value)), true),
+        formDetail,
+      );
     },
     async fetchAccount() {
       return dataOf(await request("/account", undefined, true), accountProfile);

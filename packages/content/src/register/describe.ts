@@ -25,6 +25,8 @@ export function accepts(parameter: Parameter): string {
       return "text in quotes";
     case "slug":
       return "the name of a file in the media library, in quotes";
+    case "form":
+      return "the name of a saved form, in quotes";
     case "number":
       return parameter.range
         ? `a whole number from ${parameter.range[0]} to ${parameter.range[1]}`

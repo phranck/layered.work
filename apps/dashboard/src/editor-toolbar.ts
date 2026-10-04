@@ -14,6 +14,7 @@ import {
   NoteIcon,
   RowsIcon,
   TableIcon,
+  TextboxIcon,
   VideoCameraIcon,
 } from "@layered/ui/icons";
 import type { ComponentType } from "react";
@@ -55,6 +56,7 @@ function placeholderFor(parameter: Parameter, form: SnippetForm): string {
   switch (parameter.kind) {
     case "text":
     case "slug":
+    case "form":
       return form.text;
     case "number":
       return String(parameter.default ?? parameter.range?.[0] ?? 1);
@@ -107,7 +109,7 @@ export function componentSnippet(name: ComponentName, form: SnippetForm = PLAIN)
  */
 export const COMPONENT_GROUPS: readonly (readonly ToolbarComponent[])[] = [
   ["Image", "Gallery", "Model", "Video", "YouTube", "Pdf"],
-  ["Note", "Card", "Table", "Button"],
+  ["Note", "Card", "Table", "Form", "Button"],
   ["VStack", "HStack", "Grid", "Spacer", "Divider"],
 ];
 
@@ -126,6 +128,7 @@ export const COMPONENT_ICONS: Readonly<Record<ToolbarComponent, ComponentType<Ic
   Note: NoteIcon,
   Card: CardsIcon,
   Table: TableIcon,
+  Form: TextboxIcon,
   Button: CursorClickIcon,
   VStack: RowsIcon,
   HStack: ColumnsIcon,

@@ -24,11 +24,10 @@ export const MIGRATIONS = new URL("../../drizzle/", import.meta.url);
 /**
  * The role the migration is expected to run as.
  *
- * Named in the environment because it differs between here and Zerops, which
- * creates its own. Unset means the name is not checked and only the privilege
- * is, which is the half of this that holds everywhere.
+ * Named explicitly in the environment because it differs between local and
+ * Zerops. Missing it must stop the runner before Drizzle applies anything.
  */
-const EXPECTED_ROLE = "DATABASE_EXPECTED_ROLE";
+const EXPECTED_ROLE = "DB_MIGRATION_ROLE";
 
 /** What the database says about the session before anything is written. */
 type Session = { role: string; isSuperuser: boolean };
@@ -37,20 +36,20 @@ type Session = { role: string; isSuperuser: boolean };
  * Refuses to go on when the session is more privileged than the work requires.
  *
  * @param session - Who the connection turned out to be.
- * @throws When the role is a superuser, or when a name is expected and differs.
+ * @throws When the expected role is missing, privileged, or different.
  */
 export function refuseWrongRole(session: Session): void {
-  const expected = process.env[EXPECTED_ROLE];
+  const expected = process.env[EXPECTED_ROLE]?.trim();
+
+  if (!expected) throw new Error(`${EXPECTED_ROLE} must name the non-superuser migration role.`);
 
   if (session.isSuperuser) {
     throw new Error(
-      `Refusing to migrate as "${session.role}", which is a superuser. A superuser bypasses every grant and every ownership check, so a migration that should fail would instead succeed against tables it does not own.${
-        expected ? ` Connect as "${expected}" instead.` : ""
-      }`,
+      `Refusing to migrate as "${session.role}", which is a superuser. Connect as "${expected}" instead.`,
     );
   }
 
-  if (expected && session.role !== expected) {
+  if (session.role !== expected) {
     throw new Error(
       `Refusing to migrate as "${session.role}". ${EXPECTED_ROLE} names "${expected}", and a migration run as anything else leaves the schema owned by whoever happened to be connected.`,
     );

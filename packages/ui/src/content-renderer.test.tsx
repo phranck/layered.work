@@ -18,6 +18,50 @@ const draw = (source: string) =>
   renderToStaticMarkup(<ContentRenderer nodes={renderContent(source)} media={media} />);
 
 describe("content renderer", () => {
+  it("renders an embedded form as native HTML and replaces it with success in place", () => {
+    const form = {
+      slug: "interest",
+      name: "Interest",
+      successMessage: { en: "Thanks", de: "Danke" },
+      fields: [
+        {
+          key: "email",
+          type: "email" as const,
+          label: { en: "Email", de: "E-Mail" },
+          hint: { en: "", de: "" },
+          required: true,
+          minLength: 3,
+          maxLength: 254,
+          pattern: null,
+        },
+      ],
+    };
+    const nodes = renderContent('Form("interest")');
+    const html = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={nodes}
+        media={media}
+        forms={{ interest: { form, language: "de", challenge: "signed" } }}
+      />,
+    );
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    expect(template.content.querySelector('form[method="post"][data-form-name="interest"]')).not.toBeNull();
+    expect(template.content.querySelector('input[name="_challenge"]')?.getAttribute("value")).toBe("signed");
+    expect(template.content.querySelector('input[type="email"][required]')).not.toBeNull();
+    expect(template.content.textContent).toContain("E-Mail");
+
+    const success = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={nodes}
+        media={media}
+        forms={{ interest: { form, language: "de", outcome: { status: "success", message: "Danke" } } }}
+      />,
+    );
+    expect(success).toContain('role="status"');
+    expect(success).toContain("Danke");
+    expect(success).not.toContain("<form");
+  });
   it("wraps semantic tables in their shared card scroller", () => {
     const template = document.createElement("template");
     template.innerHTML = draw("| Name | Value |\n| --- | --- |\n| Item | 42 |");

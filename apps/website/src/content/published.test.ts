@@ -31,6 +31,27 @@ describe("the published snapshot", () => {
     expect(repository.topics("en").length).toBeGreaterThan(0);
   });
 
+  it("restores the NeXT mini interest form on its original page", () => {
+    const repository = createRepository(snapshot);
+    const entry = repository.entry("/next-mini-replica-interest/");
+    const form = repository.form("next-mini-hardware-interest");
+    expect(entry?.body).toContain('Form("next-mini-hardware-interest")');
+    expect(entry?.body).not.toContain("Brevo");
+    expect(form?.fields.map((field) => field.key)).toEqual([
+      "first-name",
+      "last-name",
+      "email",
+      "newsletter",
+      "hardware",
+      "enclosure-finish",
+      "comment",
+    ]);
+    expect(form?.fields.find((field) => field.key === "hardware")).toMatchObject({
+      required: true,
+      options: [{ value: "nextcube-mini" }, { value: "megapixel-display" }, { value: "soundbox" }],
+    });
+  });
+
   it("restores the four migrated YouTube embeds as content components", () => {
     const paths = [
       "/projects/pandadock/",

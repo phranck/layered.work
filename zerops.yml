@@ -94,7 +94,7 @@ zerops:
         # else as well, so a schema cannot end up owned by whoever happened to
         # be connected. It is not a superuser, which the run before this one
         # proved by not being refused.
-        DATABASE_EXPECTED_ROLE: db
+        DB_MIGRATION_ROLE: db
         # The two origins that may call this API with a cookie. Public
         # addresses rather than secrets, so they belong here where a diff shows
         # them, and they are read from configuration rather than from a request

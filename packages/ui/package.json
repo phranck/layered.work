@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@layered/content": "workspace:*",
+    "@layered/schemas": "workspace:*",
     "@layered/tokens": "workspace:*",
     "@phosphor-icons/react": "2.1.10",
     "shiki": "4.4.3"

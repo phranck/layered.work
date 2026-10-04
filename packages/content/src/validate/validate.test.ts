@@ -228,6 +228,20 @@ describe("a media name", () => {
   });
 });
 
+describe("a form name", () => {
+  it("accepts a quoted form name without looking for it in the media library", () => {
+    expect(findingsIn('Form("next-mini-hardware-interest")')).toEqual([]);
+  });
+
+  it("refuses a form name without quotes", () => {
+    expect(onlyFinding("Form(next-mini-hardware-interest)")).toMatchObject({
+      code: FINDING.ValueNotPermitted,
+      component: "Form",
+      parameter: "name",
+    });
+  });
+});
+
 describe("a YouTube embed", () => {
   it("accepts a provider embed address", () => {
     expect(

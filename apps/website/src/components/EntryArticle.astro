@@ -1,7 +1,8 @@
 ---
 import type { RenderNode } from "@layered/content";
-import { ContentRenderer, Section } from "@layered/ui";
+import { ContentRenderer, Section, type FormEmbedProps } from "@layered/ui";
 import ModelViewer from "./ModelViewer.astro";
+import FormBehavior from "./FormBehavior.astro";
 import TopicChip from "./TopicChip.astro";
 import { EntryCard } from "./entry-card.js";
 import { dateLabel, readingTime, summaryOf, type ContentRepository, type Entry } from "../content/repository.js";
@@ -19,9 +20,10 @@ interface Props {
   repository: ContentRepository;
   entry: Entry;
   nodes: RenderNode[];
+  forms?: Record<string, FormEmbedProps>;
 }
 
-const { repository, entry, nodes } = Astro.props;
+const { repository, entry, nodes, forms } = Astro.props;
 const language = entry.language;
 const de = language === "de";
 const feature = entry.featuredImage ? repository.media(entry.featuredImage) : undefined;
@@ -38,8 +40,9 @@ const entryTopics = repository.entryTopics(entry, language);
   {project && entry.specs.length > 0 && <div class="spec-grid">{entry.specs.map((spec) => <div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
   <div class="article-body">
     {feature && !project && <figure class="article-cover"><img src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /></figure>}
-    <ContentRenderer {nodes} media={repository.media} resolveUrl={repository.contentUrl} />
+    <ContentRenderer {nodes} {forms} media={repository.media} resolveUrl={repository.contentUrl} />
   </div>
 </article>
 {neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} {language} topics={repository.entryTopics(related, language)} image={related.featuredImage ? repository.media(related.featuredImage) : undefined} />)}</div></Section.Page>}
 <ModelViewer />
+{forms && Object.keys(forms).length > 0 && <FormBehavior />}
