@@ -27,9 +27,10 @@ if (!entry) Astro.response.status = 404;
 
 const language = entry?.language ?? "en";
 const de = language === "de";
-const nodes = entry ? renderContent(entry.body) : [];
+const nodes = entry ? renderContent(entry.body, { language: entry.language }) : [];
 // Read by the middleware once this response exists, as on the published page.
 Astro.locals.rendersModel = rendersComponent(nodes, "Model");
+Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
 ---
 <SiteLayout
   title={entry ? `${de ? "Vorschau" : "Preview"}: ${entry.title}` : de ? "Vorschau nicht verfügbar" : "Preview unavailable"}

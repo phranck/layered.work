@@ -53,12 +53,21 @@ function issueNonce(): string {
  *   Read here rather than decided here, because the answer is in the body and
  *   nothing has read the body when the request arrives.
  */
-function withSafety(response: Response, nonce: string, rendersModel = false): Response {
+function withSafety(
+  response: Response,
+  nonce: string,
+  rendersModel = false,
+  rendersYouTube = false,
+): Response {
   for (const [name, value] of Object.entries(SAFETY_HEADERS)) {
     response.headers.set(name, value);
   }
   if (ENFORCE_POLICY) {
-    const policy = sitePolicy(nonce, { styleHashes: [MODEL_VIEWER_STYLE_HASH], rendersModel });
+    const policy = sitePolicy(nonce, {
+      styleHashes: [MODEL_VIEWER_STYLE_HASH],
+      rendersModel,
+      rendersYouTube,
+    });
     response.headers.set("content-security-policy", policy);
   }
   return response;
@@ -130,9 +139,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.nonce = nonce;
   context.locals.siteVisible = showSite;
   context.locals.rendersModel = false;
+  context.locals.rendersYouTube = false;
 
   if (showSite) {
-    const response = withSafety(await next(), nonce, context.locals.rendersModel);
+    const response = withSafety(
+      await next(),
+      nonce,
+      context.locals.rendersModel,
+      context.locals.rendersYouTube,
+    );
     // The address carries the token that opens the preview, so not even its
     // origin travels on with a link followed from it. Set after the shared
     // headers, which would otherwise put the site's usual policy back.

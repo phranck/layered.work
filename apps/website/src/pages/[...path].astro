@@ -9,6 +9,7 @@ import SiteLayout from "../layouts/SiteLayout.astro";
 import EntryArticle from "../components/EntryArticle.astro";
 import HomeContent from "../components/HomeContent.astro";
 import ListingContent from "../components/ListingContent.astro";
+import TopicChip from "../components/TopicChip.astro";
 import { siteFooter, siteNavigation } from "../components/site-navigation.js";
 import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
@@ -39,7 +40,7 @@ if(repository&&path==="/tags/")return Astro.redirect("/topics/",308);
 const legacyTopic=/^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
 // A topic merged or renamed since then answers at its new address in one step.
 const legacyTopicPath=legacyTopic?topicPath("en",legacyTopic):undefined;
-const legacyTopicTarget=legacyTopicPath&&(repository?.redirect(legacyTopicPath)??(repository?.data.topics.some(topic=>topic.slug===legacyTopic)?legacyTopicPath:undefined));
+const legacyTopicTarget=legacyTopicPath&&(repository?.redirect(legacyTopicPath)??(repository?.topicBySlug("en",legacyTopic??"")?legacyTopicPath:undefined));
 if(legacyTopicTarget)return Astro.redirect(legacyTopicTarget,308);
 if(repository&&path==="/authors/frank-gregor/")return Astro.redirect("/",308);
 if(repository&&rawPath==="/media/files/claude-fonts-preview.html"){
@@ -50,7 +51,7 @@ const relative=path.slice(root.length);
 const home=relative==="";
 const kind=LISTED_KINDS.find(listed=>LISTING_PATHS[listed][language]===path);
 const topicSlug=/^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
-const topic=repository?.data.topics.find(topic=>topic.slug===topicSlug);
+const topic=repository?.topicBySlug(language,topicSlug??"");
 const topics=relative==="topics/";
 const search=relative==="search/";
 // Publii paginated the home page's post list at /page/<n>/, so the posts listing
@@ -74,23 +75,26 @@ const gone=!found&&!!repository?.gone(path);
 if(repository&&!found)Astro.response.status=gone?410:404;
 // An overview's own headline where the dashboard sets one, and its name otherwise.
 const headline=kind&&repository&&!invalidQuery?repository.listing(kind).headline[language].trim():"";
-const title=headline||(errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?.name??(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
-const translationPath=entry?entry.translationPath:found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
+const title=headline||(errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?(topic.untranslated?`${topic.name} (${topic.sourceLanguage.toUpperCase()})`:topic.name):(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
+const otherLanguage=de?"en":"de";
+const otherTopic=topic?repository?.topic(topic.id,otherLanguage):undefined;
+const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(otherLanguage,otherTopic.slug):found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=siteNavigation(language);
 const footer=siteFooter(language);
-const nodes=entry?renderContent(entry.body):[];
+const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.
 Astro.locals.rendersModel=rendersComponent(nodes,"Model");
+Astro.locals.rendersYouTube=rendersComponent(nodes,"YouTube");
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
 <SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
   {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
   {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
     {home&&<HomeContent {repository} {language} />}
-    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topicSlug} {page} {query} {search} />}
-    {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Page>}
+    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topic?.id} {page} {query} {search} />}
+    {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Page>}
     {entry&&<EntryArticle {repository} {entry} {nodes} />}
   </>}
 </SiteLayout>

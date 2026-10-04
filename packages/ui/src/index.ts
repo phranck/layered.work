@@ -60,3 +60,4 @@ export { SkyBackdrop } from "./sky-backdrop.js";
 export { Spacer } from "./spacer.js";
 export { Stack, type StackProps } from "./stack.js";
 export { Video, type VideoProps } from "./video.js";
+export { YouTube, type YouTubeProps } from "./youtube.js";

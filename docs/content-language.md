@@ -41,7 +41,7 @@ HTML is not. A tag written in a document reaches the page as the characters that
 
 ## The components
 
-There are 16 of them, and this list is generated from the register, so it is what the parser actually accepts.
+There are 17 of them, and this list is generated from the register, so it is what the parser actually accepts.
 
 ### VStack
 
@@ -198,6 +198,23 @@ Takes no body. Rendered by `Video`.
 
 ```
 Video("assembly", poster: "assembly-still")
+```
+
+### YouTube
+
+A video embedded from an approved YouTube address.
+
+Takes no body. Rendered by `YouTube`.
+
+| Parameter | What it is for | Takes | Default |
+| --- | --- | --- | --- |
+| `url` (required) | The HTTPS YouTube embed address. | text in quotes |  |
+| `title` (required) | A descriptive title for the video frame. | text in quotes |  |
+
+`url` may be written first without its name.
+
+```
+YouTube("https://www.youtube.com/embed/a6UYEIY-DMc", title: "Boot demo")
 ```
 
 ### Pdf

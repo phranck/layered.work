@@ -7,6 +7,7 @@ import {
   type Media,
   readingTime,
   summaryOf,
+  type TopicView,
 } from "../content/repository.js";
 
 /** Each language's name, in the language of the page it is named on. */
@@ -27,10 +28,12 @@ export function EntryCard({
   image,
   language,
   summaryLength,
+  topics = [],
 }: {
   entry: Entry;
   image?: Media;
   language?: Language;
+  topics?: TopicView[];
   /** How long the preview text may be, where the overview's settings say. */
   summaryLength?: number;
 }) {
@@ -73,9 +76,18 @@ export function EntryCard({
       <Card.Footer
         note={
           <span className="cluster">
-            {entry.topics.slice(0, 2).map((topic) => (
-              <span className="chip" key={topic}>
-                {topic}
+            {topics.slice(0, 2).map((topic) => (
+              <span
+                className="chip"
+                key={topic.id}
+                lang={topic.untranslated ? topic.sourceLanguage : undefined}
+              >
+                {topic.name}
+                {topic.untranslated && (
+                  <span className="lang-tag" title={topic.sourceLanguage === "en" ? "English" : "Deutsch"}>
+                    {topic.sourceLanguage.toUpperCase()}
+                  </span>
+                )}
               </span>
             ))}
           </span>

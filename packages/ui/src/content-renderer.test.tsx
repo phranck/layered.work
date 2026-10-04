@@ -82,6 +82,17 @@ describe("content renderer", () => {
     expect(html).toContain('href="/media/manual.pdf"');
     expect(html).toContain("Manual");
   });
+  it("embeds a checked YouTube address on the privacy host", () => {
+    const html = draw('YouTube("https://www.youtube.com/embed/a6UYEIY-DMc?si=source", title: "Boot demo")');
+    expect(html).toContain("<iframe");
+    expect(html).toContain('src="https://www.youtube-nocookie.com/embed/a6UYEIY-DMc"');
+    expect(html).toContain('title="Boot demo"');
+    expect(html).toContain('loading="lazy"');
+    expect(html).not.toContain("?si=");
+    expect(
+      draw('YouTube("https://www.youtube.com.attacker.invalid/embed/a6UYEIY-DMc", title: "Bad")'),
+    ).not.toContain("<iframe");
+  });
   it("resolves prose links and images through the caller's media origin", () => {
     const html = renderToStaticMarkup(
       <ContentRenderer

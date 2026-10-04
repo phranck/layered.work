@@ -74,6 +74,9 @@ export const ANALYTICS_ORIGIN = "https://umami.layered.work";
  */
 export const MEDIA_ORIGIN = "https://storage.cdn.zerops.app";
 
+/** The one external frame origin a page with a YouTube embed may load. */
+export const YOUTUBE_FRAME_ORIGIN = "https://www.youtube-nocookie.com";
+
 /**
  * Builds a policy from its directives.
  *
@@ -144,10 +147,12 @@ export function dashboardPolicy(apiOrigin?: string): string {
  *   which inherits this document's policy. No build of that transcoder exists
  *   without it, so the choice is between this permission on the pages that
  *   carry a model and no model at all. Every other page is unaffected.
+ * @property rendersYouTube - Whether this page draws an approved YouTube frame.
  */
 export type SitePolicyOptions = {
   styleHashes?: readonly string[];
   rendersModel?: boolean;
+  rendersYouTube?: boolean;
 };
 
 /**
@@ -165,7 +170,7 @@ export type SitePolicyOptions = {
  * @param options - What this one response needs beyond the common policy.
  */
 export function sitePolicy(nonce: string, options: SitePolicyOptions = {}): string {
-  const { styleHashes = [], rendersModel = false } = options;
+  const { styleHashes = [], rendersModel = false, rendersYouTube = false } = options;
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     // `wasm-unsafe-eval` because the geometry arrives Draco-compressed and the
@@ -195,6 +200,7 @@ export function sitePolicy(nonce: string, options: SitePolicyOptions = {}): stri
     // refusal per texture, and the model renders empty. A blob address can only
     // name something this page itself made.
     "connect-src": ["'self'", "blob:", ANALYTICS_ORIGIN, MEDIA_ORIGIN],
+    "frame-src": rendersYouTube ? [YOUTUBE_FRAME_ORIGIN] : ["'none'"],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'self'"],

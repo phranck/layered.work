@@ -481,6 +481,10 @@ describe("every component the register declares", () => {
     ],
     Model: ['Model("cube", alt: "Ein Würfel")', ['Model → Model {"alt":"Ein Würfel","slug":"cube"}']],
     Video: ['Video("film", poster: "front")', ['Video → Video {"poster":"front","slug":"film"}']],
+    YouTube: [
+      'YouTube("https://www.youtube.com/embed/a6UYEIY-DMc", title: "Boot demo")',
+      ['YouTube → YouTube {"title":"Boot demo","url":"https://www.youtube.com/embed/a6UYEIY-DMc"}'],
+    ],
     Pdf: [
       'Pdf("anleitung", label: "Anleitung")',
       ['Pdf → Document {"label":"Anleitung","slug":"anleitung"}'],

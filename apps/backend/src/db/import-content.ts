@@ -12,6 +12,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
+import type { PublicTopic } from "../content/snapshot.js";
 import {
   entries,
   entryTopics,
@@ -84,7 +85,7 @@ export interface SnapshotMedia {
 /** The whole snapshot, as `site.json` holds it. */
 export interface Snapshot {
   entries: SnapshotEntry[];
-  topics: { id: number | string; slug: string; name: string }[];
+  topics: (PublicTopic | { id: number | string; slug: string; name: string })[];
   media: SnapshotMedia[];
   redirects: { source: string; target: string }[];
 }
@@ -356,7 +357,9 @@ async function importMedia(
 }
 
 /**
- * Writes the snapshot's topics, and returns their database ids by slug.
+ * Writes the snapshot's topics, and returns their database ids by snapshot id
+ * and slug. The migration output still names topics by English slug, while the
+ * published snapshot names them by id.
  *
  * The old site had one language of topic names, so each becomes an English
  * translation. A German name for the same topic is a row somebody adds later,
@@ -367,35 +370,47 @@ async function importTopics(
   snapshot: Snapshot,
   report: ImportReport,
 ): Promise<Map<string, string>> {
-  const byslug = new Map<string, string>();
+  const byReference = new Map<string, string>();
 
   for (const topic of snapshot.topics) {
+    const translations =
+      "translations" in topic ? topic.translations : { en: { slug: topic.slug, name: topic.name }, de: null };
+    const anchor = translations.en
+      ? { language: "en" as const, ...translations.en }
+      : translations.de
+        ? { language: "de" as const, ...translations.de }
+        : null;
+    if (!anchor) continue;
     const [existing] = await database
       .select({ topicId: topicTranslations.topicId })
       .from(topicTranslations)
-      .where(and(eq(topicTranslations.language, "en"), eq(topicTranslations.slug, topic.slug)))
+      .where(and(eq(topicTranslations.language, anchor.language), eq(topicTranslations.slug, anchor.slug)))
       .limit(1);
 
-    if (existing) {
-      await database
-        .update(topicTranslations)
-        .set({ name: topic.name })
-        .where(and(eq(topicTranslations.topicId, existing.topicId), eq(topicTranslations.language, "en")));
-      byslug.set(topic.slug, existing.topicId);
-      report.topics += 1;
-      continue;
+    let id = existing?.topicId;
+    if (!id) {
+      const [created] = await database.insert(topics).values({}).returning({ id: topics.id });
+      id = created?.id;
     }
+    if (!id) continue;
 
-    const [created] = await database.insert(topics).values({}).returning({ id: topics.id });
-    if (!created) continue;
-    await database
-      .insert(topicTranslations)
-      .values({ topicId: created.id, language: "en", name: topic.name, slug: topic.slug });
-    byslug.set(topic.slug, created.id);
+    for (const language of ["en", "de"] as const) {
+      const translation = translations[language];
+      if (!translation) continue;
+      await database
+        .insert(topicTranslations)
+        .values({ topicId: id, language, name: translation.name, slug: translation.slug })
+        .onConflictDoUpdate({
+          target: [topicTranslations.topicId, topicTranslations.language],
+          set: { name: translation.name, slug: translation.slug },
+        });
+      byReference.set(translation.slug, id);
+    }
+    byReference.set(String(topic.id), id);
     report.topics += 1;
   }
 
-  return byslug;
+  return byReference;
 }
 
 /**
@@ -447,8 +462,8 @@ async function entryAt(database: Database, path: string): Promise<string | undef
 interface Lookups {
   /** Media row ids by slug, every alias included. */
   mediaBySlug: Map<string, string>;
-  /** Topic ids by slug. */
-  topicsBySlug: Map<string, string>;
+  /** Topic ids by snapshot id or former English slug. */
+  topicsByReference: Map<string, string>;
   /** Former addresses by the address they redirect to. */
   redirectsByTarget: Map<string, string[]>;
   /** The slug kept for each one folded into it because it named the same file. */
@@ -485,7 +500,7 @@ async function importEntry(
   lookups: Lookups,
   report: ImportReport,
 ): Promise<void> {
-  const { mediaBySlug, topicsBySlug, redirectsByTarget, keptMedia } = lookups;
+  const { mediaBySlug, topicsByReference, redirectsByTarget, keptMedia } = lookups;
   // The English one leads where there is a pair, because the site's own English
   // paths are the ones that survived the migration unchanged.
   const lead = group.find((entry) => entry.language === "en") ?? group[0];
@@ -555,7 +570,7 @@ async function importEntry(
   // Topics belong to the piece of writing rather than to one of its languages,
   // so both translations contribute and the set is written once.
   const wanted = [...new Set(group.flatMap((entry) => entry.topics))]
-    .map((slug) => topicsBySlug.get(slug))
+    .map((reference) => topicsByReference.get(reference))
     .filter((id): id is string => id !== undefined);
 
   if (wanted.length > 0) {
@@ -679,7 +694,7 @@ export async function importContent(
 
   const mediaBySlug = await importMedia(database, snapshot, report);
   report.variants = await writeVariants(database, staged);
-  const topicsBySlug = await importTopics(database, snapshot, report);
+  const topicsByReference = await importTopics(database, snapshot, report);
 
   const redirectsByTarget = new Map<string, string[]>();
   for (const redirect of snapshot.redirects) {
@@ -691,7 +706,7 @@ export async function importContent(
 
   const lookups: Lookups = {
     mediaBySlug,
-    topicsBySlug,
+    topicsByReference,
     redirectsByTarget,
     keptMedia: new Map(report.aliased.map((alias) => [alias.slug, alias.sameFileAs])),
   };

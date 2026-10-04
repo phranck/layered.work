@@ -16,7 +16,7 @@ const pageUrl=(number:number)=>{const url=new URL(Astro.url);url.searchParams.se
 // topic or a search page lists both kinds and keeps the defaults.
 const listing=kind==="post"||kind==="project"?repository.listing(kind):undefined;
 const introductionText=listing?.introduction[language].trim()??"";
-const introduction=introductionText?renderContent(introductionText):[];
+const introduction=introductionText?renderContent(introductionText,{language}):[];
 ---
 <Section.Page>
   <Section.Lead title={title} />
@@ -26,7 +26,7 @@ const introduction=introductionText?renderContent(introductionText):[];
     <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon,{weight:"duotone"})}>{de?"Raster":"Grid"}</Button>
     <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon,{weight:"duotone"})}>{de?"Liste":"List"}</Button>
   </div>
-  <div class="entry-grid" data-entry-list style={listing?`--grid-columns: ${listing.columns}`:undefined}>{result.entries.map(entry=><EntryCard entry={entry} {language} summaryLength={listing?.previewLength} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+  <div class="entry-grid" data-entry-list style={listing?`--grid-columns: ${listing.columns}`:undefined}>{result.entries.map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} summaryLength={listing?.previewLength} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
   {result.total===0&&<p class="empty-state">{de?"Keine passenden Einträge gefunden.":"No matching entries found."}</p>}
   {result.pages>1&&<nav class="pagination" aria-label={de?"Seitennavigation":"Pagination"}>{Array.from({length:result.pages},(_,i)=>i+1).map(number=><Button.Link href={pageUrl(number)} aria-current={number===page?"page":undefined}>{number}</Button.Link>)}</nav>}
 </Section.Page>

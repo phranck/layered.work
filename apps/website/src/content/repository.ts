@@ -37,7 +37,7 @@ const entrySchema = z.object({
   updatedAt: instant.nullable(),
   summary: z.string().nullish(),
   body: z.string(),
-  topics: z.array(slug),
+  topics: z.array(z.union([z.number().int(), z.string()]).transform(String)),
   featuredImage: slug.nullish(),
   translationPath: path.nullish(),
   featured: z.boolean().default(false),
@@ -83,9 +83,24 @@ const mediaSchema = z.object({
     .regex(/^data:image\/(?:webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/)
     .optional(),
 });
+const topicTranslation = z.object({ slug, name: z.string() });
+const topicId = z.union([z.number().int(), z.string()]).transform(String);
+const topicSchema = z.union([
+  z.object({
+    id: topicId,
+    translations: z
+      .object({ en: topicTranslation.nullable(), de: topicTranslation.nullable() })
+      .refine((translations) => translations.en !== null || translations.de !== null),
+  }),
+  // An old backend can answer during the rollout of the new snapshot shape.
+  z.object({ id: topicId, slug, name: z.string() }).transform((topic) => ({
+    id: topic.id,
+    translations: { en: { slug: topic.slug, name: topic.name }, de: null },
+  })),
+]);
 const snapshotSchema = z.object({
   entries: z.array(entrySchema),
-  topics: z.array(z.object({ id: z.union([z.number(), z.string()]), slug, name: z.string() })),
+  topics: z.array(topicSchema),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),
   /** Addresses of entries that were deleted, which answer 410 rather than 404. */
@@ -105,6 +120,15 @@ export type Entry = z.infer<typeof entrySchema>;
 export type Media = z.infer<typeof mediaSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type { HomeBlock };
+
+/** A topic as one language of the site presents it. */
+export interface TopicView {
+  id: string;
+  slug: string;
+  name: string;
+  sourceLanguage: Language;
+  untranslated: boolean;
+}
 
 /**
  * All collection readers share this publication predicate.
@@ -261,7 +285,22 @@ function mediaSrcSet(srcSet: string): string {
 
 /** Validated read model shared by the migration snapshot and future database adapter. */
 export function createRepository(input: unknown) {
-  const data = snapshotSchema.parse(input);
+  const parsed = snapshotSchema.parse(input);
+  const topicIdByEnglishSlug = new Map(
+    parsed.topics.flatMap((topic) =>
+      topic.translations.en ? [[topic.translations.en.slug, topic.id] as const] : [],
+    ),
+  );
+  const topicIds = new Set(parsed.topics.map((topic) => topic.id));
+  const data = {
+    ...parsed,
+    entries: parsed.entries.map((entry) => ({
+      ...entry,
+      // Older backend snapshots used English slugs. Resolve them once at the
+      // boundary so every collection below compares stable ids.
+      topics: entry.topics.map((ref) => (topicIds.has(ref) ? ref : (topicIdByEnglishSlug.get(ref) ?? ref))),
+    })),
+  };
   const entries = new Map<string, Entry>();
   for (const item of data.entries) {
     if (entries.has(item.path)) throw new Error(`Duplicate entry path: ${item.path}`);
@@ -284,7 +323,26 @@ export function createRepository(input: unknown) {
     (a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "") || a.path.localeCompare(b.path),
   );
   const publicEntries = (locale: Language) => ordered.filter((entry) => isListed(entry, locale));
-  const topicNames = new Map(data.topics.map((topic) => [topic.slug, topic.name]));
+  const topicById = new Map(data.topics.map((topic) => [topic.id, topic]));
+  const topic = (id: string, locale: Language): TopicView | undefined => {
+    const found = topicById.get(id);
+    if (!found) return undefined;
+    const translation = found.translations[locale] ?? found.translations.en ?? found.translations.de;
+    if (!translation) return undefined;
+    const sourceLanguage = found.translations[locale] ? locale : locale === "en" ? "de" : "en";
+    return {
+      id,
+      ...translation,
+      sourceLanguage,
+      untranslated: sourceLanguage !== locale,
+    };
+  };
+  const topicBySlug = (locale: Language, wanted: string): TopicView | undefined => {
+    const found = data.topics.find(
+      (item) => (item.translations[locale] ?? item.translations.en ?? item.translations.de)?.slug === wanted,
+    );
+    return found ? topic(found.id, locale) : undefined;
+  };
   /**
    * Everything a search looks at, for one entry.
    *
@@ -292,9 +350,9 @@ export function createRepository(input: unknown) {
    * found in the other. Topic names are part of it because a reader looking for
    * "Hardware" means the topic as much as the word in a sentence.
    */
-  const searchText = (entry: Entry) =>
+  const searchText = (entry: Entry, locale: Language) =>
     `${entry.title} ${summaryOf(entry)} ${entry.body} ${entry.topics
-      .map((slug) => topicNames.get(slug) ?? slug)
+      .map((id) => topic(id, locale)?.name ?? id)
       .join(" ")}`;
   /**
    * Every block the snapshot declares, known or not, enabled or not.
@@ -333,6 +391,13 @@ export function createRepository(input: unknown) {
     /** Whether an address belonged to an entry that was deleted. */
     gone: (name: string) => gone.has(name),
     publicEntries,
+    topic,
+    topicBySlug,
+    entryTopics: (entry: Entry, locale: Language): TopicView[] =>
+      entry.topics.flatMap((id) => {
+        const found = topic(id, locale);
+        return found ? [found] : [];
+      }),
     list({
       language: locale,
       kind,
@@ -353,7 +418,8 @@ export function createRepository(input: unknown) {
         (entry) =>
           (!kind || entry.kind === kind) &&
           (!topic || entry.topics.includes(topic)) &&
-          (!query || searchText(entry).toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))),
+          (!query ||
+            searchText(entry, locale).toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))),
       );
       return {
         entries: matches.slice((page - 1) * pageSize, page * pageSize),
@@ -374,7 +440,7 @@ export function createRepository(input: unknown) {
         path: entry.path,
         title: entry.title,
         kind: entry.kind,
-        text: searchText(entry).toLocaleLowerCase(locale),
+        text: searchText(entry, locale).toLocaleLowerCase(locale),
       }));
     },
     /**
@@ -400,12 +466,12 @@ export function createRepository(input: unknown) {
         .slice(0, 3);
     },
     topics(locale: Language) {
-      return data.topics
-        .map((topic) => ({
-          ...topic,
-          count: publicEntries(locale).filter((entry) => entry.topics.includes(topic.slug)).length,
-        }))
-        .filter((topic) => topic.count > 0);
+      return data.topics.flatMap((item) => {
+        const localized = topic(item.id, locale);
+        if (!localized) return [];
+        const count = publicEntries(locale).filter((entry) => entry.topics.includes(item.id)).length;
+        return count > 0 ? [{ ...localized, count }] : [];
+      });
     },
     /**
      * The home page's blocks, enabled and in order, and only the ones this build renders.

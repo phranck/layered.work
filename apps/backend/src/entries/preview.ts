@@ -5,16 +5,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { sameSignature } from "../auth/signature.js";
 import { config, sessionSecret } from "../config.js";
-import { type PublicSnapshot, publicMedia } from "../content/snapshot.js";
-import {
-  entries,
-  entryPreviews,
-  entryTopics,
-  entryTranslations,
-  paths,
-  topics,
-  topicTranslations,
-} from "../db/schema/index.js";
+import { type PublicSnapshot, publicMedia, publicTopics } from "../content/snapshot.js";
+import { entries, entryPreviews, entryTopics, entryTranslations, paths } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readListingSettings } from "../settings/repository.js";
 
@@ -183,14 +175,13 @@ export async function readPreview(db: Database, token: string, now = Date.now())
   const path = current?.path ?? `/${row.language === "de" ? "de/" : ""}preview/`;
 
   const assigned = await db
-    .select({ id: topics.id, slug: topicTranslations.slug, name: topicTranslations.name })
+    .select({ topicId: entryTopics.topicId })
     .from(entryTopics)
-    .innerJoin(topics, eq(topics.id, entryTopics.topicId))
-    .innerJoin(
-      topicTranslations,
-      and(eq(topicTranslations.topicId, entryTopics.topicId), eq(topicTranslations.language, "en")),
-    )
     .where(eq(entryTopics.entryId, row.entryId));
+  const assignedTopics = await publicTopics(
+    db,
+    assigned.map((topic) => topic.topicId),
+  );
 
   const { media, slugById } = await publicMedia(db, [row]);
 
@@ -209,7 +200,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
         updatedAt: row.modifiedAt.toISOString(),
         summary: row.summary,
         body: row.body,
-        topics: assigned.map((topic) => topic.slug),
+        topics: assigned.map((topic) => topic.topicId),
         featuredImage: row.featuredMediaId ? (slugById.get(row.featuredMediaId) ?? null) : null,
         translationPath: null,
         featured: row.featured,
@@ -218,7 +209,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
         showInOtherLanguage: false,
       },
     ],
-    topics: assigned,
+    topics: assignedTopics,
     media,
     redirects: [],
     gone: [],

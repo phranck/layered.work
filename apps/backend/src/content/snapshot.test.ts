@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   entries,
+  entryTopics,
   entryTranslations,
   formerTopicSlugs,
   media,
@@ -119,23 +120,90 @@ runs("the public snapshot", () => {
     expect(snapshot.redirects).toEqual([{ source: "/before/", target: "/now/" }]);
   });
 
-  it("turns a topic's former English address into a redirect in both languages", async () => {
+  it("publishes topic ids and both language addresses, including former slugs", async () => {
     const database = await testDatabase();
     const [topic] = await database.insert(topics).values({}).returning({ id: topics.id });
     if (!topic) throw new Error("no topic");
-    await database
-      .insert(topicTranslations)
-      .values({ topicId: topic.id, language: "en", name: "Hardware", slug: "hardware" });
-    await database.insert(formerTopicSlugs).values([
-      { topicId: topic.id, language: "en", slug: "electronics" },
-      { topicId: topic.id, language: "de", slug: "elektronik" },
+    await database.insert(topicTranslations).values([
+      { topicId: topic.id, language: "en", name: "Hardware", slug: "hardware" },
+      { topicId: topic.id, language: "de", name: "Elektronik", slug: "elektronik" },
     ]);
+    await database.insert(formerTopicSlugs).values([
+      { topicId: topic.id, language: "en", slug: "old-hardware" },
+      { topicId: topic.id, language: "de", slug: "alte-elektronik" },
+    ]);
+    const { entryId } = await writeEntry(database, {
+      title: "A machine",
+      path: "/machine/",
+      state: "public",
+    });
+    await database.insert(entryTopics).values({ entryId, topicId: topic.id });
 
     const snapshot = await readPublicSnapshot(database);
 
-    expect(snapshot.redirects).toEqual([
-      { source: "/topics/electronics/", target: "/topics/hardware/" },
-      { source: "/de/topics/electronics/", target: "/de/topics/hardware/" },
+    expect(snapshot.topics).toEqual([
+      {
+        id: topic.id,
+        translations: {
+          en: { name: "Hardware", slug: "hardware" },
+          de: { name: "Elektronik", slug: "elektronik" },
+        },
+      },
+    ]);
+    expect(snapshot.entries[0]?.topics).toEqual([topic.id]);
+    expect(snapshot.redirects).toEqual(
+      expect.arrayContaining([
+        { source: "/topics/old-hardware/", target: "/topics/hardware/" },
+        { source: "/de/topics/old-hardware/", target: "/de/topics/elektronik/" },
+        { source: "/de/topics/alte-elektronik/", target: "/de/topics/elektronik/" },
+        { source: "/de/topics/hardware/", target: "/de/topics/elektronik/" },
+      ]),
+    );
+    expect(snapshot.redirects).toHaveLength(4);
+  });
+
+  it("keeps the English topic as the German fallback when no translation exists", async () => {
+    const database = await testDatabase();
+    const [topic] = await database.insert(topics).values({}).returning({ id: topics.id });
+    if (!topic) throw new Error("no topic");
+    await database.insert(topicTranslations).values({
+      topicId: topic.id,
+      language: "en",
+      name: "Hardware",
+      slug: "hardware",
+    });
+    await database.insert(formerTopicSlugs).values({
+      topicId: topic.id,
+      language: "en",
+      slug: "old-hardware",
+    });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.topics[0]?.translations.de).toBeNull();
+    expect(snapshot.redirects).toEqual(
+      expect.arrayContaining([
+        { source: "/topics/old-hardware/", target: "/topics/hardware/" },
+        { source: "/de/topics/old-hardware/", target: "/de/topics/hardware/" },
+      ]),
+    );
+  });
+
+  it("carries a German-only topic instead of dropping it", async () => {
+    const database = await testDatabase();
+    const [topic] = await database.insert(topics).values({}).returning({ id: topics.id });
+    if (!topic) throw new Error("no topic");
+    await database.insert(topicTranslations).values({
+      topicId: topic.id,
+      language: "de",
+      name: "Elektronik",
+      slug: "elektronik",
+    });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.topics).toEqual([
+      { id: topic.id, translations: { en: null, de: { name: "Elektronik", slug: "elektronik" } } },
     ]);
   });
 

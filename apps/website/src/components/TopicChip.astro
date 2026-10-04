@@ -1,0 +1,16 @@
+---
+import { topicPath, type Language, type TopicView } from "../content/repository.js";
+
+interface Props {
+  topic: TopicView;
+  language: Language;
+  count?: number;
+}
+
+const { topic, language, count } = Astro.props;
+---
+<a class="chip" href={topicPath(language, topic.slug)} lang={topic.untranslated ? topic.sourceLanguage : undefined}>
+  {topic.name}
+  {topic.untranslated && <span class="lang-tag" title={topic.sourceLanguage === "en" ? "English" : "Deutsch"}>{topic.sourceLanguage.toUpperCase()}</span>}
+  {count !== undefined && <span class="chip__count">{count}</span>}
+</a>

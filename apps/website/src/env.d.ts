@@ -24,5 +24,7 @@ declare namespace App {
      * nothing has looked at when the request arrives.
      */
     rendersModel: boolean;
+    /** Whether this page renders an approved YouTube frame. */
+    rendersYouTube: boolean;
   }
 }
