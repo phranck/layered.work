@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { localMediaPath } from "../media/storage.js";
-import { missingObjects } from "./verify-storage.js";
+import { missingOriginalObjects } from "./verify-storage.js";
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
 
@@ -17,7 +17,7 @@ export async function syncMissingObjects(
   root: string,
   store: SyncStore,
 ): Promise<string[]> {
-  const missing = await missingObjects(database, store.exists);
+  const missing = await missingOriginalObjects(database, store.exists);
   const ready: { file: (typeof missing)[number]; bytes: Buffer }[] = [];
   // Refuse a stale or damaged local library before changing any bucket object.
   for (const file of missing) {
