@@ -8,6 +8,7 @@ import { SPACE_STEPS } from "../register/components.js";
 import { accepts, either } from "../register/describe.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
 import { resolveComponent, unnamedParameter } from "../register/lookup.js";
+import { youtubeEmbedUrl } from "../render/youtube.js";
 import { FINDING, type Finding, type Validation } from "./findings.js";
 import { placesIn } from "./position.js";
 
@@ -560,6 +561,18 @@ function checkValue(bound: Bound, valueNode: SyntaxNode, subject: Subject, conte
   switch (parameter.kind) {
     case "text":
       if (written !== "string") refuse();
+      else if (subject.name === "YouTube" && bound.name === "url" && !youtubeEmbedUrl(unquote(raw))) {
+        context.report({
+          code: FINDING.ValueNotPermitted,
+          severity: "error",
+          message: "Only HTTPS YouTube embed addresses are accepted.",
+          from: valueNode.from,
+          to: valueNode.to,
+          component: subject.name,
+          parameter: bound.name,
+          value: unquote(raw),
+        });
+      }
       return;
 
     case "slug":

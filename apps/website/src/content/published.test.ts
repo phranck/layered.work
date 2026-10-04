@@ -31,6 +31,20 @@ describe("the published snapshot", () => {
     expect(repository.topics("en").length).toBeGreaterThan(0);
   });
 
+  it("restores the four migrated YouTube embeds as content components", () => {
+    const paths = [
+      "/projects/pandadock/",
+      "/de/nextstep-on-rpi5-de/",
+      "/nextstep-on-rpi5-en/",
+      "/rpi5-with-external-leds/",
+    ];
+    for (const path of paths) {
+      const entry = snapshot.entries.find((candidate: { path: string }) => candidate.path === path);
+      expect(entry?.body, path).toContain("YouTube(");
+      expect(entry?.body, path).not.toMatch(/\]\(https:\/\/www\.youtube\.com\/embed\//);
+    }
+  });
+
   it("uses topic ids and localized topic fields in the committed fallback", () => {
     const ids = new Set(snapshot.topics.map((topic: { id: string }) => topic.id));
     for (const topic of snapshot.topics as {
@@ -69,7 +83,7 @@ describe("the published snapshot", () => {
 
     for (const entry of snapshot.entries as { slug: string; body: string }[]) {
       if (!entry.body.includes("|")) continue;
-      for (const [index, table] of tablesIn(await renderContent(entry.body)).entries()) {
+      for (const [index, table] of tablesIn(renderContent(entry.body)).entries()) {
         const rows = (table.children ?? []).flatMap((part) => part.children ?? []);
         const widths = [...new Set(rows.map((row) => (row.children ?? []).length))];
         expect(widths, `${entry.slug}, table ${index + 1}`).toHaveLength(1);

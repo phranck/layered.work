@@ -5,3 +5,13 @@
   border-radius: var(--card-inner-radius);
   background: var(--surface-sunken);
 }
+
+.content-video iframe {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--card-inner-radius);
+  background: var(--surface-sunken);
+}

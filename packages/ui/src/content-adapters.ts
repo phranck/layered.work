@@ -12,6 +12,7 @@ import { Note } from "./note.js";
 import { Spacer } from "./spacer.js";
 import { Stack } from "./stack.js";
 import { Video } from "./video.js";
+import { YouTube } from "./youtube.js";
 
 type Adapter = (node: ComponentNode, media: MediaResolver, children: ReactNode) => ReactNode;
 function props<N extends ComponentName>(node: ComponentNode, children: ReactNode): ContentProps<N> {
@@ -33,6 +34,7 @@ export const CONTENT_RENDERERS: Readonly<Record<string, Adapter>> = {
   Gallery: (node, _media, children) => createElement(Gallery, props<"Gallery">(node, children)),
   Model: (node, media) => createElement(Model, { ...(node.props as unknown as PropsOf<"Model">), media }),
   Video: (node, media) => createElement(Video, { ...(node.props as unknown as PropsOf<"Video">), media }),
+  YouTube: (node) => createElement(YouTube, node.props as unknown as PropsOf<"YouTube">),
   Document: (node, media) => createElement(Document, { ...(node.props as unknown as PropsOf<"Pdf">), media }),
   Note: (node, _media, children) => createElement(Note, props<"Note">(node, children)),
   Button: (node, _media, children) => createElement(ContentButton, props<"Button">(node, children)),

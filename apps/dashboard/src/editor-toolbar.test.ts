@@ -39,5 +39,6 @@ describe("the components the toolbar offers", () => {
     expect(componentSnippet("Note")).toBe("Note {\n  \n}");
     expect(componentSnippet("Divider")).toBe("Divider()");
     expect(componentSnippet("Spacer")).toBe("Spacer()");
+    expect(componentSnippet("YouTube")).toBe('YouTube("", title: "")');
   });
 });

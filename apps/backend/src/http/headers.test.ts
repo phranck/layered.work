@@ -1,4 +1,5 @@
-import { API_POLICY, dashboardPolicy, sitePolicy } from "@layered/policy";
+import { YOUTUBE_FRAME_ORIGIN as CONTENT_YOUTUBE_FRAME_ORIGIN } from "@layered/content";
+import { API_POLICY, dashboardPolicy, sitePolicy, YOUTUBE_FRAME_ORIGIN } from "@layered/policy";
 import { describe, expect, it } from "vitest";
 import { registerProbeRoutes } from "../test-support/probe-routes.js";
 import { app } from "./app.js";
@@ -152,6 +153,14 @@ describe("the policies the other hosts send", () => {
       "'unsafe-eval'",
     );
     expect(sourcesOf(sitePolicy("abc123"), "script-src")).not.toContain("'unsafe-eval'");
+  });
+
+  it("allows YouTube frames only on pages that render a YouTube embed", () => {
+    expect(CONTENT_YOUTUBE_FRAME_ORIGIN).toBe(YOUTUBE_FRAME_ORIGIN);
+    expect(sourcesOf(sitePolicy("abc123", { rendersYouTube: true }), "frame-src")).toEqual([
+      "https://www.youtube-nocookie.com",
+    ]);
+    expect(sourcesOf(sitePolicy("abc123"), "frame-src")).toEqual(["'none'"]);
   });
 
   it("lets the site compile the model decoder and read back its own blobs", () => {

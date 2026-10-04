@@ -9,3 +9,4 @@ export * from "./model.js";
 export * from "./prose.js";
 export * from "./query.js";
 export * from "./render.js";
+export * from "./youtube.js";

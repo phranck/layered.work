@@ -86,6 +86,7 @@ const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.
 Astro.locals.rendersModel=rendersComponent(nodes,"Model");
+Astro.locals.rendersYouTube=rendersComponent(nodes,"YouTube");
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
 <SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>

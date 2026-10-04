@@ -106,7 +106,7 @@ export function componentSnippet(name: ComponentName, form: SnippetForm = PLAIN)
  * toolbar shows them. A divider is drawn between groups.
  */
 export const COMPONENT_GROUPS: readonly (readonly ToolbarComponent[])[] = [
-  ["Image", "Gallery", "Model", "Video", "Pdf"],
+  ["Image", "Gallery", "Model", "Video", "YouTube", "Pdf"],
   ["Note", "Card", "Table", "Button"],
   ["VStack", "HStack", "Grid", "Spacer", "Divider"],
 ];
@@ -121,6 +121,7 @@ export const COMPONENT_ICONS: Readonly<Record<ToolbarComponent, ComponentType<Ic
   Gallery: ImagesIcon,
   Model: CubeIcon,
   Video: VideoCameraIcon,
+  YouTube: VideoCameraIcon,
   Pdf: FilePdfIcon,
   Note: NoteIcon,
   Card: CardsIcon,

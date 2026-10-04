@@ -15,7 +15,11 @@ test("the published fallback uses topic ids and localized topic fields", async (
       input,
       JSON.stringify({
         entries: [
-          { visibility: "public", topics: ["hardware"] },
+          {
+            visibility: "public",
+            topics: ["hardware"],
+            body: "[Boot demo](https://www.youtube.com/embed/a6UYEIY-DMc?si=source)\n\n[manual](https://example.com/manual)",
+          },
           { visibility: "draft", topics: ["hardware"] },
         ],
         topics: [{ id: 7, slug: "hardware", name: "Hardware" }],
@@ -39,6 +43,10 @@ test("the published fallback uses topic ids and localized topic fields", async (
     assert.deepEqual(published.topics, [
       { id: "7", translations: { en: { slug: "hardware", name: "Hardware" }, de: null } },
     ]);
+    assert.equal(
+      published.entries[0].body,
+      'YouTube("https://www.youtube.com/embed/a6UYEIY-DMc?si=source", title: "Boot demo")\n\n[manual](https://example.com/manual)',
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

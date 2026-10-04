@@ -228,6 +228,31 @@ describe("a media name", () => {
   });
 });
 
+describe("a YouTube embed", () => {
+  it("accepts a provider embed address", () => {
+    expect(
+      findingsIn('YouTube("https://www.youtube.com/embed/a6UYEIY-DMc?si=source", title: "Boot demo")'),
+    ).toEqual([]);
+    expect(
+      findingsIn('YouTube("https://www.youtube-nocookie.com/embed/a6UYEIY-DMc", title: "Boot demo")'),
+    ).toEqual([]);
+  });
+
+  it.each([
+    "https://www.youtube.com.attacker.invalid/embed/a6UYEIY-DMc",
+    "http://www.youtube.com/embed/a6UYEIY-DMc",
+    "https://attacker@www.youtube.com/embed/a6UYEIY-DMc",
+    "https://www.youtube.com/watch?v=a6UYEIY-DMc",
+    "https://www.youtube.com/embed/not-a-video-id",
+  ])("refuses an address outside the provider allow list: %s", (url) => {
+    expect(onlyFinding(`YouTube(${JSON.stringify(url)}, title: "Boot demo")`)).toMatchObject({
+      code: FINDING.ValueNotPermitted,
+      component: "YouTube",
+      parameter: "url",
+    });
+  });
+});
+
 describe("a value written without a name", () => {
   it("is refused where the component takes none", () => {
     expect(onlyFinding('Note("Careful") { Careful. }')).toMatchObject({

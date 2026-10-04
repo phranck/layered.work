@@ -192,6 +192,18 @@ export const components = {
     renders: "Video",
   },
 
+  YouTube: {
+    description: "A video embedded from an approved YouTube address.",
+    example: 'YouTube("https://www.youtube.com/embed/a6UYEIY-DMc", title: "Boot demo")',
+    body: "never",
+    unnamed: "url",
+    parameters: {
+      url: { kind: "text", description: "The HTTPS YouTube embed address.", required: true },
+      title: { kind: "text", description: "A descriptive title for the video frame.", required: true },
+    },
+    renders: "YouTube",
+  },
+
   Pdf: {
     description: "A document to read or download.",
     example: 'Pdf("schematic", label: "The schematic, as a PDF")',

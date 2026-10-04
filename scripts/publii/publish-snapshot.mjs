@@ -30,10 +30,16 @@ const { values } = parseArgs({
 
 const site = JSON.parse(await readFile(resolve(values.export), "utf8"));
 const topicIds = new Map(site.topics.map((topic) => [topic.slug, String(topic.id)]));
+const youtubeLink =
+  /^\[([^\]\n]+)\]\((https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]{11}(?:\?[^)\s]*)?)\)$/gm;
 const entries = site.entries
   .filter((entry) => PUBLISHABLE.has(entry.visibility))
   .map((entry) => ({
     ...entry,
+    body: entry.body.replace(
+      youtubeLink,
+      (_link, title, url) => `YouTube(${JSON.stringify(url)}, title: ${JSON.stringify(title)})`,
+    ),
     topics: entry.topics.map((slug) => {
       const id = topicIds.get(slug);
       if (!id) throw new Error(`Entry ${entry.id} names unknown topic ${slug}`);
