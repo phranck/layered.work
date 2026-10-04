@@ -17,14 +17,18 @@ import { importContent, type Snapshot, withDrafts } from "./import-content.js";
  * ```sh
  * pnpm --filter @layered/backend db:import
  * pnpm --filter @layered/backend db:import --drafts-from ../../migration-out/site.json
+ * pnpm --filter @layered/backend db:import --variant-root /path/to/website/public
  * ```
+ *
+ * The default variant root is this checkout's website/public directory. The
+ * staged migration images must be present there or supplied with the option.
  */
 
 const DEFAULT_SNAPSHOT = "../../../website/content/site.json";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
-  options: { "drafts-from": { type: "string" } },
+  options: { "drafts-from": { type: "string" }, "variant-root": { type: "string" } },
 });
 
 /** Reads and parses one snapshot file. */
@@ -36,10 +40,13 @@ const file = resolve(positionals[0] ?? fileURLToPath(new URL(DEFAULT_SNAPSHOT, i
 const published = await readSnapshot(file);
 const draftsFrom = values["drafts-from"];
 const snapshot = draftsFrom ? withDrafts(published, await readSnapshot(draftsFrom)) : published;
+const variantRoot = resolve(
+  values["variant-root"] ?? fileURLToPath(new URL("../../../website/public/", import.meta.url)),
+);
 
 const sql = connectOnce(databaseUrl());
 try {
-  const report = await importContent(drizzle(sql), snapshot);
+  const report = await importContent(drizzle(sql), snapshot, { variantRoot });
   console.log(JSON.stringify({ file, draftsFrom: draftsFrom ?? null, ...report }, null, 2));
 } finally {
   await sql.end({ timeout: 5 });

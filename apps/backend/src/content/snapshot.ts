@@ -11,6 +11,7 @@ import {
   homeBlocks,
   media,
   mediaTranslations,
+  mediaVariants,
   paths,
   topics,
   topicTranslations,
@@ -80,6 +81,7 @@ export interface PublicMedia {
   width?: number;
   height?: number;
   alt?: string;
+  srcSet?: string;
 }
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -163,22 +165,47 @@ export async function publicMedia(
     );
 
   const named = namedFiles(translations, assets);
+  const variants = named.size
+    ? await database
+        .select({
+          mediaId: mediaVariants.mediaId,
+          format: mediaVariants.format,
+          width: mediaVariants.width,
+          storageKey: mediaVariants.storageKey,
+        })
+        .from(mediaVariants)
+        .where(inArray(mediaVariants.mediaId, [...named]))
+    : [];
+  const variantsByMedia = new Map<string, typeof variants>();
+  for (const variant of variants) {
+    variantsByMedia.set(variant.mediaId, [...(variantsByMedia.get(variant.mediaId) ?? []), variant]);
+  }
   return {
     slugById: new Map(assets.map((asset) => [asset.id, asset.slug])),
     media: assets
       .filter((asset) => named.has(asset.id))
-      .map((asset) => ({
-        slug: asset.slug,
-        src: `/${asset.storageKey}`,
-        mime: asset.mimeType,
-        filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
-        source: asset.storageKey,
-        bytes: asset.byteSize,
-        sha256: asset.checksum,
-        ...(asset.width === null ? {} : { width: asset.width }),
-        ...(asset.height === null ? {} : { height: asset.height }),
-        ...(asset.altText ? { alt: asset.altText } : {}),
-      })),
+      .map((asset) => {
+        const sizes = variantsByMedia.get(asset.id) ?? [];
+        const format = sizes.some((variant) => variant.format === "webp") ? "webp" : sizes[0]?.format;
+        const srcSet = sizes
+          .filter((variant) => variant.format === format)
+          .sort((left, right) => left.width - right.width)
+          .map((variant) => `/${variant.storageKey} ${variant.width}w`)
+          .join(", ");
+        return {
+          slug: asset.slug,
+          src: `/${asset.storageKey}`,
+          mime: asset.mimeType,
+          filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
+          source: asset.storageKey,
+          bytes: asset.byteSize,
+          sha256: asset.checksum,
+          ...(asset.width === null ? {} : { width: asset.width }),
+          ...(asset.height === null ? {} : { height: asset.height }),
+          ...(asset.altText ? { alt: asset.altText } : {}),
+          ...(srcSet ? { srcSet } : {}),
+        };
+      }),
   };
 }
 

@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mediaReferences } from "@layered/content";
 import { LISTING_PATHS, listingSettings } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   closeTestDatabase,
@@ -17,7 +22,16 @@ import {
   type Snapshot,
   withDrafts,
 } from "./import-content.js";
-import { entries, entryTopics, entryTranslations, media, paths, settings, topics } from "./schema/index.js";
+import {
+  entries,
+  entryTopics,
+  entryTranslations,
+  media,
+  mediaVariants,
+  paths,
+  settings,
+  topics,
+} from "./schema/index.js";
 
 /**
  * The import, against the real snapshot and a real database.
@@ -174,6 +188,73 @@ runs("importing a snapshot", () => {
     expect(copies.size).toBeGreaterThan(0);
     const slugs = (await database.select({ slug: media.slug }).from(media)).map((row) => row.slug);
     expect(slugs.filter((slug) => copies.has(slug))).toEqual([]);
+  });
+
+  it("imports measured responsive variants and does not duplicate them on a second run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "layered-variants-"));
+    try {
+      await mkdir(join(root, "media"));
+      const bytes = await sharp({
+        create: { width: 480, height: 240, channels: 3, background: "#334455" },
+      })
+        .webp()
+        .toBuffer();
+      await writeFile(join(root, "media", "variant-fixture-variant-480.webp"), bytes);
+      const original = Buffer.from("variant fixture original");
+      const fixture: Snapshot = {
+        entries: [],
+        topics: [],
+        redirects: [],
+        media: [
+          {
+            slug: "variant-fixture",
+            src: "/media/variant-fixture.jpg",
+            mime: "image/jpeg",
+            filename: "variant-fixture.jpg",
+            source: "fixture/variant-fixture.jpg",
+            bytes: original.length,
+            sha256: createHash("sha256").update(original).digest("hex"),
+            width: 1200,
+            height: 600,
+            srcSet: "/media/variant-fixture-variant-480.webp 480w",
+          },
+        ],
+      };
+      const database = await testDatabase();
+      const report = await importContent(database, fixture, { variantRoot: root });
+      expect(report.variants).toBe(1);
+      const [variant] = await database.select().from(mediaVariants);
+      expect(variant).toMatchObject({
+        format: "webp",
+        width: 480,
+        height: 240,
+        byteSize: bytes.length,
+        storageKey: "migration/variant-fixture-variant-480.webp",
+      });
+
+      await importContent(database, fixture, { variantRoot: root });
+      expect(await database.select().from(mediaVariants)).toHaveLength(1);
+
+      const originalAsset = fixture.media[0];
+      if (!originalAsset) throw new Error("No fixture picture.");
+      const missing: Snapshot = {
+        ...fixture,
+        media: [
+          {
+            ...originalAsset,
+            slug: "missing-variant-fixture",
+            sha256: createHash("sha256").update("another original").digest("hex"),
+            srcSet: "/media/absent-variant-480.webp 480w",
+          },
+        ],
+      };
+      await expect(importContent(database, missing, { variantRoot: root })).rejects.toThrow();
+      expect(await database.select().from(media).where(eq(media.slug, "missing-variant-fixture"))).toEqual(
+        [],
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("holds a file once however many slugs name it", async () => {
