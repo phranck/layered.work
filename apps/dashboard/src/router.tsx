@@ -8,6 +8,7 @@ import { safeReturnTo } from "./auth-routing.js";
 import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
+import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { SubmissionsScreen } from "./submissions.js";
@@ -82,6 +83,14 @@ export function dashboardRouteObjects({
               children: [
                 { index: true, element: <FormsScreen area={area} /> },
                 { path: ":id", element: <FormEditorScreen area={area} /> },
+              ],
+            };
+          if (area.id === "mail-templates")
+            return {
+              path: area.path,
+              children: [
+                { index: true, element: <MailTemplatesScreen /> },
+                { path: ":kind", element: <MailTemplateEditorScreen /> },
               ],
             };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };

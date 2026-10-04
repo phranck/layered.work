@@ -38,6 +38,15 @@ describe("sending through SMTP2GO", () => {
     expect(outcome).toEqual({ accepted: true, answer: "Accepted as 1u0SwL-B9zBpi9ffUq-JAB2." });
   });
 
+  it("sends both HTML and text when a template provides them", async () => {
+    const send = answer({ data: { succeeded: 1, failed: 0 } });
+    await sendThroughSmtp2go("key", { ...mail, html: "<p>Hi</p>" }, send);
+    expect(JSON.parse(String(send.mock.calls[0]?.[1]?.body))).toMatchObject({
+      text_body: "Hi",
+      html_body: "<p>Hi</p>",
+    });
+  });
+
   it("reports a refusal in SMTP2GO's own words, also when it answered 200", async () => {
     const refused = await sendThroughSmtp2go(
       "key",

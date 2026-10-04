@@ -56,6 +56,6 @@ export async function readDashboardCounts(
 
   return {
     ...stored,
-    mailTemplates: null,
+    mailTemplates: 2,
   };
 }

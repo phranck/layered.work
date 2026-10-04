@@ -108,11 +108,23 @@ const uniqueFieldKeys = (form: { fields: FormField[] }) =>
 export const createFormBody = body({
   ...publicDeclarationFields,
   notificationEmail: z.email().max(254).nullable(),
+  /** Send the confirmation to this validated email field, when present. */
+  confirmationEmailField: z.string().max(MaxLength.Handle).nullable().optional(),
   storeSubmissions: z.boolean(),
-}).refine(uniqueFieldKeys, {
-  path: ["fields"],
-  message: "Field names must be unique.",
-});
+})
+  .refine(uniqueFieldKeys, {
+    path: ["fields"],
+    message: "Field names must be unique.",
+  })
+  .refine(
+    (form) =>
+      !form.confirmationEmailField ||
+      form.fields.some((field) => field.key === form.confirmationEmailField && field.type === "email"),
+    {
+      path: ["confirmationEmailField"],
+      message: "Choose an email field for confirmations.",
+    },
+  );
 export type CreateFormBody = z.infer<typeof createFormBody>;
 
 /** Saving replaces the declaration as a whole, so order is kept in one write. */

@@ -32,7 +32,7 @@ describe("readDashboardCounts", () => {
       social: 8,
       forms: 10,
       submissions: 4,
-      mailTemplates: null,
+      mailTemplates: 2,
     });
     expect(execute).toHaveBeenCalledOnce();
 

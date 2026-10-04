@@ -6,7 +6,7 @@ import { logger } from "../logger.js";
 import type { SendOutcome } from "./smtp2go.js";
 
 type Database = PostgresJsDatabase<typeof schema>;
-export type PendingMail = { to: string; subject: string; text: string };
+export type PendingMail = { to: string; subject: string; text: string; html?: string };
 type Sender = (mail: PendingMail) => Promise<SendOutcome>;
 
 const LEASE_MS = 60_000;
@@ -35,7 +35,14 @@ export async function runMailJob(
   let reason = "invalid_payload";
   if (job.recipient && job.body) {
     try {
-      accepted = (await send({ to: job.recipient, subject: job.subject, text: job.body })).accepted;
+      accepted = (
+        await send({
+          to: job.recipient,
+          subject: job.subject,
+          text: job.body,
+          ...(job.htmlBody ? { html: job.htmlBody } : {}),
+        })
+      ).accepted;
       reason = "provider_refused";
     } catch {
       // A sender exception is retried like a provider refusal. Never log the
@@ -48,7 +55,7 @@ export async function runMailJob(
   if (accepted) {
     await db
       .update(mailJobs)
-      .set({ attempts, sentAt: now, recipient: null, body: null })
+      .set({ attempts, sentAt: now, recipient: null, body: null, htmlBody: null })
       .where(eq(mailJobs.id, job.id));
     logger.info({ jobId: job.id, submissionId: job.submissionId, attempts, result: "accepted" }, "mail job");
     return "sent";

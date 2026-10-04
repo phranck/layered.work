@@ -12,6 +12,7 @@ export const mailJobs = pgTable(
     recipient: text(),
     subject: text().notNull(),
     body: text(),
+    htmlBody: text("html_body"),
     attempts: integer().notNull().default(0),
     nextAttemptAt: instant("next_attempt_at"),
     sentAt: timestamp("sent_at", { withTimezone: true }),

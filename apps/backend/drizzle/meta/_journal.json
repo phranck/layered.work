@@ -78,6 +78,13 @@
       "when": 1791151340514,
       "tag": "0010_elite_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791152298808,
+      "tag": "0011_kind_whirlwind",
+      "breakpoints": true
     }
   ]
 }

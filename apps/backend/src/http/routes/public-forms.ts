@@ -6,7 +6,8 @@ import { formSubmissions, mailJobs } from "../../db/schema/index.js";
 import { issueFormChallenge, verifyFormChallenge } from "../../forms/challenge.js";
 import { readFormBySlug } from "../../forms/repository.js";
 import { logger } from "../../logger.js";
-import { formNotification } from "../../mail/notification.js";
+import { formMailValues } from "../../mail/notification.js";
+import { readMailTemplate, renderMailTemplate } from "../../mail/templates.js";
 import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
 import { HttpError, ok } from "../response.js";
@@ -74,8 +75,18 @@ publicFormsRoutes.post(
       windowSeconds: 10,
       keys: (context) => [`${slug}:${byAddress(context)}`],
     });
-    if (form.storeSubmissions || form.notificationEmail) {
+    const confirmationAddress = form.confirmationEmailField
+      ? checked.values[form.confirmationEmailField]
+      : null;
+    const notificationTemplate = form.notificationEmail
+      ? await readMailTemplate(db, "submission_notification")
+      : null;
+    const confirmationTemplate = confirmationAddress
+      ? await readMailTemplate(db, "submission_confirmation")
+      : null;
+    if (form.storeSubmissions || form.notificationEmail || confirmationAddress) {
       try {
+        const mailValues = formMailValues(form, checked.values, body.language, checked.consents);
         await db.transaction(async (tx) => {
           const [submission] = form.storeSubmissions
             ? await tx
@@ -88,12 +99,26 @@ publicFormsRoutes.post(
                 })
                 .returning({ id: formSubmissions.id })
             : [];
-          if (form.notificationEmail) {
+          if (form.notificationEmail && notificationTemplate) {
+            const rendered = renderMailTemplate(notificationTemplate, body.language, mailValues);
             await tx.insert(mailJobs).values({
               formId: form.id,
               submissionId: submission?.id,
               recipient: form.notificationEmail,
-              ...formNotification(form, checked.values, body.language, checked.consents),
+              subject: rendered.subject,
+              body: rendered.text,
+              htmlBody: rendered.html,
+            });
+          }
+          if (typeof confirmationAddress === "string" && confirmationAddress && confirmationTemplate) {
+            const rendered = renderMailTemplate(confirmationTemplate, body.language, mailValues);
+            await tx.insert(mailJobs).values({
+              formId: form.id,
+              submissionId: submission?.id,
+              recipient: confirmationAddress,
+              subject: rendered.subject,
+              body: rendered.text,
+              htmlBody: rendered.html,
             });
           }
         });

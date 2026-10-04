@@ -22,7 +22,7 @@ export const dashboardCounts = z
     social: storedCount,
     forms: storedCount,
     submissions: storedCount,
-    mailTemplates: z.null(),
+    mailTemplates: z.number().int().nonnegative().nullable(),
   })
   .strict();
 

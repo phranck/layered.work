@@ -18,6 +18,7 @@ runs("durable mail delivery", () => {
         recipient: "private@example.test",
         subject: "Contact form",
         body: "private message body",
+        htmlBody: "<p>private message body</p>",
         nextAttemptAt: now,
       })
       .returning({ id: mailJobs.id });
@@ -44,6 +45,7 @@ runs("durable mail delivery", () => {
       to: "private@example.test",
       subject: "Contact form",
       text: "private message body",
+      html: "<p>private message body</p>",
     });
     const [delayed] = await db.select().from(mailJobs).where(eq(mailJobs.id, jobId));
     expect(delayed?.attempts).toBe(1);
@@ -57,6 +59,7 @@ runs("durable mail delivery", () => {
     expect(accepted?.sentAt?.toISOString()).toBe("2026-10-05T00:00:15.000Z");
     expect(accepted?.recipient).toBeNull();
     expect(accepted?.body).toBeNull();
+    expect(accepted?.htmlBody).toBeNull();
     expect(await runMailJob(db, jobId, send, new Date("2026-10-05T00:01:00.000Z"))).toBe("not_due");
     expect(send).toHaveBeenCalledTimes(2);
 

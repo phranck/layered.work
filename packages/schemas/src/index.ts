@@ -23,6 +23,7 @@ export * from "./entries.js";
 export * from "./errors.js";
 export * from "./forms.js";
 export * from "./home-blocks.js";
+export * from "./mail-templates.js";
 export * from "./media.js";
 export * from "./request.js";
 export * from "./search.js";

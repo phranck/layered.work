@@ -35,6 +35,8 @@ const words = {
     settings: "Form settings",
     slug: "Shortcode name",
     notification: "Notification email",
+    confirmation: "Confirmation email field",
+    noConfirmation: "Do not send confirmations",
     success: "Success message",
     store: "Store submissions",
     pattern: "Pattern",
@@ -68,6 +70,8 @@ const words = {
     settings: "Formulareinstellungen",
     slug: "Shortcode-Name",
     notification: "Benachrichtigungs-E-Mail",
+    confirmation: "E-Mail-Feld für Bestätigung",
+    noConfirmation: "Keine Bestätigung senden",
     success: "Erfolgsmeldung",
     store: "Einsendungen speichern",
     pattern: "Muster",
@@ -366,8 +370,24 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
 
   useEffect(() => {
     if (loaded.data) {
-      const { slug, name, notificationEmail, successMessage, storeSubmissions, fields } = loaded.data;
-      setDraft({ slug, name, notificationEmail, successMessage, storeSubmissions, fields });
+      const {
+        slug,
+        name,
+        notificationEmail,
+        confirmationEmailField,
+        successMessage,
+        storeSubmissions,
+        fields,
+      } = loaded.data;
+      setDraft({
+        slug,
+        name,
+        notificationEmail,
+        confirmationEmailField: confirmationEmailField ?? null,
+        successMessage,
+        storeSubmissions,
+        fields,
+      });
     }
   }, [loaded.data]);
 
@@ -598,6 +618,21 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     type="email"
                     value={draft.notificationEmail ?? ""}
                     onChange={(event) => change({ ...draft, notificationEmail: event.target.value || null })}
+                  />
+                </Field>
+                <Field label={w.confirmation} htmlFor="form-confirmation">
+                  <Select
+                    id="form-confirmation"
+                    value={draft.confirmationEmailField ?? ""}
+                    options={[
+                      { value: "", label: w.noConfirmation },
+                      ...draft.fields
+                        .filter((field) => field.type === "email")
+                        .map((field) => ({ value: field.key, label: field.label[language] || field.key })),
+                    ]}
+                    onChange={(event) =>
+                      change({ ...draft, confirmationEmailField: event.target.value || null })
+                    }
                   />
                 </Field>
                 <TranslatedInputs

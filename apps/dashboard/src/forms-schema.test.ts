@@ -88,4 +88,10 @@ describe("form declarations", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts confirmations only when they target a declared email field", () => {
+    expect(createFormBody.safeParse({ ...form, confirmationEmailField: "email" }).success).toBe(true);
+    expect(createFormBody.safeParse({ ...form, confirmationEmailField: "name" }).success).toBe(false);
+    expect(createFormBody.safeParse({ ...form, confirmationEmailField: "absent" }).success).toBe(false);
+  });
 });

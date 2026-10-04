@@ -36,12 +36,19 @@ import {
   formSubmissionList,
   type ListingSettings,
   type MailSettings,
+  type MailTemplate,
+  type MailTemplateKind,
+  mailTemplate,
+  mailTemplateList,
   mergeTopicBody,
   type PreviewEntryBody,
   previewEntryBody,
+  type RenderedMail,
   readApiError,
+  renderedMail,
   type SaveEntryBody,
   type SaveFormBody,
+  type SaveMailTemplateBody,
   type SaveTopicBody,
   type SearchResults,
   type SettingsView,
@@ -163,6 +170,19 @@ export interface DashboardApi {
   ): Promise<SettingsView>;
   /** Sends a test message to the signed-in owner and reports what SMTP2GO answered. */
   sendTestMail(): Promise<TestMailResult>;
+  fetchMailTemplates(): Promise<MailTemplate[]>;
+  saveMailTemplate(kind: MailTemplateKind, value: SaveMailTemplateBody): Promise<MailTemplate>;
+  previewMailTemplate(
+    kind: MailTemplateKind,
+    value: SaveMailTemplateBody,
+    language: "en" | "de",
+  ): Promise<RenderedMail>;
+  testMailTemplate(
+    kind: MailTemplateKind,
+    value: SaveMailTemplateBody,
+    language: "en" | "de",
+    recipient: string,
+  ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
@@ -344,6 +364,28 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async sendTestMail() {
       return dataOf(await request("/settings/mail/test", { method: "POST" }, true), testMailResult);
+    },
+    async fetchMailTemplates() {
+      return dataOf(await request("/mail-templates", undefined, true), mailTemplateList);
+    },
+    async saveMailTemplate(kind, value) {
+      return dataOf(await request(`/mail-templates/${kind}`, jsonBody("PUT", value), true), mailTemplate);
+    },
+    async previewMailTemplate(kind, template, language) {
+      return dataOf(
+        await request(`/mail-templates/${kind}/preview`, jsonBody("POST", { template, language }), true),
+        renderedMail,
+      );
+    },
+    async testMailTemplate(kind, template, language, recipient) {
+      return dataOf(
+        await request(
+          `/mail-templates/${kind}/test`,
+          jsonBody("POST", { template, language, recipient }),
+          true,
+        ),
+        testMailResult,
+      );
     },
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));

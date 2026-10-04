@@ -69,6 +69,7 @@ export function newForm(): CreateFormBody {
     slug: "new-form",
     name: "New form",
     notificationEmail: null,
+    confirmationEmailField: null,
     successMessage: { en: "Thank you!", de: "Vielen Dank!" },
     storeSubmissions: true,
     fields: [newField("shortText", "name")],

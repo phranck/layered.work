@@ -14,10 +14,12 @@ import { createForm } from "./repository.js";
 const suffix = randomUUID();
 const slug = `submit-${suffix}`;
 const transientSlug = `notify-only-${suffix}`;
+const confirmSlug = `confirm-${suffix}`;
 const runs = hasTestDatabase ? describe : describe.skip;
 let actorId = "";
 let formId = "";
 let transientFormId = "";
+let confirmationFormId = "";
 const declaration = {
   slug,
   name: "Submission test",
@@ -75,15 +77,44 @@ runs("public form submission", () => {
     transientFormId = (
       await createForm(db, { ...declaration, slug: transientSlug, storeSubmissions: false }, actorId)
     ).id;
+    confirmationFormId = (
+      await createForm(
+        db,
+        {
+          ...declaration,
+          slug: confirmSlug,
+          confirmationEmailField: "reply",
+          fields: [
+            ...declaration.fields,
+            {
+              key: "reply",
+              type: "email" as const,
+              label: { en: "Email", de: "E-Mail" },
+              hint: { en: "", de: "" },
+              required: true,
+              minLength: 3,
+              maxLength: 254,
+              pattern: null,
+            },
+          ],
+        },
+        actorId,
+      )
+    ).id;
   });
 
   afterAll(async () => {
     const db = await testDatabase();
-    if (formId && transientFormId) {
-      await db.delete(mailJobs).where(inArray(mailJobs.formId, [formId, transientFormId]));
+    if (formId && transientFormId && confirmationFormId) {
+      await db
+        .delete(mailJobs)
+        .where(inArray(mailJobs.formId, [formId, transientFormId, confirmationFormId]));
       await db.delete(formSubmissions).where(eq(formSubmissions.formId, formId));
-      await db.delete(auditLog).where(inArray(auditLog.subjectId, [formId, transientFormId]));
-      await db.delete(forms).where(inArray(forms.id, [formId, transientFormId]));
+      await db.delete(formSubmissions).where(eq(formSubmissions.formId, confirmationFormId));
+      await db
+        .delete(auditLog)
+        .where(inArray(auditLog.subjectId, [formId, transientFormId, confirmationFormId]));
+      await db.delete(forms).where(inArray(forms.id, [formId, transientFormId, confirmationFormId]));
     }
     if (actorId) await db.delete(users).where(eq(users.id, actorId));
     forgetRateLimits();
@@ -164,6 +195,30 @@ runs("public form submission", () => {
     const jobs = await db.select().from(mailJobs).where(eq(mailJobs.formId, transientFormId));
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject({ recipient: "notify@example.test", submissionId: null });
+  });
+
+  it("queues bilingual HTML and text confirmation to the validated email field", async () => {
+    const response = await app.request(`/forms/${confirmSlug}/submissions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        challenge: issueFormChallenge(confirmSlug, Date.now() - 3_000),
+        honeypot: "",
+        language: "de",
+        values: { name: "Ada", consent: "yes", reply: "ada@example.test" },
+      }),
+    });
+    expect(response.status).toBe(200);
+    const jobs = await (await testDatabase())
+      .select()
+      .from(mailJobs)
+      .where(eq(mailJobs.formId, confirmationFormId));
+    expect(jobs).toHaveLength(2);
+    const confirmation = jobs.find((job) => job.recipient === "ada@example.test");
+    expect(confirmation?.subject).toContain("erhalten");
+    expect(confirmation?.body).toContain("Vielen Dank");
+    expect(confirmation?.htmlBody).toContain("<strong>Submission test</strong>");
+    expect(jobs.find((job) => job.recipient === "notify@example.test")?.htmlBody).toContain("Ada");
   });
 
   it("rejects a filled honeypot and a forged challenge", async () => {
