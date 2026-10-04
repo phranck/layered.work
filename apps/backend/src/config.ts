@@ -67,7 +67,7 @@ const schema = z.object({
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"]).default("info"),
 
   DATABASE_URL: z.string().min(1),
-  DATABASE_EXPECTED_ROLE: optional(z.string().min(1)),
+  DB_MIGRATION_ROLE: optional(z.string().min(1)),
 
   /** The two origins that may call this API with a cookie. Nothing else may. */
   SITE_ORIGIN: z.url(),

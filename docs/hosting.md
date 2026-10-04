@@ -259,7 +259,7 @@ Zerops exposes a service's own variables to its siblings, prefixed by the hostna
 | Bucket key | `${assets_accessKeyId}` |
 | Bucket secret | `${assets_secretAccessKey}` |
 
-`postgres` also exposes `superUser` and `superUserPassword`. The migration runner never uses them: it checks the connected role before the first statement and aborts when it is a superuser, or when it is not the one `DATABASE_EXPECTED_ROLE` names.
+`postgres` also exposes `superUser` and `superUserPassword`. The migration runner never uses them: it checks the connected role before the first migration and aborts when it is a superuser, when `DB_MIGRATION_ROLE` is missing, or when the connected role differs from that value.
 
 **The role Zerops connects as is `db`**, read off the first migration that ran there rather than guessed, from the line `migrations applied as db`. It is not a superuser, which that same run proved by not being refused. Locally the equivalent is `layered_app`, created by `scripts/local-database/`.
 
