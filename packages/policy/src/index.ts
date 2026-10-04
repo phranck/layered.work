@@ -116,7 +116,10 @@ export function dashboardPolicy(apiOrigin?: string): string {
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     "script-src": ["'self'"],
-    "style-src": ["'self'"],
+    // CodeMirror mounts its base, theme and syntax rules in runtime <style>
+    // elements. nginx serves a static document, so it cannot issue a nonce
+    // shared with those elements; blocking them breaks editor indentation.
+    "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...(apiOrigin ? [apiOrigin] : []), ANALYTICS_ORIGIN],
