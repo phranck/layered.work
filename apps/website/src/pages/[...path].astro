@@ -81,7 +81,7 @@ const otherTopic=topic?repository?.topic(topic.id,otherLanguage):undefined;
 const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(otherLanguage,otherTopic.slug):found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=siteNavigation(language);
 const footer=siteFooter(language);
-const nodes=entry?renderContent(entry.body):[];
+const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.

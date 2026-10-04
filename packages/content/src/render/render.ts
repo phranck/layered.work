@@ -31,6 +31,8 @@ import { type Content, ENTITIES, MARKS, PROSE } from "./prose.js";
 export type RenderOptions = {
   /** Which register to read. The real one unless a test says otherwise. */
   register?: Register;
+  /** The language whose quotation marks the finished prose uses. */
+  language?: "en" | "de";
 };
 
 /** The document, the register, and the link targets it defines. */
@@ -41,6 +43,9 @@ type Context = {
   references: Map<string, string>;
   /** Heading anchors already assigned in this document, including nested bodies. */
   headingIds: Set<string>;
+  language?: "en" | "de";
+  doubleQuoteOpen: boolean;
+  singleQuoteOpen: boolean;
 };
 
 /**
@@ -94,6 +99,9 @@ export function renderTree(tree: Tree, text: string, options: RenderOptions = {}
     register: options.register,
     references: linkTargets(tree, text),
     headingIds: new Set(),
+    language: options.language,
+    doubleQuoteOpen: false,
+    singleQuoteOpen: false,
   };
 
   return blockChildren(tree.topNode, context);
@@ -161,13 +169,51 @@ function inlineChildren(node: SyntaxNode, from: number, to: number, context: Con
 
   for (const child of childrenOf(node)) {
     if (child.to <= from || child.from >= to) continue;
-    if (child.from > at) nodes.push(text(context.text.slice(at, child.from)));
+    if (child.from > at) nodes.push(text(proseText(context.text.slice(at, child.from), context)));
     nodes.push(...renderNode(child, context));
     at = child.to;
   }
 
-  if (to > at) nodes.push(text(context.text.slice(at, to)));
+  if (to > at) nodes.push(text(proseText(context.text.slice(at, to), context)));
   return nodes.filter((node) => node.kind !== "text" || node.value !== "");
+}
+
+/** Curl only authored prose, while retaining quote state across inline markup. */
+function proseText(value: string, context: Context): string {
+  if (!context.language) return value;
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === '"') {
+      result += context.doubleQuoteOpen
+        ? context.language === "de"
+          ? "“"
+          : "”"
+        : context.language === "de"
+          ? "„"
+          : "“";
+      context.doubleQuoteOpen = !context.doubleQuoteOpen;
+    } else if (character === "'") {
+      const previous = value[index - 1] ?? "";
+      const next = value[index + 1] ?? "";
+      const afterWord = /[\p{L}\p{N}]/u.test(previous);
+      if (afterWord && (/[\p{L}\p{N}]/u.test(next) || !context.singleQuoteOpen)) {
+        result += "’";
+      } else {
+        result += context.singleQuoteOpen
+          ? context.language === "de"
+            ? "‘"
+            : "’"
+          : context.language === "de"
+            ? "‚"
+            : "‘";
+        context.singleQuoteOpen = !context.singleQuoteOpen;
+      }
+    } else {
+      result += character;
+    }
+  }
+  return result;
 }
 
 /**
@@ -202,7 +248,13 @@ function renderNode(node: SyntaxNode, context: Context): RenderNode[] {
 
   const prose = PROSE[name];
   if (prose) {
-    const children = contentOf(node, prose.content, context);
+    const local =
+      prose.tag === "code"
+        ? { ...context, language: undefined }
+        : prose.tag === "p" || prose.content === "heading"
+          ? { ...context, doubleQuoteOpen: false, singleQuoteOpen: false }
+          : context;
+    const children = contentOf(node, prose.content, local);
     return [
       element(
         prose.tag,

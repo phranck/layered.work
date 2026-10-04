@@ -16,7 +16,7 @@ const pageUrl=(number:number)=>{const url=new URL(Astro.url);url.searchParams.se
 // topic or a search page lists both kinds and keeps the defaults.
 const listing=kind==="post"||kind==="project"?repository.listing(kind):undefined;
 const introductionText=listing?.introduction[language].trim()??"";
-const introduction=introductionText?renderContent(introductionText):[];
+const introduction=introductionText?renderContent(introductionText,{language}):[];
 ---
 <Section.Page>
   <Section.Lead title={title} />
