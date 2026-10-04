@@ -28,6 +28,7 @@ import { migrationMedia } from "./migration-media.mjs";
 import { migratedOverviewPages } from "./migration-overviews.mjs";
 import { visibleText, wordRuns, words } from "./migration-text.mjs";
 import { loadProductionApp } from "./production-app.mjs";
+import { missingResponsiveImages } from "./responsive-images.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -136,6 +137,23 @@ const readable = [
 const results = [];
 const renderedMediaPaths = new Set();
 
+/** Media paths named by a rendered page, including responsive candidates. */
+function mediaPathsIn(root, pagePath) {
+  const found = new Set();
+  for (const element of root.querySelectorAll("*")) {
+    for (const attribute of element.attributes) {
+      for (const candidate of attribute.value.split(/[\s,]+/)) {
+        if (!candidate.includes("/")) continue;
+        const url = new URL(candidate, new URL(pagePath, origin));
+        if ((url.origin === origin || url.origin === mediaOrigin) && media.isMediaPath(url.pathname)) {
+          found.add(url.pathname);
+        }
+      }
+    }
+  }
+  return found;
+}
+
 for (const entry of readable) {
   const problems = [];
   // eslint-disable-next-line react-doctor/async-await-in-loop -- One page at a time keeps the production renderer's memory bounded.
@@ -145,6 +163,7 @@ for (const entry of readable) {
   const prose = document.querySelector(RENDERED_BODY);
   if (!prose) problems.push("no rendered body");
   const article = document.querySelector(RENDERED_ARTICLE) ?? prose ?? document.body;
+  problems.push(...missingResponsiveImages(article, snapshot.media, new URL(entry.path, origin)));
 
   const legacyFile = legacy.get(entry.slug);
   const legacyBody = legacyFile
@@ -196,18 +215,7 @@ for (const entry of readable) {
 
   // Every file the article names, from the cover to the last figure, whatever
   // attribute carries it: `src`, `srcset`, `poster`, or a model's source.
-  const mediaPaths = new Set();
-  for (const element of article.querySelectorAll("*")) {
-    for (const attribute of element.attributes) {
-      for (const candidate of attribute.value.split(/[\s,]+/)) {
-        if (!candidate.includes("/")) continue;
-        const url = new URL(candidate, new URL(entry.path, origin));
-        if ((url.origin === origin || url.origin === mediaOrigin) && media.isMediaPath(url.pathname)) {
-          mediaPaths.add(url.pathname);
-        }
-      }
-    }
-  }
+  const mediaPaths = mediaPathsIn(article, entry.path);
   for (const path of mediaPaths) {
     renderedMediaPaths.add(path);
     // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
@@ -250,11 +258,22 @@ for (const result of results.filter((item) => item.runs.length > 0)) {
 }
 
 const failed = results.filter((result) => result.problems.length > 0);
+const home = await resolveAddress("/");
+const homeDocument = home.status === 200 ? parse(home.body) : null;
+const homeProblems = homeDocument
+  ? missingResponsiveImages(homeDocument, snapshot.media, origin)
+  : [`home page answers ${home.status}`];
+for (const path of homeDocument ? mediaPathsIn(homeDocument, "/") : []) {
+  renderedMediaPaths.add(path);
+  const problem = await media.inspect(path);
+  if (problem) homeProblems.push(problem);
+}
+console.log(`Home page responsive images: ${homeProblems.join("; ") || "ok"}.`);
 console.log(
   `\n${results.length} entries rendered, ${results.reduce((total, item) => total + item.linksChecked, 0)} internal links and ${results.reduce((total, item) => total + item.mediaChecked, 0)} files checked, ${failed.length} with problems.`,
 );
-process.exitCode = failed.length > 0 ? 1 : 0;
-if (failed.length === 0 && values["media-paths-out"]) {
+process.exitCode = failed.length > 0 || homeProblems.length > 0 ? 1 : 0;
+if (failed.length === 0 && homeProblems.length === 0 && values["media-paths-out"]) {
   await writeFile(
     resolve(values["media-paths-out"]),
     `${JSON.stringify([...renderedMediaPaths].sort(), null, 2)}\n`,

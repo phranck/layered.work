@@ -1,4 +1,5 @@
-import { basename } from "node:path";
+import { stat } from "node:fs/promises";
+import { basename, extname, resolve } from "node:path";
 import { mediaReferences } from "@layered/content";
 import {
   DEFAULT_LISTING,
@@ -10,12 +11,14 @@ import {
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import sharp from "sharp";
 import {
   entries,
   entryTopics,
   entryTranslations,
   media,
   mediaTranslations,
+  mediaVariants,
   paths,
   settings,
   topics,
@@ -36,10 +39,9 @@ import {
  * its translation currently answers at, because that is the one value the
  * snapshot and the database both hold and neither invents.
  *
- * What it does not write: media variants. The snapshot describes them as a
- * `srcSet` string, which gives a width and a path and neither a height nor a
- * byte size, and `media_variants` requires both. They arrive when the site reads
- * its media from the database and something generates them against it.
+ * When the staged media directory is supplied, each responsive size is measured
+ * from its file and written beside the original. The file check runs before
+ * any database write, so a missing size cannot leave a partial import.
  */
 
 /** One entry as the snapshot holds it. */
@@ -75,6 +77,7 @@ export interface SnapshotMedia {
   width?: number;
   height?: number;
   alt?: string;
+  srcSet?: string;
 }
 
 /** The whole snapshot, as `site.json` holds it. */
@@ -88,6 +91,7 @@ export interface Snapshot {
 /** What the import wrote, so the caller can say it rather than guess. */
 export interface ImportReport {
   media: number;
+  variants: number;
   topics: number;
   entries: number;
   translations: number;
@@ -137,6 +141,109 @@ export function migratedStorageKey(src: string): string {
 
 /** Where `scripts/publii/upload.mjs` writes every migrated object in the bucket. */
 const MIGRATION_PREFIX = "migration/";
+
+/** One staged responsive file, measured before any database write. */
+export interface StagedVariant {
+  originalChecksum: string;
+  file: string;
+  storageKey: string;
+  format: "avif" | "webp" | "jpeg" | "png";
+  width: number;
+  height: number;
+  byteSize: number;
+}
+
+const VARIANT_PATH = /^(\/media\/[a-zA-Z0-9_.-]+\.(?:avif|webp|jpe?g|png)) ([1-9]\d*)w$/i;
+const VARIANT_FORMAT: Record<string, StagedVariant["format"]> = {
+  avif: "avif",
+  webp: "webp",
+  jpg: "jpeg",
+  jpeg: "jpeg",
+  png: "png",
+};
+
+/** Reads every responsive file named by the snapshot and verifies its dimensions and format. */
+export async function stageVariants(snapshot: Snapshot, root: string): Promise<StagedVariant[]> {
+  const staged: StagedVariant[] = [];
+  const checksums = new Set<string>();
+  const keys = new Set<string>();
+  for (const asset of snapshot.media) {
+    if (isPubliiSizeCopy(asset.source) || !asset.srcSet || checksums.has(asset.sha256)) continue;
+    checksums.add(asset.sha256);
+    for (const candidate of asset.srcSet.split(",")) {
+      const match = VARIANT_PATH.exec(candidate.trim());
+      if (!match) throw new Error(`Invalid responsive source for ${asset.slug}: ${candidate.trim()}`);
+      const [, path, descriptor] = match;
+      if (!path || !descriptor) throw new Error(`Invalid responsive source for ${asset.slug}.`);
+      const file = resolve(root, `.${path}`);
+      const storageKey = migratedStorageKey(path);
+      if (keys.has(storageKey)) throw new Error(`Two responsive sources name ${storageKey}.`);
+      keys.add(storageKey);
+      const format = VARIANT_FORMAT[extname(path).slice(1).toLowerCase()];
+      if (!format) throw new Error(`Unsupported responsive format for ${asset.slug}.`);
+      const [metadata, found] = await Promise.all([sharp(file).metadata(), stat(file)]);
+      const width = Number(descriptor);
+      const decodedFormat = format === "avif" ? "heif" : format;
+      if (
+        metadata.format !== decodedFormat ||
+        metadata.width !== width ||
+        !metadata.height ||
+        found.size < 1
+      ) {
+        throw new Error(`Responsive file ${path} does not match its descriptor.`);
+      }
+      staged.push({
+        originalChecksum: asset.sha256,
+        file,
+        storageKey,
+        format,
+        width,
+        height: metadata.height,
+        byteSize: found.size,
+      });
+    }
+  }
+  return staged;
+}
+
+/** Adds measured variants to originals already in the library, leaving every other row alone. */
+async function writeVariants(database: Database, staged: readonly StagedVariant[]): Promise<number> {
+  if (staged.length === 0) return 0;
+  const checksums = [...new Set(staged.map((variant) => variant.originalChecksum))];
+  const originals = await database
+    .select({ id: media.id, checksum: media.checksum })
+    .from(media)
+    .where(inArray(media.checksum, checksums));
+  const idByChecksum = new Map(originals.map((original) => [original.checksum, original.id]));
+  if (idByChecksum.size !== checksums.length) throw new Error("A responsive image has no imported original.");
+  await database.transaction(async (tx) => {
+    for (const variant of staged) {
+      const mediaId = idByChecksum.get(variant.originalChecksum);
+      if (!mediaId) throw new Error("A responsive image has no imported original.");
+      const values = {
+        mediaId,
+        format: variant.format,
+        width: variant.width,
+        height: variant.height,
+        byteSize: variant.byteSize,
+        storageKey: variant.storageKey,
+      };
+      await tx
+        .insert(mediaVariants)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [mediaVariants.mediaId, mediaVariants.format, mediaVariants.width],
+          set: { height: values.height, byteSize: values.byteSize, storageKey: values.storageKey },
+        });
+    }
+  });
+  return staged.length;
+}
+
+/** Backfills responsive variants without reimporting editorial content. */
+export async function importVariants(database: Database, snapshot: Snapshot, root: string): Promise<number> {
+  return writeVariants(database, await stageVariants(snapshot, root));
+}
 
 /**
  * Whether an asset is one of the size copies Publii made of a picture.
@@ -550,9 +657,15 @@ async function importListingIntroduction(
  * @param snapshot - The parsed `site.json`.
  * @returns What was written, and what was left out and why.
  */
-export async function importContent(database: Database, snapshot: Snapshot): Promise<ImportReport> {
+export async function importContent(
+  database: Database,
+  snapshot: Snapshot,
+  options?: { variantRoot: string },
+): Promise<ImportReport> {
+  const staged = options ? await stageVariants(snapshot, options.variantRoot) : [];
   const report: ImportReport = {
     media: 0,
+    variants: 0,
     topics: 0,
     entries: 0,
     translations: 0,
@@ -562,6 +675,7 @@ export async function importContent(database: Database, snapshot: Snapshot): Pro
   };
 
   const mediaBySlug = await importMedia(database, snapshot, report);
+  report.variants = await writeVariants(database, staged);
   const topicsBySlug = await importTopics(database, snapshot, report);
 
   const redirectsByTarget = new Map<string, string[]>();

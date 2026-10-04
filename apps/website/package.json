@@ -10,7 +10,7 @@
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
     "typecheck": "node tools/prepare-assets.mjs && astro check",
-    "test": "vitest run && node --test tools/preview-assets.test.mjs tools/migration-text.test.mjs tools/migration-media.test.mjs tools/migration-overviews.test.mjs tools/bundle-react-into-build.test.mjs tools/local-media.test.mjs"
+    "test": "vitest run && node --test tools/preview-assets.test.mjs tools/migration-text.test.mjs tools/migration-media.test.mjs tools/migration-overviews.test.mjs tools/responsive-images.test.mjs tools/bundle-react-into-build.test.mjs tools/local-media.test.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.5",

@@ -5,6 +5,7 @@ import {
   entryTranslations,
   formerTopicSlugs,
   media,
+  mediaVariants,
   paths,
   topics,
   topicTranslations,
@@ -236,6 +237,46 @@ runs("the public snapshot", () => {
     expect(snapshot.media.map((asset) => asset.slug).sort()).toEqual(["cover", "in-a-component", "linked"]);
     expect(JSON.stringify(snapshot)).not.toContain("uploads/");
     expect(JSON.stringify(snapshot)).not.toContain("only-in-a-draft");
+  });
+
+  it("gives a published image the responsive sizes stored for it", async () => {
+    const database = await testDatabase();
+    const [picture] = await database
+      .insert(media)
+      .values({
+        slug: "responsive-cover",
+        kind: "image",
+        mimeType: "image/jpeg",
+        storageKey: "migration/responsive-cover.jpg",
+        byteSize: 5000,
+        checksum: "a".repeat(64),
+        width: 1200,
+        height: 600,
+      })
+      .returning({ id: media.id });
+    if (!picture) throw new Error("no picture");
+    await database.insert(mediaVariants).values({
+      mediaId: picture.id,
+      format: "webp",
+      width: 480,
+      height: 240,
+      byteSize: 900,
+      storageKey: "migration/responsive-cover-variant-480.webp",
+    });
+    const { translationId } = await writeEntry(database, {
+      title: "A cover",
+      path: "/cover/",
+      state: "public",
+    });
+    await database
+      .update(entryTranslations)
+      .set({ featuredMediaId: picture.id })
+      .where(eq(entryTranslations.id, translationId));
+
+    const snapshot = await readPublicSnapshot(database);
+    expect(snapshot.media.find((asset) => asset.slug === "responsive-cover")?.srcSet).toBe(
+      "/migration/responsive-cover-variant-480.webp 480w",
+    );
   });
 
   it("leaves out a translation nothing can link to", async () => {
