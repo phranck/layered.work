@@ -42,3 +42,27 @@ export async function missingObjects(
   }
   return missing;
 }
+
+/** Every object named by rendered content, including legacy downloads outside the media library. */
+export async function missingRenderedObjects(
+  paths: readonly string[],
+  exists: (storageKey: string) => Promise<boolean> = mediaObjectExists,
+): Promise<string[]> {
+  const keys = [
+    ...new Set(
+      paths.map((path) => {
+        if (typeof path !== "string" || !/^\/(?:migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) {
+          throw new Error(`Rendered media path is not a storage key: ${path}`);
+        }
+        return path.slice(1);
+      }),
+    ),
+  ].sort();
+  const missing: string[] = [];
+  for (let start = 0; start < keys.length; start += BATCH) {
+    const batch = keys.slice(start, start + BATCH);
+    const found = await Promise.all(batch.map(exists));
+    missing.push(...batch.filter((_, index) => !found[index]));
+  }
+  return missing;
+}

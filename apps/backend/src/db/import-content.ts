@@ -503,7 +503,7 @@ export function withDrafts(published: Snapshot, migrationOutput: Snapshot): Snap
  *
  * @param entry - An entry from the snapshot.
  */
-function listingAt(entry: SnapshotEntry): ListedKind | undefined {
+export function listingAt(entry: Pick<SnapshotEntry, "kind" | "language" | "path">): ListedKind | undefined {
   if (entry.kind !== "page") return undefined;
   return LISTED_KINDS.find((kind) => LISTING_PATHS[kind][entry.language] === entry.path);
 }

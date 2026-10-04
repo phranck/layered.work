@@ -307,6 +307,11 @@ export function createRepository(input: unknown) {
       : homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
   return {
     data,
+    contentUrl: (url: string) => {
+      const path = url.split(/[?#]/, 1)[0] ?? "";
+      if (!/^\/(?:media|migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) return url;
+      return `${mediaUrl(path)}${url.slice(path.length)}`;
+    },
     media: (name: string) => {
       const asset = media.get(name);
       if (!asset) return undefined;

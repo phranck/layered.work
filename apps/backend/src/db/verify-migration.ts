@@ -2,10 +2,19 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { and, eq } from "drizzle-orm";
+import { LISTED_KINDS, LISTING_GROUP, type ListedKind, listingSettings } from "@layered/schemas";
+import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { isPubliiSizeCopy } from "./import-content.js";
-import { entries, entryTopics, entryTranslations, media, paths, topicTranslations } from "./schema/index.js";
+import { isPubliiSizeCopy, listingAt } from "./import-content.js";
+import {
+  entries,
+  entryTopics,
+  entryTranslations,
+  media,
+  paths,
+  settings,
+  topicTranslations,
+} from "./schema/index.js";
 
 /**
  * Proof that the migration lost nothing between the Publii database and this
@@ -30,6 +39,8 @@ export interface SourcePost {
   state: State;
   createdAt: string;
   topics: string[];
+  /** A former page now represented by a listing introduction, not an entry. */
+  overview?: ListedKind;
 }
 
 /** One file in Publii's media directory. */
@@ -69,6 +80,7 @@ export interface Target {
   topics: string[];
   topicsByEntry: Map<string, string[]>;
   checksums: Set<string>;
+  introductions: Map<ListedKind, string>;
 }
 
 /** One line of the counts table. */
@@ -91,10 +103,19 @@ export interface EntryRow {
   problems: string[];
 }
 
+/** One former Publii page represented by a listing introduction. */
+export interface OverviewRow {
+  slug: string;
+  path: string;
+  introduction: boolean;
+  problems: string[];
+}
+
 /** The whole comparison. */
 export interface Verification {
   counts: CountRow[];
   entries: EntryRow[];
+  overviews: OverviewRow[];
   /** Files absent from this database, each with whether any post names it. */
   absentFiles: SourceFile[];
   passed: boolean;
@@ -114,6 +135,12 @@ export function stateOf(status: string): State {
   if (flags.has("hidden")) return "hidden";
   if (flags.has("published")) return "public";
   return "draft";
+}
+
+/** The listing a Publii page became, if its slug owns a listing address. */
+export function overviewForPubliiPost(slug: string, status: string): ListedKind | undefined {
+  if (!status.split(",").includes("is-page")) return undefined;
+  return listingAt({ kind: "page", language: "en", path: `/${slug}/` });
 }
 
 /** A Publii timestamp, which is milliseconds since the epoch, as an ISO string. */
@@ -175,6 +202,7 @@ export function readSource(input: string): Source {
       state: stateOf(row.status),
       createdAt: instantOf(row.created_at),
       topics: assignments.filter((item) => item.post === row.id).map((item) => item.slug),
+      overview: overviewForPubliiPost(row.slug, row.status),
     }));
 
     // Everything a live post could name a file in: its body, its images and
@@ -241,6 +269,21 @@ export async function readTarget(database: Database): Promise<Target> {
     .from(topicTranslations)
     .where(eq(topicTranslations.language, "en"));
   const checksums = await database.select({ checksum: media.checksum }).from(media);
+  const listingRows = await database
+    .select({ key: settings.key, value: settings.value })
+    .from(settings)
+    .where(
+      inArray(
+        settings.key,
+        LISTED_KINDS.map((kind) => LISTING_GROUP[kind]),
+      ),
+    );
+  const listingValues = new Map(listingRows.map((row) => [row.key, row.value]));
+  const introductions = new Map<ListedKind, string>();
+  for (const kind of LISTED_KINDS) {
+    const parsed = listingSettings.safeParse(listingValues.get(LISTING_GROUP[kind]));
+    introductions.set(kind, parsed.success ? parsed.data.introduction.en : "");
+  }
 
   return {
     translations: rows.map((row) => ({
@@ -254,6 +297,7 @@ export async function readTarget(database: Database): Promise<Target> {
     topics: topics.map((row) => row.slug),
     topicsByEntry,
     checksums: new Set(checksums.map((row) => row.checksum)),
+    introductions,
   };
 }
 
@@ -284,6 +328,8 @@ function countOf<T extends { state: State }>(items: T[], state: State): number {
  * @param target - What this database holds.
  */
 export function compare(source: Source, target: Target): Verification {
+  const overviewPosts = source.posts.filter((post) => post.overview && post.state !== "trashed");
+  const entryPosts = source.posts.filter((post) => !post.overview || post.state === "trashed");
   const bySlug = new Map(target.translations.map((row) => [row.slug, row]));
 
   const slugsByEntry = new Map<string, string[]>();
@@ -292,7 +338,7 @@ export function compare(source: Source, target: Target): Verification {
   }
   const postsBySlug = new Map(source.posts.map((post) => [post.slug, post]));
 
-  const entryRows: EntryRow[] = source.posts.map((post) => {
+  const entryRows: EntryRow[] = entryPosts.map((post) => {
     const found = bySlug.get(post.slug);
     if (post.state === "trashed") {
       return {
@@ -332,6 +378,15 @@ export function compare(source: Source, target: Target): Verification {
     return { slug: post.slug, path: found.path, state: post.state, title, date, topics, problems };
   });
 
+  const overviews: OverviewRow[] = overviewPosts.map((post) => {
+    const introduction = Boolean(target.introductions.get(post.overview as ListedKind)?.trim());
+    const problems = [
+      ...(introduction ? [] : ["introduction missing"]),
+      ...(post.topics.length === 0 ? [] : ["overview topics are not represented"]),
+    ];
+    return { slug: post.slug, path: `/${post.slug}/`, introduction, problems };
+  });
+
   // Distinct contents rather than files, because Publii copied the same file
   // into several post directories and this database holds a file once.
   const distinct = new Map<string, SourceFile>();
@@ -355,11 +410,18 @@ export function compare(source: Source, target: Target): Verification {
   const counts: CountRow[] = [
     ...(["public", "hidden", "draft"] as const).map((state) => ({
       what: `Entries, ${state}`,
-      source: countOf(source.posts, state),
+      source: countOf(entryPosts, state),
       target: countOf(target.translations, state),
-      matches: countOf(source.posts, state) === countOf(target.translations, state),
+      matches: countOf(entryPosts, state) === countOf(target.translations, state),
       note: "",
     })),
+    {
+      what: "Overview introductions",
+      source: overviews.length,
+      target: overviews.filter((row) => row.introduction).length,
+      matches: overviews.every((row) => row.problems.length === 0),
+      note: "Former pages represented by listing settings",
+    },
     {
       what: "Entries in the trash",
       source: countOf(source.posts, "trashed"),
@@ -393,10 +455,12 @@ export function compare(source: Source, target: Target): Verification {
   return {
     counts,
     entries: entryRows,
+    overviews,
     absentFiles,
     passed:
       counts.every((row) => row.matches) &&
       entryRows.every((row) => row.problems.length === 0) &&
-      source.posts.filter((post) => post.state !== "trashed").length === target.translations.length,
+      overviews.every((row) => row.problems.length === 0) &&
+      entryPosts.filter((post) => post.state !== "trashed").length === target.translations.length,
   };
 }

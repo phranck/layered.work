@@ -6,7 +6,23 @@ import {
   testDatabase,
 } from "../test-support/database.js";
 import { media } from "./schema/index.js";
-import { missingObjects } from "./verify-storage.js";
+import { missingObjects, missingRenderedObjects } from "./verify-storage.js";
+
+describe("checking rendered media keys", () => {
+  it("checks each storage key once, including legacy files outside the library", async () => {
+    const asked: string[] = [];
+    const missing = await missingRenderedObjects(
+      ["/migration/manual.pdf", "/migration/manual.pdf", "/uploads/new-image.webp"],
+      async (key) => {
+        asked.push(key);
+        return key === "migration/manual.pdf";
+      },
+    );
+    expect(asked.sort()).toEqual(["migration/manual.pdf", "uploads/new-image.webp"]);
+    expect(missing).toEqual(["uploads/new-image.webp"]);
+    await expect(missingRenderedObjects(["/media/legacy.pdf"], async () => true)).rejects.toThrow();
+  });
+});
 
 const runs = hasTestDatabase ? describe : describe.skip;
 
