@@ -250,7 +250,8 @@ describe("dashboard shell", () => {
 
     const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
     const links = within(navigation).getAllByRole("link");
-    expect(links).toHaveLength(15);
+    expect(links).toHaveLength(16);
+    expect(within(navigation).getByRole("link", { name: "API-Tokens" })).toBeTruthy();
     const settings = within(navigation).getByRole("link", { name: "Einstellungen" });
     fireEvent.click(settings);
 
