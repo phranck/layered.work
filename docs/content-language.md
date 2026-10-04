@@ -41,7 +41,7 @@ HTML is not. A tag written in a document reaches the page as the characters that
 
 ## The components
 
-There are 17 of them, and this list is generated from the register, so it is what the parser actually accepts.
+There are 18 of them, and this list is generated from the register, so it is what the parser actually accepts.
 
 ### VStack
 
@@ -126,6 +126,22 @@ It takes no parameters.
 
 ```
 Divider()
+```
+
+### Form
+
+A saved form at this position in the page.
+
+Takes no body. Rendered by `Form`.
+
+| Parameter | What it is for | Takes | Default |
+| --- | --- | --- | --- |
+| `name` (required) | The form's name in the builder. | the name of a file in the media library, in quotes |  |
+
+`name` may be written first without its name.
+
+```
+Form("next-mini-interest")
 ```
 
 ### Image

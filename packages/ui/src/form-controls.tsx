@@ -142,7 +142,10 @@ export function FormControls({ fields, language, values = {}, errors = {} }: For
         return (
           <div key={field.key} className="form-controls__field">
             {field.type === "consent" || field.type === "multipleChoice" ? (
-              <fieldset aria-describedby={errors[field.key] ? errorId : undefined}>
+              <fieldset
+                aria-describedby={errors[field.key] ? errorId : undefined}
+                data-required-choice={field.type === "multipleChoice" && field.required ? "true" : undefined}
+              >
                 <legend>{label}</legend>
                 {control}
                 {hint && <small>{hint}</small>}

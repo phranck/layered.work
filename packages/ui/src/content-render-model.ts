@@ -4,6 +4,9 @@ import { CodeBlock } from "./code-block.js";
 import { CONTENT_RENDERERS } from "./content-adapters.js";
 import { ContentPlaceholder } from "./content-placeholder.js";
 import { contentUrl, type MediaResolver } from "./content-shared.js";
+import type { FormEmbedProps } from "./form-embed.js";
+
+type FormRenders = Readonly<Record<string, FormEmbedProps>>;
 
 const proseTags = new Set([
   "p",
@@ -37,8 +40,9 @@ function renderElement(
   node: ElementNode,
   media: MediaResolver,
   resolveUrl?: (url: string) => string,
+  forms?: FormRenders,
 ): ReactNode {
-  const children = renderNodes(node.children, media, resolveUrl);
+  const children = renderNodes(node.children, media, resolveUrl, forms);
   if (!proseTags.has(node.tag)) return children;
   const attributes: Record<string, string | undefined> = {};
   for (const name of ["alt", "title", "data-task", "data-align"])
@@ -61,7 +65,12 @@ function renderElement(
   if (node.tag === "hr" || node.tag === "br") return createElement(node.tag);
   return createElement(node.tag, attributes, children);
 }
-function renderNode(node: RenderNode, media: MediaResolver, resolveUrl?: (url: string) => string): ReactNode {
+function renderNode(
+  node: RenderNode,
+  media: MediaResolver,
+  resolveUrl?: (url: string) => string,
+  forms?: FormRenders,
+): ReactNode {
   switch (node.kind) {
     case "text":
       return node.value;
@@ -70,10 +79,15 @@ function renderNode(node: RenderNode, media: MediaResolver, resolveUrl?: (url: s
     case "code":
       return createElement(CodeBlock, { source: node.source, language: node.language });
     case "element":
-      return renderElement(node, media, resolveUrl);
+      return renderElement(node, media, resolveUrl, forms);
     case "component":
       return Object.hasOwn(CONTENT_RENDERERS, node.renders)
-        ? CONTENT_RENDERERS[node.renders]?.(node, media, renderNodes(node.children, media, resolveUrl))
+        ? CONTENT_RENDERERS[node.renders]?.(
+            node,
+            media,
+            renderNodes(node.children, media, resolveUrl, forms),
+            forms,
+          )
         : createElement(ContentPlaceholder, { name: node.name });
   }
 }
@@ -82,10 +96,11 @@ export function renderNodes(
   nodes: readonly RenderNode[],
   media: MediaResolver,
   resolveUrl?: (url: string) => string,
+  forms?: FormRenders,
 ): ReactNode {
   // The render model is a static document snapshot with no identity or mutable
   // list state. Position keys preserve the authored order, including repeated prose.
   return nodes.map((node, index) =>
-    createElement(Fragment, { key: index }, renderNode(node, media, resolveUrl)),
+    createElement(Fragment, { key: index }, renderNode(node, media, resolveUrl, forms)),
   );
 }

@@ -21,3 +21,18 @@ export function rendersComponent(nodes: readonly RenderNode[], renders: string):
       ((node.kind === "component" || node.kind === "element") && rendersComponent(node.children, renders)),
   );
 }
+
+/** Form names used by a finished document, including nested components. */
+export function referencedFormNames(nodes: readonly RenderNode[]): string[] {
+  const names = new Set<string>();
+  const visit = (part: readonly RenderNode[]) => {
+    for (const node of part) {
+      if (node.kind === "component" && node.renders === "Form" && typeof node.props.name === "string") {
+        names.add(node.props.name);
+      }
+      if (node.kind === "component" || node.kind === "element") visit(node.children);
+    }
+  };
+  visit(nodes);
+  return [...names];
+}

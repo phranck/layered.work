@@ -119,6 +119,17 @@ export const components = {
     renders: "Divider",
   },
 
+  Form: {
+    description: "A saved form at this position in the page.",
+    example: 'Form("next-mini-interest")',
+    body: "never",
+    unnamed: "name",
+    parameters: {
+      name: { kind: "slug", description: "The form's name in the builder.", required: true },
+    },
+    renders: "Form",
+  },
+
   Image: {
     description: "A picture from the media library.",
     example: 'Image("workbench", caption: "The bench, half way through")',

@@ -97,14 +97,19 @@ export type FormField = z.infer<typeof formField>;
 export type FormFieldType = FormField["type"];
 
 /** What the dashboard saves, including field order and form-wide settings. */
-export const createFormBody = body({
+const publicDeclarationFields = {
   slug: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
   name: text(MaxLength.Line),
-  notificationEmail: z.email().max(254).nullable(),
   successMessage: formText,
-  storeSubmissions: z.boolean(),
   fields: z.array(formField).min(1).max(40),
-}).refine((form) => new Set(form.fields.map((field) => field.key)).size === form.fields.length, {
+};
+const uniqueFieldKeys = (form: { fields: FormField[] }) =>
+  new Set(form.fields.map((field) => field.key)).size === form.fields.length;
+export const createFormBody = body({
+  ...publicDeclarationFields,
+  notificationEmail: z.email().max(254).nullable(),
+  storeSubmissions: z.boolean(),
+}).refine(uniqueFieldKeys, {
   path: ["fields"],
   message: "Field names must be unique.",
 });
@@ -121,6 +126,122 @@ export const formDetail = createFormBody.safeExtend({
   modifiedAt: z.iso.datetime(),
 });
 export type FormDetail = z.infer<typeof formDetail>;
+
+/** The declaration a public page may read, without editor-only settings. */
+export const publicForm = body(publicDeclarationFields).refine(uniqueFieldKeys, {
+  path: ["fields"],
+  message: "Field names must be unique.",
+});
+export type PublicForm = z.infer<typeof publicForm>;
+
+/** A browser may submit a value once or several times for a choice group. */
+export const formSubmissionValues = z.record(
+  z.string().max(MaxLength.Handle),
+  z.union([z.string().max(MaxLength.Paragraph), z.array(z.string().max(MaxLength.Paragraph)).max(30)]),
+);
+export type FormSubmissionValues = z.infer<typeof formSubmissionValues>;
+
+export const submitFormBody = body({
+  challenge: z.string().min(1).max(256),
+  honeypot: z.string().max(256),
+  language: z.enum(["en", "de"]),
+  values: formSubmissionValues,
+});
+
+/** The consent's exact text and revision are saved with a submission. */
+export type FormConsent = { key: string; revision: string; notice: string };
+
+/** The API and browser use the same field rules; the API remains authoritative. */
+export function validateFormValues(
+  form: PublicForm,
+  submitted: FormSubmissionValues,
+  language: "en" | "de",
+): { values: FormSubmissionValues; errors: Record<string, string>; consents: FormConsent[] } {
+  const values: FormSubmissionValues = {};
+  const errors: Record<string, string> = {};
+  const consents: FormConsent[] = [];
+  const message = {
+    required: language === "de" ? "Dieses Feld ist erforderlich." : "This field is required.",
+    invalid: language === "de" ? "Bitte gib einen gültigen Wert ein." : "Enter a valid value.",
+  };
+  for (const field of form.fields) {
+    const raw = submitted[field.key];
+    const value =
+      field.type === "multipleChoice"
+        ? (Array.isArray(raw) ? raw : raw ? [raw] : []).map((item) => item.trim())
+        : Array.isArray(raw)
+          ? raw.map((item) => item.trim())
+          : (raw ?? "").trim();
+    values[field.key] = value;
+    const one = typeof value === "string" ? value : "";
+    const many = Array.isArray(value) ? value : [];
+    const present = field.type === "multipleChoice" ? many.length > 0 : one !== "";
+    if (field.required && !present) {
+      errors[field.key] = message.required;
+      continue;
+    }
+    if (!present) continue;
+    switch (field.type) {
+      case "shortText":
+      case "longText":
+      case "email":
+        if (
+          Array.isArray(value) ||
+          one.length < field.minLength ||
+          one.length > field.maxLength ||
+          (field.type === "email" && !z.email().safeParse(one).success) ||
+          (field.pattern !== null && !new RegExp(field.pattern, "u").test(one))
+        )
+          errors[field.key] = message.invalid;
+        break;
+      case "number": {
+        const number = Number(one);
+        if (
+          Array.isArray(value) ||
+          !Number.isFinite(number) ||
+          (field.min !== null && number < field.min) ||
+          (field.max !== null && number > field.max)
+        )
+          errors[field.key] = message.invalid;
+        break;
+      }
+      case "singleChoice":
+        if (Array.isArray(value) || !field.options.some((option) => option.value === one))
+          errors[field.key] = message.invalid;
+        break;
+      case "multipleChoice": {
+        const allowed = new Set(field.options.map((option) => option.value));
+        if (
+          !Array.isArray(value) ||
+          many.length !== new Set(many).size ||
+          many.some((item) => !allowed.has(item))
+        )
+          errors[field.key] = message.invalid;
+        break;
+      }
+      case "checkbox":
+        if (Array.isArray(value) || one !== "yes") errors[field.key] = message.invalid;
+        break;
+      case "date":
+        if (
+          Array.isArray(value) ||
+          !z.iso.date().safeParse(one).success ||
+          (field.min !== null && one < field.min) ||
+          (field.max !== null && one > field.max)
+        )
+          errors[field.key] = message.invalid;
+        break;
+      case "consent":
+        if (Array.isArray(value) || one !== "yes") errors[field.key] = message.invalid;
+        else consents.push({ key: field.key, revision: field.revision, notice: field.notice[language] });
+        break;
+    }
+  }
+  if (Object.keys(submitted).some((key) => !form.fields.some((field) => field.key === key))) {
+    errors._form = message.invalid;
+  }
+  return { values, errors, consents };
+}
 
 export const formList = z.array(formDetail);
 export type FormList = z.infer<typeof formList>;

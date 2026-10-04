@@ -94,7 +94,7 @@ describe("form builder", () => {
   });
 
   it("does not send a field whose German label is blank", async () => {
-    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/auth/me") || url.endsWith("/account")) return json(account);
       if (url.endsWith("/dashboard/counts")) return json(counts);

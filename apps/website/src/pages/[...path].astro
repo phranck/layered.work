@@ -13,6 +13,7 @@ import TopicChip from "../components/TopicChip.astro";
 import { siteFooter, siteNavigation } from "../components/site-navigation.js";
 import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
 import { loadContent } from "../content/load.js";
+import { formsForPage, submitPageForm } from "../content/forms.js";
 import { languageRoot, parseListingQuery, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
 
@@ -82,6 +83,18 @@ const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(ot
 const navigation=siteNavigation(language);
 const footer=siteFooter(language);
 const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
+let formSubmission;
+if(Astro.request.method==="POST"){
+  if(!entry||!repository||Number(Astro.request.headers.get("content-length")??0)>100_000){
+    Astro.response.status=400;
+  }else{
+    formSubmission=await submitPageForm(Astro.request,repository,nodes,entry);
+    if(!formSubmission)Astro.response.status=400;
+    else Astro.response.status=formSubmission.httpStatus;
+  }
+}
+const forms=entry&&repository?await formsForPage(repository,nodes,entry.language,formSubmission):{};
+if(Object.keys(forms).length>0)Astro.response.headers.set("Cache-Control","no-store");
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.
@@ -95,6 +108,6 @@ if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noind
     {home&&<HomeContent {repository} {language} />}
     {listing&&<ListingContent {repository} {language} {title} {kind} topic={topic?.id} {page} {query} {search} />}
     {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Page>}
-    {entry&&<EntryArticle {repository} {entry} {nodes} />}
+    {entry&&<EntryArticle {repository} {entry} {nodes} {forms} />}
   </>}
 </SiteLayout>

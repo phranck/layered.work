@@ -7,6 +7,7 @@ import {
   isKnownHomeBlock,
   type ListedKind,
   listingSettings,
+  publicForm,
   READING_WIDTHS,
   unknownHomeBlocks,
 } from "@layered/schemas";
@@ -100,6 +101,7 @@ const topicSchema = z.union([
 ]);
 const snapshotSchema = z.object({
   entries: z.array(entrySchema),
+  forms: z.array(publicForm).default([]),
   topics: z.array(topicSchema),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),
@@ -308,6 +310,8 @@ export function createRepository(input: unknown) {
   }
   const media = new Map(data.media.map((item) => [item.slug, item]));
   if (media.size !== data.media.length) throw new Error("Duplicate media slug");
+  const forms = new Map(data.forms.map((item) => [item.slug, item]));
+  if (forms.size !== data.forms.length) throw new Error("Duplicate form slug");
   const redirects = new Map(data.redirects.map((item) => [item.source, item.target]));
   const gone = new Set(data.gone);
   for (const source of redirects.keys()) {
@@ -385,6 +389,7 @@ export function createRepository(input: unknown) {
       const entry = entries.get(name);
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
     },
+    form: (name: string) => forms.get(name),
     redirect: (name: string) => redirects.get(name),
     /** How the overview of one kind is set up. */
     listing: (kind: ListedKind) => data.listings[kind],

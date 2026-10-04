@@ -5,7 +5,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { sameSignature } from "../auth/signature.js";
 import { config, sessionSecret } from "../config.js";
-import { type PublicSnapshot, publicMedia, publicTopics } from "../content/snapshot.js";
+import { type PublicSnapshot, publicForms, publicMedia, publicTopics } from "../content/snapshot.js";
 import { entries, entryPreviews, entryTopics, entryTranslations, paths } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readListingSettings } from "../settings/repository.js";
@@ -210,6 +210,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
       },
     ],
     topics: assignedTopics,
+    forms: await publicForms(db, [row.body]),
     media,
     redirects: [],
     gone: [],

@@ -5,6 +5,7 @@ import {
   entryTopics,
   entryTranslations,
   formerTopicSlugs,
+  forms,
   media,
   mediaVariants,
   paths,
@@ -94,6 +95,50 @@ runs("the public snapshot", () => {
     expect(snapshot.entries).toEqual([]);
     expect(JSON.stringify(snapshot)).not.toContain("Not finished");
     expect(JSON.stringify(snapshot)).not.toContain("nobody outside may read");
+  });
+
+  it("publishes only forms referenced by reachable entries and omits editor settings", async () => {
+    const database = await testDatabase();
+    const declaration = (slug: string) => ({
+      slug,
+      name: slug,
+      notificationEmail: "private@example.test",
+      successMessage: { en: "Thanks", de: "Danke" },
+      storeSubmissions: true,
+      fields: [
+        {
+          key: "name",
+          type: "shortText" as const,
+          label: { en: "Name", de: "Name" },
+          hint: { en: "", de: "" },
+          required: true,
+          minLength: 1,
+          maxLength: 80,
+          pattern: null,
+        },
+      ],
+    });
+    await database.insert(forms).values([
+      { slug: "published-form", name: "Published", declaration: declaration("published-form") },
+      { slug: "draft-form", name: "Draft", declaration: declaration("draft-form") },
+    ]);
+    await writeEntry(database, {
+      title: "Open",
+      path: "/open/",
+      state: "public",
+      body: 'Form("published-form")',
+    });
+    await writeEntry(database, {
+      title: "Draft",
+      path: "/draft/",
+      state: "draft",
+      body: 'Form("draft-form")',
+    });
+
+    const snapshot = await readPublicSnapshot(database);
+    expect(snapshot.forms.map((form) => form.slug)).toEqual(["published-form"]);
+    expect(JSON.stringify(snapshot.forms)).not.toContain("private@example.test");
+    expect(JSON.stringify(snapshot.forms)).not.toContain("draft-form");
   });
 
   it("leaves a draft out whilst its published sibling stays in", async () => {

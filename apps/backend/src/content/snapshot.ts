@@ -1,5 +1,11 @@
-import { mediaReferences } from "@layered/content";
-import { type ListedKind, type ListingSettings, RESERVED_PATHS } from "@layered/schemas";
+import { mediaReferences, referencedFormNames, renderContent } from "@layered/content";
+import {
+  type ListedKind,
+  type ListingSettings,
+  type PublicForm,
+  publicForm,
+  RESERVED_PATHS,
+} from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -7,6 +13,7 @@ import {
   entryTopics,
   entryTranslations,
   formerTopicSlugs,
+  forms,
   gonePaths,
   homeBlocks,
   media,
@@ -36,6 +43,7 @@ import { readListingSettings } from "../settings/repository.js";
 /** What a caller receives. */
 export interface PublicSnapshot {
   entries: PublicEntry[];
+  forms: PublicForm[];
   topics: PublicTopic[];
   media: PublicMedia[];
   redirects: { source: string; target: string }[];
@@ -219,6 +227,20 @@ export async function publicMedia(
   };
 }
 
+/** Only form declarations referenced by these reachable bodies may leave the API. */
+export async function publicForms(database: Database, bodies: readonly string[]): Promise<PublicForm[]> {
+  const names = new Set(bodies.flatMap((body) => referencedFormNames(renderContent(body))));
+  if (names.size === 0) return [];
+  const rows = await database
+    .select({ declaration: forms.declaration })
+    .from(forms)
+    .where(inArray(forms.slug, [...names]));
+  return rows.map((row) => {
+    const { slug, name, successMessage, fields } = row.declaration;
+    return publicForm.parse({ slug, name, successMessage, fields });
+  });
+}
+
 /** The names and addresses of the topics a snapshot or preview carries. */
 export async function publicTopics(database: Database, ids?: readonly string[]): Promise<PublicTopic[]> {
   if (ids && ids.length === 0) return [];
@@ -370,6 +392,11 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   // something a reader can reach and it does not belong in what the site shows.
   const reachable = translations.filter((row) => currentPaths.has(row.translationId));
 
+  const publishedForms = await publicForms(
+    database,
+    reachable.map((row) => row.body),
+  );
+
   const assignments =
     reachable.length > 0
       ? await database
@@ -431,6 +458,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
 
   return {
     entries: publicEntries,
+    forms: publishedForms,
     topics: publishedTopics,
     media: publishedMedia,
     redirects: former,

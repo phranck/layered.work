@@ -90,44 +90,46 @@ function take(key: string, limit: number, windowMs: number): { allowed: boolean;
  *
  * @param limits - What this route counts and how far it lets it go.
  */
-export function rateLimit(limits: Limits): MiddlewareHandler {
+export function enforceRateLimit(c: Context, limits: Limits): void {
   const windowMs = limits.windowSeconds * 1000;
+  const address = sourceAddress(c);
+  let refusedAt = 0;
 
+  for (const key of limits.keys(c)) {
+    const { allowed, resetAt } = take(`${limits.name}:${key}`, limits.limit, windowMs);
+    // Every key is taken, not only the ones before the first refusal, so a
+    // caller cannot spend somebody else's allowance for free by being over
+    // their own.
+    if (!allowed) refusedAt = Math.max(refusedAt, resetAt);
+  }
+
+  if (refusedAt > 0) {
+    const seconds = Math.max(1, Math.ceil((refusedAt - Date.now()) / 1000));
+    c.header("Retry-After", String(seconds));
+
+    deviation("refused by a rate limit", {
+      requestId: c.get("requestId"),
+      limiter: limits.name,
+      route: c.req.routePath,
+      // Hashed, because a log of addresses is a record of who tried what, and
+      // the only question here is whether one source is doing this repeatedly.
+      source: sourceFingerprint(address),
+      // Every hop, hashed. The length alone says how many proxies are in
+      // front; it does not say which position the client is in, and reading
+      // the wrong one puts every caller in the same bucket, which turns a
+      // per-source limit into a global one. Hashed, so this answers that
+      // question without becoming a record of who connected from where.
+      chain: forwardedChain(c).map(sourceFingerprint),
+      retryAfterSeconds: seconds,
+    });
+
+    throw new HttpError(ErrorCode.RateLimited, "Too many attempts. Try again shortly.");
+  }
+}
+
+export function rateLimit(limits: Limits): MiddlewareHandler {
   return async (c, next) => {
-    const address = sourceAddress(c);
-    let refusedAt = 0;
-
-    for (const key of limits.keys(c)) {
-      const { allowed, resetAt } = take(`${limits.name}:${key}`, limits.limit, windowMs);
-      // Every key is taken, not only the ones before the first refusal, so a
-      // caller cannot spend somebody else's allowance for free by being over
-      // their own.
-      if (!allowed) refusedAt = Math.max(refusedAt, resetAt);
-    }
-
-    if (refusedAt > 0) {
-      const seconds = Math.max(1, Math.ceil((refusedAt - Date.now()) / 1000));
-      c.header("Retry-After", String(seconds));
-
-      deviation("refused by a rate limit", {
-        requestId: c.get("requestId"),
-        limiter: limits.name,
-        route: c.req.routePath,
-        // Hashed, because a log of addresses is a record of who tried what, and
-        // the only question here is whether one source is doing this repeatedly.
-        source: sourceFingerprint(address),
-        // Every hop, hashed. The length alone says how many proxies are in
-        // front; it does not say which position the client is in, and reading
-        // the wrong one puts every caller in the same bucket, which turns a
-        // per-source limit into a global one. Hashed, so this answers that
-        // question without becoming a record of who connected from where.
-        chain: forwardedChain(c).map(sourceFingerprint),
-        retryAfterSeconds: seconds,
-      });
-
-      throw new HttpError(ErrorCode.RateLimited, "Too many attempts. Try again shortly.");
-    }
-
+    enforceRateLimit(c, limits);
     await next();
   };
 }

@@ -5,6 +5,7 @@ import type { ContentProps, MediaResolver } from "./content-shared.js";
 import { Divider } from "./divider.js";
 import { Document } from "./document.js";
 import { Figure } from "./figure.js";
+import { FormEmbed, type FormEmbedProps } from "./form-embed.js";
 import { Gallery } from "./gallery.js";
 import { Grid } from "./grid.js";
 import { Model } from "./model.js";
@@ -14,7 +15,12 @@ import { Stack } from "./stack.js";
 import { Video } from "./video.js";
 import { YouTube } from "./youtube.js";
 
-type Adapter = (node: ComponentNode, media: MediaResolver, children: ReactNode) => ReactNode;
+type Adapter = (
+  node: ComponentNode,
+  media: MediaResolver,
+  children: ReactNode,
+  forms?: Readonly<Record<string, FormEmbedProps>>,
+) => ReactNode;
 function props<N extends ComponentName>(node: ComponentNode, children: ReactNode): ContentProps<N> {
   // The content package owns interpretation/defaults. Only the neutral body is
   // replaced here, at the boundary where it becomes React.
@@ -30,6 +36,13 @@ export const CONTENT_RENDERERS: Readonly<Record<string, Adapter>> = {
   Grid: (node, _media, children) => createElement(Grid, props<"Grid">(node, children)),
   Spacer: (node) => createElement(Spacer, node.props),
   Divider: () => createElement(Divider),
+  Form: (node, _media, _children, forms) => {
+    const name = node.props.name;
+    const found = typeof name === "string" ? forms?.[name] : undefined;
+    return found
+      ? createElement(FormEmbed, found)
+      : createElement("p", { className: "form-embed", role: "status" }, "Form unavailable.");
+  },
   Figure: (node, media) => createElement(Figure, { ...(node.props as unknown as PropsOf<"Image">), media }),
   Gallery: (node, _media, children) => createElement(Gallery, props<"Gallery">(node, children)),
   Model: (node, media) => createElement(Model, { ...(node.props as unknown as PropsOf<"Model">), media }),
