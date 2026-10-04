@@ -1,7 +1,8 @@
-import { previewTokenParam } from "@layered/schemas";
+import { previewTokenParam, publicSnapshot } from "@layered/schemas";
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
 import { readPreview } from "../../entries/preview.js";
+import { responds } from "../api-metadata.js";
 import { validate } from "../validate.js";
 
 /**
@@ -23,9 +24,14 @@ import { validate } from "../validate.js";
  */
 export const previewsRoutes = new Hono();
 
-previewsRoutes.get("/:token", validate("param", previewTokenParam), async (c) => {
-  const snapshot = await readPreview(database(), c.req.valid("param").token);
-  c.header("Cache-Control", "no-store");
-  c.header("X-Robots-Tag", "noindex, nofollow");
-  return c.json(snapshot);
-});
+previewsRoutes.get(
+  "/:token",
+  validate("param", previewTokenParam),
+  responds(publicSnapshot, { envelope: false }),
+  async (c) => {
+    const snapshot = await readPreview(database(), c.req.valid("param").token);
+    c.header("Cache-Control", "no-store");
+    c.header("X-Robots-Tag", "noindex, nofollow");
+    return c.json(snapshot);
+  },
+);

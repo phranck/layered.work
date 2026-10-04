@@ -1,8 +1,12 @@
 import {
   ErrorCode,
+  mailTemplate,
   mailTemplateKind,
+  mailTemplateList,
   previewMailTemplateBody,
+  renderedMail,
   saveMailTemplateBody,
+  testMailResult,
   testMailTemplateBody,
 } from "@layered/schemas";
 import { Hono } from "hono";
@@ -18,6 +22,7 @@ import {
   renderMailTemplate,
   saveMailTemplate,
 } from "../../mail/templates.js";
+import { responds } from "../api-metadata.js";
 import { enforceRateLimit } from "../rate-limit.js";
 import { principalOf, requireOwner, requireSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
@@ -46,8 +51,10 @@ function rendered(
 export const mailTemplateRoutes = new Hono();
 mailTemplateRoutes.use("*", requireSession);
 
-mailTemplateRoutes.get("/", async (c) => ok(c, await listMailTemplates(database())));
-mailTemplateRoutes.get("/:kind", validate("param", kindParam), async (c) =>
+mailTemplateRoutes.get("/", responds(mailTemplateList), async (c) =>
+  ok(c, await listMailTemplates(database())),
+);
+mailTemplateRoutes.get("/:kind", validate("param", kindParam), responds(mailTemplate), async (c) =>
   ok(c, await readMailTemplate(database(), c.req.valid("param").kind)),
 );
 mailTemplateRoutes.put(
@@ -55,6 +62,7 @@ mailTemplateRoutes.put(
   requireOwner,
   validate("param", kindParam),
   validate("json", saveMailTemplateBody),
+  responds(mailTemplate),
   async (c) => {
     const kind = c.req.valid("param").kind;
     const value = c.req.valid("json");
@@ -67,6 +75,7 @@ mailTemplateRoutes.post(
   "/:kind/preview",
   validate("param", kindParam),
   validate("json", previewMailTemplateBody),
+  responds(renderedMail),
   async (c) => {
     const { template, language } = c.req.valid("json");
     return ok(c, rendered(c.req.valid("param").kind, template, language));
@@ -77,6 +86,7 @@ mailTemplateRoutes.post(
   requireOwner,
   validate("param", kindParam),
   validate("json", testMailTemplateBody),
+  responds(testMailResult),
   async (c) => {
     enforceRateLimit(c, {
       name: "mail-template-test",

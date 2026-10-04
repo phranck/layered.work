@@ -69,6 +69,8 @@ Zerops issued the certificate through Let's Encrypt, valid to 12 December 2026, 
 
 `dashboard.layered.work` carries the same two records and is attached to the `dashboard` service. Zerops issued one certificate covering both names, so the site and the dashboard share it. `api.layered.work` has no record yet and is reached through its Zerops subdomain.
 
+The backend publishes its generated OpenAPI description at `/openapi.json`. The route, authentication and shared error contract are documented in [API](api.md).
+
 Adding a name to a project makes Zerops re-issue that certificate, and for a minute or two whilst it does, the existing host answers with a self-signed one. Nothing is broken; it passes.
 
 **A domain with a record pointing at something dead cannot get a certificate.** On 13 September the old host's A and AAAA records were still published alongside the new ones. Let's Encrypt validates over HTTP against whichever address it picks, so it kept hitting a host that answered 502 and 404, and no certificate was issued whilst the site was already down. Removing the two old records fixed it within minutes. The lesson for the remaining two hosts: one name points at one place, and the old record goes at the same moment the new one arrives, not before and not after.

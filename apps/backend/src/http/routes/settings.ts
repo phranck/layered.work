@@ -4,7 +4,9 @@ import {
   LISTING_GROUP,
   listingSettings,
   mailSettings,
+  settingsView,
   siteSettings,
+  testMailResult,
 } from "@layered/schemas";
 import { Hono } from "hono";
 import { getAccountProfile } from "../../account/repository.js";
@@ -13,6 +15,7 @@ import { logger } from "../../logger.js";
 import { readMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import { readSettings, saveSettings } from "../../settings/repository.js";
+import { responds } from "../api-metadata.js";
 import { principalOf, requireOwner, requireSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -30,24 +33,32 @@ export const settingsRoutes = new Hono();
 
 settingsRoutes.use("*", requireSession);
 
-settingsRoutes.get("/", async (c) => ok(c, await readSettings(database())));
+settingsRoutes.get("/", responds(settingsView), async (c) => ok(c, await readSettings(database())));
 
-settingsRoutes.put("/site", requireOwner, validate("json", siteSettings), async (c) =>
+settingsRoutes.put("/site", requireOwner, validate("json", siteSettings), responds(settingsView), async (c) =>
   ok(c, await saveSettings(database(), "site", c.req.valid("json"), principalOf(c).userId)),
 );
 
-settingsRoutes.put("/mail", requireOwner, validate("json", mailSettings), async (c) =>
+settingsRoutes.put("/mail", requireOwner, validate("json", mailSettings), responds(settingsView), async (c) =>
   ok(c, await saveSettings(database(), "mail", c.req.valid("json"), principalOf(c).userId)),
 );
 
-settingsRoutes.put("/analytics", requireOwner, validate("json", analyticsSettings), async (c) =>
-  ok(c, await saveSettings(database(), "analytics", c.req.valid("json"), principalOf(c).userId)),
+settingsRoutes.put(
+  "/analytics",
+  requireOwner,
+  validate("json", analyticsSettings),
+  responds(settingsView),
+  async (c) => ok(c, await saveSettings(database(), "analytics", c.req.valid("json"), principalOf(c).userId)),
 );
 
 // How the overviews of posts and projects are set up, one group each.
 for (const group of Object.values(LISTING_GROUP)) {
-  settingsRoutes.put(`/${group}`, requireOwner, validate("json", listingSettings), async (c) =>
-    ok(c, await saveSettings(database(), group, c.req.valid("json"), principalOf(c).userId)),
+  settingsRoutes.put(
+    `/${group}`,
+    requireOwner,
+    validate("json", listingSettings),
+    responds(settingsView),
+    async (c) => ok(c, await saveSettings(database(), group, c.req.valid("json"), principalOf(c).userId)),
   );
 }
 
@@ -59,7 +70,7 @@ for (const group of Object.values(LISTING_GROUP)) {
  * route cannot be used to send mail to a stranger. The log line carries the
  * outcome and never the address.
  */
-settingsRoutes.post("/mail/test", requireOwner, async (c) => {
+settingsRoutes.post("/mail/test", requireOwner, responds(testMailResult), async (c) => {
   const mailConfiguration = await readMailConfiguration(database());
   if (!mailConfiguration.ready && mailConfiguration.reason === "key")
     throw new HttpError(ErrorCode.Conflict, "No SMTP2GO key is configured, so nothing can be sent.");

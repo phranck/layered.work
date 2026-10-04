@@ -4,6 +4,7 @@ import type { TokenPrincipal } from "../auth/access-token.js";
 import { getSessionCookie } from "../auth/cookie.js";
 import { type Principal, readSession } from "../auth/session.js";
 import { database } from "../db/connect.js";
+import { describeMiddleware } from "./api-metadata.js";
 import { HttpError } from "./response.js";
 
 /**
@@ -32,21 +33,27 @@ declare module "hono" {
  * For routes that answer differently to a signed-in person without requiring
  * one, and for the route that reports whether anybody is signed in at all.
  */
-export const withSession = createMiddleware(async (c, next) => {
-  const principal = await readSession(database(), getSessionCookie(c));
-  if (principal) c.set("principal", principal);
-  await next();
-});
+export const withSession = describeMiddleware(
+  createMiddleware(async (c, next) => {
+    const principal = await readSession(database(), getSessionCookie(c));
+    if (principal) c.set("principal", principal);
+    await next();
+  }),
+  { kind: "security", mode: "optional-session" },
+);
 
 /** Refuses the request when nobody is signed in. */
-export const requireSession = createMiddleware(async (c, next) => {
-  const principal = await readSession(database(), getSessionCookie(c));
-  if (!principal) {
-    throw new HttpError(ErrorCode.Unauthenticated, "You are not signed in.");
-  }
-  c.set("principal", principal);
-  await next();
-});
+export const requireSession = describeMiddleware(
+  createMiddleware(async (c, next) => {
+    const principal = await readSession(database(), getSessionCookie(c));
+    if (!principal) {
+      throw new HttpError(ErrorCode.Unauthenticated, "You are not signed in.");
+    }
+    c.set("principal", principal);
+    await next();
+  }),
+  { kind: "security", mode: "session" },
+);
 
 /**
  * Refuses the request unless the owner of the site is signed in.
@@ -56,12 +63,15 @@ export const requireSession = createMiddleware(async (c, next) => {
  * so a request without a session is told to sign in rather than that it lacks a
  * role.
  */
-export const requireOwner = createMiddleware(async (c, next) => {
-  if (principalOf(c).role !== "owner") {
-    throw new HttpError(ErrorCode.Forbidden, "Only the owner of the site can change this.");
-  }
-  await next();
-});
+export const requireOwner = describeMiddleware(
+  createMiddleware(async (c, next) => {
+    if (principalOf(c).role !== "owner") {
+      throw new HttpError(ErrorCode.Forbidden, "Only the owner of the site can change this.");
+    }
+    await next();
+  }),
+  { kind: "security", mode: "owner" },
+);
 
 /**
  * The principal, for a handler that runs behind `requireSession`.

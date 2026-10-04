@@ -1,10 +1,11 @@
-/**
- * The agent-facing server.
- *
- * A thin client over the API: every tool is a call to a route, no rule is
- * reimplemented here, and nothing reaches the database. What an agent may do is
- * decided by the scopes on its token and by nothing in this package.
- *
- * Filled by the agent access epic.
- */
-export const MCP_PACKAGE = "@layered/mcp" as const;
+import { openApiDocument } from "@layered/schemas";
+
+/** The agent-facing server reads the API's own contract rather than keeping a copy. */
+export const OPENAPI_PATH = "/openapi.json";
+
+/** Available to MCP tooling without importing the backend or opening the database. */
+export async function readApiDescription(apiOrigin: string, fetcher: typeof fetch = fetch) {
+  const response = await fetcher(new URL(OPENAPI_PATH, apiOrigin));
+  if (!response.ok) throw new Error(`The API description returned HTTP ${response.status}.`);
+  return openApiDocument.parse(await response.json());
+}

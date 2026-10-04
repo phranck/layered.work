@@ -1,4 +1,14 @@
-import { completeUploadBody, createUploadBody, ErrorCode, uploadToken } from "@layered/schemas";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  binaryContent,
+  completeUploadBody,
+  createUploadBody,
+  ErrorCode,
+  uploadedMedia,
+  uploadReceived,
+  uploadTicket,
+  uploadToken,
+} from "@layered/schemas";
 import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
@@ -6,6 +16,7 @@ import { logger } from "../../logger.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
 import { readUploadToken } from "../../media/upload-token.js";
+import { acceptsRaw, responds } from "../api-metadata.js";
 import { requireScope } from "../require-scope.js";
 import { principalOf } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
@@ -20,14 +31,19 @@ import { validate } from "../validate.js";
  */
 export const media = new Hono();
 
-media.post("/uploads", requireScope("media:write"), validate("json", createUploadBody), async (c) =>
-  ok(c, await createUpload(c.req.valid("json"), principalOf(c).userId)),
+media.post(
+  "/uploads",
+  requireScope("media:write"),
+  validate("json", createUploadBody),
+  responds(uploadTicket),
+  async (c) => ok(c, await createUpload(c.req.valid("json"), principalOf(c).userId)),
 );
 
 media.post(
   "/uploads/complete",
   requireScope("media:write"),
   validate("json", completeUploadBody),
+  responds(uploadedMedia),
   async (c) =>
     ok(
       c,
@@ -68,6 +84,8 @@ if (storesLocally()) {
     "/uploads/:token/content",
     requireScope("media:write"),
     validate("param", z.object({ token: uploadToken })),
+    acceptsRaw(binaryContent, ACCEPTED_IMAGE_TYPES),
+    responds(uploadReceived),
     async (c) => {
       const claims = readUploadToken(c.req.valid("param").token);
       if (!claims || claims.userId !== principalOf(c).userId) {

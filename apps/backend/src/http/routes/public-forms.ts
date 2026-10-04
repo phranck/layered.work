@@ -1,4 +1,10 @@
-import { ErrorCode, submitFormBody, validateFormValues } from "@layered/schemas";
+import {
+  ErrorCode,
+  formChallenge,
+  formSubmitted,
+  submitFormBody,
+  validateFormValues,
+} from "@layered/schemas";
 import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
@@ -8,6 +14,7 @@ import { readFormBySlug } from "../../forms/repository.js";
 import { logger } from "../../logger.js";
 import { formMailValues } from "../../mail/notification.js";
 import { readMailTemplate, renderMailTemplate } from "../../mail/templates.js";
+import { responds } from "../api-metadata.js";
 import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
 import { HttpError, ok } from "../response.js";
@@ -21,17 +28,23 @@ const slugParam = z.object({
 });
 export const publicFormsRoutes = new Hono();
 
-publicFormsRoutes.get("/:slug/challenge", validate("param", slugParam), async (c) => {
-  const { slug } = c.req.valid("param");
-  await readFormBySlug(database(), slug);
-  c.header("Cache-Control", "no-store");
-  return ok(c, { challenge: issueFormChallenge(slug) });
-});
+publicFormsRoutes.get(
+  "/:slug/challenge",
+  validate("param", slugParam),
+  responds(formChallenge),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    await readFormBySlug(database(), slug);
+    c.header("Cache-Control", "no-store");
+    return ok(c, { challenge: issueFormChallenge(slug) });
+  },
+);
 
 publicFormsRoutes.post(
   "/:slug/submissions",
   validate("param", slugParam),
   validate("json", submitFormBody),
+  responds(formSubmitted),
   async (c) => {
     const { slug } = c.req.valid("param");
     const body = c.req.valid("json");

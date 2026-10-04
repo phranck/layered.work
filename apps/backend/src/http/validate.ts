@@ -3,6 +3,7 @@ import { ErrorCode } from "@layered/schemas";
 import type { ValidationTargets } from "hono";
 import type { ZodType } from "zod";
 import { logger } from "../logger.js";
+import { describeMiddleware } from "./api-metadata.js";
 import { fail } from "./response.js";
 
 /**
@@ -34,26 +35,29 @@ export function validate<Target extends keyof ValidationTargets, Schema extends 
   target: Target,
   schema: Schema,
 ) {
-  return zValidator(target, schema, (result, c) => {
-    if (result.success) return;
+  return describeMiddleware(
+    zValidator(target, schema, (result, c) => {
+      if (result.success) return;
 
-    // An input error, not a fault. At info, so the noisy kind cannot bury the
-    // serious kind, and with the issues, which say which field and why.
-    logger.info(
-      {
-        requestId: c.get("requestId"),
-        code: ErrorCode.InvalidRequest,
-        route: c.req.routePath,
-        method: c.req.method,
-        target,
-        issues: result.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          code: issue.code,
-        })),
-      },
-      "request refused by validation",
-    );
+      // An input error, not a fault. At info, so the noisy kind cannot bury the
+      // serious kind, and with the issues, which say which field and why.
+      logger.info(
+        {
+          requestId: c.get("requestId"),
+          code: ErrorCode.InvalidRequest,
+          route: c.req.routePath,
+          method: c.req.method,
+          target,
+          issues: result.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            code: issue.code,
+          })),
+        },
+        "request refused by validation",
+      );
 
-    return fail(c, ErrorCode.InvalidRequest, REFUSED);
-  });
+      return fail(c, ErrorCode.InvalidRequest, REFUSED);
+    }),
+    { kind: "validation", target, schema },
+  );
 }

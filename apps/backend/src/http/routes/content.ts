@@ -1,6 +1,8 @@
+import { publicSnapshot } from "@layered/schemas";
 import { Hono } from "hono";
 import { type PublicSnapshot, readPublicSnapshot } from "../../content/snapshot.js";
 import { database } from "../../db/connect.js";
+import { responds } from "../api-metadata.js";
 
 /**
  * What the public website reads.
@@ -31,7 +33,7 @@ const CACHE_MS = 30_000;
 
 let held: { snapshot: PublicSnapshot; builtAt: number } | undefined;
 
-content.get("/snapshot", async (c) => {
+content.get("/snapshot", responds(publicSnapshot, { envelope: false }), async (c) => {
   if (!held || Date.now() - held.builtAt > CACHE_MS) {
     held = { snapshot: await readPublicSnapshot(database()), builtAt: Date.now() };
   }

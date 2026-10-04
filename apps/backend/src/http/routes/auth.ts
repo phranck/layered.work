@@ -1,5 +1,5 @@
 import { unmatchableHash, verifyPassword } from "@layered/passwords";
-import { ErrorCode, type SignedInAs, signInBody } from "@layered/schemas";
+import { ErrorCode, type SignedInAs, signedInAs, signedOut, signInBody } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { clearSessionCookie, getSessionCookie, setSessionCookie } from "../../auth/cookie.js";
@@ -7,6 +7,7 @@ import { closeSession, openSession, type Principal } from "../../auth/session.js
 import { database } from "../../db/connect.js";
 import { users } from "../../db/schema/index.js";
 import { logger } from "../../logger.js";
+import { responds } from "../api-metadata.js";
 import { byAccount, byAddress, rateLimit } from "../rate-limit.js";
 import { withSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
@@ -77,6 +78,7 @@ auth.post(
   rateLimit({ ...SIGN_IN_PER_ADDRESS, keys: (c) => [byAddress(c)] }),
   validate("json", signInBody),
   rateLimit({ ...SIGN_IN_PER_ACCOUNT, keys: (c) => [byAccount(c)] }),
+  responds(signedInAs),
   async (c) => {
     const { email, password } = c.req.valid("json");
     const db = database();
@@ -129,7 +131,7 @@ auth.post(
  * Answers the same whether or not there was one to end. Telling a caller that
  * their cookie was already invalid is a way of testing cookies.
  */
-auth.post("/sign-out", async (c) => {
+auth.post("/sign-out", responds(signedOut), async (c) => {
   const ended = await closeSession(database(), getSessionCookie(c));
   clearSessionCookie(c);
 
@@ -146,7 +148,7 @@ auth.post("/sign-out", async (c) => {
  * find out whether to show the sign-in screen, and a 401 for the ordinary case
  * of not being signed in yet is an error that is not an error.
  */
-auth.get("/me", withSession, (c) => {
+auth.get("/me", withSession, responds(signedInAs.nullable()), (c) => {
   const principal = c.get("principal");
   return ok(c, principal ? asSignedIn(principal) : null);
 });

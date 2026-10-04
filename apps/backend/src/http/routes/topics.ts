@@ -1,7 +1,16 @@
-import { createTopicBody, mergeTopicBody, saveTopicBody, topicIdParam } from "@layered/schemas";
+import {
+  createTopicBody,
+  mergeTopicBody,
+  saveTopicBody,
+  topicIdParam,
+  topicList,
+  topicListItem,
+} from "@layered/schemas";
 import { Hono } from "hono";
+import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { createTopic, deleteTopic, listTopics, mergeTopic, saveTopic } from "../../topics/repository.js";
+import { responds } from "../api-metadata.js";
 import { requireScope } from "../require-scope.js";
 import { principalOf } from "../require-session.js";
 import { ok } from "../response.js";
@@ -15,11 +24,18 @@ import { validate } from "../validate.js";
  */
 export const topicsRoutes = new Hono();
 
-topicsRoutes.get("/", requireScope("content:read"), async (c) => ok(c, await listTopics(database())));
+topicsRoutes.get("/", requireScope("content:read"), responds(topicList), async (c) =>
+  ok(c, await listTopics(database())),
+);
 
 // Created from the editor, so it answers with the existing topic for a name that is taken.
-topicsRoutes.post("/", requireScope("content:write"), validate("json", createTopicBody), async (c) =>
-  ok(c, await createTopic(database(), c.req.valid("json"), principalOf(c).userId, principalOf(c).tokenId)),
+topicsRoutes.post(
+  "/",
+  requireScope("content:write"),
+  validate("json", createTopicBody),
+  responds(topicListItem),
+  async (c) =>
+    ok(c, await createTopic(database(), c.req.valid("json"), principalOf(c).userId, principalOf(c).tokenId)),
 );
 
 topicsRoutes.put(
@@ -27,6 +43,7 @@ topicsRoutes.put(
   requireScope("content:write"),
   validate("param", topicIdParam),
   validate("json", saveTopicBody),
+  responds(topicListItem),
   async (c) =>
     ok(
       c,
@@ -45,6 +62,7 @@ topicsRoutes.post(
   requireScope("content:write"),
   validate("param", topicIdParam),
   validate("json", mergeTopicBody),
+  responds(topicListItem),
   async (c) =>
     ok(
       c,
@@ -58,7 +76,13 @@ topicsRoutes.post(
     ),
 );
 
-topicsRoutes.delete("/:id", requireScope("content:write"), validate("param", topicIdParam), async (c) => {
-  await deleteTopic(database(), c.req.valid("param").id, principalOf(c).userId, principalOf(c).tokenId);
-  return ok(c, null);
-});
+topicsRoutes.delete(
+  "/:id",
+  requireScope("content:write"),
+  validate("param", topicIdParam),
+  responds(z.null()),
+  async (c) => {
+    await deleteTopic(database(), c.req.valid("param").id, principalOf(c).userId, principalOf(c).tokenId);
+    return ok(c, null);
+  },
+);
