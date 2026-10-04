@@ -30,7 +30,7 @@ import {
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { useBlocker, useLinkClickHandler, useNavigate, useParams } from "react-router";
+import { useBlocker, useLinkClickHandler, useLocation, useNavigate, useParams } from "react-router";
 import { AddressField, isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
 import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
@@ -40,6 +40,7 @@ import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { steppedTextSize, useEditorTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { entryListKey, LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
+import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
@@ -60,9 +61,6 @@ import { topicListKey } from "./topics.js";
 
 /** How long typing has to pause before a draft is saved by itself, in milliseconds. */
 const AUTOSAVE_DELAY_MS = 2000;
-
-/** The query an open entry is cached under. */
-const entryKey = (id: string) => ["entry", id] as const;
 
 /**
  * About how many characters a line holds at each reading width, measured on
@@ -128,6 +126,7 @@ function sameDraft(first: SaveEntryBody, second: SaveEntryBody): boolean {
  */
 export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
   const { id = "" } = useParams();
+  const location = useLocation();
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const entry = useQuery({ queryKey: entryKey(id), queryFn: () => api.fetchEntry(id) });
@@ -146,7 +145,15 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
       </BackToList>
     );
   // Keyed by the translation, so opening another one starts a fresh draft.
-  return <EntryEditor key={entry.data.id} area={area} kind={kind} entry={entry.data} />;
+  return (
+    <EntryEditor
+      key={entry.data.id}
+      area={area}
+      kind={kind}
+      entry={entry.data}
+      focusTitle={location.state?.focusTitle === true}
+    />
+  );
 }
 
 /**
@@ -176,7 +183,17 @@ function BackToList({ area, children }: { area: DashboardArea; children?: ReactN
  * by itself. Leaving with something unsaved asks first, inside the dashboard
  * and when the tab closes.
  */
-function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKind; entry: EntryDetail }) {
+function EntryEditor({
+  area,
+  kind,
+  entry,
+  focusTitle = false,
+}: {
+  area: DashboardArea;
+  kind: EntryKind;
+  entry: EntryDetail;
+  focusTitle?: boolean;
+}) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
@@ -392,6 +409,7 @@ function EntryEditor({ area, kind, entry }: { area: DashboardArea; kind: EntryKi
           <Field.Inline className="entry-editor__title" label={text("editorTitle")} htmlFor="entry-title">
             <Input
               id="entry-title"
+              autoFocus={focusTitle}
               value={draft.title}
               maxLength={MaxLength.Line}
               lang={entry.language}

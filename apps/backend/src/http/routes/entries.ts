@@ -1,8 +1,15 @@
-import { entryIdParam, entryListQuery, previewEntryBody, saveEntryBody } from "@layered/schemas";
+import {
+  createEntryBody,
+  entryIdParam,
+  entryListQuery,
+  previewEntryBody,
+  saveEntryBody,
+} from "@layered/schemas";
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
 import { createPreview } from "../../entries/preview.js";
 import {
+  createEntry,
   createTranslation,
   emptyTrash,
   listEntries,
@@ -29,6 +36,10 @@ entriesRoutes.use("*", requireSession);
 
 entriesRoutes.get("/", validate("query", entryListQuery), async (c) =>
   ok(c, await listEntries(database(), c.req.valid("query").kind)),
+);
+
+entriesRoutes.post("/", validate("json", createEntryBody), async (c) =>
+  ok(c, await createEntry(database(), c.req.valid("json"), principalOf(c).userId)),
 );
 
 entriesRoutes.get("/:id", validate("param", entryIdParam), async (c) =>

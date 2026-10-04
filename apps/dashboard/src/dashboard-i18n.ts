@@ -93,6 +93,8 @@ const de = {
   sessionExpired: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
 
   // Entry lists
+  newEntry: "Neu",
+  newEntryPending: "Wird angelegt…",
   statPublished: "Veröffentlicht",
   statPublishedNote: "sichtbar auf der Site",
   statDrafts: "Entwürfe",
@@ -415,6 +417,8 @@ const en: Catalogue = {
   signInRefusedUsername: "The username or the password is not correct.",
   sessionExpired: "Your session has expired. Please sign in again.",
 
+  newEntry: "New",
+  newEntryPending: "Creating…",
   statPublished: "Published",
   statPublishedNote: "visible on the site",
   statDrafts: "Drafts",

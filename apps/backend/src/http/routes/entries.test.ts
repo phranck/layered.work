@@ -1,8 +1,15 @@
-import { type EntryList, entryDetail, entryList, readApiError, slugFromTitle } from "@layered/schemas";
+import {
+  DEFAULT_SETTINGS,
+  type EntryList,
+  entryDetail,
+  entryList,
+  readApiError,
+  slugFromTitle,
+} from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { readPublicSnapshot } from "../../content/snapshot.js";
-import { auditLog, entries, media, mediaReferences, paths } from "../../db/schema/index.js";
+import { auditLog, entries, media, mediaReferences, paths, settings } from "../../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";
@@ -87,6 +94,50 @@ runs("the entry list", () => {
   it("keeps pages apart from posts", async () => {
     const rows = await list("page", await signedInCookie());
     expect(rows.map((row) => row.title)).toEqual(["A page"]);
+  });
+
+  it.each([
+    "post",
+    "page",
+    "project",
+  ] as const)("creates a %s draft in the site's default language without an address and logs it", async (kind) => {
+    const database = await testDatabase();
+    await database.insert(settings).values({
+      key: "site",
+      value: { ...DEFAULT_SETTINGS.site, defaultLanguage: "de" },
+    });
+    const cookie = await signedInCookie();
+    const response = await app.request("/entries", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ kind, title: "Ohne Titel" }),
+    });
+    expect(response.status).toBe(200);
+    const created = entryDetail.parse(((await response.json()) as { data: unknown }).data);
+    expect(created).toMatchObject({ kind, title: "Ohne Titel", language: "de", state: "draft", path: null });
+    expect((await list(kind, cookie)).some((row) => row.id === created.id)).toBe(true);
+    expect(
+      await database
+        .select({ action: auditLog.action })
+        .from(auditLog)
+        .where(eq(auditLog.subjectId, created.id)),
+    ).toEqual([{ action: "entry.created" }]);
+  });
+
+  it("refuses creating an entry without a session or with an invalid kind", async () => {
+    const unsigned = await app.request("/entries", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind: "post", title: "Untitled" }),
+    });
+    expect(unsigned.status).toBe(401);
+
+    const invalid = await app.request("/entries", {
+      method: "POST",
+      headers: { cookie: await signedInCookie(), "content-type": "application/json" },
+      body: JSON.stringify({ kind: "media", title: "Untitled" }),
+    });
+    expect(invalid.status).toBe(400);
   });
 
   it("opens one translation with its text, its address, its topics and its other language", async () => {

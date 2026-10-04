@@ -4,7 +4,9 @@ import {
   type AnalyticsSettings,
   accountMediaPage,
   accountProfile,
+  type CreateEntryBody,
   type CreateTopicBody,
+  createEntryBody,
   createTopicBody,
   createUploadBody,
   type DashboardCounts,
@@ -100,6 +102,8 @@ export interface DashboardApi {
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
+  /** Creates one draft in the site's default language. */
+  createEntry(value: CreateEntryBody): Promise<EntryDetail>;
   /** One translation, as the editor opens it. */
   fetchEntry(id: string): Promise<EntryDetail>;
   /** Stores what the editor holds for one translation, and returns it as it now stands. */
@@ -225,6 +229,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchEntries(kind) {
       const params = new URLSearchParams({ kind });
       return dataOf(await request(`/entries?${params}`, undefined, true), entryList);
+    },
+    async createEntry(value) {
+      const sent = jsonBody("POST", createEntryBody.parse(value));
+      return dataOf(await request("/entries", sent, true), entryDetail);
     },
     async fetchEntry(id) {
       return dataOf(await request(`/entries/${encodeURIComponent(id)}`, undefined, true), entryDetail);

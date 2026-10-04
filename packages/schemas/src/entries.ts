@@ -126,6 +126,13 @@ export const entryDetail = z.object({
 });
 export type EntryDetail = z.infer<typeof entryDetail>;
 
+/** A new entry starts with one draft in the site's default language. */
+export const createEntryBody = body({
+  kind: z.enum(ENTRY_KINDS),
+  title: text(MaxLength.Line),
+});
+export type CreateEntryBody = z.infer<typeof createEntryBody>;
+
 /**
  * What moving a translation to the trash will affect, for the question asked
  * before it happens.

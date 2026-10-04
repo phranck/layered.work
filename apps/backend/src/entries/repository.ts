@@ -1,5 +1,6 @@
 import {
   type ContentLanguage,
+  type CreateEntryBody,
   type EmptiedTrash,
   type EntryDetail,
   type EntryKind,
@@ -27,8 +28,36 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { readSettings } from "../settings/repository.js";
 
 type Database = ReturnType<typeof database>;
+
+/** Creates one entry with one draft translation, leaving its address for the first save. */
+export async function createEntry(
+  db: Database,
+  value: CreateEntryBody,
+  actorUserId: string,
+): Promise<EntryDetail> {
+  const { defaultLanguage } = (await readSettings(db)).site;
+  const translationId = await db.transaction(async (tx) => {
+    const [entry] = await tx.insert(entries).values({ kind: value.kind }).returning({ id: entries.id });
+    if (!entry) throw new Error("The entry was not written.");
+    const [translation] = await tx
+      .insert(entryTranslations)
+      .values({ entryId: entry.id, language: defaultLanguage, title: value.title })
+      .returning({ id: entryTranslations.id });
+    if (!translation) throw new Error("The translation was not written.");
+    await tx.insert(auditLog).values({
+      actorUserId,
+      action: "entry.created",
+      subjectType: "entry_translations",
+      subjectId: translation.id,
+      detail: { kind: value.kind, language: defaultLanguage },
+    });
+    return translation.id;
+  });
+  return readEntry(db, translationId);
+}
 
 /**
  * The names of an entry's topics, alphabetically, each in the given language
