@@ -53,6 +53,7 @@ export interface SnapshotEntry {
   language: "en" | "de";
   visibility: "public" | "hidden" | "draft" | "trashed";
   kind: "post" | "page" | "project";
+  createdAt: string;
   publishedAt: string | null;
   updatedAt: string | null;
   summary: string | null;
@@ -496,6 +497,8 @@ async function importEntry(
     kind: lead.kind,
     featured: lead.featured,
     onHomePage: lead.onHomePage,
+    createdAt: new Date(Math.min(...group.map((entry) => Date.parse(entry.createdAt)))),
+    modifiedAt: new Date(Math.max(...group.map((entry) => Date.parse(entry.updatedAt ?? entry.createdAt)))),
   };
 
   let entryId = existingId;

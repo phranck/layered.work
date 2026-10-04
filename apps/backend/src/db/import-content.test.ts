@@ -9,6 +9,7 @@ import { LISTING_PATHS, listingSettings } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { selectObjects } from "../../../../scripts/publii/upload.mjs";
 import {
   closeTestDatabase,
   emptyTestDatabase,
@@ -79,12 +80,28 @@ function migrationOutput(): Snapshot {
   };
 }
 
-// The upload in scripts/publii holds the same key in its own test. That script
-// stays on the machine that ran the migration, so the two sides meet at this
-// literal rather than through an import.
 describe("the storage key of a migrated file", () => {
   it("is the key the upload gave its object in the bucket", () => {
-    expect(migratedStorageKey("/media/cover.webp")).toBe("migration/cover.webp");
+    const src = "/media/cover.webp";
+    const { objects } = selectObjects(
+      {
+        entries: [{ body: 'Image("cover")' }],
+        media: [
+          {
+            slug: "cover",
+            src,
+            source: "posts/1/cover.webp",
+            filename: "cover.webp",
+            mime: "image/webp",
+            bytes: 100,
+            sha256: "a".repeat(64),
+          },
+        ],
+      },
+      { variants: [] },
+    );
+    expect(objects).toHaveLength(1);
+    expect(migratedStorageKey(src)).toBe(objects[0]?.key);
   });
 });
 
@@ -309,5 +326,60 @@ runs("importing a snapshot", () => {
       media: (await database.select().from(media)).length,
       topics: (await database.select().from(topics)).length,
     }).toEqual(before);
+  });
+
+  it("keeps the earliest creation and latest modification of a translated entry on repeated import", async () => {
+    const database = await testDatabase();
+    const example = snapshot.entries[0];
+    if (!example) throw new Error("The published snapshot holds no entries");
+    const english = {
+      ...example,
+      id: "date-english",
+      slug: "date-english",
+      path: "/date-english/",
+      language: "en" as const,
+      createdAt: "2020-01-02T00:00:00.000Z",
+      updatedAt: "2020-01-04T00:00:00.000Z",
+      translationPath: "/de/date-german/",
+      topics: [],
+      featuredImage: null,
+    };
+    const german = {
+      ...english,
+      id: "date-german",
+      slug: "date-german",
+      path: "/de/date-german/",
+      language: "de" as const,
+      createdAt: "2020-01-01T00:00:00.000Z",
+      updatedAt: "2020-01-05T00:00:00.000Z",
+      translationPath: english.path,
+    };
+    const fixture: Snapshot = { entries: [english, german], topics: [], media: [], redirects: [] };
+    const stored = async () => {
+      const [row] = await database
+        .select({ id: entries.id, createdAt: entries.createdAt, modifiedAt: entries.modifiedAt })
+        .from(entries)
+        .innerJoin(entryTranslations, eq(entryTranslations.entryId, entries.id))
+        .innerJoin(paths, eq(paths.translationId, entryTranslations.id))
+        .where(eq(paths.path, english.path));
+      return row;
+    };
+
+    await importContent(database, fixture);
+    const before = await stored();
+    expect(before?.createdAt.toISOString()).toBe(german.createdAt);
+    expect(before?.modifiedAt.toISOString()).toBe(german.updatedAt);
+
+    await importContent(database, {
+      ...fixture,
+      entries: [
+        { ...english, createdAt: "2019-01-02T00:00:00.000Z", updatedAt: "2021-01-04T00:00:00.000Z" },
+        { ...german, createdAt: "2019-01-01T00:00:00.000Z", updatedAt: "2021-01-05T00:00:00.000Z" },
+      ],
+    });
+    const after = await stored();
+    expect(after?.id).toBe(before?.id);
+    expect(after?.createdAt.toISOString()).toBe("2019-01-01T00:00:00.000Z");
+    expect(after?.modifiedAt.toISOString()).toBe("2021-01-05T00:00:00.000Z");
   });
 });

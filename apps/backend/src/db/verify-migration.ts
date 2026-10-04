@@ -38,6 +38,7 @@ export interface SourcePost {
   title: string;
   state: State;
   createdAt: string;
+  modifiedAt: string;
   topics: string[];
   /** A former page now represented by a listing introduction, not an entry. */
   overview?: ListedKind;
@@ -72,6 +73,8 @@ export interface TargetTranslation {
   title: string;
   state: Exclude<State, "trashed">;
   publishedAt: string | null;
+  createdAt: string;
+  modifiedAt: string;
 }
 
 /** Everything read out of this database. */
@@ -172,13 +175,14 @@ export function readSource(input: string): Source {
   const database = new DatabaseSync(join(input, "db.sqlite"), { readOnly: true });
   try {
     const rows = database
-      .prepare("select id, slug, title, status, created_at, text from posts order by id")
+      .prepare("select id, slug, title, status, created_at, modified_at, text from posts order by id")
       .all() as {
       id: number;
       slug: string;
       title: string;
       status: string;
       created_at: number;
+      modified_at: number;
       text: string;
     }[];
     const assignments = database
@@ -201,6 +205,7 @@ export function readSource(input: string): Source {
       title: row.title,
       state: stateOf(row.status),
       createdAt: instantOf(row.created_at),
+      modifiedAt: instantOf(row.modified_at),
       topics: assignments.filter((item) => item.post === row.id).map((item) => item.slug),
       overview: overviewForPubliiPost(row.slug, row.status),
     }));
@@ -247,6 +252,8 @@ export async function readTarget(database: Database): Promise<Target> {
       title: entryTranslations.title,
       state: entryTranslations.state,
       publishedAt: entryTranslations.publishedAt,
+      createdAt: entries.createdAt,
+      modifiedAt: entries.modifiedAt,
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
@@ -293,6 +300,8 @@ export async function readTarget(database: Database): Promise<Target> {
       title: row.title,
       state: row.state,
       publishedAt: row.publishedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      modifiedAt: row.modifiedAt.toISOString(),
     })),
     topics: topics.map((row) => row.slug),
     topicsByEntry,
@@ -363,16 +372,27 @@ export function compare(source: Source, target: Target): Verification {
       };
     }
 
-    const expectedTopics = (slugsByEntry.get(found.entryId) ?? []).flatMap(
-      (slug) => postsBySlug.get(slug)?.topics ?? [],
-    );
+    const pairedPosts = (slugsByEntry.get(found.entryId) ?? [])
+      .map((slug) => postsBySlug.get(slug))
+      .filter((value): value is SourcePost => value !== undefined);
+    const expectedTopics = pairedPosts.flatMap((paired) => paired.topics);
+    const expectedCreatedAt = pairedPosts.map((paired) => paired.createdAt).sort()[0];
+    const expectedModifiedAt = pairedPosts
+      .map((paired) => paired.modifiedAt)
+      .sort()
+      .at(-1);
     const title = found.title === post.title;
-    const date = found.publishedAt === post.createdAt;
+    const publishedDate = found.publishedAt === post.createdAt;
+    const createdDate = found.createdAt === expectedCreatedAt;
+    const modifiedDate = found.modifiedAt === expectedModifiedAt;
+    const date = publishedDate && createdDate && modifiedDate;
     const topics = sameSet(target.topicsByEntry.get(found.entryId) ?? [], expectedTopics);
     const problems = [
       ...(found.state === post.state ? [] : [`state ${found.state}, expected ${post.state}`]),
       ...(title ? [] : [`title "${found.title}", expected "${post.title}"`]),
-      ...(date ? [] : [`date ${found.publishedAt}, expected ${post.createdAt}`]),
+      ...(publishedDate ? [] : [`date ${found.publishedAt}, expected ${post.createdAt}`]),
+      ...(createdDate ? [] : [`created at ${found.createdAt}, expected ${expectedCreatedAt}`]),
+      ...(modifiedDate ? [] : [`modified at ${found.modifiedAt}, expected ${expectedModifiedAt}`]),
       ...(topics ? [] : ["topics differ"]),
     ];
     return { slug: post.slug, path: found.path, state: post.state, title, date, topics, problems };

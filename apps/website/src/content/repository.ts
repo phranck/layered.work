@@ -32,6 +32,7 @@ const entrySchema = z.object({
   language,
   visibility: z.enum(["public", "hidden", "draft", "trashed"]),
   kind: z.enum(["post", "page", "project"]),
+  createdAt: instant.optional(),
   publishedAt: instant.nullable(),
   updatedAt: instant.nullable(),
   summary: z.string().nullish(),
