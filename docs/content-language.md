@@ -136,7 +136,7 @@ Takes no body. Rendered by `Form`.
 
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
-| `name` (required) | The form's name in the builder. | the name of a file in the media library, in quotes |  |
+| `name` (required) | The form's name in the builder. | the name of a saved form, in quotes |  |
 
 `name` may be written first without its name.
 

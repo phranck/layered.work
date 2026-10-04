@@ -56,6 +56,7 @@ function placeholderFor(parameter: Parameter, form: SnippetForm): string {
   switch (parameter.kind) {
     case "text":
     case "slug":
+    case "form":
       return form.text;
     case "number":
       return String(parameter.default ?? parameter.range?.[0] ?? 1);

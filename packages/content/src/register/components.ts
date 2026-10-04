@@ -125,7 +125,7 @@ export const components = {
     body: "never",
     unnamed: "name",
     parameters: {
-      name: { kind: "slug", description: "The form's name in the builder.", required: true },
+      name: { kind: "form", description: "The form's name in the builder.", required: true },
     },
     renders: "Form",
   },

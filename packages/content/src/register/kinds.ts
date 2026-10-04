@@ -29,6 +29,8 @@ export type ParameterKind =
   | "step"
   /** The name of a file in the media library, written in quotes. */
   | "slug"
+  /** The name of a saved form, written in quotes. */
+  | "form"
   /** An icon, written bare. The set is large and lives in the icon package. */
   | "icon"
   /**

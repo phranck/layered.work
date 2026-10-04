@@ -201,7 +201,7 @@ function parameterOption(
   parameter: Parameter,
   extra: Pick<Completion, "detail" | "info" | "boost">,
 ): Completion {
-  const quoted = parameter.kind === "text" || parameter.kind === "slug";
+  const quoted = parameter.kind === "text" || parameter.kind === "slug" || parameter.kind === "form";
   if (quoted) return snippetCompletion(`${name}: "\${}"`, { label: name, type: "property", ...extra });
   return {
     label: name,

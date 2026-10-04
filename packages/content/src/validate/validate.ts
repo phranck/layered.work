@@ -580,6 +580,10 @@ function checkValue(bound: Bound, valueNode: SyntaxNode, subject: Subject, conte
       else checkSlug(unquote(raw), valueNode, bound, subject, context);
       return;
 
+    case "form":
+      if (written !== "string") refuse();
+      return;
+
     case "number":
       if (written !== "number" || !withinRange(Number(raw), parameter.range)) refuse();
       return;
