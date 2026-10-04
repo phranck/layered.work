@@ -66,6 +66,9 @@ test("the dashboard ships shared assets and nginx policy with SPA fallback", asy
     );
     const nginx = await readFile(join(workspace, "dist/site.conf"), "utf8");
     assert.match(nginx, /Content-Security-Policy/);
+    // CodeMirror mounts its editor and syntax styles as runtime <style> elements.
+    assert.match(nginx, /style-src 'self' 'unsafe-inline';/);
+    assert.match(nginx, /script-src 'self';/);
     assert.match(nginx, /connect-src 'self' https:\/\/umami.layered.work;/);
     assert.doesNotMatch(nginx, /connect-src[^;]*(?:backend|undefined)/);
     assert.match(nginx, /location \/api\//);
