@@ -35,4 +35,17 @@ describe("an entry card", () => {
     expect(markup).not.toContain("lang-tag");
     expect(markup).not.toContain('lang="en"');
   });
+
+  it("shows a topic's localized name and marks an English fallback", () => {
+    const markup = renderToStaticMarkup(
+      <EntryCard
+        entry={{ ...english, topics: ["1"] }}
+        language="de"
+        topics={[{ id: "1", name: "Hardware", slug: "hardware", sourceLanguage: "en", untranslated: true }]}
+      />,
+    );
+    expect(markup).toContain("Hardware");
+    expect(markup).toContain('class="lang-tag" title="English">EN</span>');
+    expect(markup).not.toContain('class="chip">1</span>');
+  });
 });

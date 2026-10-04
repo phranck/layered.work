@@ -52,13 +52,17 @@ for (const language of ["en", "de"]) {
   const root = language === "de" ? "/de/" : "/";
   for (const path of ["posts/", "projects/", "topics/", "search/"]) routes.add(`${root}${path}`);
   for (const topic of snapshot.topics) {
+    const translation = topic.translations[language] ?? topic.translations.en ?? topic.translations.de;
+    if (!translation) continue;
     if (
       snapshot.entries.some(
         (entry) =>
-          entry.visibility === "public" && entry.language === language && entry.topics.includes(topic.slug),
+          entry.visibility === "public" &&
+          (entry.language === language || (entry.showInOtherLanguage && !entry.translationPath)) &&
+          entry.topics.includes(topic.id),
       )
     ) {
-      routes.add(`${root}topics/${topic.slug}/`);
+      routes.add(`${root}topics/${translation.slug}/`);
     }
   }
   routes.add(`${root}search/?q=NeXT`);

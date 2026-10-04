@@ -63,12 +63,23 @@ const overviewPages = snapshot.entries.filter(
 function migrationOutput(): Snapshot {
   const [first, ...rest] = snapshot.entries;
   if (!first) throw new Error("The published snapshot holds no entries");
+  const englishTopic = snapshot.topics.find((topic) => "translations" in topic && topic.translations.en);
+  if (!englishTopic || !("translations" in englishTopic) || !englishTopic.translations.en) {
+    throw new Error("The published snapshot holds no English topic");
+  }
   return {
     ...snapshot,
     entries: [
       { ...first, body: "The text before the correction." },
       ...rest,
-      { ...first, id: "draft-fixture", slug: "draft-fixture", path: "/draft-fixture/", visibility: "draft" },
+      {
+        ...first,
+        id: "draft-fixture",
+        slug: "draft-fixture",
+        path: "/draft-fixture/",
+        visibility: "draft",
+        topics: [englishTopic.translations.en.slug],
+      },
       {
         ...first,
         id: "trash-fixture",

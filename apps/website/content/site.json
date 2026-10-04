@@ -59,8 +59,8 @@
       "template": "",
       "title": "Swift: Don't use nested ternary operators",
       "topics": [
-        "software",
-        "swift"
+        "3",
+        "5"
       ],
       "translationPath": null,
       "updatedAt": "2025-08-04T01:34:34.737000Z",
@@ -83,9 +83,9 @@
       "template": "",
       "title": "SwiftUI: Platform ViewModifier",
       "topics": [
-        "software",
-        "swift",
-        "swiftui"
+        "3",
+        "5",
+        "6"
       ],
       "translationPath": null,
       "updatedAt": "2026-05-05T13:54:54.544000Z",
@@ -129,9 +129,9 @@
       "template": "",
       "title": "NeXT mini Replica Interest",
       "topics": [
-        "electronics",
-        "3dprint",
-        "next"
+        "1",
+        "2",
+        "7"
       ],
       "translationPath": null,
       "updatedAt": "2025-11-21T14:37:44.944000Z",
@@ -175,8 +175,8 @@
       "template": "",
       "title": "Mastodon: A new Love",
       "topics": [
-        "fediverse",
-        "mastodon"
+        "8",
+        "9"
       ],
       "translationPath": null,
       "updatedAt": "2025-08-05T18:32:15.731000Z",
@@ -220,10 +220,10 @@
       "template": "",
       "title": "Website Design: Die Zweite",
       "topics": [
-        "software",
-        "web-development",
-        "css",
-        "javascript"
+        "3",
+        "10",
+        "11",
+        "12"
       ],
       "translationPath": null,
       "updatedAt": "2025-08-08T17:50:26.398000Z",
@@ -246,11 +246,11 @@
       "template": "",
       "title": "NeXTSTEP: Auf einem RPi 5",
       "topics": [
-        "next",
-        "nextstep",
-        "previous",
-        "emulator",
-        "raspberrypi"
+        "7",
+        "13",
+        "14",
+        "15",
+        "16"
       ],
       "translationPath": "/nextstep-on-rpi5-en/",
       "updatedAt": "2025-09-01T09:53:38.302000Z",
@@ -294,8 +294,8 @@
       "template": "",
       "title": "External Activity and Power LEDs on RPi 5",
       "topics": [
-        "software",
-        "raspberrypi"
+        "3",
+        "16"
       ],
       "translationPath": null,
       "updatedAt": "2025-08-31T22:13:44.571000Z",
@@ -318,11 +318,11 @@
       "template": "",
       "title": "Editor Cheat-Sheets (for Mac Keyboards)",
       "topics": [
-        "linux",
-        "editor",
-        "nano",
-        "vi",
-        "text-editor"
+        "17",
+        "18",
+        "19",
+        "20",
+        "21"
       ],
       "translationPath": null,
       "updatedAt": "2025-08-31T00:33:19.435000Z",
@@ -387,10 +387,10 @@
       "template": "",
       "title": "NeXTSTEP Naming",
       "topics": [
-        "next",
-        "nextstep",
-        "bsd",
-        "operating-system"
+        "7",
+        "13",
+        "22",
+        "23"
       ],
       "translationPath": null,
       "updatedAt": "2025-12-07T18:30:12.699000Z",
@@ -399,119 +399,234 @@
   ],
   "topics": [
     {
-      "id": 1,
-      "name": "Electronics",
-      "slug": "electronics"
+      "id": "1",
+      "translations": {
+        "en": {
+          "slug": "electronics",
+          "name": "Electronics"
+        },
+        "de": null
+      }
     },
     {
-      "id": 2,
-      "name": "3DPrint",
-      "slug": "3dprint"
+      "id": "2",
+      "translations": {
+        "en": {
+          "slug": "3dprint",
+          "name": "3DPrint"
+        },
+        "de": null
+      }
     },
     {
-      "id": 3,
-      "name": "Software",
-      "slug": "software"
+      "id": "3",
+      "translations": {
+        "en": {
+          "slug": "software",
+          "name": "Software"
+        },
+        "de": null
+      }
     },
     {
-      "id": 4,
-      "name": "General",
-      "slug": "general"
+      "id": "4",
+      "translations": {
+        "en": {
+          "slug": "general",
+          "name": "General"
+        },
+        "de": null
+      }
     },
     {
-      "id": 5,
-      "name": "Swift",
-      "slug": "swift"
+      "id": "5",
+      "translations": {
+        "en": {
+          "slug": "swift",
+          "name": "Swift"
+        },
+        "de": null
+      }
     },
     {
-      "id": 6,
-      "name": "SwiftUI",
-      "slug": "swiftui"
+      "id": "6",
+      "translations": {
+        "en": {
+          "slug": "swiftui",
+          "name": "SwiftUI"
+        },
+        "de": null
+      }
     },
     {
-      "id": 7,
-      "name": "NeXT",
-      "slug": "next"
+      "id": "7",
+      "translations": {
+        "en": {
+          "slug": "next",
+          "name": "NeXT"
+        },
+        "de": null
+      }
     },
     {
-      "id": 8,
-      "name": "Fediverse",
-      "slug": "fediverse"
+      "id": "8",
+      "translations": {
+        "en": {
+          "slug": "fediverse",
+          "name": "Fediverse"
+        },
+        "de": null
+      }
     },
     {
-      "id": 9,
-      "name": "Mastodon",
-      "slug": "mastodon"
+      "id": "9",
+      "translations": {
+        "en": {
+          "slug": "mastodon",
+          "name": "Mastodon"
+        },
+        "de": null
+      }
     },
     {
-      "id": 10,
-      "name": "Web-Development",
-      "slug": "web-development"
+      "id": "10",
+      "translations": {
+        "en": {
+          "slug": "web-development",
+          "name": "Web-Development"
+        },
+        "de": null
+      }
     },
     {
-      "id": 11,
-      "name": "CSS",
-      "slug": "css"
+      "id": "11",
+      "translations": {
+        "en": {
+          "slug": "css",
+          "name": "CSS"
+        },
+        "de": null
+      }
     },
     {
-      "id": 12,
-      "name": "Javascript",
-      "slug": "javascript"
+      "id": "12",
+      "translations": {
+        "en": {
+          "slug": "javascript",
+          "name": "Javascript"
+        },
+        "de": null
+      }
     },
     {
-      "id": 13,
-      "name": "NeXTSTEP",
-      "slug": "nextstep"
+      "id": "13",
+      "translations": {
+        "en": {
+          "slug": "nextstep",
+          "name": "NeXTSTEP"
+        },
+        "de": null
+      }
     },
     {
-      "id": 14,
-      "name": "Previous",
-      "slug": "previous"
+      "id": "14",
+      "translations": {
+        "en": {
+          "slug": "previous",
+          "name": "Previous"
+        },
+        "de": null
+      }
     },
     {
-      "id": 15,
-      "name": "Emulator",
-      "slug": "emulator"
+      "id": "15",
+      "translations": {
+        "en": {
+          "slug": "emulator",
+          "name": "Emulator"
+        },
+        "de": null
+      }
     },
     {
-      "id": 16,
-      "name": "RaspberryPi",
-      "slug": "raspberrypi"
+      "id": "16",
+      "translations": {
+        "en": {
+          "slug": "raspberrypi",
+          "name": "RaspberryPi"
+        },
+        "de": null
+      }
     },
     {
-      "id": 17,
-      "name": "Linux",
-      "slug": "linux"
+      "id": "17",
+      "translations": {
+        "en": {
+          "slug": "linux",
+          "name": "Linux"
+        },
+        "de": null
+      }
     },
     {
-      "id": 18,
-      "name": "Editor",
-      "slug": "editor"
+      "id": "18",
+      "translations": {
+        "en": {
+          "slug": "editor",
+          "name": "Editor"
+        },
+        "de": null
+      }
     },
     {
-      "id": 19,
-      "name": "nano",
-      "slug": "nano"
+      "id": "19",
+      "translations": {
+        "en": {
+          "slug": "nano",
+          "name": "nano"
+        },
+        "de": null
+      }
     },
     {
-      "id": 20,
-      "name": "vi",
-      "slug": "vi"
+      "id": "20",
+      "translations": {
+        "en": {
+          "slug": "vi",
+          "name": "vi"
+        },
+        "de": null
+      }
     },
     {
-      "id": 21,
-      "name": "Text Editor",
-      "slug": "text-editor"
+      "id": "21",
+      "translations": {
+        "en": {
+          "slug": "text-editor",
+          "name": "Text Editor"
+        },
+        "de": null
+      }
     },
     {
-      "id": 22,
-      "name": "BSD",
-      "slug": "bsd"
+      "id": "22",
+      "translations": {
+        "en": {
+          "slug": "bsd",
+          "name": "BSD"
+        },
+        "de": null
+      }
     },
     {
-      "id": 23,
-      "name": "Operating System",
-      "slug": "operating-system"
+      "id": "23",
+      "translations": {
+        "en": {
+          "slug": "operating-system",
+          "name": "Operating System"
+        },
+        "de": null
+      }
     }
   ],
   "media": [

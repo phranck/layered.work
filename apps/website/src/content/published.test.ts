@@ -31,6 +31,21 @@ describe("the published snapshot", () => {
     expect(repository.topics("en").length).toBeGreaterThan(0);
   });
 
+  it("uses topic ids and localized topic fields in the committed fallback", () => {
+    const ids = new Set(snapshot.topics.map((topic: { id: string }) => topic.id));
+    for (const topic of snapshot.topics as {
+      id: string;
+      translations: { en: { slug: string; name: string }; de: null };
+    }[]) {
+      expect(topic.translations.en.slug).toBeTruthy();
+      expect(topic.translations.en.name).toBeTruthy();
+      expect(topic.translations.de).toBeNull();
+    }
+    for (const entry of snapshot.entries as { topics: string[] }[]) {
+      for (const id of entry.topics) expect(ids.has(id)).toBe(true);
+    }
+  });
+
   it("keeps every redirect pointing at something it carries", () => {
     const repository = createRepository(snapshot);
     for (const redirect of snapshot.redirects as { source: string; target: string }[]) {

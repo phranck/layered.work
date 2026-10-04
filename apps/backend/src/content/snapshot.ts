@@ -36,7 +36,7 @@ import { readListingSettings } from "../settings/repository.js";
 /** What a caller receives. */
 export interface PublicSnapshot {
   entries: PublicEntry[];
-  topics: { id: string; slug: string; name: string }[];
+  topics: PublicTopic[];
   media: PublicMedia[];
   redirects: { source: string; target: string }[];
   /** Addresses of translations in the trash or deleted for good, which answer 410. */
@@ -44,6 +44,15 @@ export interface PublicSnapshot {
   /** How the overviews of posts and projects are set up. */
   listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
+}
+
+/** One subject and the names and addresses it has in each language. */
+export interface PublicTopic {
+  id: string;
+  translations: {
+    en: { slug: string; name: string } | null;
+    de: { slug: string; name: string } | null;
+  };
 }
 
 /** One entry, in the shape the site's repository parses. */
@@ -210,34 +219,80 @@ export async function publicMedia(
   };
 }
 
+/** The names and addresses of the topics a snapshot or preview carries. */
+export async function publicTopics(database: Database, ids?: readonly string[]): Promise<PublicTopic[]> {
+  if (ids && ids.length === 0) return [];
+  const topicRows = await database
+    .select({
+      id: topics.id,
+      language: topicTranslations.language,
+      slug: topicTranslations.slug,
+      name: topicTranslations.name,
+    })
+    .from(topicTranslations)
+    .innerJoin(topics, eq(topics.id, topicTranslations.topicId))
+    .where(ids ? inArray(topics.id, [...ids]) : undefined);
+  const translationsByTopic = new Map<string, Partial<PublicTopic["translations"]>>();
+  for (const row of topicRows) {
+    const translations = translationsByTopic.get(row.id) ?? {};
+    translations[row.language] = { slug: row.slug, name: row.name };
+    translationsByTopic.set(row.id, translations);
+  }
+  return [...translationsByTopic].flatMap(([id, translations]) =>
+    translations.en || translations.de
+      ? [{ id, translations: { en: translations.en ?? null, de: translations.de ?? null } }]
+      : [],
+  );
+}
+
 /**
  * The redirects a renamed or merged topic leaves behind.
  *
- * The site addresses a topic by its English slug in both languages, under
- * `/topics/` and `/de/topics/`, so only an English former slug is an address
- * anybody can hold. Each one leads to where its topic answers now, in both
- * languages. A topic with no English slug has no address to lead to.
+ * Former English addresses remain valid in both languages. Former German
+ * addresses remain valid only under `/de/topics/`. A topic that gained a German
+ * translation also redirects its old German page at the English slug.
  *
  * @param database - The database to read from.
- * @param current - Every topic's current English slug.
+ * @param current - Every topic and its current addresses.
  */
 async function formerTopicAddresses(
   database: Database,
-  current: readonly { id: string; slug: string }[],
+  current: readonly PublicTopic[],
 ): Promise<{ source: string; target: string }[]> {
-  const slugById = new Map(current.map((topic) => [topic.id, topic.slug]));
+  const topicById = new Map(current.map((topic) => [topic.id, topic]));
   const rows = await database
-    .select({ topicId: formerTopicSlugs.topicId, slug: formerTopicSlugs.slug })
-    .from(formerTopicSlugs)
-    .where(eq(formerTopicSlugs.language, "en"));
-  return rows.flatMap((row) => {
-    const target = slugById.get(row.topicId);
-    if (!target || target === row.slug) return [];
-    return [
-      { source: `/topics/${row.slug}/`, target: `/topics/${target}/` },
-      { source: `/de/topics/${row.slug}/`, target: `/de/topics/${target}/` },
-    ];
-  });
+    .select({
+      topicId: formerTopicSlugs.topicId,
+      slug: formerTopicSlugs.slug,
+      language: formerTopicSlugs.language,
+    })
+    .from(formerTopicSlugs);
+  const redirects = new Map<string, string>();
+  const add = (source: string, target: string) => {
+    if (source === target) return;
+    const existing = redirects.get(source);
+    if (existing && existing !== target) throw new Error(`Conflicting topic redirect: ${source}`);
+    redirects.set(source, target);
+  };
+  for (const topic of current) {
+    if (topic.translations.en && topic.translations.de) {
+      add(`/de/topics/${topic.translations.en.slug}/`, `/de/topics/${topic.translations.de.slug}/`);
+    }
+  }
+  for (const row of rows) {
+    const topic = topicById.get(row.topicId);
+    if (!topic) continue;
+    const english = topic.translations.en?.slug ?? topic.translations.de?.slug;
+    const german = topic.translations.de?.slug ?? topic.translations.en?.slug;
+    if (!english || !german) continue;
+    if (row.language === "en") {
+      add(`/topics/${row.slug}/`, `/topics/${english}/`);
+      add(`/de/topics/${row.slug}/`, `/de/topics/${german}/`);
+    } else {
+      add(`/de/topics/${row.slug}/`, `/de/topics/${german}/`);
+    }
+  }
+  return [...redirects].map(([source, target]) => ({ source, target }));
 }
 
 /**
@@ -318,18 +373,14 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   const assignments =
     reachable.length > 0
       ? await database
-          .select({ entryId: entryTopics.entryId, slug: topicTranslations.slug })
+          .select({ entryId: entryTopics.entryId, topicId: entryTopics.topicId })
           .from(entryTopics)
-          .innerJoin(
-            topicTranslations,
-            and(eq(topicTranslations.topicId, entryTopics.topicId), eq(topicTranslations.language, "en")),
-          )
           .where(inArray(entryTopics.entryId, [...new Set(reachable.map((row) => row.entryId))]))
       : [];
 
   const topicsByEntry = new Map<string, string[]>();
   for (const row of assignments) {
-    topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.slug]);
+    topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.topicId]);
   }
 
   const { media: publishedMedia, slugById } = await publicMedia(database, reachable);
@@ -365,12 +416,8 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     };
   });
 
-  const publicTopics = await database
-    .select({ id: topics.id, slug: topicTranslations.slug, name: topicTranslations.name })
-    .from(topicTranslations)
-    .innerJoin(topics, eq(topics.id, topicTranslations.topicId))
-    .where(eq(topicTranslations.language, "en"));
-  former.push(...(await formerTopicAddresses(database, publicTopics)));
+  const publishedTopics = await publicTopics(database);
+  former.push(...(await formerTopicAddresses(database, publishedTopics)));
 
   const blocks = await database
     .select({
@@ -384,7 +431,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
 
   return {
     entries: publicEntries,
-    topics: publicTopics,
+    topics: publishedTopics,
     media: publishedMedia,
     redirects: former,
     gone: await goneAddresses(

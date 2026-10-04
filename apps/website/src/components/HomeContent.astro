@@ -2,8 +2,9 @@
 import { Button, Card, Section } from "@layered/ui";
 import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
 import { createElement, Fragment as ReactFragment } from "react";
+import TopicChip from "./TopicChip.astro";
 import { EntryCard } from "./entry-card.js";
-import { dateLabel, languageRoot, readingTime, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
+import { dateLabel, languageRoot, readingTime, summaryOf, type ContentRepository, type Language } from "../content/repository.js";
 interface Props { repository:ContentRepository; language:Language; }
 const {repository,language}=Astro.props;
 const de=language==="de";
@@ -53,9 +54,9 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
 ) : block.type==="project_grid"||block.type==="post_grid" ? (
   <Section.Band>
     <Section.Title eyebrow={gridKicker(block.type)} title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
     {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
   </Section.Band>
 ) : block.type==="topic_bar" ? (
-  <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><a class="chip" href={topicPath(language,topic.slug)}>{topic.name}<span class="chip__count">{topic.count}</span></a>)}</div></Section.Band>
+  <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Band>
 ) : null)}

@@ -161,7 +161,7 @@ runs("the topics", () => {
     });
     expect(snapshot.redirects).toContainEqual({
       source: "/de/topics/soldering/",
-      target: "/de/topics/retro-computing/",
+      target: "/de/topics/retro-computer/",
     });
   });
 

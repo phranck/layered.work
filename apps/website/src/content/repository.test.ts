@@ -1,6 +1,6 @@
 import { DEFAULT_LISTING, homeBlockTypes } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
-import { createRepository, parseListingQuery, summaryOf } from "./repository.js";
+import { createRepository, parseListingQuery, summaryOf, topicPath } from "./repository.js";
 
 const entry = (id: number, visibility = "public", language = "en") => ({
   id,
@@ -14,11 +14,11 @@ const entry = (id: number, visibility = "public", language = "en") => ({
   updatedAt: "2026-01-01T00:00:00Z",
   summary: "",
   body: "First **complete** paragraph.\n\nSecond paragraph.",
-  topics: ["hardware"],
+  topics: ["1"],
 });
 const snapshot = {
   entries: [entry(1), entry(2, "hidden"), entry(3, "draft"), entry(4, "trashed"), entry(6, "public", "de")],
-  topics: [{ id: 1, slug: "hardware", name: "Hardware" }],
+  topics: [{ id: "1", translations: { en: { slug: "hardware", name: "Hardware" }, de: null } }],
   media: [],
   redirects: [{ source: "/old/", target: "/entry-1/" }],
 };
@@ -113,7 +113,7 @@ describe("public content repository", () => {
     });
     expect(repo.list({ language: "en", kind: "post" }).pages).toBe(2);
     expect(repo.list({ language: "en", kind: "project" }).pages).toBe(1);
-    expect(repo.list({ language: "en", topic: "hardware" }).entries).toHaveLength(3);
+    expect(repo.list({ language: "en", topic: "1" }).entries).toHaveLength(3);
     expect(repo.listing("project").headline.en).toBe("Work");
   });
 
@@ -202,6 +202,66 @@ describe("public content repository", () => {
     const repo = createRepository(snapshot);
     expect(repo.list({ language: "en", query: "Hardware" }).total).toBe(1);
     expect(repo.searchIndex("en")[0]?.text).toContain("hardware");
+  });
+  it("uses German topic names and slugs while filtering entries by stable topic id", () => {
+    const repo = createRepository({
+      ...snapshot,
+      topics: [
+        {
+          id: "1",
+          translations: {
+            en: { name: "Electronics", slug: "electronics" },
+            de: { name: "Elektronik", slug: "elektronik" },
+          },
+        },
+      ],
+    });
+
+    expect(repo.topicBySlug("en", "electronics")?.id).toBe("1");
+    expect(repo.topicBySlug("de", "elektronik")?.id).toBe("1");
+    expect(repo.topicBySlug("de", "electronics")).toBeUndefined();
+    expect(repo.topics("de")).toMatchObject([
+      { name: "Elektronik", slug: "elektronik", untranslated: false },
+    ]);
+    expect(topicPath("de", repo.topics("de")[0]?.slug ?? "")).toBe("/de/topics/elektronik/");
+    expect(repo.list({ language: "de", topic: "1" }).entries.map((item) => item.id)).toEqual([6]);
+    expect(repo.searchIndex("de")[0]?.text).toContain("elektronik");
+    expect(repo.searchIndex("en")[0]?.text).toContain("electronics");
+  });
+
+  it("marks an untranslated topic and keeps its English name and slug in German", () => {
+    const repo = createRepository(snapshot);
+    expect(repo.topicBySlug("de", "hardware")).toMatchObject({
+      name: "Hardware",
+      slug: "hardware",
+      untranslated: true,
+    });
+    expect(repo.topics("de")).toMatchObject([{ name: "Hardware", slug: "hardware", untranslated: true }]);
+  });
+  it("keeps a German-only topic reachable in German and marks its English fallback", () => {
+    const repo = createRepository({
+      ...snapshot,
+      topics: [{ id: "1", translations: { en: null, de: { name: "Elektronik", slug: "elektronik" } } }],
+    });
+    expect(repo.topicBySlug("de", "elektronik")).toMatchObject({
+      name: "Elektronik",
+      sourceLanguage: "de",
+      untranslated: false,
+    });
+    expect(repo.topicBySlug("en", "elektronik")).toMatchObject({
+      sourceLanguage: "de",
+      untranslated: true,
+    });
+  });
+  it("reads the old backend snapshot while services are rolling out", () => {
+    const repo = createRepository({
+      ...snapshot,
+      entries: [{ ...entry(1), topics: ["hardware"] }],
+      topics: [{ id: 1, slug: "hardware", name: "Hardware" }],
+      redirects: [],
+    });
+    expect(repo.data.entries[0]?.topics).toEqual(["1"]);
+    expect(repo.topicBySlug("de", "hardware")?.untranslated).toBe(true);
   });
   it("bounds request values before searching or rendering them", () => {
     expect(parseListingQuery(new URLSearchParams("page=2&q=hardware"))).toEqual({
