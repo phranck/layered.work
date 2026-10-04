@@ -247,3 +247,24 @@ export const formList = z.array(formDetail);
 export type FormList = z.infer<typeof formList>;
 
 export const formIdParam = body({ id: z.uuid() });
+
+export const formSubmissionStatus = z.enum(["unread", "read", "spam"]);
+export type FormSubmissionStatus = z.infer<typeof formSubmissionStatus>;
+
+/** One stored response, with only a fingerprint of the request origin. */
+export const formSubmission = body({
+  id: z.uuid(),
+  formId: z.uuid(),
+  values: formSubmissionValues,
+  consents: z.array(body({ key: z.string(), revision: z.string(), notice: z.string() })),
+  sourceHash: z
+    .string()
+    .regex(/^[0-9a-f]{12}$/)
+    .nullable(),
+  status: formSubmissionStatus,
+  createdAt: z.iso.datetime(),
+});
+export type FormSubmission = z.infer<typeof formSubmission>;
+export const formSubmissionList = z.array(formSubmission);
+export type FormSubmissionList = z.infer<typeof formSubmissionList>;
+export const updateFormSubmission = body({ status: formSubmissionStatus });

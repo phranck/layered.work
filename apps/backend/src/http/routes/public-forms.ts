@@ -6,6 +6,7 @@ import { formSubmissions } from "../../db/schema/index.js";
 import { issueFormChallenge, verifyFormChallenge } from "../../forms/challenge.js";
 import { readFormBySlug } from "../../forms/repository.js";
 import { logger } from "../../logger.js";
+import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -77,6 +78,7 @@ publicFormsRoutes.post(
         formId: form.id,
         values: checked.values,
         consents: checked.consents,
+        sourceHash: sourceFingerprint(sourceAddress(c)),
       });
     }
     return ok(c, { successMessage: form.successMessage[body.language] });

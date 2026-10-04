@@ -11,6 +11,7 @@ describe("readDashboardCounts", () => {
         projects: 9,
         tags: 3,
         forms: 10,
+        submissions: 4,
         media: 4,
         blocks: 5,
         mainNav: 6,
@@ -30,7 +31,7 @@ describe("readDashboardCounts", () => {
       footerNav: 7,
       social: 8,
       forms: 10,
-      submissions: null,
+      submissions: 4,
       mailTemplates: null,
     });
     expect(execute).toHaveBeenCalledOnce();
@@ -49,5 +50,6 @@ describe("readDashboardCounts", () => {
     expect(statement).not.toContain('count(*)::int from "entry_translations"');
     expect(statement).toContain('"entry_translations"."trashed_at" is null');
     expect(statement).not.toContain("enabled");
+    expect(statement).toContain('from "form_submissions" where "form_submissions"."status" = \'unread\'');
   });
 });

@@ -114,6 +114,9 @@ runs("public form submission", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.values.name).toBe("Ada");
     expect(rows[0]?.consents).toEqual([{ key: "consent", revision: "v1", notice: "Ich stimme zu" }]);
+    expect(rows[0]?.sourceHash).toMatch(/^[0-9a-f]{12}$/);
+    expect(rows[0]?.sourceHash).not.toContain("198.51.100.1");
+    expect(rows[0]?.status).toBe("unread");
   });
 
   it("rejects a filled honeypot and a forged challenge", async () => {

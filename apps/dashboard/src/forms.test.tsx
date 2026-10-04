@@ -26,7 +26,7 @@ const counts = {
   footerNav: 0,
   social: 0,
   forms: 0,
-  submissions: null,
+  submissions: 0,
   mailTemplates: null,
 };
 const json = (data: unknown) =>

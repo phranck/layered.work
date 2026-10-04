@@ -27,8 +27,13 @@ import {
   entryTrashImpact,
   type FormDetail,
   type FormList,
+  type FormSubmission,
+  type FormSubmissionList,
+  type FormSubmissionStatus,
   formDetail,
   formList,
+  formSubmission,
+  formSubmissionList,
   type ListingSettings,
   type MailSettings,
   mergeTopicBody,
@@ -110,6 +115,13 @@ export interface DashboardApi {
   fetchForm(id: string): Promise<FormDetail>;
   createForm(value: CreateFormBody): Promise<FormDetail>;
   saveForm(id: string, value: SaveFormBody): Promise<FormDetail>;
+  fetchFormSubmissions(formId: string): Promise<FormSubmissionList>;
+  setFormSubmissionStatus(
+    formId: string,
+    submissionId: string,
+    status: FormSubmissionStatus,
+  ): Promise<FormSubmission>;
+  deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
@@ -245,6 +257,20 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
         await request(`/forms/${encodeURIComponent(id)}`, jsonBody("PUT", saveFormBody.parse(value)), true),
         formDetail,
       );
+    },
+    async fetchFormSubmissions(formId) {
+      return dataOf(
+        await request(`/forms/${encodeURIComponent(formId)}/submissions`, undefined, true),
+        formSubmissionList,
+      );
+    },
+    async setFormSubmissionStatus(formId, submissionId, status) {
+      const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
+      return dataOf(await request(path, jsonBody("PATCH", { status }), true), formSubmission);
+    },
+    async deleteFormSubmission(formId, submissionId) {
+      const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
+      await request(path, { method: "DELETE" }, true);
     },
     async fetchAccount() {
       return dataOf(await request("/account", undefined, true), accountProfile);

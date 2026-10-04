@@ -21,7 +21,7 @@ export const dashboardCounts = z
     footerNav: storedCount,
     social: storedCount,
     forms: storedCount,
-    submissions: z.null(),
+    submissions: storedCount,
     mailTemplates: z.null(),
   })
   .strict();

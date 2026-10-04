@@ -10,6 +10,7 @@ import { EntryListScreen } from "./entry-list.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+import { SubmissionsScreen } from "./submissions.js";
 import { TopicsScreen } from "./topics.js";
 
 /**
@@ -21,6 +22,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   settings: SiteSettingsScreen,
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,
+  submissions: SubmissionsScreen,
 };
 
 export interface DashboardRouterOptions {
