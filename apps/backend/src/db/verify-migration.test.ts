@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compare, type Source, stateOf, type Target } from "./verify-migration.js";
+import { compare, overviewForPubliiPost, type Source, stateOf, type Target } from "./verify-migration.js";
 
 /**
  * The comparison is only worth something if it notices a difference, so every
@@ -69,6 +69,7 @@ function agreeing(): { source: Source; target: Target } {
       topics: ["a"],
       topicsByEntry: new Map([["pair", ["a"]]]),
       checksums: new Set(["one"]),
+      introductions: new Map(),
     },
   };
 }
@@ -83,7 +84,47 @@ describe("reading a Publii status", () => {
   });
 });
 
+describe("recognising a migrated overview", () => {
+  it("recognises only a page at a listing address", () => {
+    expect(overviewForPubliiPost("projects", "published,is-page")).toBe("project");
+    expect(overviewForPubliiPost("posts", "published,is-page")).toBe("post");
+    expect(overviewForPubliiPost("projects", "published")).toBeUndefined();
+    expect(overviewForPubliiPost("ordinary-page", "published,is-page")).toBeUndefined();
+  });
+});
+
 describe("comparing Publii with the database", () => {
+  it("counts a migrated overview as its listing introduction, not as a missing entry", () => {
+    const { source, target } = agreeing();
+    source.posts.push({
+      slug: "projects",
+      title: "Projects",
+      state: "public",
+      createdAt: "2025-01-05T00:00:00.000Z",
+      topics: [],
+      overview: "project",
+    });
+    target.introductions.set("project", "The old projects overview text.");
+
+    const matching = compare(source, target);
+    expect(matching.passed).toBe(true);
+    expect(matching.counts.find((row) => row.what === "Entries, public")).toMatchObject({
+      source: 1,
+      target: 1,
+    });
+    expect(matching.counts.find((row) => row.what === "Overview introductions")).toMatchObject({
+      source: 1,
+      target: 1,
+    });
+
+    target.introductions.clear();
+    const missing = compare(source, target);
+    expect(missing.passed).toBe(false);
+    expect(missing.overviews.find((row) => row.slug === "projects")?.problems).toEqual([
+      "introduction missing",
+    ]);
+  });
+
   it("passes when both sides agree", () => {
     const { source, target } = agreeing();
     const result = compare(source, target);

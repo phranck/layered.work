@@ -10,3 +10,19 @@ export function activateMediaSyncBucket(environment: NodeJS.ProcessEnv): void {
     if (!active && dedicated) environment[key] = dedicated;
   }
 }
+
+/** Bucket maintenance reads the local library and must never substitute a hosted database. */
+export function requireLocalMediaDatabase(raw: string): void {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("Bucket maintenance requires a valid local development database URL.");
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(url.protocol) ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+  ) {
+    throw new Error("Bucket maintenance requires the local development database.");
+  }
+}

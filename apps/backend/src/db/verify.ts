@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { readPublicSnapshot } from "../content/snapshot.js";
 import { connectOnce, databaseUrl } from "./connect.js";
 import { compare, readSource, readTarget, type Verification } from "./verify-migration.js";
-import { missingObjects } from "./verify-storage.js";
+import { missingObjects, missingRenderedObjects } from "./verify-storage.js";
 
 /**
  * Compares the Publii site with the database it is pointed at, and prints the
@@ -18,6 +18,7 @@ import { missingObjects } from "./verify-storage.js";
  * ```sh
  * pnpm --filter @layered/backend db:verify
  * pnpm --filter @layered/backend db:verify --snapshot-out /tmp/database-snapshot.json
+ * pnpm --filter @layered/backend db:verify-bucket --media-paths /tmp/rendered-media.json
  * ```
  *
  * `--snapshot-out` also writes what the site would read from this database, so
@@ -31,6 +32,7 @@ const { values } = parseArgs({
   options: {
     publii: { type: "string", default: DEFAULT_INPUT },
     "snapshot-out": { type: "string" },
+    "media-paths": { type: "string" },
   },
 });
 
@@ -56,6 +58,14 @@ function render(verification: Verification): string {
         `| \`${row.slug}\` | ${row.path ? `\`${row.path}\`` : "none"} | ${row.state} | ${mark(row.title)} | ${mark(row.date)} | ${mark(row.topics)} | ${row.problems.join("; ")} |`,
     ),
   ];
+  const overviews = [
+    "| Former page | Listing address | Introduction | Problems |",
+    "| --- | --- | --- | --- |",
+    ...verification.overviews.map(
+      (row) =>
+        `| \`${row.slug}\` | \`${row.path}\` | ${mark(row.introduction)} | ${row.problems.join("; ")} |`,
+    ),
+  ];
   const absent = [
     "| File | Named by a post |",
     "| --- | --- |",
@@ -65,7 +75,7 @@ function render(verification: Verification): string {
       .filter((file) => !file.copy)
       .map((file) => `| \`${file.path}\` | ${file.named ? "**yes**" : "no"} |`),
   ];
-  return [...counts, "", ...entries, "", ...absent, ""].join("\n");
+  return [...counts, "", ...entries, "", ...overviews, "", ...absent, ""].join("\n");
 }
 
 const source = readSource(resolve(values.publii));
@@ -90,10 +100,28 @@ try {
         ].join("\n"),
   );
 
+  const renderedPathsFile = values["media-paths"];
+  let missingRendered: string[] = [];
+  if (renderedPathsFile) {
+    const renderedPaths = JSON.parse(await readFile(resolve(renderedPathsFile), "utf8"));
+    if (!Array.isArray(renderedPaths)) throw new Error("Rendered media paths must be a JSON array.");
+    missingRendered = await missingRenderedObjects(renderedPaths);
+    console.log(
+      missingRendered.length === 0
+        ? `Every rendered media key names an object in the store (${renderedPaths.length} paths).`
+        : [
+            "| Rendered storage key with no object |",
+            "| --- |",
+            ...missingRendered.map((key) => `| \`${key}\` |`),
+            "",
+          ].join("\n"),
+    );
+  }
+
   const out = values["snapshot-out"];
   if (out) await writeFile(resolve(out), `${JSON.stringify(await readPublicSnapshot(database), null, 2)}\n`);
 
-  const passed = verification.passed && missing.length === 0;
+  const passed = verification.passed && missing.length === 0 && missingRendered.length === 0;
   console.log(passed ? "Nothing differs." : "Differences found.");
   process.exitCode = passed ? 0 : 1;
 } finally {

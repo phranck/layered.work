@@ -67,23 +67,27 @@ Publii copied some files into several post directories, and the migration gave e
 
 ## Proving nothing was lost
 
-Two checks compare the old site with the new one, and both read everything rather than a sample. Neither writes anything, and neither sends a request off the machine.
+The local checks compare the old site with the new one, and both read everything rather than a sample. Neither writes anything or sends a request off the machine. The bucket check below additionally asks Zerops object storage about every key in the local database's library.
 
 ```bash
 pnpm --filter @layered/backend db:verify --snapshot-out /tmp/database-snapshot.json
 pnpm --filter "@layered/website..." build
-WEBSITE_CONTENT_FILE=/tmp/database-snapshot.json node apps/website/tools/verify-migration.mjs
+WEBSITE_CONTENT_FILE=/tmp/database-snapshot.json node apps/website/tools/verify-migration.mjs --media-paths-out /tmp/rendered-media.json
+pnpm --filter @layered/backend db:verify-bucket --media-paths /tmp/rendered-media.json
 ```
 
-`db:verify` reads the Publii database at `~/Documents/Publii/sites/layeredwork/input` and the database `DATABASE_URL` names. It compares the counts, and for every post its address, state, title, date and topics. It also writes what the site would read from that database. `verify-migration.mjs` renders every public and hidden entry from that file through the production build, and compares its text with the page the old site served. It also checks every internal link and every file the page names. Both exit with a non-zero status when something differs that is not a text difference.
+`db:verify` reads the Publii database at `~/Documents/Publii/sites/layeredwork/input` and the database `DATABASE_URL` names. It compares the counts, and for every regular entry its address, state, title, date and topics. The former `/projects/` page became the project listing's introduction, so that introduction is checked separately rather than counted as an entry. The command also writes what the site would read from that database. `verify-migration.mjs` renders every public and hidden entry plus the former overview page from that file through the production build, compares their text with the old pages, and checks internal links and rendered media against local source bytes and the snapshot's checksums. Both exit with a non-zero status when something differs that is not an explained text difference.
+
+`db:verify-bucket` runs the same comparison with the dedicated `ZEROPS_S3_*` credentials in the ignored `.env.local`. It requires `DATABASE_URL` to name the local database and checks every library storage key in the Zerops bucket. With `--media-paths`, it also checks every distinct storage key named by rendered pages, including legacy download links outside the media library. The render check writes those paths only after it finds no broken page or file. In a separate worktree, set `MEDIA_LOCAL_DIR` to the absolute path of the primary checkout's `media-local/` before the render check.
 
 ### The counts
 
-Measured on 2 October 2026 against the local database after the import above.
+Measured on 4 October 2026 against the local database and the Zerops bucket.
 
 | What | Publii | Database |
 | --- | ---: | ---: |
-| Entries, public | 15 | 15 |
+| Entries, public | 14 | 14 |
+| Overview introductions | 1 | 1 |
 | Entries, hidden | 2 | 2 |
 | Entries, draft | 3 | 3 |
 | Entries in the trash | 1 | 0 |
@@ -93,11 +97,11 @@ Measured on 2 October 2026 against the local database after the import above.
 
 The entry in the trash, `happy-birthday`, stays out by decision. Publii's media directory holds 228 files. Two are the NeXTSTEP disk images, which are linked to the Internet Archive instead, and 21 duplicate a file already counted, which leaves 205 distinct files. 125 of them are the size copies Publii made of every picture, in a `responsive` directory beside each one or as a gallery thumbnail. This site generates its own variants, so the import leaves the copies out of the library, and they would otherwise show every picture several times over. Publii's bodies name them in their `srcset`, which is why the check identifies them by where they lie rather than by whether a body names them. Three further files are not in the database, and no post names any of them: the two `svg-map.svg` files of Publii's share and follow plugins, and `website/LAYERED-Logo-Transparent.svg`, the old site's logo.
 
-Every one of the 20 migrated entries has the state, title, date and topics it had in Publii, at the address the rules above give it.
+All 19 regular migrated translations have the state, title, date and topics they had in Publii, at the address the rules above give them. The twentieth non-trashed source page is `/projects/`; its text is the project listing introduction and is checked in the rendered-page comparison.
 
 ### The text of every entry
 
-The 17 entries a reader can open, compared word by word with the old page. Every internal link in them resolves, and no page shows a placeholder for a missing file. All 75 files they name exist in the build, and each one the database records has the checksum the database holds for it.
+The 16 entries a reader can open and the former `/projects/` page, compared word by word with the old page. Every internal link in them resolves, and no page shows a placeholder for a missing file. The render check examined 72 media references against local source bytes and snapshot checksums where the library has one. They resolve to 68 distinct storage keys, including three legacy downloads absent from the library. The bucket check found all 68 rendered objects and every one of the local library's 78 storage keys.
 
 | Entry | Words before | Words after | What differs |
 | --- | ---: | ---: | --- |

@@ -7,8 +7,9 @@
  * The snapshot is the one `pnpm --filter @layered/backend db:verify
  * --snapshot-out` writes from the database, so what is rendered is what the
  * database holds. Rendering goes through the production build in this process,
- * with no listener and no request leaving the machine, and media are checked
- * against the files the build serves.
+ * with no listener and no request leaving the machine. A dummy media origin
+ * exercises the deployment's URL mapping; files are checked against local
+ * source bytes.
  *
  * It prints a table per entry and every run of words found on one side only.
  * Unresolved links, missing files and pages that do not answer 200 fail the
@@ -16,13 +17,15 @@
  * explained where the result is recorded.
  */
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { LISTING_PATHS } from "@layered/schemas";
 import { Window } from "happy-dom";
+import { migrationMedia } from "./migration-media.mjs";
+import { migratedOverviewPages } from "./migration-overviews.mjs";
 import { visibleText, wordRuns, words } from "./migration-text.mjs";
 import { loadProductionApp } from "./production-app.mjs";
 
@@ -32,6 +35,7 @@ const { values } = parseArgs({
       type: "string",
       default: join(homedir(), "Documents/Publii/sites/layeredwork/output"),
     },
+    "media-paths-out": { type: "string" },
   },
 });
 assert(process.env.WEBSITE_CONTENT_FILE, "WEBSITE_CONTENT_FILE must name the snapshot to render");
@@ -63,13 +67,15 @@ function isFurniture(element) {
 const LEGACY_LISTINGS = new Set(["tags", "page", "authors"]);
 
 const origin = "https://layered.work";
+const mediaOrigin = "https://migration-media.invalid";
 const appDirectory = fileURLToPath(new URL("../", import.meta.url));
 const clientDirectory = join(appDirectory, "dist/client");
 
 // The file and nothing else: an API_URL would make the site read whatever
-// backend it names, and a MEDIA_ORIGIN would point every file at a bucket.
+// backend it names. The dummy media origin checks production URL mapping
+// without asking the actual bucket for any file.
 delete process.env.API_URL;
-delete process.env.MEDIA_ORIGIN;
+process.env.MEDIA_ORIGIN = mediaOrigin;
 process.env.WEBSITE_MODE = "site";
 
 const snapshot = JSON.parse(await readFile(resolve(process.env.WEBSITE_CONTENT_FILE), "utf8"));
@@ -107,17 +113,6 @@ async function resolveAddress(address) {
   return { status: 0, path: current, body: "" };
 }
 
-/** Whether the build serves a file at this `/media/` path, and its checksum if so. */
-async function mediaFile(pathname) {
-  try {
-    const bytes = await readFile(join(clientDirectory, decodeURIComponent(pathname)));
-    return createHash("sha256").update(bytes).digest("hex");
-  } catch (error) {
-    if (error.code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
 /** Every old page that shows one entry, by the last segment of its address. */
 async function legacyPages(root, directory = root, found = new Map()) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -130,13 +125,16 @@ async function legacyPages(root, directory = root, found = new Map()) {
 }
 
 const legacy = await legacyPages(resolve(values["legacy-output"]));
-const shaBySource = new Map(snapshot.media.map((asset) => [asset.src, asset.sha256]));
+const localMediaRoot = resolve(appDirectory, "../../", process.env.MEDIA_LOCAL_DIR ?? "media-local");
+const media = migrationMedia(snapshot.media, { localRoot: localMediaRoot, clientRoot: clientDirectory });
 // Sorted, because a database returns rows in no promised order and two runs
 // over the same content should print the same report.
-const readable = snapshot.entries
-  .filter((entry) => ["public", "hidden"].includes(entry.visibility))
-  .sort((one, other) => one.path.localeCompare(other.path));
+const readable = [
+  ...snapshot.entries.filter((entry) => ["public", "hidden"].includes(entry.visibility)),
+  ...migratedOverviewPages(snapshot.entries, legacy, LISTING_PATHS),
+].sort((one, other) => one.path.localeCompare(other.path));
 const results = [];
+const renderedMediaPaths = new Set();
 
 for (const entry of readable) {
   const problems = [];
@@ -145,7 +143,8 @@ for (const entry of readable) {
   if (page.status !== 200) problems.push(`answers ${page.status}`);
   const document = parse(page.body);
   const prose = document.querySelector(RENDERED_BODY);
-  const article = document.querySelector(RENDERED_ARTICLE) ?? document.body;
+  if (!prose) problems.push("no rendered body");
+  const article = document.querySelector(RENDERED_ARTICLE) ?? prose ?? document.body;
 
   const legacyFile = legacy.get(entry.slug);
   const legacyBody = legacyFile
@@ -157,16 +156,25 @@ for (const entry of readable) {
   const runs = legacyBody && prose ? wordRuns(before, after) : [];
 
   // Links in the body. An anchor on the page must exist on it, an internal
-  // address must end at 200, and a file must be one the build serves.
+  // address must end at 200, and a file must match the local source.
   let linksChecked = 0;
   for (const anchor of prose?.querySelectorAll("a[href]") ?? []) {
     const href = anchor.getAttribute("href");
     const url = new URL(href, new URL(entry.path, origin));
+    if (url.origin === mediaOrigin) {
+      linksChecked++;
+      renderedMediaPaths.add(url.pathname);
+      // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
+      const problem = await media.inspect(url.pathname);
+      if (problem) problems.push(problem);
+      continue;
+    }
     if (url.origin !== origin) continue;
     linksChecked++;
-    if (url.pathname.startsWith("/media/")) {
+    if (media.isMediaPath(url.pathname)) {
       // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
-      if (!(await mediaFile(url.pathname))) problems.push(`link to a missing file ${url.pathname}`);
+      const problem = await media.inspect(url.pathname);
+      if (problem) problems.push(problem);
       continue;
     }
     const samePage = url.pathname === new URL(entry.path, origin).pathname;
@@ -192,17 +200,19 @@ for (const entry of readable) {
   for (const element of article.querySelectorAll("*")) {
     for (const attribute of element.attributes) {
       for (const candidate of attribute.value.split(/[\s,]+/)) {
-        if (!candidate.includes("/media/")) continue;
+        if (!candidate.includes("/")) continue;
         const url = new URL(candidate, new URL(entry.path, origin));
-        if (url.origin === origin && url.pathname.startsWith("/media/")) mediaPaths.add(url.pathname);
+        if ((url.origin === origin || url.origin === mediaOrigin) && media.isMediaPath(url.pathname)) {
+          mediaPaths.add(url.pathname);
+        }
       }
     }
   }
   for (const path of mediaPaths) {
+    renderedMediaPaths.add(path);
     // eslint-disable-next-line react-doctor/async-await-in-loop -- Sequential file reads keep the report in reading order.
-    const sha256 = await mediaFile(path);
-    if (!sha256) problems.push(`missing file ${path}`);
-    else if (shaBySource.has(path) && shaBySource.get(path) !== sha256) problems.push(`changed file ${path}`);
+    const problem = await media.inspect(path);
+    if (problem) problems.push(problem);
   }
 
   results.push({
@@ -244,4 +254,10 @@ console.log(
   `\n${results.length} entries rendered, ${results.reduce((total, item) => total + item.linksChecked, 0)} internal links and ${results.reduce((total, item) => total + item.mediaChecked, 0)} files checked, ${failed.length} with problems.`,
 );
 process.exitCode = failed.length > 0 ? 1 : 0;
+if (failed.length === 0 && values["media-paths-out"]) {
+  await writeFile(
+    resolve(values["media-paths-out"]),
+    `${JSON.stringify([...renderedMediaPaths].sort(), null, 2)}\n`,
+  );
+}
 await app.logger?.close();
