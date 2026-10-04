@@ -37,7 +37,7 @@ const counts = {
   mainNav: 6,
   footerNav: 3,
   social: 7,
-  forms: null,
+  forms: 2,
   submissions: null,
   mailTemplates: null,
 };
@@ -1191,7 +1191,7 @@ describe("dashboard shell", () => {
     const posts = await screen.findByRole("link", { name: "Beiträge 12" });
     expect(posts.textContent).toContain("12");
     expect(screen.getByRole("link", { name: "Medien 17" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Formulare" }).textContent).not.toContain("0");
+    expect(screen.getByRole("link", { name: "Formulare 2" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Einsendungen" }).textContent).not.toContain("0");
     expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/dashboard\/counts$/), {
       credentials: "include",

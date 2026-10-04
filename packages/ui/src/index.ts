@@ -47,6 +47,7 @@ export {
 } from "./field.js";
 export { Figure, type FigureProps } from "./figure.js";
 export { returnFocusQuietly } from "./focus-return.js";
+export { FormControls, type FormControlsProps } from "./form-controls.js";
 export { Gallery } from "./gallery.js";
 export { Grid } from "./grid.js";
 export { Logo, type LogoProps } from "./logo.js";

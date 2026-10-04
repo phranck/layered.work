@@ -7,6 +7,7 @@
  */
 export * from "./entries.js";
 export * from "./enums.js";
+export * from "./forms.js";
 export * from "./media.js";
 export * from "./navigation.js";
 export * from "./people.js";

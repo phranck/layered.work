@@ -7,6 +7,7 @@ import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
+import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { TopicsScreen } from "./topics.js";
@@ -73,6 +74,14 @@ export function dashboardRouteObjects({
           const kind = area.entryKind;
           const Screen = AREA_SCREENS[area.id];
           if (Screen) return { path: area.path, element: <Screen area={area} /> };
+          if (area.id === "forms")
+            return {
+              path: area.path,
+              children: [
+                { index: true, element: <FormsScreen area={area} /> },
+                { path: ":id", element: <FormEditorScreen area={area} /> },
+              ],
+            };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };
           return {
             path: area.path,

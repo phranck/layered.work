@@ -4,6 +4,7 @@ import type { database } from "../../db/connect.js";
 import {
   entries,
   entryTranslations,
+  forms,
   homeBlocks,
   media,
   navigationItems,
@@ -13,7 +14,7 @@ import {
 } from "../../db/schema/index.js";
 
 /** The aggregate columns returned by the single read-only query. */
-type StoredDashboardCounts = Omit<DashboardCounts, "forms" | "submissions" | "mailTemplates">;
+type StoredDashboardCounts = Omit<DashboardCounts, "submissions" | "mailTemplates">;
 
 /**
  * Reads sidebar totals from their owning rows.
@@ -36,6 +37,7 @@ export async function readDashboardCounts(
       (select count(*)::int from ${entries} where ${entries.kind} = 'page' and ${kept}) as pages,
       (select count(*)::int from ${entries} where ${entries.kind} = 'project' and ${kept}) as projects,
       (select count(*)::int from ${topics}) as tags,
+      (select count(*)::int from ${forms}) as forms,
       (select count(*)::int from ${media}) as media,
       (select count(*)::int from ${homeBlocks}) as blocks,
       (
@@ -52,7 +54,6 @@ export async function readDashboardCounts(
 
   return {
     ...stored,
-    forms: null,
     submissions: null,
     mailTemplates: null,
   };
