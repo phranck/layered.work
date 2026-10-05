@@ -44,6 +44,13 @@ export type ToolbarComponent = {
  */
 export type SnippetForm = { text: string; field: string; body: string };
 
+/**
+ * One level of indentation: what a body is indented by in the snippets below,
+ * and what the writing surface keeps every body indented by as it is typed and
+ * reindented.
+ */
+export const INDENT_UNIT = "  ";
+
 /** Plain text, as the toolbar inserts it. */
 export const PLAIN: SnippetForm = { text: '""', field: "name", body: "" };
 
@@ -99,8 +106,10 @@ export function componentSnippet(name: ComponentName, form: SnippetForm = PLAIN)
   const head = values.length > 0 || definition.body === "never" ? `${name}(${values.join(", ")})` : name;
   if (definition.body !== "required") return head;
 
-  const parts = (definition.holds ?? []).map((part) => `  ${componentSnippet(part as ComponentName, form)}`);
-  return `${head} {\n${parts.length > 0 ? parts.join("\n") : `  ${form.body}`}\n}`;
+  const parts = (definition.holds ?? []).map(
+    (part) => `${INDENT_UNIT}${componentSnippet(part as ComponentName, form)}`,
+  );
+  return `${head} {\n${parts.length > 0 ? parts.join("\n") : `${INDENT_UNIT}${form.body}`}\n}`;
 }
 
 /**

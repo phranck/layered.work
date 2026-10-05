@@ -8,8 +8,10 @@ import { CONTENT_SYNTAX, type Finding } from "@layered/content";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 import { contentAutocompletion } from "./content-completion.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
+import { contentIndentation, reindentDocument } from "./content-indent.js";
 import { contentValidation } from "./content-lint.js";
 import { type CheckedContent, findingMessage } from "./content-validation.js";
+import { INDENT_UNIT } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { tableSync } from "./table-sync.js";
 
@@ -72,6 +74,18 @@ const surfaceTheme = EditorView.theme(
     ".cm-line": { padding: "0" },
     ".cm-cursor": { borderLeftColor: "var(--text-accent)" },
 
+    // The bracket beside the cursor and the one it pairs with are outlined, and
+    // one with no partner is marked as an error. Written with the focus selector
+    // the default styles use, because a plainer selector would lose to them.
+    "&.cm-focused .cm-matchingBracket": {
+      backgroundColor: "var(--accent-tint)",
+      outline: "1px solid var(--edge-strong)",
+    },
+    "&.cm-focused .cm-nonmatchingBracket": {
+      color: "var(--state-danger)",
+      outline: "1px solid var(--state-danger)",
+    },
+
     // The completion list is an overlay of the workbench, so it takes the
     // overlay's surface, edge and lift, and the editor's own face and size.
     ".cm-tooltip": {
@@ -126,6 +140,7 @@ function surfaceExtensions(label: string): Extension[] {
     contentLanguage(),
     contentHighlighting(),
     contentAutocompletion(),
+    contentIndentation(),
     tableSync(),
     history(),
     drawSelection(),
@@ -158,6 +173,11 @@ export interface ContentEditorHandle {
    * block, or into an empty body, or to its end.
    */
   insertBlock(text: string): void;
+  /**
+   * Puts the indentation of every line right, from the structure of the
+   * document, so the same text comes out the same however it was indented before.
+   */
+  reindent(): void;
   /** Selects and scrolls the reported range into view. */
   selectFinding(finding: Pick<Finding, "from" | "to">): void;
 }
@@ -248,14 +268,21 @@ export function ContentEditor({ value, onChange, label, editorRef, onValidation 
             const to = inText ? line.to : range.to;
             const lead = inText ? "\n\n" : "";
             const quotes = text.indexOf('""');
-            const body = text.indexOf("{\n  \n}");
-            const cursor = quotes >= 0 ? quotes + 1 : body >= 0 ? body + "{\n  ".length : text.length;
+            const body = text.indexOf(`{\n${INDENT_UNIT}\n}`);
+            const cursor =
+              quotes >= 0 ? quotes + 1 : body >= 0 ? body + `{\n${INDENT_UNIT}`.length : text.length;
             return {
               changes: { from, to, insert: `${lead}${text}` },
               range: EditorSelection.cursor(from + lead.length + cursor),
             };
           }),
         );
+        current.focus();
+      },
+      reindent() {
+        const current = view.current;
+        if (!current) return;
+        reindentDocument(current);
         current.focus();
       },
     }),

@@ -40,8 +40,7 @@ export type Dedented = {
  */
 export function dedent(body: string, offset: number): Dedented {
   const lines = body.split("\n");
-  const first = lines.find((line) => line.trim() !== "");
-  const indent = first ? first.length - first.trimStart().length : 0;
+  const indent = bodyIndent(body);
 
   if (indent === 0) {
     return { text: body, toDocument: (at) => at + offset };
@@ -79,4 +78,20 @@ export function dedent(body: string, offset: number): Dedented {
       return (documentStarts[index] ?? offset) + (at - (shortStarts[index] ?? 0));
     },
   };
+}
+
+/**
+ * How far the first non-blank line of a body is indented, in characters.
+ *
+ * This is the whole rule for what comes off a body, and the editor reads it from
+ * here as well, so reindenting a document leaves every line of Markdown at the
+ * same distance from the body's first line as the parser sees it.
+ *
+ * @param body - The text between the braces.
+ * @returns The width of that line's leading whitespace, or 0 for a body with no
+ *   text in it.
+ */
+export function bodyIndent(body: string): number {
+  const first = body.split("\n").find((line) => line.trim() !== "");
+  return first ? first.length - first.trimStart().length : 0;
 }

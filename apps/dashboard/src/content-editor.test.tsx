@@ -115,4 +115,20 @@ describe("the writing surface", () => {
     rerender(<ContentEditor value="Second" onChange={vi.fn()} label="Text" />);
     expect(container.querySelector(".cm-content")?.textContent).toBe("Second");
   });
+
+  it("puts the indentation of the whole document right on request", () => {
+    const handle = createRef<ContentEditorHandle>();
+    const { container } = render(
+      <ContentEditor
+        value={"VStack {\n        Spacer()\n }"}
+        onChange={vi.fn()}
+        editorRef={handle}
+        label="Text"
+      />,
+    );
+    const cm = container.querySelector(".cm-editor");
+    if (!(cm instanceof HTMLElement)) throw new Error("Missing editor");
+    handle.current?.reindent();
+    expect(EditorView.findFromDOM(cm)?.state.doc.toString()).toBe("VStack {\n  Spacer()\n}");
+  });
 });
