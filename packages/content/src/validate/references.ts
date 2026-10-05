@@ -26,9 +26,12 @@ export type MediaReference = {
 /**
  * Every media reference in a document, in the order written.
  *
- * Components that could not be read, and parameters the register does not
- * know, name nothing here: the validator reports those, and guessing at them
- * would invent references.
+ * Parameters the register does not know name nothing here, and neither does a
+ * component whose arguments could not be read: the validator reports those, and
+ * guessing at them would invent references. A component the parser marked for
+ * something else, such as text beside it on its line, still names the files its
+ * arguments name, because those were read to the end and the library must not
+ * let a file go that a draft still names.
  *
  * @param text - The document as written.
  * @param register - Which register to bind against. The real one unless a
@@ -40,8 +43,7 @@ export function mediaReferences(text: string, register?: Register): MediaReferen
 
   parseContent(text).iterate({
     enter(node) {
-      if (node.name === NODE.ComponentError) return false;
-      if (node.name !== NODE.Component) return true;
+      if (node.name !== NODE.Component && node.name !== NODE.ComponentError) return true;
 
       const nameNode = childOf(node.node, NODE.ComponentName);
       if (!nameNode) return true;

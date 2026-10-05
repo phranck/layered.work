@@ -53,6 +53,8 @@ export const FINDING = {
   MissingField: "missing-field",
   /** A bracket or a brace that is never closed. */
   Unclosed: "unclosed",
+  /** Text on the line of a component, which has its line to itself. */
+  UnexpectedCharacter: "unexpected-character",
   /** A component the parser marked and could not explain. */
   Unreadable: "unreadable",
 } as const;

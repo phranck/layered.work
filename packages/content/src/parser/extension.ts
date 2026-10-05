@@ -2,7 +2,7 @@ import type { Tree } from "@lezer/common";
 import type { BlockContext, Element, Line, MarkdownConfig, MarkdownParser } from "@lezer/markdown";
 import { dedent } from "./dedent.js";
 import { NODE, VALUE_NODE } from "./nodes.js";
-import { type ScannedComponent, scanComponent, startsComponent } from "./scan.js";
+import { OPEN_ERRORS, type ScannedComponent, scanComponent, startsComponent } from "./scan.js";
 
 /**
  * The block parser, which is the thin part.
@@ -47,9 +47,10 @@ function takeComponent(cx: BlockContext, line: Line): { found: ScannedComponent;
     const found = scanComponent(buffer, 0);
     if (!found) return null;
 
-    // Closed. Every error the scanner reports is a thing that is still open, so
-    // the component is not finished until another line has been added to it.
-    if (!found.error) return { found, start };
+    // Closed, or closed with text beside it, which another line cannot mend. An
+    // error about a bracket or a brace still open means the component is not
+    // finished until another line has been added to it.
+    if (!found.error || !OPEN_ERRORS.has(found.error.code)) return { found, start };
 
     // The line after the current one, read without moving, which is the only
     // public way to see text the context has not reached yet. At the end of the

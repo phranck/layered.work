@@ -444,3 +444,29 @@ describe("plain Markdown", () => {
     expect(findingsIn(text)).toEqual([]);
   });
 });
+
+describe("text beside a component on its line", () => {
+  it("is one error at the first character that does not belong, between the arguments and the brace", () => {
+    expect(onlyFinding("Note(tone: warning) xyz {\n  Hi.\n}")).toMatchObject({
+      code: "unexpected-character",
+      severity: "error",
+      component: "Note",
+      from: 20,
+      to: 25,
+      line: 1,
+      column: 21,
+    });
+  });
+
+  it("is one error after a closing brace", () => {
+    expect(onlyFinding("Note { Hi. } and then more text")).toMatchObject({
+      code: "unexpected-character",
+      severity: "error",
+      component: "Note",
+      from: 13,
+      to: 31,
+      line: 1,
+      column: 14,
+    });
+  });
+});

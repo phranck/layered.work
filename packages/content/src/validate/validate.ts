@@ -675,6 +675,20 @@ function reportUnreadable(node: SyntaxNode, context: Context): void {
     return;
   }
 
+  if (error.code === "unexpected-character") {
+    context.report({
+      code: FINDING.UnexpectedCharacter,
+      severity: "error",
+      message: error.message,
+      // Everything that does not belong, from its first character to the last
+      // one on the line, so the underline shows what has to move.
+      from: error.at,
+      to: error.at + context.text.slice(error.at, found?.to ?? node.to).trimEnd().length,
+      component: found?.name.text,
+    });
+    return;
+  }
+
   context.report({
     code: FINDING.Unclosed,
     severity: "error",

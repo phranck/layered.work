@@ -28,6 +28,13 @@ describe("finding the files a document names", () => {
     expect(mediaReferences(text).map((reference) => reference.slug)).toEqual(["front"]);
   });
 
+  it("keeps the files of a component with text beside it, and names none where arguments are unreadable", () => {
+    expect(
+      mediaReferences('Image("front") and a sentence after it').map((reference) => reference.slug),
+    ).toEqual(["front"]);
+    expect(mediaReferences('Image("front"\n\nThe bracket is never closed.')).toEqual([]);
+  });
+
   it("does not treat a form name as a media file", () => {
     expect(mediaReferences('Form("next-mini-hardware-interest")')).toEqual([]);
   });
