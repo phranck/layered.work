@@ -38,14 +38,28 @@ const prefix = `library-${randomUUID()}`;
   });
   it("searches localized alt text and captions, and filters kinds without losing dimensions", async () => {
     const db = await testDatabase();
-    const byAlt = await listMedia(db, { search: `${prefix} mountains`, kind: "all", page: 1 });
+    const byAlt = await listMedia(db, { search: `${prefix} mountains`, kind: "all", page: 1, order: "slug" });
     expect(byAlt.items.map((item) => item.id)).toEqual([ids[0]]);
-    expect((await listMedia(db, { search: `${prefix} sunset`, kind: "all", page: 1 })).items[0]?.width).toBe(
-      400,
-    );
     expect(
-      (await listMedia(db, { search: prefix, kind: "document", page: 1 })).items.map((item) => item.id),
+      (await listMedia(db, { search: `${prefix} sunset`, kind: "all", page: 1, order: "slug" })).items[0]
+        ?.width,
+    ).toBe(400);
+    expect(
+      (await listMedia(db, { search: prefix, kind: "document", page: 1, order: "slug" })).items.map(
+        (item) => item.id,
+      ),
     ).toEqual([ids[1]]);
+  });
+  it("lists the newest file first when asked, and by slug otherwise", async () => {
+    const db = await testDatabase();
+    await db
+      .update(media)
+      .set({ uploadedAt: new Date(Date.now() + 60_000) })
+      .where(eq(media.id, ids[1] ?? ""));
+    const listed = async (order: "slug" | "newest") =>
+      (await listMedia(db, { search: prefix, kind: "all", page: 1, order })).items.map((item) => item.id);
+    expect(await listed("newest")).toEqual([ids[1], ids[0]]);
+    expect(await listed("slug")).toEqual([ids[0], ids[1]]);
   });
   it("saves both languages and distinguishes missing alt text from an explicitly decorative image", async () => {
     const db = await testDatabase();

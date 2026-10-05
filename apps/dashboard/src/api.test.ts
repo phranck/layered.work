@@ -88,7 +88,8 @@ describe("dashboard API authentication", () => {
       .fn()
       .mockResolvedValueOnce(json({ data: profile }))
       .mockResolvedValueOnce(json({ data: { ...profile, interfaceLanguage: "en" } }))
-      .mockResolvedValueOnce(json({ data: { items: [item], page: 2, hasMore: false } }));
+      .mockResolvedValueOnce(json({ data: { items: [item], page: 2, hasMore: false } }))
+      .mockResolvedValueOnce(json({ data: { items: [item], page: 1, hasMore: false } }));
     vi.stubGlobal("fetch", request);
     const api = createDashboardApi(new QueryClient(), vi.fn());
 
@@ -110,6 +111,12 @@ describe("dashboard API authentication", () => {
       expect.objectContaining({ credentials: "include", method: "PATCH" }),
     );
     expect(request).toHaveBeenNthCalledWith(3, "/api/media?search=portrait+%26+me&kind=image&page=2", {
+      credentials: "include",
+    });
+
+    // The library's own order is the default, so only the editor's newest first is sent.
+    await api.fetchMedia("", "image", 1, false, "newest");
+    expect(request).toHaveBeenNthCalledWith(4, "/api/media?search=&kind=image&page=1&order=newest", {
       credentials: "include",
     });
   });

@@ -46,6 +46,7 @@ import {
   type MediaDeletionResult,
   type MediaDetail,
   type MediaLibraryPage,
+  type MediaOrder,
   mailTemplate,
   mailTemplateList,
   mediaDeletionResult,
@@ -156,7 +157,17 @@ export interface DashboardApi {
   ): Promise<FormSubmission>;
   deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
-  fetchMedia(search: string, kind: string, page: number, unused?: boolean): Promise<MediaLibraryPage>;
+  /**
+   * One page of the library, matching a search in the slug, the alt text and the
+   * caption, of one kind or all, by slug unless `order` asks for the newest first.
+   */
+  fetchMedia(
+    search: string,
+    kind: string,
+    page: number,
+    unused?: boolean,
+    order?: MediaOrder,
+  ): Promise<MediaLibraryPage>;
   fetchMediaDetail(id: string): Promise<MediaDetail>;
   saveMediaMetadata(id: string, value: SaveMediaMetadataBody): Promise<MediaDetail>;
   deleteMedia(id: string): Promise<MediaDeletionResult>;
@@ -343,9 +354,11 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
       await request(path, { method: "DELETE" }, true);
     },
-    async fetchMedia(search, kind, page, unused = false) {
+    async fetchMedia(search, kind, page, unused = false, order = "slug") {
       const params = new URLSearchParams({ search, kind, page: String(page) });
       if (unused) params.set("unused", "true");
+      // The library's own order is the API's default, so only the other is sent.
+      if (order !== "slug") params.set("order", order);
       return dataOf(await request(`/media?${params}`, undefined, true), mediaLibraryPage);
     },
     async fetchMediaDetail(id) {

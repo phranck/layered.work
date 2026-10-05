@@ -116,6 +116,29 @@ export const updateMediaFocalBody = body({ x: focalPoint.shape.x, y: focalPoint.
 
 /** Supported library kinds; upload acceptance remains a separate byte-level policy. */
 export const MEDIA_KINDS = ["image", "video", "document", "model"] as const;
+
+/** One kind of file the library holds. */
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
+/**
+ * The types an upload may declare, by the kind of file it becomes.
+ *
+ * A kind with no entry cannot be uploaded yet. The editor reads this to know
+ * where offering an upload makes sense, so a kind added here is offered with
+ * nothing else edited.
+ */
+export const UPLOAD_TYPES: Readonly<Partial<Record<MediaKind, readonly string[]>>> = {
+  image: ACCEPTED_IMAGE_TYPES,
+};
+
+/**
+ * The orders the library can be listed in: by slug, which is how the library
+ * screen reads, or newest first, which is how the editor offers files.
+ */
+export const MEDIA_ORDERS = ["slug", "newest"] as const;
+
+/** One order the library can be listed in. */
+export type MediaOrder = (typeof MEDIA_ORDERS)[number];
 export const mediaDescriptions = z.object({
   en: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
   de: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
@@ -124,6 +147,7 @@ export const mediaLibraryQuery = z.object({
   search: z.string().trim().max(MaxLength.Line).default(""),
   kind: z.enum(["all", ...MEDIA_KINDS]).default("all"),
   page: z.coerce.number().int().min(1).max(10000).default(1),
+  order: z.enum(MEDIA_ORDERS).default("slug"),
   unused: z.preprocess(
     (value) => (value === "true" ? true : value === "false" ? false : value),
     z.boolean().optional(),

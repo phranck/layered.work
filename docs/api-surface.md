@@ -18,7 +18,7 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `setFormSubmissionStatus` | PATCH /forms/:id/submissions/:submissionId | Browser session |
 | `deleteFormSubmission` | DELETE /forms/:id/submissions/:submissionId | Browser session |
 | `fetchAccount` | GET /account | Browser session |
-| `fetchMedia` | GET /media?search=:search&kind=:kind&page=:page&unused=:unused | media:write |
+| `fetchMedia` | GET /media?search=:search&kind=:kind&page=:page&unused=:unused&order=:order | media:write |
 | `fetchMediaDetail` | GET /media/:id | media:write |
 | `saveMediaMetadata` | PUT /media/:id | media:write |
 | `deleteMedia` | DELETE /media/:id | media:write |
