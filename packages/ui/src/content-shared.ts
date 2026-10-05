@@ -17,6 +17,8 @@ export interface MediaAsset {
   sizes?: string;
   /** A small raster data URL shown before the full image finishes loading. */
   placeholder?: string;
+  /** The real entry or library picture shown before an interactive model loads. */
+  poster?: string;
   mime?: string;
   filename?: string;
   focalPoint?: { x: number; y: number };

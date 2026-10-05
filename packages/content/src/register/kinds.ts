@@ -53,6 +53,8 @@ export type Parameter = {
   values?: readonly string[];
   /** For `number`, the range it accepts, both ends included. */
   range?: readonly [number, number];
+  /** For text, the minimum number of non-padding characters. */
+  minLength?: number;
 };
 
 /** Whether a component takes a body, and whether it insists on one. */

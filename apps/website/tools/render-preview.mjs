@@ -150,7 +150,7 @@ function rewriteHtml(html, requestPath) {
           // `data-search-index` carries an address the overlay fetches, so it
           // moves under the preview prefix exactly as `href` and `src` do.
           .replace(
-            /(?<=\s)(src|href|srcset|action|poster|style|data-search-index)=("[^"]*"|'[^']*')/gi,
+            /(?<=\s)(src|href|srcset|action|poster|style|data-search-index|data-model-src)=("[^"]*"|'[^']*')/gi,
             (_, name, quoted) => {
               const quote = quoted[0];
               const value = quoted.slice(1, -1);
@@ -323,7 +323,9 @@ try {
   for (const [requestPath, result] of rendered) {
     if (!result.headers["content-type"]?.includes("text/html")) continue;
     for (const tag of result.body.matchAll(/<[a-z][^>]*>/gi)) {
-      for (const attribute of tag[0].matchAll(/(?<=\s)(src|href|srcset|poster)=("[^"]*"|'[^']*')/gi)) {
+      for (const attribute of tag[0].matchAll(
+        /(?<=\s)(src|href|srcset|poster|data-model-src)=("[^"]*"|'[^']*')/gi,
+      )) {
         const value = attribute[2].slice(1, -1);
         const urls =
           attribute[1].toLowerCase() === "srcset"

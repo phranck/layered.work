@@ -14,6 +14,11 @@
     },
     "./*.css": "./src/*.css",
     "./copy-assets": "./copy-assets.mjs",
+    "./model-island": {
+      "types": "./src/model-island.ts",
+      "development": "./src/model-island.ts",
+      "default": "./dist/model-island.js"
+    },
     "./model-viewport": {
       "types": "./src/model-viewport.ts",
       "development": "./src/model-viewport.ts",

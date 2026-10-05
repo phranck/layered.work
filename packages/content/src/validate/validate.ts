@@ -560,7 +560,7 @@ function checkValue(bound: Bound, valueNode: SyntaxNode, subject: Subject, conte
 
   switch (parameter.kind) {
     case "text":
-      if (written !== "string") refuse();
+      if (written !== "string" || unquote(raw).trim().length < (parameter.minLength ?? 0)) refuse();
       else if (subject.name === "YouTube" && bound.name === "url" && !youtubeEmbedUrl(unquote(raw))) {
         context.report({
           code: FINDING.ValueNotPermitted,

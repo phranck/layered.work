@@ -184,6 +184,13 @@ export const components = {
       alt: {
         kind: "text",
         description: "What a screen reader says, since a model cannot be described by looking at it.",
+        required: true,
+        minLength: 1,
+      },
+      poster: {
+        kind: "slug",
+        description:
+          "A library picture shown before the model loads. The entry's featured picture is used when absent.",
       },
       caption: { kind: "text", description: "Shown beneath it." },
     },

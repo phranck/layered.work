@@ -6,6 +6,12 @@
   width: 100%;
   height: 100%;
 }
+.content-model img[slot="poster"] {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--card-inner-radius);
+}
 .content-model model-viewer {
   /* The viewer clips what lies outside it, so its focus is drawn inside. */
   --focus-ring: inset 0 0 0 1px var(--focus-edge), inset 0 0 0 4px var(--accent-tint);
