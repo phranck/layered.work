@@ -8,6 +8,7 @@ import { closeDatabase } from "../db/connect.js";
 import { auditLog, formSubmissions, forms, sessions, users } from "../db/schema/index.js";
 import { app } from "../http/app.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
+import { submissionsCsv } from "./inbox.js";
 import { createForm } from "./repository.js";
 
 const runs = hasTestDatabase ? describe : describe.skip;
@@ -163,4 +164,23 @@ runs("form submissions inbox", () => {
       .where(eq(formSubmissions.formId, formId));
     expect(rows).toEqual([{ id: secondId }]);
   });
+});
+
+it("exports values for fields removed from the current form declaration", () => {
+  const csv = submissionsCsv(
+    ["message"],
+    [
+      {
+        id: randomUUID(),
+        formId: randomUUID(),
+        values: { message: "Current value", removedField: "Müller;Österreich" },
+        consents: [],
+        sourceHash: null,
+        status: "unread",
+        createdAt: "2026-10-03T12:00:00.000Z",
+      },
+    ],
+  );
+  expect(csv.split("\r\n")[0]).toContain('"removedField"');
+  expect(csv).toContain('"Müller;Österreich"');
 });

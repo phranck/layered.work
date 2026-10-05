@@ -49,12 +49,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("shows stored markup as text, finds it, marks it read and confirms permanent deletion", async () => {
+it("shows every submitted field as text after form edits, marks it read and confirms deletion", async () => {
   let rows = [
     {
       id: submissionId,
       formId,
-      values: { message: "<img src=x onerror=alert(1)> Österreich" },
+      values: {
+        message: "<img src=x onerror=alert(1)> Österreich",
+        removedField: "<b>Archived response</b>",
+        removedChoices: ["Müller", "Österreich"],
+      },
       consents: [],
       sourceHash: "a".repeat(12),
       status: "unread",
@@ -109,6 +113,10 @@ it("shows stored markup as text, finds it, marks it read and confirms permanent 
   fireEvent.click(await screen.findByRole("button", { name: /Österreich/ }));
   expect(screen.getAllByText("<img src=x onerror=alert(1)> Österreich").length).toBeGreaterThan(0);
   expect(document.querySelector("img[src=x]")).toBeNull();
+  expect(screen.getByText("removedField", { selector: "dt" })).toBeTruthy();
+  expect(screen.getByText("<b>Archived response</b>", { selector: "dd" })).toBeTruthy();
+  expect(screen.getByText("Müller, Österreich", { selector: "dd" })).toBeTruthy();
+  expect(document.querySelector(".submissions-detail b")).toBeNull();
 
   fireEvent.click(screen.getByRole("button", { name: "Mark read" }));
   await waitFor(() => expect(fetcher.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
