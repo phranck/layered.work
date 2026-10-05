@@ -1,7 +1,7 @@
 import type { ComponentName, ComponentNode, PropsOf } from "@layered/content";
 import { createElement, type ReactNode } from "react";
 import { ContentButton, ContentCard } from "./content-controls.js";
-import type { ContentProps, MediaResolver } from "./content-shared.js";
+import type { ContentProps, ContentUrlResolver, MediaResolver } from "./content-shared.js";
 import { Divider } from "./divider.js";
 import { Document } from "./document.js";
 import { Figure } from "./figure.js";
@@ -20,6 +20,7 @@ type Adapter = (
   media: MediaResolver,
   children: ReactNode,
   forms?: Readonly<Record<string, FormEmbedProps>>,
+  resolveUrl?: ContentUrlResolver,
 ) => ReactNode;
 function props<N extends ComponentName>(node: ComponentNode, children: ReactNode): ContentProps<N> {
   // The content package owns interpretation/defaults. Only the neutral body is
@@ -50,6 +51,8 @@ export const CONTENT_RENDERERS: Readonly<Record<string, Adapter>> = {
   YouTube: (node) => createElement(YouTube, node.props as unknown as PropsOf<"YouTube">),
   Document: (node, media) => createElement(Document, { ...(node.props as unknown as PropsOf<"Pdf">), media }),
   Note: (node, _media, children) => createElement(Note, props<"Note">(node, children)),
-  Button: (node, _media, children) => createElement(ContentButton, props<"Button">(node, children)),
-  Card: (node, media, children) => createElement(ContentCard, { ...props<"Card">(node, children), media }),
+  Button: (node, _media, children, _forms, resolveUrl) =>
+    createElement(ContentButton, { ...props<"Button">(node, children), resolveUrl }),
+  Card: (node, media, children, _forms, resolveUrl) =>
+    createElement(ContentCard, { ...props<"Card">(node, children), media, resolveUrl }),
 };

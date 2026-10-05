@@ -2,12 +2,23 @@ import type { Icon } from "@phosphor-icons/react";
 import * as icons from "@phosphor-icons/react/dist/ssr";
 import { Button } from "./button.js";
 import { Card } from "./card.js";
-import { type ContentProps, contentUrl, type MediaResolver } from "./content-shared.js";
+import {
+  type ContentProps,
+  type ContentUrlResolver,
+  contentUrl,
+  type MediaResolver,
+} from "./content-shared.js";
 import { Figure } from "./figure.js";
 
 /** Render a registered button with the existing button compound. */
-export function ContentButton({ label, href, tone, icon }: ContentProps<"Button">) {
-  const url = contentUrl(href);
+export function ContentButton({
+  label,
+  href,
+  tone,
+  icon,
+  resolveUrl,
+}: ContentProps<"Button"> & { resolveUrl?: ContentUrlResolver }) {
+  const url = contentUrl(href, false, resolveUrl);
   const name =
     typeof icon === "string"
       ? icon
@@ -42,8 +53,9 @@ export function ContentCard({
   image,
   children,
   media,
-}: ContentProps<"Card"> & { media: MediaResolver }) {
-  const url = contentUrl(href);
+  resolveUrl,
+}: ContentProps<"Card"> & { media: MediaResolver; resolveUrl?: ContentUrlResolver }) {
+  const url = contentUrl(href, false, resolveUrl);
   // A title link keeps prose links and controls valid: wrapping the complete
   // body in an anchor would put interactive descendants inside another anchor.
   return (

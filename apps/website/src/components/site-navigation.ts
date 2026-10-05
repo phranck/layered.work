@@ -4,6 +4,7 @@ import type { BrandName } from "@layered/ui";
 export interface SiteNavigationItem {
   label: string;
   href: string;
+  children?: { label: string; href: string }[];
 }
 
 export interface SiteFooterData {

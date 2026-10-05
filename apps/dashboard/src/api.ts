@@ -54,23 +54,29 @@ import {
   readApiError,
   renderedMail,
   reorderFooterNavigationBody,
+  reorderSocialAccountsBody,
   type SaveEntryBody,
   type SaveFooterNavigationBody,
   type SaveFormBody,
   type SaveMailTemplateBody,
+  type SaveSocialAccountBody,
   type SaveTopicBody,
   type SearchResults,
   type SettingsView,
   type SignedInAs,
   type SignInBody,
   type SiteSettings,
+  type SocialAccount,
   saveEntryBody,
   saveFooterNavigationBody,
   saveFormBody,
+  saveSocialAccountBody,
   saveTopicBody,
   searchResults,
   settingsView,
   signedInAs,
+  socialAccount,
+  socialAccountList,
   type TestMailResult,
   type TokenSummary,
   type TopicList,
@@ -176,11 +182,25 @@ export interface DashboardApi {
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
   fetchSettings(): Promise<SettingsView>;
-  fetchFooterNavigations(): Promise<FooterNavigation[]>;
-  createFooterNavigation(value: SaveFooterNavigationBody): Promise<FooterNavigation>;
-  saveFooterNavigation(id: string, value: SaveFooterNavigationBody): Promise<FooterNavigation>;
-  deleteFooterNavigation(id: string): Promise<void>;
-  reorderFooterNavigations(positions: { id: string; sortOrder: number }[]): Promise<FooterNavigation[]>;
+  fetchSocialAccounts(): Promise<SocialAccount[]>;
+  saveSocialAccount(id: string | null, value: SaveSocialAccountBody): Promise<SocialAccount>;
+  deleteSocialAccount(id: string): Promise<void>;
+  reorderSocialAccounts(positions: { id: string; sortOrder: number }[]): Promise<SocialAccount[]>;
+  fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
+  createFooterNavigation(
+    value: SaveFooterNavigationBody,
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation>;
+  saveFooterNavigation(
+    id: string,
+    value: SaveFooterNavigationBody,
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation>;
+  deleteFooterNavigation(id: string, placement?: "main" | "footer"): Promise<void>;
+  reorderFooterNavigations(
+    positions: { id: string; sortOrder: number }[],
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation[]>;
   /** Stores one group of settings and returns all of them as they now stand. */
   saveSettings<Group extends keyof SettingsGroups>(
     group: Group,
@@ -380,32 +400,62 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchSettings() {
       return dataOf(await request("/settings", undefined, true), settingsView);
     },
-    async fetchFooterNavigations() {
-      return dataOf(await request("/footer-navigation", undefined, true), footerNavigationList);
+    async fetchSocialAccounts() {
+      return dataOf(await request("/social-accounts", undefined, true), socialAccountList);
     },
-    async createFooterNavigation(value) {
+    async saveSocialAccount(id, value) {
       return dataOf(
-        await request("/footer-navigation", jsonBody("POST", saveFooterNavigationBody.parse(value)), true),
+        await request(
+          id ? `/social-accounts/${encodeURIComponent(id)}` : "/social-accounts",
+          jsonBody(id ? "PUT" : "POST", saveSocialAccountBody.parse(value)),
+          true,
+        ),
+        socialAccount,
+      );
+    },
+    async deleteSocialAccount(id) {
+      await request(`/social-accounts/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
+    },
+    async reorderSocialAccounts(positions) {
+      return dataOf(
+        await request(
+          "/social-accounts/order",
+          jsonBody("PATCH", reorderSocialAccountsBody.parse({ positions })),
+          true,
+        ),
+        socialAccountList,
+      );
+    },
+    async fetchFooterNavigations(placement = "footer") {
+      return dataOf(await request(`/${placement}-navigation`, undefined, true), footerNavigationList);
+    },
+    async createFooterNavigation(value, placement = "footer") {
+      return dataOf(
+        await request(
+          `/${placement}-navigation`,
+          jsonBody("POST", saveFooterNavigationBody.parse(value)),
+          true,
+        ),
         footerNavigation,
       );
     },
-    async saveFooterNavigation(id, value) {
+    async saveFooterNavigation(id, value, placement = "footer") {
       return dataOf(
         await request(
-          `/footer-navigation/${encodeURIComponent(id)}`,
+          `/${placement}-navigation/${encodeURIComponent(id)}`,
           jsonBody("PUT", saveFooterNavigationBody.parse(value)),
           true,
         ),
         footerNavigation,
       );
     },
-    async deleteFooterNavigation(id) {
-      await request(`/footer-navigation/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
+    async deleteFooterNavigation(id, placement = "footer") {
+      await request(`/${placement}-navigation/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
     },
-    async reorderFooterNavigations(positions) {
+    async reorderFooterNavigations(positions, placement = "footer") {
       return dataOf(
         await request(
-          "/footer-navigation/order",
+          `/${placement}-navigation/order`,
           jsonBody("PATCH", reorderFooterNavigationBody.parse({ positions })),
           true,
         ),

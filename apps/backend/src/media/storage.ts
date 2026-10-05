@@ -145,6 +145,23 @@ export async function writeBucketMediaBytes(
   );
 }
 
+/** Store a newly generated object through the same local/bucket boundary as uploads. */
+export async function writeMediaBytes(storageKey: string, bytes: Buffer, mimeType: string): Promise<void> {
+  const mode = storageMode();
+  if (mode.kind === "bucket") return writeBucketMediaBytes(storageKey, bytes, mimeType);
+  await writeLocalMediaObject(
+    mode.root,
+    storageKey,
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array(bytes));
+        controller.close();
+      },
+    }),
+    bytes.length,
+  );
+}
+
 /**
  * Whether the store this process reads holds an object at a key.
  *

@@ -40,6 +40,7 @@ const publicEntry = z.object({
   body: z.string(),
   topics: z.array(z.string()),
   featuredImage: z.string().nullable(),
+  socialImage: z.string().nullable().optional(),
   translationPath: z.string().nullable(),
   featured: z.boolean(),
   onHomePage: z.boolean(),

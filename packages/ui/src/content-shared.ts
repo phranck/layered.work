@@ -31,9 +31,14 @@ export type MediaResolver = (slug: string) => MediaAsset | undefined;
 export interface MediaProps {
   media: MediaResolver;
 }
+export type ContentUrlResolver = (url: string) => string;
 
 /** Allow web navigation and relative assets, never executable or opaque URL schemes. */
-export function contentUrl(value: string | undefined, asset = false): string | undefined {
+export function contentUrl(
+  value: string | undefined,
+  asset = false,
+  resolveUrl?: ContentUrlResolver,
+): string | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const url = value.trim();
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject browser-normalized control characters in authored URLs.
@@ -41,7 +46,9 @@ export function contentUrl(value: string | undefined, asset = false): string | u
   const protocol = /^([a-z][a-z\d+.-]*):/i.exec(url)?.[1]?.toLowerCase();
   if (protocol && !(asset ? ["http", "https"] : ["http", "https", "mailto", "tel"]).includes(protocol))
     return undefined;
-  return url;
+  // Validate before handing an authored destination to a caller's URL resolver.
+  if (!URL.canParse(url, "https://content.invalid/")) return undefined;
+  return resolveUrl ? contentUrl(resolveUrl(url), asset) : url;
 }
 
 /** A validated token reference; content never supplies arbitrary CSS. */

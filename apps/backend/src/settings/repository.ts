@@ -100,6 +100,13 @@ export async function readSettings(db: Database): Promise<SettingsView> {
 export async function readPublicSiteFrame(db: Pick<Database, "select">): Promise<PublicSiteFrame> {
   const rows = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "site"));
   const site = readGroup("site", new Map([["site", rows[0]?.value]]));
+  const [picture] = site.socialImageMediaId
+    ? await db
+        .select({ storageKey: media.storageKey })
+        .from(media)
+        .where(eq(media.id, site.socialImageMediaId))
+        .limit(1)
+    : [];
   const accounts = await db
     .select({ platform: socialAccounts.platform, handle: socialAccounts.handle, href: socialAccounts.href })
     .from(socialAccounts)
@@ -108,6 +115,7 @@ export async function readPublicSiteFrame(db: Pick<Database, "select">): Promise
   return {
     title: site.title,
     footerLine: site.footerLine,
+    socialImage: picture ? `/${picture.storageKey}` : null,
     social: accounts.filter((account) => navigationHref.safeParse(account.href).success),
   };
 }

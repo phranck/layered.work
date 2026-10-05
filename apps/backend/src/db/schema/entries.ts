@@ -100,6 +100,9 @@ export const entryTranslations = pgTable(
      */
     featuredMediaId: uuid("featured_media_id").references(() => media.id, { onDelete: "restrict" }),
 
+    /** Generated at publication, separate from the picture shown in the article. */
+    socialCardMediaId: uuid("social_card_media_id").references(() => media.id, { onDelete: "restrict" }),
+
     /**
      * When it was moved to the trash, or null whilst it is not there.
      *

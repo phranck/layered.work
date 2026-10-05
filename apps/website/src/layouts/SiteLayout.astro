@@ -6,6 +6,9 @@ import "../styles/site.css";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import type { SiteFooterData, SiteNavigationItem } from "../components/site-navigation";
+import type { LanguageLink } from "../content/language-links";
+import type { SocialImage } from "../content/metadata";
+import { TAGLINE } from "../site";
 
 interface Props {
   title: string;
@@ -13,24 +16,31 @@ interface Props {
   language?: "en" | "de";
   canonicalPath?: string;
   translationPath?: string | null;
+  alternates?: LanguageLink[];
   readingWidth?: "narrow" | "normal" | "wide" | "full";
   navigation?: SiteNavigationItem[];
   footer?: SiteFooterData;
   siteName?: string;
+  socialImage?: SocialImage;
+  article?: Record<string, unknown>;
 }
 
 const {
   title,
-  description,
+  description = TAGLINE,
   language = "en",
   canonicalPath = Astro.url.pathname,
   translationPath = null,
+  alternates = [],
   readingWidth = "normal",
   navigation = [],
   footer = {},
   siteName = "LAYERED.work",
+  socialImage = { url: "https://layered.work/og.png", width: 1200, height: 630, alt: "LAYERED.work" },
+  article,
 } = Astro.props;
 const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
+const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
 ---
 
 <!doctype html>
@@ -39,11 +49,28 @@ const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
-    {description && <meta name="description" content={description} />}
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content={article ? "article" : "website"} />
+    <meta property="og:locale" content={language === "de" ? "de_AT" : "en_GB"} />
+    <meta property="og:image" content={socialImage.url} />
+    <meta property="og:image:alt" content={socialImage.alt} />
+    {socialImage.width && <meta property="og:image:width" content={String(socialImage.width)} />}
+    {socialImage.height && <meta property="og:image:height" content={String(socialImage.height)} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage.url} />
+    <meta name="twitter:image:alt" content={socialImage.alt} />
+    {article && <script is:inline type="application/ld+json" nonce={Astro.locals.nonce} set:html={JSON.stringify(article).replace(/</g, "\\u003c")} />}
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang={language} href={canonical} />
-    {translationPath && <link rel="alternate" hreflang={language === "de" ? "en" : "de"} href={new URL(translationPath, canonical)} />}
+    {alternates.map(link => <link rel="alternate" hreflang={link.language} href={new URL(link.path, canonical)} />)}
+    <link rel="alternate" type="application/rss+xml" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)} />
+    <link rel="alternate" type="application/feed+json" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)} />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />

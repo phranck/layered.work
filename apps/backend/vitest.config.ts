@@ -1,4 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
@@ -36,6 +38,9 @@ const NOWHERE = "postgres://nobody@127.0.0.1:1/nothing";
  * exactly how `data-safety.md` gets broken by accident.
  */
 const TEST_DATABASE = process.env.DATABASE_URL_TEST ?? "";
+// Generated publication images belong only to this run, never to development media or S3.
+const TEST_MEDIA = mkdtempSync(join(tmpdir(), "layered-backend-test-media-"));
+process.once("exit", () => rmSync(TEST_MEDIA, { recursive: true, force: true }));
 
 export default defineConfig({
   test: {
@@ -59,6 +64,11 @@ export default defineConfig({
       // real message through SMTP2GO. What SMTP2GO answers is tested against a
       // stand-in for its API instead.
       SMTP2GO_API_KEY: "",
+      S3_ENDPOINT: "",
+      S3_BUCKET: "",
+      S3_ACCESS_KEY_ID: "",
+      S3_SECRET_ACCESS_KEY: "",
+      MEDIA_LOCAL_DIR: TEST_MEDIA,
     },
   },
 });

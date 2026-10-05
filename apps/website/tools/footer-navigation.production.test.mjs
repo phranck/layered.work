@@ -20,8 +20,16 @@ test("renders stored footer groups, their order and both languages in the produc
     ],
   };
   snapshot.mainNavigation = {
-    en: [{ label: "Stored header", href: "/posts/" }],
-    de: [{ label: "Gespeicherter Header", href: "/de/posts/" }],
+    en: [
+      { label: "Stored header", href: "/posts/", children: [{ label: "Child header", href: "/projects/" }] },
+    ],
+    de: [
+      {
+        label: "Gespeicherter Header",
+        href: "/de/posts/",
+        children: [{ label: "Unterpunkt", href: "/de/projects/" }],
+      },
+    ],
   };
   snapshot.siteFrame = {
     title: { en: "Stored site", de: "Gespeicherte Website" },
@@ -55,6 +63,8 @@ test("renders stored footer groups, their order and both languages in the produc
       assert(footer.includes('data-brand="github"'));
       assert(footer.includes("https://example.test/account"));
       assert(html.includes(path === "/" ? "Stored header" : "Gespeicherter Header"));
+      assert(html.includes(path === "/" ? "Child header" : "Unterpunkt"));
+      assert(html.includes('class="site-nav__branch"'));
       assert(html.includes(`<title>${path === "/" ? "Stored site" : "Gespeicherte Website"}</title>`));
       assert.equal(/<main[^>]*id="main-content"/.test(html), true);
       const missing = await app.render(new Request(`https://layered.work${path}fixture-missing-page/`));

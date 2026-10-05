@@ -171,7 +171,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // A file under public/, or one of the two routes machines read. Astro serves
   // the first and renders the second, and answers 404 itself when there is no
   // such file, which is the right answer either way.
-  const isFeed = path === "/feed.xml" || path === "/feed.json";
+  const isFeed = /^\/(?:de\/)?feed\.(?:xml|json)$/.test(path);
   if (OPEN_BEFORE_LAUNCH.has(path) || (!isFeed && path.slice(path.lastIndexOf("/")).includes("."))) {
     return withSafety(await next(), nonce);
   }

@@ -1,0 +1,2 @@
+ALTER TABLE "entry_translations" ADD COLUMN "social_card_media_id" uuid;--> statement-breakpoint
+ALTER TABLE "entry_translations" ADD CONSTRAINT "entry_translations_social_card_media_id_media_id_fk" FOREIGN KEY ("social_card_media_id") REFERENCES "public"."media"("id") ON DELETE restrict ON UPDATE no action;

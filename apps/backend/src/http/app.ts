@@ -16,7 +16,7 @@ import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
 import { entriesRoutes } from "./routes/entries.js";
-import { footerNavigationRoutes } from "./routes/footer-navigation.js";
+import { footerNavigationRoutes, mainNavigationRoutes } from "./routes/footer-navigation.js";
 import { formsRoutes } from "./routes/forms.js";
 import { mailTemplateRoutes } from "./routes/mail-templates.js";
 import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
@@ -24,6 +24,7 @@ import { previewsRoutes } from "./routes/previews.js";
 import { publicFormsRoutes } from "./routes/public-forms.js";
 import { searchRoutes } from "./routes/search.js";
 import { settingsRoutes } from "./routes/settings.js";
+import { socialAccountRoutes } from "./routes/social-accounts.js";
 import { topicsRoutes } from "./routes/topics.js";
 
 /**
@@ -87,7 +88,9 @@ app.route("/forms", formsRoutes);
 app.route("/search", searchRoutes);
 app.route("/topics", topicsRoutes);
 app.route("/settings", settingsRoutes);
+app.route("/social-accounts", socialAccountRoutes);
 app.route("/footer-navigation", footerNavigationRoutes);
+app.route("/main-navigation", mainNavigationRoutes);
 app.route("/mail-templates", mailTemplateRoutes);
 app.route("/media", media);
 app.route("/content", content);

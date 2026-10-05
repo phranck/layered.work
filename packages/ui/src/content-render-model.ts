@@ -49,12 +49,10 @@ function renderElement(
     if (node.attributes[name]) attributes[name] = node.attributes[name];
   if (/^h[1-6]$/.test(node.tag)) attributes.id = node.attributes.id;
   if (node.tag === "a") {
-    const href = contentUrl(node.attributes.href);
-    attributes.href = href ? contentUrl(resolveUrl?.(href) ?? href) : undefined;
+    attributes.href = contentUrl(node.attributes.href, false, resolveUrl);
   }
   if (node.tag === "img") {
-    const src = contentUrl(node.attributes.src, true);
-    attributes.src = src ? contentUrl(resolveUrl?.(src) ?? src, true) : undefined;
+    attributes.src = contentUrl(node.attributes.src, true, resolveUrl);
     attributes.alt = node.attributes.alt ?? "";
     if (!attributes.src) return createElement("span", null, attributes.alt);
     return createElement("img", { ...attributes, loading: "lazy", decoding: "async" });
@@ -87,6 +85,7 @@ function renderNode(
             media,
             renderNodes(node.children, media, resolveUrl, forms),
             forms,
+            resolveUrl,
           )
         : createElement(ContentPlaceholder, { name: node.name });
   }

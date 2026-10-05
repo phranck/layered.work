@@ -209,6 +209,41 @@ main h1::before {
 .site-nav a[aria-current]:hover {
   background: var(--accent-tint-strong);
 }
+.site-nav__item {
+  display: flex;
+  align-items: center;
+}
+.site-nav__branch {
+  position: relative;
+}
+.site-nav__branch summary {
+  cursor: pointer;
+  padding: var(--space-2);
+  color: var(--text-secondary);
+  list-style: none;
+}
+.site-nav__branch summary::-webkit-details-marker {
+  display: none;
+}
+.site-nav__branch ul {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 180px;
+  max-width: calc(100vw - 2 * var(--page-gutter));
+  padding: var(--space-2);
+  margin: 0;
+  list-style: none;
+  background: var(--surface-floating);
+  border: var(--line-width) solid var(--edge-strong);
+  border-radius: var(--radius-control);
+  box-shadow: var(--lift-2);
+}
+.site-nav__branch a {
+  width: 100%;
+  height: auto;
+  min-height: var(--nav-control-height);
+}
 .header-tools {
   display: flex;
   flex: none;

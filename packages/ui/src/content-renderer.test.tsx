@@ -150,6 +150,37 @@ describe("content renderer", () => {
     expect(html).toContain('href="https://storage.example/migration/manual.pdf"');
     expect(html).toContain('src="https://storage.example/migration/preview.webp"');
   });
+  it("rejects malformed destinations before invoking a caller's URL resolver", () => {
+    const resolved: string[] = [];
+    const html = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={renderContent("[Incomplete](https://)\n\n![Broken](https://[)\n\n[Valid](/valid/)")}
+        media={media}
+        resolveUrl={(url) => {
+          resolved.push(url);
+          return new URL(url, "https://layered.work/").href;
+        }}
+      />,
+    );
+    expect(resolved).toEqual(["/valid/"]);
+    expect(html).toContain("Incomplete");
+    expect(html).toContain("Broken");
+    expect(html).not.toContain('href="https://"');
+    expect(html).toContain('href="https://layered.work/valid/"');
+  });
+  it("resolves component links through the same boundary as prose", () => {
+    const html = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={renderContent(
+          'Button("Read", href: "download/")\n\nCard(title: "More", href: "../more/") { Prose. }',
+        )}
+        media={media}
+        resolveUrl={(url) => new URL(url, "https://layered.work/post/").href}
+      />,
+    );
+    expect(html).toContain('href="https://layered.work/post/download/"');
+    expect(html).toContain('href="https://layered.work/more/"');
+  });
   it("renders raw HTML and code as text, and names missing components", () => {
     const html = draw('<script>alert("x")</script>\n\n```js\n<script>\n```\n\nMissingThing()');
     expect(html).not.toContain("<script>");

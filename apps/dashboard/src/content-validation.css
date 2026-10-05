@@ -1,0 +1,38 @@
+.content-findings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.content-findings .button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: auto;
+  white-space: normal;
+  text-align: start;
+}
+.content-findings small {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.content-findings [data-severity="error"] .button {
+  color: var(--state-danger);
+}
+.content-findings [data-severity="warning"] .button {
+  color: var(--state-warning);
+}
+/* CSS underlines work under the dashboard CSP without the linter's data-URL images. */
+.content-editor .cm-lintRange-error {
+  background-image: none;
+  text-decoration: underline wavy var(--state-danger);
+  text-underline-offset: 3px;
+}
+.content-editor .cm-lintRange-warning {
+  background-image: none;
+  text-decoration: underline dotted var(--state-warning);
+  text-underline-offset: 3px;
+}

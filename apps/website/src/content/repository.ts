@@ -43,6 +43,7 @@ const entrySchema = z.object({
   body: z.string(),
   topics: z.array(z.union([z.number().int(), z.string()]).transform(String)),
   featuredImage: slug.nullish(),
+  socialImage: slug.nullish(),
   translationPath: path.nullish(),
   featured: z.boolean().default(false),
   onHomePage: z.boolean().default(true),

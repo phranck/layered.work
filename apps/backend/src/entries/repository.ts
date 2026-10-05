@@ -31,6 +31,7 @@ import {
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readSettings } from "../settings/repository.js";
+import { hasRasterPicture, storeSocialCard, withCardObjects } from "../social/store.js";
 
 type Database = ReturnType<typeof database>;
 
@@ -275,10 +276,12 @@ type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** Drafts may be incomplete; every translation readers can reach must be valid. */
 function requirePublishableContent(body: string, state: SaveEntryBody["state"]): void {
-  if (state !== "draft" && !validateContent(body).publishable) {
+  if (state === "draft") return;
+  const failure = validateContent(body).findings.find((finding) => finding.severity === "error");
+  if (failure) {
     throw new HttpError(
       ErrorCode.InvalidRequest,
-      "This content has validation errors. Correct them before publishing.",
+      `Cannot publish: ${(failure.component ?? "Content").slice(0, 100)} has ${failure.code} at ${failure.line}:${failure.column}. Correct this content error first.`,
     );
   }
 }
@@ -410,65 +413,78 @@ export async function saveEntry(
   actorUserId: string,
   actorTokenId?: string,
 ): Promise<EntryDetail> {
-  await db.transaction(async (tx) => {
-    const [current] = await tx
-      .select({
-        entryId: entryTranslations.entryId,
-        title: entryTranslations.title,
-        summary: entryTranslations.summary,
-        body: entryTranslations.body,
-        state: entryTranslations.state,
-        readingWidth: entryTranslations.readingWidth,
-        showInOtherLanguage: entryTranslations.showInOtherLanguage,
-        publishedAt: entryTranslations.publishedAt,
-        trashedAt: entryTranslations.trashedAt,
-        language: entryTranslations.language,
-      })
-      .from(entryTranslations)
-      .where(eq(entryTranslations.id, id))
-      .limit(1);
-    if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
-    // A translation in the trash is restored before it is written to, so a save
-    // can never publish something the reader believes is deleted.
-    if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
-    requirePublishableContent(value.body, value.state);
+  await withCardObjects((createdObjects) =>
+    db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({
+          entryId: entryTranslations.entryId,
+          title: entryTranslations.title,
+          summary: entryTranslations.summary,
+          body: entryTranslations.body,
+          state: entryTranslations.state,
+          readingWidth: entryTranslations.readingWidth,
+          showInOtherLanguage: entryTranslations.showInOtherLanguage,
+          publishedAt: entryTranslations.publishedAt,
+          trashedAt: entryTranslations.trashedAt,
+          language: entryTranslations.language,
+          featuredMediaId: entryTranslations.featuredMediaId,
+          socialCardMediaId: entryTranslations.socialCardMediaId,
+        })
+        .from(entryTranslations)
+        .where(eq(entryTranslations.id, id))
+        .limit(1)
+        .for("update");
+      if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
+      // A translation in the trash is restored before it is written to, so a save
+      // can never publish something the reader believes is deleted.
+      if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
+      requirePublishableContent(value.body, value.state);
 
-    const now = new Date();
-    const becomesPublic = value.state === "public" && current.state !== "public";
-    const { topicIds, slug, ...fields } = value;
-    await tx
-      .update(entryTranslations)
-      .set({
-        ...fields,
-        publishedAt: becomesPublic && !current.publishedAt ? now : current.publishedAt,
-      })
-      .where(eq(entryTranslations.id, id));
-    await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
-    const topicsChanged = await setEntryTopics(tx, current.entryId, topicIds);
+      const now = new Date();
+      const becomesPublic = value.state === "public" && current.state !== "public";
+      const { topicIds, slug, ...fields } = value;
+      await tx
+        .update(entryTranslations)
+        .set({
+          ...fields,
+          // A saved title invalidates its derived image even while the entry is a draft.
+          ...(current.title !== value.title ? { socialCardMediaId: null } : {}),
+          publishedAt: becomesPublic && !current.publishedAt ? now : current.publishedAt,
+        })
+        .where(eq(entryTranslations.id, id));
+      await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
+      const topicsChanged = await setEntryTopics(tx, current.entryId, topicIds);
 
-    const changedKeys: string[] = (Object.keys(fields) as (keyof typeof fields)[]).filter(
-      (key) => current[key] !== fields[key],
-    );
-    if (topicsChanged) changedKeys.push("topicIds");
-    if (await setAddress(tx, id, current.language, slug)) changedKeys.push("slug");
-    if (changedKeys.length > 0) {
-      await tx.insert(auditLog).values({
-        ...auditActor(actorUserId, actorTokenId),
-        action: "entry.updated",
-        subjectType: "entry_translations",
-        subjectId: id,
-        detail: { changedKeys },
-      });
-    }
-    if (becomesPublic) {
-      await tx.insert(auditLog).values({
-        ...auditActor(actorUserId, actorTokenId),
-        action: "entry.published",
-        subjectType: "entry_translations",
-        subjectId: id,
-      });
-    }
-  });
+      const changedKeys: string[] = (Object.keys(fields) as (keyof typeof fields)[]).filter(
+        (key) => current[key] !== fields[key],
+      );
+      if (topicsChanged) changedKeys.push("topicIds");
+      if (await setAddress(tx, id, current.language, slug)) changedKeys.push("slug");
+      if (value.state !== "draft" && (!current.socialCardMediaId || current.title !== value.title)) {
+        if (!(await hasRasterPicture(tx, current.featuredMediaId))) {
+          const socialCardMediaId = await storeSocialCard(tx, value.title, createdObjects);
+          await tx.update(entryTranslations).set({ socialCardMediaId }).where(eq(entryTranslations.id, id));
+        }
+      }
+      if (changedKeys.length > 0) {
+        await tx.insert(auditLog).values({
+          ...auditActor(actorUserId, actorTokenId),
+          action: "entry.updated",
+          subjectType: "entry_translations",
+          subjectId: id,
+          detail: { changedKeys },
+        });
+      }
+      if (becomesPublic) {
+        await tx.insert(auditLog).values({
+          ...auditActor(actorUserId, actorTokenId),
+          action: "entry.published",
+          subjectType: "entry_translations",
+          subjectId: id,
+        });
+      }
+    }),
+  );
   return readEntry(db, id);
 }
 

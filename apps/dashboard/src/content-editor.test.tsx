@@ -1,9 +1,11 @@
 import { ensureSyntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { parseContent } from "@layered/content";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ContentEditor, contentLanguage } from "./content-editor.js";
+import { ContentEditor, type ContentEditorHandle, contentLanguage } from "./content-editor.js";
 
 afterEach(cleanup);
 
@@ -62,6 +64,44 @@ describe("the writing surface's language", () => {
 });
 
 describe("the writing surface", () => {
+  it("underlines an unknown component after typing pauses and selects the finding", async () => {
+    const checked = vi.fn();
+    const handle = createRef<ContentEditorHandle>();
+    const { container, rerender } = render(
+      <ContentEditor
+        value="Carousel { Text. }"
+        onChange={vi.fn()}
+        onValidation={checked}
+        editorRef={handle}
+        label="Text"
+      />,
+    );
+    await waitFor(() => expect(container.querySelector(".cm-lintRange-error")?.textContent).toBe("Carousel"));
+    expect(checked.mock.calls.at(-1)?.[0]).toMatchObject({
+      source: "Carousel { Text. }",
+      validation: { publishable: false },
+    });
+    const cm = container.querySelector(".cm-editor");
+    if (!(cm instanceof HTMLElement)) throw new Error("Missing editor");
+    handle.current?.selectFinding({ from: 0, to: 8 });
+    expect(EditorView.findFromDOM(cm)?.state.selection.main.to).toBe(8);
+    rerender(
+      <ContentEditor
+        value="Correct prose."
+        onChange={vi.fn()}
+        onValidation={checked}
+        editorRef={handle}
+        label="Text"
+      />,
+    );
+    await waitFor(() =>
+      expect(checked.mock.calls.at(-1)?.[0]).toMatchObject({
+        source: "Correct prose.",
+        validation: { publishable: true },
+      }),
+    );
+    await waitFor(() => expect(container.querySelector(".cm-lintRange-error")).toBeNull());
+  });
   it("shows the body it is given as plain text", () => {
     const { container } = render(<ContentEditor value={SAMPLE} onChange={vi.fn()} label="Text" />);
     const content = container.querySelector(".cm-content");
