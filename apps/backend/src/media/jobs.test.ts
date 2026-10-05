@@ -2,10 +2,17 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { media, mediaJobs, mediaVariants } from "../db/schema/index.js";
+import { media, mediaAttempts, mediaJobs, mediaVariants } from "../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 
 const store = vi.hoisted(() => new Map<string, Buffer>());
+const control = vi.hoisted(() => ({
+  blockNext: false,
+  entered: undefined as (() => void) | undefined,
+  released: undefined as Promise<void> | undefined,
+  blockedDeletes: new Set<string>(),
+  blockedKey: "",
+}));
 vi.mock("./storage.js", () => ({
   readMediaBytes: async (key: string) => {
     const bytes = store.get(key);
@@ -13,9 +20,16 @@ vi.mock("./storage.js", () => ({
     return bytes;
   },
   writeMediaBytes: async (key: string, bytes: Buffer) => {
+    if (control.blockNext) {
+      control.blockNext = false;
+      control.blockedKey = key;
+      control.entered?.();
+      await control.released;
+    }
     store.set(key, bytes);
   },
   deleteMediaObject: async (key: string) => {
+    if (control.blockedDeletes.has(key)) throw new Error("owned cleanup failure");
     store.delete(key);
   },
 }));
@@ -55,6 +69,7 @@ async function fixture() {
   afterAll(async () => {
     const db = await testDatabase();
     if (ids.length) await db.delete(media).where(inArray(media.id, ids));
+    if (ids.length) await db.delete(mediaAttempts).where(inArray(mediaAttempts.mediaId, ids));
     store.clear();
     await closeTestDatabase();
   });
@@ -111,5 +126,39 @@ async function fixture() {
     expect(job?.state).toBe("failed");
     expect(job?.errorId).toMatch(/^[a-f0-9-]{36}$/);
     expect(await db.select().from(mediaVariants).where(eq(mediaVariants.mediaId, id))).toEqual([]);
+  });
+  it("durably reclaims late writes from a replaced worker after its cleanup failed", async () => {
+    const { db, id, key } = await fixture();
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      control.entered = resolve;
+    });
+    control.released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    control.blockNext = true;
+    const oldWorker = processMediaJob(db, id);
+    try {
+      await entered;
+      await db
+        .update(mediaJobs)
+        .set({ leaseExpiresAt: new Date(0) })
+        .where(eq(mediaJobs.mediaId, id));
+      await processMediaJob(db, id);
+      const current = await db.select().from(mediaVariants).where(eq(mediaVariants.mediaId, id));
+      control.blockedDeletes.add(control.blockedKey);
+      release();
+      await oldWorker;
+      expect(store.has(control.blockedKey)).toBe(true);
+      control.blockedDeletes.clear();
+      await processMediaJob(db, id);
+      const expected = new Set([key, ...current.map((variant) => variant.storageKey)]);
+      expect([...store.keys()].filter((path) => path.includes(id)).sort()).toEqual([...expected].sort());
+      expect((await getMediaProcessing(db, id)).state).toBe("ready");
+    } finally {
+      release();
+      control.blockedDeletes.clear();
+      await oldWorker;
+    }
   });
 });

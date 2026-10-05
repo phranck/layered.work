@@ -69,4 +69,9 @@ const prefix = `library-${randomUUID()}`;
     const [row] = await db.select().from(media).where(eq(media.id, id));
     expect(row?.slug).toBe(`${prefix}-0`);
   });
+  it("publishes files named only by an overview introduction", async () => {
+    const db = await testDatabase();
+    const snapshot = await publicMedia(db, [], [`Image("${prefix}-0")`]);
+    expect(snapshot.media.map((asset) => asset.slug)).toEqual([`${prefix}-0`]);
+  });
 });

@@ -21,6 +21,7 @@ import { config } from "../config.js";
 import type { database } from "../db/connect.js";
 import { auditLog, media, settings, socialAccounts } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { replaceSettingMediaReferences } from "../media/references.js";
 
 type Database = ReturnType<typeof database>;
 
@@ -172,6 +173,9 @@ export async function saveSettings<Group extends SettingsGroup>(
       .insert(settings)
       .values({ key: group, value })
       .onConflictDoUpdate({ target: settings.key, set: { value } });
+
+    if (group === "postListing" || group === "projectListing")
+      await replaceSettingMediaReferences(tx, group, (value as ListingSettings).introduction);
 
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({

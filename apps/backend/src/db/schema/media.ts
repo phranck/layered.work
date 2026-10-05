@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   index,
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
@@ -14,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { identifier, instant } from "./columns.js";
 import { imageFormat, language, mediaKind } from "./enums.js";
+import { settings } from "./site.js";
 
 /**
  * Every file the site serves, and the sizes derived from it.
@@ -211,4 +214,29 @@ export const mediaDeletions = pgTable("media_deletions", {
   errorId: uuid("error_id"),
   nextAttemptAt: instant("next_attempt_at"),
   createdAt: instant("created_at"),
+});
+
+/** Listing introductions are published content and protect their named files too. */
+export const settingMediaReferences = pgTable(
+  "setting_media_references",
+  {
+    settingsKey: text("settings_key")
+      .notNull()
+      .references(() => settings.key, { onDelete: "cascade" }),
+    language: language().notNull(),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
+  },
+  (table) => [primaryKey({ columns: [table.settingsKey, table.language, table.mediaId] })],
+);
+
+/** Each generation keeps its keys independently until publication or confirmed cleanup. */
+export const mediaAttempts = pgTable("media_attempts", {
+  token: uuid().primaryKey(),
+  mediaId: uuid("media_id").notNull(),
+  objectKeys: text("object_keys").array().notNull().default(sql`'{}'::text[]`),
+  cleanupReady: boolean("cleanup_ready").notNull().default(false),
+  nextAttemptAt: instant("next_attempt_at"),
+  errorId: uuid("error_id"),
 });

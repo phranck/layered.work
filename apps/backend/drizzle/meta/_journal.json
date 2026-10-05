@@ -113,6 +113,20 @@
       "when": 1791227714400,
       "tag": "0015_parched_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791228849152,
+      "tag": "0016_brown_puppet_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791229013216,
+      "tag": "0017_watery_earthquake",
+      "breakpoints": true
     }
   ]
 }

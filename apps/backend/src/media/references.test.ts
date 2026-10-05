@@ -10,12 +10,13 @@ import {
   mediaJobs,
   mediaReferences,
   mediaVariants,
+  settings,
   users,
 } from "../db/schema/index.js";
 import { createTranslation, saveEntry } from "../entries/repository.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { getMediaDetail, listMedia } from "./library.js";
-import { referencedMediaIds } from "./references.js";
+import { referencedMediaIds, replaceSettingMediaReferences } from "./references.js";
 
 const storage = vi.hoisted(() => ({ keys: new Set<string>(), failOnce: "" }));
 vi.mock("./storage.js", () => ({
@@ -28,7 +29,12 @@ vi.mock("./storage.js", () => ({
   },
 }));
 const { deleteMedia } = await import("./deletion.js");
-const owned = { media: [] as string[], entries: [] as string[], users: [] as string[] };
+const owned = {
+  media: [] as string[],
+  entries: [] as string[],
+  users: [] as string[],
+  settings: [] as string[],
+};
 async function fixture() {
   const db = await testDatabase();
   const id = randomUUID();
@@ -108,6 +114,7 @@ it.each([
     const db = await testDatabase();
     if (owned.entries.length) await db.delete(entries).where(inArray(entries.id, owned.entries));
     if (owned.users.length) await db.delete(users).where(inArray(users.id, owned.users));
+    if (owned.settings.length) await db.delete(settings).where(inArray(settings.key, owned.settings));
     if (owned.media.length) {
       await db.delete(media).where(inArray(media.id, owned.media));
       await db.delete(mediaDeletions).where(inArray(mediaDeletions.mediaId, owned.media));
@@ -190,5 +197,21 @@ it.each([
     });
     expect(storage.keys.has(`test/${id}-variant`)).toBe(false);
     expect(storage.keys.has(`test/${other}`)).toBe(true);
+  });
+  it("protects both languages of a listing introduction until its real uses are removed", async () => {
+    const { db, id } = await fixture();
+    const key = `owned-${randomUUID()}`;
+    owned.settings.push(key);
+    await db.insert(settings).values({ key, value: {} });
+    await db.transaction((tx) =>
+      replaceSettingMediaReferences(tx, key, { en: `Image("reference-${id}")`, de: `![Bild](/test/${id})` }),
+    );
+    expect((await getMediaDetail(db, id)).uses.map((use) => use.language).sort()).toEqual(["de", "en"]);
+    expect(
+      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, unused: true })).items,
+    ).toEqual([]);
+    await expect(deleteMedia(db, id)).rejects.toThrow(/Listing introduction/);
+    await db.transaction((tx) => replaceSettingMediaReferences(tx, key, { en: "", de: "" }));
+    expect(await deleteMedia(db, id)).toMatchObject({ cleanupState: "ready", removedObjects: 2 });
   });
 });

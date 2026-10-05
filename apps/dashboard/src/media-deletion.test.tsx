@@ -79,3 +79,18 @@ it("links the site sharing image to the registered settings route", () => {
   });
   expect(screen.getByRole("link", { name: "Bild für Social Cards" }).getAttribute("href")).toBe("/settings");
 });
+it("links a listing introduction to its overview", () => {
+  show({
+    ...detail,
+    uses: [
+      {
+        id: detail.id,
+        title: "Post introduction",
+        language: "de",
+        kind: "settings",
+        settingsGroup: "postListing",
+      },
+    ],
+  });
+  expect(screen.getByRole("link", { name: "Einleitung: Beiträge (DE)" }).getAttribute("href")).toBe("/posts");
+});

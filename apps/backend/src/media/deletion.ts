@@ -3,7 +3,14 @@ import { ErrorCode, type MediaDeletionResult } from "@layered/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
-import { auditLog, media, mediaDeletions, mediaJobs, mediaVariants } from "../db/schema/index.js";
+import {
+  auditLog,
+  media,
+  mediaAttempts,
+  mediaDeletions,
+  mediaJobs,
+  mediaVariants,
+} from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { getMediaUses } from "./library.js";
@@ -94,7 +101,17 @@ export async function deleteMedia(
       .from(mediaVariants)
       .where(eq(mediaVariants.mediaId, id));
     const keys = [
-      ...new Set([file.storageKey, ...variants.map((variant) => variant.key), ...(job?.objectKeys ?? [])]),
+      ...new Set([
+        file.storageKey,
+        ...variants.map((variant) => variant.key),
+        ...(job?.objectKeys ?? []),
+        ...(
+          await tx
+            .select({ keys: mediaAttempts.objectKeys })
+            .from(mediaAttempts)
+            .where(eq(mediaAttempts.mediaId, id))
+        ).flatMap((attempt) => attempt.keys),
+      ]),
     ];
     await tx.insert(mediaDeletions).values({ mediaId: id, pendingKeys: keys });
     await tx.delete(media).where(eq(media.id, id));

@@ -18,11 +18,23 @@ export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
       {!uses.length && <p>{text("mediaUnused")}</p>}
       <ul>
         {uses.map((use) => (
-          <li key={`${use.kind}-${use.id}`}>
+          <li key={`${use.kind}-${use.id}-${use.language}-${use.settingsGroup ?? ""}`}>
             {use.kind === "account" ? (
               `${use.title} (${text("account")})`
             ) : use.kind === "settings" ? (
-              <a href="/settings">{text("socialImage")}</a>
+              <a
+                href={
+                  use.settingsGroup === "postListing"
+                    ? "/posts"
+                    : use.settingsGroup === "projectListing"
+                      ? "/projects"
+                      : "/settings"
+                }
+              >
+                {use.settingsGroup === "postListing" || use.settingsGroup === "projectListing"
+                  ? `${text("mediaListingIntroduction", text(use.settingsGroup === "postListing" ? "posts" : "projects"))} (${use.language.toUpperCase()})`
+                  : text("socialImage")}
+              </a>
             ) : (
               <a href={`/${ENTRY_AREA[use.kind]}/${use.id}`}>
                 {use.title} ({use.language.toUpperCase()})

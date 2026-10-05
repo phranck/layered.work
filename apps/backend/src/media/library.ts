@@ -21,6 +21,7 @@ import {
   mediaJobs,
   mediaReferences,
   mediaTranslations,
+  settingMediaReferences,
   settings,
   users,
 } from "../db/schema/index.js";
@@ -108,6 +109,20 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
     .from(settings)
     .where(and(eq(settings.key, "site"), sql`${settings.value}->>'socialImageMediaId' = ${id}`));
   if (sharing.length) uses.push({ id, title: "Site sharing image", language: "en", kind: "settings" });
+  const introductions = await db
+    .select({ key: settingMediaReferences.settingsKey, language: settingMediaReferences.language })
+    .from(settingMediaReferences)
+    .where(eq(settingMediaReferences.mediaId, id));
+  for (const introduction of introductions)
+    uses.push({
+      id,
+      kind: "settings",
+      language: introduction.language,
+      title: `${introduction.key === "postListing" ? "Post" : introduction.key === "projectListing" ? "Project" : "Listing"} introduction`,
+      ...(introduction.key === "postListing" || introduction.key === "projectListing"
+        ? { settingsGroup: introduction.key }
+        : {}),
+    });
   return uses;
 }
 export async function getMediaDetail(db: Database, id: string): Promise<MediaDetail> {

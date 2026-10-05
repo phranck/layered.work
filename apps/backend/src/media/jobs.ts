@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { media, mediaJobs, mediaVariants } from "../db/schema/index.js";
+import { media, mediaAttempts, mediaJobs, mediaVariants } from "../db/schema/index.js";
 import { logger } from "../logger.js";
+import { processMediaAttemptCleanup, settleMediaAttempt } from "./attempts.js";
 import { deleteMediaObject, readMediaBytes, writeMediaBytes } from "./storage.js";
 import { deriveImageVariants } from "./variants.js";
 
@@ -31,11 +32,16 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
       .update(mediaJobs)
       .set({ state: "processing", claimToken: token, leaseExpiresAt: lease(), errorId: null })
       .where(eq(mediaJobs.mediaId, candidate.mediaId));
+    await tx.insert(mediaAttempts).values({ token, mediaId: candidate.mediaId });
     return candidate;
   });
-  if (!job) return false;
+  if (!job) {
+    await processMediaAttemptCleanup(db, id);
+    return false;
+  }
   const owned = and(eq(mediaJobs.mediaId, job.mediaId), eq(mediaJobs.claimToken, token));
   const keys: string[] = [];
+  let published = false;
   const heartbeat = setInterval(() => {
     void db
       .update(mediaJobs)
@@ -70,15 +76,20 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
       storageKey: `variants/${job.mediaId}/${token}/${createHash("sha256").update(variant.bytes).digest("hex")}.${variant.format}`,
     }));
     keys.push(...variants.map(({ storageKey }) => storageKey));
-    const reserved = await db
-      .update(mediaJobs)
-      .set({ objectKeys: keys, leaseExpiresAt: lease() })
-      .where(owned)
-      .returning();
+    const reserved = await db.transaction(async (tx) => {
+      const current = await tx
+        .update(mediaJobs)
+        .set({ objectKeys: keys, leaseExpiresAt: lease() })
+        .where(owned)
+        .returning();
+      if (current.length)
+        await tx.update(mediaAttempts).set({ objectKeys: keys }).where(eq(mediaAttempts.token, token));
+      return current;
+    });
     if (!reserved.length) return true;
     for (const variant of variants)
       await writeMediaBytes(variant.storageKey, variant.bytes, `image/${variant.format}`);
-    const published = await db.transaction(async (tx) => {
+    published = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(mediaJobs).where(owned).for("update");
       if (!current) return false;
       if (variants.length)
@@ -91,26 +102,11 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
         );
       await tx.update(media).set({ placeholder: result.placeholder }).where(eq(media.id, job.mediaId));
       await tx.update(mediaJobs).set({ state: "ready", leaseExpiresAt: null }).where(owned);
+      await tx.delete(mediaAttempts).where(eq(mediaAttempts.token, token));
       return true;
     });
-    if (!published) for (const key of keys) await deleteMediaObject(key);
   } catch (cause) {
     const errorId = randomUUID();
-    try {
-      for (const key of keys) await deleteMediaObject(key);
-    } catch {
-      logger.error(
-        {
-          code: "media_cleanup_failed",
-          errorId,
-          operation: "media.processing",
-          mediaId: job.mediaId,
-          status: 500,
-          result: "objects_retained",
-        },
-        "media cleanup failed",
-      );
-    }
     await db.update(mediaJobs).set({ state: "failed", errorId, leaseExpiresAt: null }).where(owned);
     logger.error(
       {
@@ -126,6 +122,7 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
     );
   } finally {
     clearInterval(heartbeat);
+    if (!published) await settleMediaAttempt(db, token);
   }
   return true;
 }

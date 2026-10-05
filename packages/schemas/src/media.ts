@@ -155,6 +155,7 @@ export const mediaUse = z.object({
   title: z.string(),
   language: z.enum(["en", "de"]),
   kind: z.enum(["post", "page", "project", "account", "settings"]),
+  settingsGroup: z.enum(["site", "postListing", "projectListing"]).optional(),
 });
 export const mediaDetail = mediaLibraryItem.extend({
   translations: mediaDescriptions,
