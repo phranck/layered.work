@@ -1,9 +1,16 @@
 import { CompletionContext } from "@codemirror/autocomplete";
 import { ensureSyntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { COMPONENT_NAMES, components, SPACE_STEPS } from "@layered/content";
-import { describe, expect, it } from "vitest";
-import { contentCompletions } from "./content-completion.js";
+import type { MediaKind } from "@layered/schemas";
+import { describe, expect, it, vi } from "vitest";
+import {
+  contentCompletions,
+  type LibraryFile,
+  libraryCompletions,
+  type MediaLibrary,
+} from "./content-completion.js";
 import { contentLanguage } from "./content-editor.js";
 
 /**
@@ -99,5 +106,109 @@ describe("values", () => {
 
   it("of text are not offered, because text is the author's own", () => {
     expect(offered("Note(title: |")).toBeNull();
+  });
+});
+
+describe("files from the media library", () => {
+  /** Two pictures, newest first, and a model, as the library would answer. */
+  const FILES: LibraryFile[] = [
+    { slug: "newest-picture", kind: "image", url: "/media/1/content" },
+    { slug: "older-picture", kind: "image", url: "/media/2/content" },
+    { slug: "soundbox", kind: "model", url: null },
+  ];
+
+  /** A library that answers with the files of the kind it is asked for, and records every question. */
+  function library(uploaded: string | null = null) {
+    const asked: [MediaKind, string][] = [];
+    const uploads: MediaKind[] = [];
+    const source: MediaLibrary = {
+      search: async (kind, query) => {
+        asked.push([kind, query]);
+        return FILES.filter((file) => file.kind === kind);
+      },
+      upload: async (kind) => {
+        uploads.push(kind);
+        return uploaded;
+      },
+      uploadLabel: () => "Upload…",
+    };
+    return { source, asked, uploads };
+  }
+
+  /** What the library source offers with the cursor where the bar stands. */
+  function offeredFiles(textWithCursor: string, source: MediaLibrary) {
+    const position = textWithCursor.indexOf("|");
+    const state = EditorState.create({
+      doc: textWithCursor.replace("|", ""),
+      extensions: [contentLanguage()],
+    });
+    return libraryCompletions(source)(new CompletionContext(state, position, false));
+  }
+
+  /** A surface holding `Image("ne)` with the cursor after what has been typed. */
+  function typingImage(): EditorView {
+    return new EditorView({
+      parent: document.body,
+      state: EditorState.create({
+        doc: 'Image("ne)',
+        selection: { anchor: 9 },
+        extensions: [contentLanguage()],
+      }),
+    });
+  }
+
+  it("lists only pictures inside Image's quotes, as the library orders them, with the upload last", async () => {
+    const { source, asked } = library();
+    const result = await offeredFiles('Image("|', source);
+    expect(result?.options.map((option) => option.label)).toEqual([
+      "newest-picture",
+      "older-picture",
+      "Upload…",
+    ]);
+    expect(result?.filter).toBe(false);
+    expect(asked).toEqual([["image", ""]]);
+  });
+
+  it("lists only models inside Model's quotes, and offers no upload the library would refuse", async () => {
+    const { source, asked } = library();
+    const result = await offeredFiles('Model("|', source);
+    expect(result?.options.map((option) => option.label)).toEqual(["soundbox"]);
+    expect(asked).toEqual([["model", ""]]);
+  });
+
+  it("asks for what has been typed, and for the kind a named parameter takes", async () => {
+    const { source, asked } = library();
+    await offeredFiles('Model("soundbox", poster: "old|', source);
+    expect(asked).toEqual([["image", "old"]]);
+  });
+
+  it("offers nothing in the quotes of a parameter that names no file", async () => {
+    const { source, asked } = library();
+    expect(await offeredFiles('Image("front", caption: "The |', source)).toBeNull();
+    expect(asked).toEqual([]);
+  });
+
+  it("inserts the slug, never a path, and closes the quotes", async () => {
+    const { source } = library();
+    const view = typingImage();
+    const result = await libraryCompletions(source)(new CompletionContext(view.state, 9, false));
+    const option = result?.options[0];
+    if (!result || typeof option?.apply !== "function") throw new Error("Missing entry");
+    option.apply(view, option, result.from, 9);
+    expect(view.state.doc.toString()).toBe('Image("newest-picture")');
+    expect(view.state.selection.main.head).toBe('Image("newest-picture"'.length);
+    view.destroy();
+  });
+
+  it("uploads from the list and leaves the new file's slug where the author was typing", async () => {
+    const { source, uploads } = library("fresh-upload");
+    const view = typingImage();
+    const result = await libraryCompletions(source)(new CompletionContext(view.state, 9, false));
+    const upload = result?.options.at(-1);
+    if (!result || typeof upload?.apply !== "function") throw new Error("Missing upload");
+    upload.apply(view, upload, result.from, 9);
+    await vi.waitFor(() => expect(view.state.doc.toString()).toBe('Image("fresh-upload")'));
+    expect(uploads).toEqual(["image"]);
+    view.destroy();
   });
 });

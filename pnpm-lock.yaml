@@ -236,6 +236,9 @@ importers:
 
   packages/content:
     dependencies:
+      '@layered/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@layered/tokens':
         specifier: workspace:*
         version: link:../tokens

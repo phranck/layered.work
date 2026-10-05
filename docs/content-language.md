@@ -152,7 +152,7 @@ Takes no body. Rendered by `Figure`.
 
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
-| `slug` (required) | Which picture. | the name of a file in the media library, in quotes |  |
+| `slug` (required) | Which picture. | the name of a picture in the media library, in quotes |  |
 | `caption` | Shown beneath it. The library's own caption is used when this is absent. | text in quotes |  |
 | `alt` | What a screen reader says. The library's own, in this language, is used when this is absent. | text in quotes |  |
 
@@ -188,9 +188,9 @@ Takes no body. Rendered by `Model`.
 
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
-| `slug` (required) | Which model. | the name of a file in the media library, in quotes |  |
+| `slug` (required) | Which model. | the name of a model in the media library, in quotes |  |
 | `alt` (required) | What a screen reader says, since a model cannot be described by looking at it. | text in quotes |  |
-| `poster` | A library picture shown before the model loads. The entry's featured picture is used when absent. | the name of a file in the media library, in quotes |  |
+| `poster` | A library picture shown before the model loads. The entry's featured picture is used when absent. | the name of a picture in the media library, in quotes |  |
 | `caption` | Shown beneath it. | text in quotes |  |
 
 `slug` may be written first without its name.
@@ -207,8 +207,8 @@ Takes no body. Rendered by `Video`.
 
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
-| `slug` (required) | Which video. | the name of a file in the media library, in quotes |  |
-| `poster` | A picture to show before it plays. | the name of a file in the media library, in quotes |  |
+| `slug` (required) | Which video. | the name of a video in the media library, in quotes |  |
+| `poster` | A picture to show before it plays. | the name of a picture in the media library, in quotes |  |
 | `caption` | Shown beneath it. | text in quotes |  |
 
 `slug` may be written first without its name.
@@ -242,7 +242,7 @@ Takes no body. Rendered by `Document`.
 
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
-| `slug` (required) | Which document. | the name of a file in the media library, in quotes |  |
+| `slug` (required) | Which document. | the name of a document in the media library, in quotes |  |
 | `label` | What the link says. The file's own name otherwise. | text in quotes |  |
 
 `slug` may be written first without its name.
@@ -297,7 +297,7 @@ Needs a body. Rendered by `Card`.
 | --- | --- | --- | --- |
 | `title` | A heading for the card. | text in quotes |  |
 | `href` | Where the whole card leads, if anywhere. | text in quotes |  |
-| `image` | A picture across the top. | the name of a file in the media library, in quotes |  |
+| `image` | A picture across the top. | the name of a picture in the media library, in quotes |  |
 
 ```
 Card(title: "The enclosure", image: "enclosure") {

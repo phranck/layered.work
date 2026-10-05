@@ -5,8 +5,9 @@ import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/sea
 import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX, type Finding } from "@layered/content";
+import type { MediaKind } from "@layered/schemas";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
-import { contentAutocompletion } from "./content-completion.js";
+import { contentAutocompletion, type MediaLibrary } from "./content-completion.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 import { contentIndentation, reindentDocument } from "./content-indent.js";
 import { contentValidation } from "./content-lint.js";
@@ -115,6 +116,15 @@ const surfaceTheme = EditorView.theme(
       color: "var(--text-muted)",
     },
     ".cm-completionMatchedText": { textDecoration: "none", color: "var(--text-accent)" },
+    // A picture from the library, small enough to sit on the line of its name.
+    ".cm-completionThumbnail": {
+      width: "var(--space-6)",
+      height: "var(--space-6)",
+      marginRight: "var(--space-2)",
+      objectFit: "cover",
+      borderRadius: "var(--radius-chip)",
+      verticalAlign: "middle",
+    },
     ".cm-tooltip.cm-completionInfo": {
       maxWidth: "28em",
       padding: "var(--space-2) var(--space-3)",
@@ -134,12 +144,13 @@ const surfaceTheme = EditorView.theme(
  * cursor is added with Alt and a click, or Mod-D on the next match.
  *
  * @param label - What the surface is called to assistive technology.
+ * @param library - The media library completion offers files from, where there is one.
  */
-function surfaceExtensions(label: string): Extension[] {
+function surfaceExtensions(label: string, library?: MediaLibrary): Extension[] {
   return [
     contentLanguage(),
     contentHighlighting(),
-    contentAutocompletion(),
+    contentAutocompletion(library),
     contentIndentation(),
     tableSync(),
     history(),
@@ -193,6 +204,12 @@ export interface ContentEditorProps {
   onChange: (value: string) => void;
   /** What the surface is called to assistive technology. */
   label: string;
+  /**
+   * The media library, which completes the quotes of a file parameter. Whether
+   * there is one is read when the surface is created; what it answers is read
+   * each time it is asked.
+   */
+  library?: MediaLibrary;
 }
 
 /**
@@ -204,7 +221,14 @@ export interface ContentEditorProps {
  * replaces the document; a `value` that is only the echo of the author's own
  * typing is recognised and left alone, so the cursor does not jump.
  */
-export function ContentEditor({ value, onChange, label, editorRef, onValidation }: ContentEditorProps) {
+export function ContentEditor({
+  value,
+  onChange,
+  label,
+  editorRef,
+  onValidation,
+  library,
+}: ContentEditorProps) {
   const { language } = useDashboardLanguage();
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -291,8 +315,14 @@ export function ContentEditor({ value, onChange, label, editorRef, onValidation 
   const validated = useEffectEvent((checked: CheckedContent) => onValidation?.(checked));
   const message = useEffectEvent((finding: Finding) => findingMessage(finding, language));
   const changed = useEffectEvent((text: string) => onChange(text));
+  const searchLibrary = useEffectEvent(
+    (kind: MediaKind, query: string) => library?.search(kind, query) ?? Promise.resolve([]),
+  );
+  const uploadToLibrary = useEffectEvent((kind: MediaKind) => library?.upload(kind) ?? Promise.resolve(null));
+  const libraryUploadLabel = useEffectEvent(() => library?.uploadLabel() ?? "");
   const initialValue = useRef(value);
   const initialLabel = useRef(label);
+  const hasLibrary = useRef(library !== undefined);
 
   useEffect(() => {
     if (!host.current) return;
@@ -301,7 +331,16 @@ export function ContentEditor({ value, onChange, label, editorRef, onValidation 
       state: EditorState.create({
         doc: initialValue.current,
         extensions: [
-          surfaceExtensions(initialLabel.current),
+          surfaceExtensions(
+            initialLabel.current,
+            hasLibrary.current
+              ? {
+                  search: (kind, query) => searchLibrary(kind, query),
+                  upload: (kind) => uploadToLibrary(kind),
+                  uploadLabel: () => libraryUploadLabel(),
+                }
+              : undefined,
+          ),
           contentValidation(
             (checked) => validated(checked),
             (finding) => message(finding),

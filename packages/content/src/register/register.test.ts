@@ -1,3 +1,4 @@
+import { MEDIA_KINDS } from "@layered/schemas";
 import { SPACE_STEPS, STATUS_TONES } from "@layered/tokens";
 import { describe, expect, it } from "vitest";
 import { validateContent } from "../validate/validate.js";
@@ -117,6 +118,14 @@ describe("every entry", () => {
 });
 
 describe("where the values come from", () => {
+  it("names the kind of library file each file parameter takes", () => {
+    const files = Object.values(components as Register).flatMap((definition) =>
+      Object.values(definition.parameters).filter((parameter) => parameter.kind === "slug"),
+    );
+    expect(files.length).toBeGreaterThan(0);
+    for (const parameter of files) expect(MEDIA_KINDS).toContain(parameter.media);
+  });
+
   it("offers the space scale's steps rather than a list of its own", () => {
     // The acceptance this register was written against. A step added to
     // `scale.css` has to reach an author with nothing else edited.

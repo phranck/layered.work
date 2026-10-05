@@ -8,7 +8,7 @@ import {
   type SaveMediaMetadataBody,
   saveMediaMetadataBody,
 } from "@layered/schemas";
-import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
@@ -31,6 +31,15 @@ import { unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
 const PAGE_SIZE = 24;
+/**
+ * What each order sorts by. The id comes last in both, so two files with the same
+ * slug or the same upload time fall on the same side of a page boundary on every
+ * request.
+ */
+const ORDERING = {
+  slug: [asc(media.slug), asc(media.id)],
+  newest: [desc(media.uploadedAt), asc(media.id)],
+} as const;
 const rasterTypes = new Set<string>(ACCEPTED_IMAGE_TYPES);
 const selection = {
   id: media.id,
@@ -75,7 +84,7 @@ export async function listMedia(db: Database, query: MediaLibraryQuery): Promise
         query.unused ? unusedMedia() : undefined,
       ),
     )
-    .orderBy(asc(media.slug), asc(media.id))
+    .orderBy(...ORDERING[query.order])
     .limit(PAGE_SIZE + 1)
     .offset((query.page - 1) * PAGE_SIZE);
   return { items: rows.slice(0, PAGE_SIZE).map(item), page: query.page, hasMore: rows.length > PAGE_SIZE };

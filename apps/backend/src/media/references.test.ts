@@ -136,12 +136,19 @@ it.each([
     await expect(deleteMedia(db, id)).rejects.toThrow(/Owned original/);
     expect(storage.keys.has(`test/${id}`)).toBe(true);
     expect(
-      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, unused: true })).items,
+      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, order: "slug", unused: true }))
+        .items,
     ).toEqual([]);
     expect(
-      (await listMedia(db, { search: `reference-${other}`, kind: "all", page: 1, unused: true })).items.map(
-        (item) => item.id,
-      ),
+      (
+        await listMedia(db, {
+          search: `reference-${other}`,
+          kind: "all",
+          page: 1,
+          order: "slug",
+          unused: true,
+        })
+      ).items.map((item) => item.id),
     ).toEqual([other]);
     await saveEntry(db, translation, { ...value, body: "The file is no longer named." }, actor);
     expect(await deleteMedia(db, id)).toMatchObject({
@@ -167,7 +174,8 @@ it.each([
     await db.update(users).set({ avatarMediaId: id }).where(eq(users.id, actor));
     await expect(deleteMedia(db, id)).rejects.toThrow(/Fixture owner/);
     expect(
-      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, unused: true })).items,
+      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, order: "slug", unused: true }))
+        .items,
     ).toEqual([]);
     await db.update(users).set({ avatarMediaId: null }).where(eq(users.id, actor));
     await db
@@ -208,7 +216,8 @@ it.each([
     );
     expect((await getMediaDetail(db, id)).uses.map((use) => use.language).sort()).toEqual(["de", "en"]);
     expect(
-      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, unused: true })).items,
+      (await listMedia(db, { search: `reference-${id}`, kind: "all", page: 1, order: "slug", unused: true }))
+        .items,
     ).toEqual([]);
     await expect(deleteMedia(db, id)).rejects.toThrow(/Listing introduction/);
     await db.transaction((tx) => replaceSettingMediaReferences(tx, key, { en: "", de: "" }));
