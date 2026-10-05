@@ -26,6 +26,10 @@ export function referencedMediaIds(body: string, assets: readonly Asset[]): stri
   );
   function walk(nodes: readonly RenderNode[]) {
     for (const node of nodes) {
+      if (node.kind === "component" && typeof node.props.href === "string") {
+        const id = keys.get(node.props.href.split(/[?#]/, 1)[0] ?? "");
+        if (id) found.add(id);
+      }
       if (node.kind === "element") {
         const target =
           node.tag === "a" ? node.attributes.href : node.tag === "img" ? node.attributes.src : undefined;

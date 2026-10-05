@@ -20,9 +20,9 @@ export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
         {uses.map((use) => (
           <li key={`${use.kind}-${use.id}`}>
             {use.kind === "account" ? (
-              `${use.title} (${text("accountAvatar")})`
+              `${use.title} (${text("account")})`
             ) : use.kind === "settings" ? (
-              <a href="/settings/site">{text("socialImage")}</a>
+              <a href="/settings">{text("socialImage")}</a>
             ) : (
               <a href={`/${ENTRY_AREA[use.kind]}/${use.id}`}>
                 {use.title} ({use.language.toUpperCase()})

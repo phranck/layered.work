@@ -95,6 +95,14 @@ it("resolves Markdown destinations and nested components, excluding captions, co
     ),
   ).toEqual(["a"]);
 });
+it.each([
+  'Button("Download", href: "/migration/picture.png")',
+  'Card(href: "/media/picture.png") {\n  Read this file.\n}',
+])("indexes a rendered component link: %s", (body) => {
+  expect(
+    referencedMediaIds(body, [{ id: "a", slug: "picture", storageKey: "migration/picture.png" }]),
+  ).toEqual(["a"]);
+});
 (hasTestDatabase ? describe : describe.skip)("reference index and protected deletion", () => {
   afterAll(async () => {
     const db = await testDatabase();

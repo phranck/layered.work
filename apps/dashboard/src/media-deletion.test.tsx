@@ -72,3 +72,10 @@ it("names and links a referencing entry and disables deletion", () => {
   expect(screen.getByRole("button", { name: "Datei löschen" }).hasAttribute("disabled")).toBe(true);
   expect(remove).not.toHaveBeenCalled();
 });
+it("links the site sharing image to the registered settings route", () => {
+  show({
+    ...detail,
+    uses: [{ id: detail.id, title: "Site sharing image", language: "en", kind: "settings" }],
+  });
+  expect(screen.getByRole("link", { name: "Bild für Social Cards" }).getAttribute("href")).toBe("/settings");
+});
