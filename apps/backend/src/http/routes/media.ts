@@ -4,6 +4,7 @@ import {
   completeUploadBody,
   createUploadBody,
   ErrorCode,
+  mediaProcessing,
   uploadedMedia,
   uploadReceived,
   uploadTicket,
@@ -13,6 +14,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { getMediaProcessing } from "../../media/processing.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
 import { readUploadToken } from "../../media/upload-token.js";
@@ -30,6 +32,14 @@ import { validate } from "../validate.js";
  * asked and only they may complete it.
  */
 export const media = new Hono();
+
+media.get(
+  "/:id/processing",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaProcessing),
+  async (c) => ok(c, await getMediaProcessing(database(), c.req.valid("param").id)),
+);
 
 media.post(
   "/uploads",

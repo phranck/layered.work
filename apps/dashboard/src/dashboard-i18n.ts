@@ -339,6 +339,10 @@ const de = {
   invalidListingText: "Eine Überschrift oder Einleitung ist zu lang.",
 
   // Media picker
+  mediaQueued: "Wartet auf Verarbeitung",
+  mediaProcessing: "Wird verarbeitet…",
+  mediaReady: "Bereit",
+  mediaFailed: "Verarbeitung fehlgeschlagen",
   mediaPicker: "Bild auswählen",
   mediaSearch: "Bilder durchsuchen",
   mediaEmpty: "Keine Bilder gefunden.",
@@ -691,6 +695,10 @@ const en: Catalogue = {
   invalidPreviewLength: `Preview length: a whole number from ${LISTING_BOUNDS.previewLength.min} to ${LISTING_BOUNDS.previewLength.max}.`,
   invalidListingText: "A headline or an introduction is too long.",
 
+  mediaQueued: "Waiting for processing",
+  mediaProcessing: "Processing…",
+  mediaReady: "Ready",
+  mediaFailed: "Processing failed",
   mediaPicker: "Choose a picture",
   mediaSearch: "Search pictures",
   mediaEmpty: "No pictures found.",

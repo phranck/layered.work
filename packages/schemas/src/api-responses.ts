@@ -59,6 +59,7 @@ const publicMedia = z.object({
   height: z.number().optional(),
   alt: z.string().optional(),
   srcSet: z.string().optional(),
+  placeholder: z.string().optional(),
 });
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
 export const publicSnapshot = z.object({

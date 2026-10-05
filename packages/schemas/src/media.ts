@@ -91,3 +91,20 @@ export const uploadedMedia = z.object({
 });
 
 export type UploadedMedia = z.infer<typeof uploadedMedia>;
+
+/** Processing state shared by the library and its detail view. */
+export const mediaProcessingState = z.enum(["queued", "processing", "ready", "failed"]);
+export const mediaProcessing = z.object({
+  state: mediaProcessingState,
+  errorId: z.uuid().nullable(),
+  variants: z.array(
+    z.object({
+      format: z.enum(["avif", "webp", "jpeg", "png"]),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      byteSize: z.number().int().positive(),
+      storageKey: z.string(),
+    }),
+  ),
+});
+export type MediaProcessing = z.infer<typeof mediaProcessing>;

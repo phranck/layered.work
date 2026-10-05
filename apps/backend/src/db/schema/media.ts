@@ -1,5 +1,17 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, index, integer, pgTable, real, text, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { identifier, instant } from "./columns.js";
 import { imageFormat, language, mediaKind } from "./enums.js";
 
@@ -172,3 +184,22 @@ export const mediaTranslations = pgTable(
     check("media_translations_says_something", sql`num_nonnulls(${table.altText}, ${table.caption}) > 0`),
   ],
 );
+
+/** Durable processing leases fence concurrent workers and survive service restarts. */
+export const mediaProcessingState = pgEnum("media_processing_state", [
+  "queued",
+  "processing",
+  "ready",
+  "failed",
+]);
+export const mediaJobs = pgTable("media_jobs", {
+  mediaId: uuid("media_id")
+    .primaryKey()
+    .references(() => media.id, { onDelete: "cascade" }),
+  state: mediaProcessingState().notNull().default("queued"),
+  claimToken: uuid("claim_token"),
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  objectKeys: text("object_keys").array().notNull().default(sql`'{}'::text[]`),
+  errorId: uuid("error_id"),
+  createdAt: instant("created_at"),
+});

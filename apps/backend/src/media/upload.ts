@@ -11,7 +11,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
-import { auditLog, media } from "../db/schema/index.js";
+import { auditLog, media, mediaJobs } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { deleteMediaObject, readMediaBytes, uploadTarget } from "./storage.js";
@@ -189,13 +189,15 @@ export async function completeUpload(
         })
         .onConflictDoNothing({ target: media.slug })
         .returning({ id: media.id, slug: media.slug });
-      if (created)
+      if (created) {
+        await tx.insert(mediaJobs).values({ mediaId: created.id });
         await tx.insert(auditLog).values({
           ...auditActor(userId, actorTokenId),
           action: "media.uploaded",
           subjectType: "media",
           subjectId: created.id,
         });
+      }
       return created;
     });
     if (row) {

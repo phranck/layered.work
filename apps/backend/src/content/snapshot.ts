@@ -108,6 +108,7 @@ export interface PublicMedia {
   height?: number;
   alt?: string;
   srcSet?: string;
+  placeholder?: string;
 }
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -192,6 +193,7 @@ export async function publicMedia(
       width: media.width,
       height: media.height,
       altText: mediaTranslations.altText,
+      placeholder: media.placeholder,
     })
     .from(media)
     .leftJoin(
@@ -239,6 +241,7 @@ export async function publicMedia(
           ...(asset.height === null ? {} : { height: asset.height }),
           ...(asset.altText ? { alt: asset.altText } : {}),
           ...(srcSet ? { srcSet } : {}),
+          ...(asset.placeholder ? { placeholder: asset.placeholder } : {}),
         };
       }),
   };

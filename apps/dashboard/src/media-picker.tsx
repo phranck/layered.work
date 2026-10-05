@@ -8,6 +8,13 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 
+const PROCESSING_LABEL = {
+  queued: "mediaQueued",
+  processing: "mediaProcessing",
+  ready: "mediaReady",
+  failed: "mediaFailed",
+} as const;
+
 export function MediaPicker({
   onCancel,
   onChoose,
@@ -24,6 +31,12 @@ export function MediaPicker({
     queryKey: ["account-media", query, page],
     queryFn: () => api.fetchAccountMedia(query, page),
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.items.some(
+        (item) => item.processingState === "queued" || item.processingState === "processing",
+      )
+        ? 2_000
+        : false,
   });
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -65,6 +78,7 @@ export function MediaPicker({
               >
                 <img src={item.url} alt="" loading="lazy" />
                 <span>{item.slug}</span>
+                <small>{text(PROCESSING_LABEL[item.processingState ?? "ready"])}</small>
               </button>
             ))}
           </div>
