@@ -207,10 +207,10 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 <dd>
                   <code>{selected.sourceHash ?? w.unknown}</code>
                 </dd>
-                {form.fields.map((field) => (
-                  <div key={field.key} className="submissions-detail__field">
-                    <dt>{field.label[language]}</dt>
-                    <dd>{displayValue(selected.values[field.key])}</dd>
+                {Object.entries(selected.values).map(([key, value]) => (
+                  <div key={key} className="submissions-detail__field">
+                    <dt>{form.fields.find((field) => field.key === key)?.label[language] ?? key}</dt>
+                    <dd>{displayValue(value)}</dd>
                   </div>
                 ))}
                 {selected.consents.map((consent) => (

@@ -74,19 +74,20 @@ export async function deleteFormSubmission(
 
 /** Semicolon CSV opens in German spreadsheet locales; dangerous formulas stay text. */
 export function submissionsCsv(fields: string[], rows: FormSubmission[]): string {
+  const columns = [...new Set([...fields, ...rows.flatMap((row) => Object.keys(row.values))])];
   const cell = (value: string): string => {
     const safe = /^[\t\r\n ]*[=+\-@]/u.test(value) ? `'${value}` : value;
     return `"${safe.replaceAll('"', '""')}"`;
   };
   const line = (values: string[]) => values.map(cell).join(";");
-  const header = line(["id", "submittedAt", "status", "sourceHash", ...fields, "consents"]);
+  const header = line(["id", "submittedAt", "status", "sourceHash", ...columns, "consents"]);
   const body = rows.map((row) =>
     line([
       row.id,
       row.createdAt,
       row.status,
       row.sourceHash ?? "",
-      ...fields.map((key) => {
+      ...columns.map((key) => {
         const value = row.values[key];
         return Array.isArray(value) ? value.join(", ") : (value ?? "");
       }),
