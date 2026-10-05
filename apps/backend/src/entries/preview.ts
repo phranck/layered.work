@@ -3,10 +3,18 @@ import { type EntryPreview, ErrorCode, type PreviewEntryBody } from "@layered/sc
 import { and, eq, lt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
+import { auditActor } from "../auth/audit-actor.js";
 import { sameSignature } from "../auth/signature.js";
 import { config, sessionSecret } from "../config.js";
 import { type PublicSnapshot, publicForms, publicMedia, publicTopics } from "../content/snapshot.js";
-import { entries, entryPreviews, entryTopics, entryTranslations, paths } from "../db/schema/index.js";
+import {
+  auditLog,
+  entries,
+  entryPreviews,
+  entryTopics,
+  entryTranslations,
+  paths,
+} from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readListingSettings } from "../settings/repository.js";
 
@@ -99,6 +107,7 @@ export async function createPreview(
   value: PreviewEntryBody,
   actorUserId: string,
   now = Date.now(),
+  actorTokenId?: string,
 ): Promise<EntryPreview> {
   const expiresAt = new Date(now + PREVIEW_LIFETIME_MS);
   const previewId = await db.transaction(async (tx) => {
@@ -115,6 +124,12 @@ export async function createPreview(
       .values({ translationId, ...value, createdBy: actorUserId, expiresAt })
       .returning({ id: entryPreviews.id });
     if (!row) throw new Error("The preview was not written.");
+    await tx.insert(auditLog).values({
+      ...auditActor(actorUserId, actorTokenId),
+      action: "entry.previewed",
+      subjectType: "entry_translations",
+      subjectId: translationId,
+    });
     return row.id;
   });
 

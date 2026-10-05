@@ -12,6 +12,13 @@
     "./*": "./src/*"
   },
   "scripts": {
+    "test": "node --conditions=development --import tsx --test src/*.test.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@layered/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
   }
 }

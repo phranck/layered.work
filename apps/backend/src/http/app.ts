@@ -1,19 +1,23 @@
-import { ErrorCode } from "@layered/schemas";
+import { ErrorCode, openApiDocument } from "@layered/schemas";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { MAX_BODY_BYTES } from "../config.js";
 import { logger } from "../logger.js";
+import { responds } from "./api-metadata.js";
 import { corsForInterfaces, safetyHeaders } from "./headers.js";
 import { health } from "./health.js";
+import { generateOpenApi } from "./openapi.js";
 import { requestId } from "./request-id.js";
 import { fail, INTERNAL_MESSAGE, statusFor } from "./response.js";
+import { accessTokenRoutes } from "./routes/access-tokens.js";
 import { account } from "./routes/account.js";
 import { auth } from "./routes/auth.js";
 import { content } from "./routes/content.js";
 import { dashboard } from "./routes/dashboard.js";
 import { entriesRoutes } from "./routes/entries.js";
 import { formsRoutes } from "./routes/forms.js";
+import { mailTemplateRoutes } from "./routes/mail-templates.js";
 import { LOCAL_UPLOAD_CONTENT, media } from "./routes/media.js";
 import { previewsRoutes } from "./routes/previews.js";
 import { publicFormsRoutes } from "./routes/public-forms.js";
@@ -74,6 +78,7 @@ app.use("*", async (c, next) => {
 app.route("/health", health);
 app.route("/auth", auth);
 app.route("/account", account);
+app.route("/access-tokens", accessTokenRoutes);
 app.route("/dashboard", dashboard);
 app.route("/entries", entriesRoutes);
 app.route("/forms", publicFormsRoutes);
@@ -81,9 +86,14 @@ app.route("/forms", formsRoutes);
 app.route("/search", searchRoutes);
 app.route("/topics", topicsRoutes);
 app.route("/settings", settingsRoutes);
+app.route("/mail-templates", mailTemplateRoutes);
 app.route("/media", media);
 app.route("/content", content);
 app.route("/previews", previewsRoutes);
+app.get("/openapi.json", responds(openApiDocument, { envelope: false }), (c) => {
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json(generateOpenApi(app.routes));
+});
 
 /** An address that is not here, in the same shape as every other failure. */
 app.notFound((c) => fail(c, ErrorCode.NotFound, "There is nothing at this address."));

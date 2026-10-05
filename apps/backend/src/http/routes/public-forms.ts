@@ -1,11 +1,21 @@
-import { ErrorCode, submitFormBody, validateFormValues } from "@layered/schemas";
+import {
+  ErrorCode,
+  formChallenge,
+  formSubmitted,
+  submitFormBody,
+  validateFormValues,
+} from "@layered/schemas";
 import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
-import { formSubmissions } from "../../db/schema/index.js";
+import { formSubmissions, mailJobs } from "../../db/schema/index.js";
 import { issueFormChallenge, verifyFormChallenge } from "../../forms/challenge.js";
 import { readFormBySlug } from "../../forms/repository.js";
 import { logger } from "../../logger.js";
+import { formMailValues } from "../../mail/notification.js";
+import { readMailTemplate, renderMailTemplate } from "../../mail/templates.js";
+import { responds } from "../api-metadata.js";
+import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -18,17 +28,23 @@ const slugParam = z.object({
 });
 export const publicFormsRoutes = new Hono();
 
-publicFormsRoutes.get("/:slug/challenge", validate("param", slugParam), async (c) => {
-  const { slug } = c.req.valid("param");
-  await readFormBySlug(database(), slug);
-  c.header("Cache-Control", "no-store");
-  return ok(c, { challenge: issueFormChallenge(slug) });
-});
+publicFormsRoutes.get(
+  "/:slug/challenge",
+  validate("param", slugParam),
+  responds(formChallenge),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    await readFormBySlug(database(), slug);
+    c.header("Cache-Control", "no-store");
+    return ok(c, { challenge: issueFormChallenge(slug) });
+  },
+);
 
 publicFormsRoutes.post(
   "/:slug/submissions",
   validate("param", slugParam),
   validate("json", submitFormBody),
+  responds(formSubmitted),
   async (c) => {
     const { slug } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -72,12 +88,62 @@ publicFormsRoutes.post(
       windowSeconds: 10,
       keys: (context) => [`${slug}:${byAddress(context)}`],
     });
-    if (form.storeSubmissions) {
-      await db.insert(formSubmissions).values({
-        formId: form.id,
-        values: checked.values,
-        consents: checked.consents,
-      });
+    const confirmationAddress = form.confirmationEmailField
+      ? checked.values[form.confirmationEmailField]
+      : null;
+    const notificationTemplate = form.notificationEmail
+      ? await readMailTemplate(db, "submission_notification")
+      : null;
+    const confirmationTemplate = confirmationAddress
+      ? await readMailTemplate(db, "submission_confirmation")
+      : null;
+    if (form.storeSubmissions || form.notificationEmail || confirmationAddress) {
+      try {
+        const mailValues = formMailValues(form, checked.values, body.language, checked.consents);
+        await db.transaction(async (tx) => {
+          const [submission] = form.storeSubmissions
+            ? await tx
+                .insert(formSubmissions)
+                .values({
+                  formId: form.id,
+                  values: checked.values,
+                  consents: checked.consents,
+                  sourceHash: sourceFingerprint(sourceAddress(c)),
+                })
+                .returning({ id: formSubmissions.id })
+            : [];
+          if (form.notificationEmail && notificationTemplate) {
+            const rendered = renderMailTemplate(notificationTemplate, body.language, mailValues);
+            await tx.insert(mailJobs).values({
+              formId: form.id,
+              submissionId: submission?.id,
+              recipient: form.notificationEmail,
+              subject: rendered.subject,
+              body: rendered.text,
+              htmlBody: rendered.html,
+            });
+          }
+          if (typeof confirmationAddress === "string" && confirmationAddress && confirmationTemplate) {
+            const rendered = renderMailTemplate(confirmationTemplate, body.language, mailValues);
+            await tx.insert(mailJobs).values({
+              formId: form.id,
+              submissionId: submission?.id,
+              recipient: confirmationAddress,
+              subject: rendered.subject,
+              body: rendered.text,
+              htmlBody: rendered.html,
+            });
+          }
+        });
+      } catch {
+        // A driver error may include SQL parameters with the recipient or
+        // submitted text. Keep its public and logged cause free of both.
+        throw new HttpError(
+          ErrorCode.Internal,
+          "The submission could not be saved.",
+          new Error("The form and mail job transaction failed."),
+        );
+      }
     }
     return ok(c, { successMessage: form.successMessage[body.language] });
   },

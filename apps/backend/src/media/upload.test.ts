@@ -1,13 +1,9 @@
-import { eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { eq, inArray, like } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { media } from "../db/schema/index.js";
-import {
-  closeTestDatabase,
-  emptyTestDatabase,
-  hasTestDatabase,
-  testDatabase,
-} from "../test-support/database.js";
+import { auditLog, media, users } from "../db/schema/index.js";
+import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { issueUploadToken } from "./upload-token.js";
 
 /**
@@ -36,7 +32,8 @@ const { completeUpload, slugStem } = await import("./upload.js");
 
 const runs = hasTestDatabase ? describe : describe.skip;
 
-const AUTHOR = "00000000-0000-4000-8000-000000000001";
+const suiteId = `upload-${randomUUID().slice(0, 8)}`;
+let authorId = "";
 
 let sequence = 0;
 
@@ -62,10 +59,10 @@ function upload(
     storageKey,
     token: issueUploadToken({
       storageKey,
-      slug: claims.slug ?? "portrait",
+      slug: `${suiteId}-${claims.slug ?? "portrait"}`,
       type: claims.type ?? "image/png",
       size: claims.size ?? bytes.length,
-      userId: AUTHOR,
+      userId: authorId,
     }),
   };
 }
@@ -82,7 +79,16 @@ describe("a file name, as a slug", () => {
 
 runs("checking an upload", () => {
   beforeAll(async () => {
-    await emptyTestDatabase();
+    const db = await testDatabase();
+    const [actor] = await db
+      .insert(users)
+      .values({
+        email: `${suiteId}@example.test`,
+        passwordHash: "test-only",
+        displayName: "Upload test",
+      })
+      .returning({ id: users.id });
+    authorId = actor?.id ?? "";
   });
 
   beforeEach(() => {
@@ -90,6 +96,18 @@ runs("checking an upload", () => {
   });
 
   afterAll(async () => {
+    const db = await testDatabase();
+    const created = await db
+      .select({ id: media.id })
+      .from(media)
+      .where(like(media.slug, `${suiteId}-%`));
+    if (created.length > 0) {
+      const ids = created.map((item) => item.id);
+      await db.delete(auditLog).where(inArray(auditLog.subjectId, ids));
+      await db.delete(media).where(inArray(media.id, ids));
+    }
+    if (authorId) await db.delete(users).where(eq(users.id, authorId));
+    stored.clear();
     await closeTestDatabase();
   });
 
@@ -97,9 +115,9 @@ runs("checking an upload", () => {
     const database = await testDatabase();
     const { token } = upload(await picture("png", 40, 30));
 
-    const result = await completeUpload(database, token, AUTHOR);
+    const result = await completeUpload(database, token, authorId);
 
-    expect(result).toMatchObject({ slug: "portrait", width: 40, height: 30, existing: false });
+    expect(result).toMatchObject({ slug: `${suiteId}-portrait`, width: 40, height: 30, existing: false });
     const [row] = await database.select().from(media).where(eq(media.id, result.id));
     expect(row?.mimeType).toBe("image/png");
   });
@@ -107,10 +125,10 @@ runs("checking an upload", () => {
   it("returns the existing picture for the same file, and keeps no second copy", async () => {
     const database = await testDatabase();
     const bytes = await picture("png");
-    const first = await completeUpload(database, upload(bytes).token, AUTHOR);
+    const first = await completeUpload(database, upload(bytes).token, authorId);
     const second = upload(bytes);
 
-    const result = await completeUpload(database, second.token, AUTHOR);
+    const result = await completeUpload(database, second.token, authorId);
 
     expect(result).toMatchObject({ id: first.id, existing: true });
     expect(removed).toContain(second.storageKey);
@@ -118,22 +136,22 @@ runs("checking an upload", () => {
 
   it("numbers the slug when the name is taken", async () => {
     const database = await testDatabase();
-    await completeUpload(database, upload(await picture("png"), { slug: "taken" }).token, AUTHOR);
+    await completeUpload(database, upload(await picture("png"), { slug: "taken" }).token, authorId);
 
     const result = await completeUpload(
       database,
       upload(await picture("png"), { slug: "taken" }).token,
-      AUTHOR,
+      authorId,
     );
 
-    expect(result.slug).toBe("taken-2");
+    expect(result.slug).toBe(`${suiteId}-taken-2`);
   });
 
   it("refuses a file that is not the type it was declared as, and removes it", async () => {
     const database = await testDatabase();
     const { token, storageKey } = upload(await picture("jpeg"), { type: "image/png" });
 
-    await expect(completeUpload(database, token, AUTHOR)).rejects.toThrow("not the picture");
+    await expect(completeUpload(database, token, authorId)).rejects.toThrow("not the picture");
     expect(removed).toContain(storageKey);
   });
 
@@ -141,7 +159,7 @@ runs("checking an upload", () => {
     const database = await testDatabase();
     const { token, storageKey } = upload(Buffer.from("not a picture at all"));
 
-    await expect(completeUpload(database, token, AUTHOR)).rejects.toThrow("not the picture");
+    await expect(completeUpload(database, token, authorId)).rejects.toThrow("not the picture");
     expect(removed).toContain(storageKey);
   });
 
@@ -150,7 +168,7 @@ runs("checking an upload", () => {
     const bytes = await picture("png");
     const { token } = upload(bytes, { size: bytes.length + 1 });
 
-    await expect(completeUpload(database, token, AUTHOR)).rejects.toThrow("not the size");
+    await expect(completeUpload(database, token, authorId)).rejects.toThrow("not the size");
   });
 
   it("refuses to complete somebody else's upload", async () => {

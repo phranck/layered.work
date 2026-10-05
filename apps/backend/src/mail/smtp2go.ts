@@ -24,6 +24,7 @@ export interface OutgoingMail {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }
 
 /** What SMTP2GO said, in its own words. */
@@ -72,6 +73,7 @@ export async function sendThroughSmtp2go(
         to: [mail.to],
         subject: mail.subject,
         text_body: mail.text,
+        ...(mail.html ? { html_body: mail.html } : {}),
       }),
     });
   } catch (cause) {

@@ -38,7 +38,7 @@ const counts = {
   footerNav: 3,
   social: 7,
   forms: 2,
-  submissions: null,
+  submissions: 0,
   mailTemplates: null,
 };
 
@@ -250,7 +250,8 @@ describe("dashboard shell", () => {
 
     const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
     const links = within(navigation).getAllByRole("link");
-    expect(links).toHaveLength(15);
+    expect(links).toHaveLength(16);
+    expect(within(navigation).getByRole("link", { name: "API-Tokens" })).toBeTruthy();
     const settings = within(navigation).getByRole("link", { name: "Einstellungen" });
     fireEvent.click(settings);
 
@@ -1192,7 +1193,7 @@ describe("dashboard shell", () => {
     expect(posts.textContent).toContain("12");
     expect(screen.getByRole("link", { name: "Medien 17" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Formulare 2" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Einsendungen" }).textContent).not.toContain("0");
+    expect(screen.getByRole("link", { name: "Einsendungen 0" })).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/dashboard\/counts$/), {
       credentials: "include",
     });

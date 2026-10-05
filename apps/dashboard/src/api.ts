@@ -27,16 +27,32 @@ import {
   entryTrashImpact,
   type FormDetail,
   type FormList,
+  type FormSubmission,
+  type FormSubmissionList,
+  type FormSubmissionStatus,
   formDetail,
   formList,
+  formSubmission,
+  formSubmissionList,
+  type IssuedToken,
+  type IssueTokenBody,
+  issuedToken,
+  issueTokenBody,
   type ListingSettings,
   type MailSettings,
+  type MailTemplate,
+  type MailTemplateKind,
+  mailTemplate,
+  mailTemplateList,
   mergeTopicBody,
   type PreviewEntryBody,
   previewEntryBody,
+  type RenderedMail,
   readApiError,
+  renderedMail,
   type SaveEntryBody,
   type SaveFormBody,
+  type SaveMailTemplateBody,
   type SaveTopicBody,
   type SearchResults,
   type SettingsView,
@@ -50,9 +66,12 @@ import {
   settingsView,
   signedInAs,
   type TestMailResult,
+  type TokenSummary,
   type TopicList,
   type TopicListItem,
   testMailResult,
+  tokenList,
+  tokenSummary,
   topicList,
   topicListItem,
   type UpdateAccountBody,
@@ -110,6 +129,13 @@ export interface DashboardApi {
   fetchForm(id: string): Promise<FormDetail>;
   createForm(value: CreateFormBody): Promise<FormDetail>;
   saveForm(id: string, value: SaveFormBody): Promise<FormDetail>;
+  fetchFormSubmissions(formId: string): Promise<FormSubmissionList>;
+  setFormSubmissionStatus(
+    formId: string,
+    submissionId: string,
+    status: FormSubmissionStatus,
+  ): Promise<FormSubmission>;
+  deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
   /** Every translation of every entry of one kind, newest first. */
@@ -151,6 +177,22 @@ export interface DashboardApi {
   ): Promise<SettingsView>;
   /** Sends a test message to the signed-in owner and reports what SMTP2GO answered. */
   sendTestMail(): Promise<TestMailResult>;
+  fetchAccessTokens(): Promise<TokenSummary[]>;
+  issueAccessToken(value: IssueTokenBody): Promise<IssuedToken>;
+  revokeAccessToken(id: string): Promise<TokenSummary>;
+  fetchMailTemplates(): Promise<MailTemplate[]>;
+  saveMailTemplate(kind: MailTemplateKind, value: SaveMailTemplateBody): Promise<MailTemplate>;
+  previewMailTemplate(
+    kind: MailTemplateKind,
+    value: SaveMailTemplateBody,
+    language: "en" | "de",
+  ): Promise<RenderedMail>;
+  testMailTemplate(
+    kind: MailTemplateKind,
+    value: SaveMailTemplateBody,
+    language: "en" | "de",
+    recipient: string,
+  ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
@@ -246,6 +288,20 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
         formDetail,
       );
     },
+    async fetchFormSubmissions(formId) {
+      return dataOf(
+        await request(`/forms/${encodeURIComponent(formId)}/submissions`, undefined, true),
+        formSubmissionList,
+      );
+    },
+    async setFormSubmissionStatus(formId, submissionId, status) {
+      const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
+      return dataOf(await request(path, jsonBody("PATCH", { status }), true), formSubmission);
+    },
+    async deleteFormSubmission(formId, submissionId) {
+      const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
+      await request(path, { method: "DELETE" }, true);
+    },
     async fetchAccount() {
       return dataOf(await request("/account", undefined, true), accountProfile);
     },
@@ -318,6 +374,43 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async sendTestMail() {
       return dataOf(await request("/settings/mail/test", { method: "POST" }, true), testMailResult);
+    },
+    async fetchAccessTokens() {
+      return dataOf(await request("/access-tokens", undefined, true), tokenList);
+    },
+    async issueAccessToken(value) {
+      return dataOf(
+        await request("/access-tokens", jsonBody("POST", issueTokenBody.parse(value)), true),
+        issuedToken,
+      );
+    },
+    async revokeAccessToken(id) {
+      return dataOf(
+        await request(`/access-tokens/${encodeURIComponent(id)}`, { method: "DELETE" }, true),
+        tokenSummary,
+      );
+    },
+    async fetchMailTemplates() {
+      return dataOf(await request("/mail-templates", undefined, true), mailTemplateList);
+    },
+    async saveMailTemplate(kind, value) {
+      return dataOf(await request(`/mail-templates/${kind}`, jsonBody("PUT", value), true), mailTemplate);
+    },
+    async previewMailTemplate(kind, template, language) {
+      return dataOf(
+        await request(`/mail-templates/${kind}/preview`, jsonBody("POST", { template, language }), true),
+        renderedMail,
+      );
+    },
+    async testMailTemplate(kind, template, language, recipient) {
+      return dataOf(
+        await request(
+          `/mail-templates/${kind}/test`,
+          jsonBody("POST", { template, language, recipient }),
+          true,
+        ),
+        testMailResult,
+      );
     },
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));

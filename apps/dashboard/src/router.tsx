@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ComponentType } from "react";
 import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject, redirect } from "react-router";
+import { AccessTokensScreen } from "./access-tokens.js";
 import type { DashboardApi } from "./api.js";
 import { AreaScreen, DashboardShell, NotFoundScreen, RouteErrorScreen } from "./app.js";
 import { LoginScreen, type LoginScreenProps } from "./auth.js";
@@ -8,8 +9,10 @@ import { safeReturnTo } from "./auth-routing.js";
 import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
+import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+import { SubmissionsScreen } from "./submissions.js";
 import { TopicsScreen } from "./topics.js";
 
 /**
@@ -21,6 +24,8 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   settings: SiteSettingsScreen,
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,
+  submissions: SubmissionsScreen,
+  "api-tokens": AccessTokensScreen,
 };
 
 export interface DashboardRouterOptions {
@@ -80,6 +85,14 @@ export function dashboardRouteObjects({
               children: [
                 { index: true, element: <FormsScreen area={area} /> },
                 { path: ":id", element: <FormEditorScreen area={area} /> },
+              ],
+            };
+          if (area.id === "mail-templates")
+            return {
+              path: area.path,
+              children: [
+                { index: true, element: <MailTemplatesScreen /> },
+                { path: ":kind", element: <MailTemplateEditorScreen /> },
               ],
             };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };

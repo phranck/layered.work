@@ -36,7 +36,7 @@ const counts = {
   footerNav: 4,
   social: 6,
   forms: 2,
-  submissions: null,
+  submissions: 2,
   mailTemplates: null,
 };
 
@@ -71,7 +71,7 @@ describe("GET /dashboard/counts", () => {
     expect(body).toEqual({ data: counts });
     expect(parsed).toEqual(counts);
     expect(parsed.forms).toBe(2);
-    expect(parsed.submissions).toBeNull();
+    expect(parsed.submissions).toBe(2);
     expect(parsed.mailTemplates).toBeNull();
   });
 

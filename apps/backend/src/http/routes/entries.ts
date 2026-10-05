@@ -1,7 +1,12 @@
 import {
   createEntryBody,
+  emptiedTrash,
+  entryDetail,
   entryIdParam,
+  entryList,
   entryListQuery,
+  entryPreview,
+  entryTrashImpact,
   previewEntryBody,
   saveEntryBody,
 } from "@layered/schemas";
@@ -18,7 +23,9 @@ import {
   setTrashed,
   trashImpact,
 } from "../../entries/repository.js";
-import { principalOf, requireSession } from "../require-session.js";
+import { responds } from "../api-metadata.js";
+import { requirePublishForPublicSave, requirePublishScope, requireScope } from "../require-scope.js";
+import { principalOf } from "../require-session.js";
 import { ok } from "../response.js";
 import { validate } from "../validate.js";
 
@@ -32,55 +39,145 @@ import { validate } from "../validate.js";
  */
 export const entriesRoutes = new Hono();
 
-entriesRoutes.use("*", requireSession);
-
-entriesRoutes.get("/", validate("query", entryListQuery), async (c) =>
-  ok(c, await listEntries(database(), c.req.valid("query").kind)),
+entriesRoutes.get(
+  "/",
+  requireScope("content:read"),
+  validate("query", entryListQuery),
+  responds(entryList),
+  async (c) => ok(c, await listEntries(database(), c.req.valid("query").kind)),
 );
 
-entriesRoutes.post("/", validate("json", createEntryBody), async (c) =>
-  ok(c, await createEntry(database(), c.req.valid("json"), principalOf(c).userId)),
+entriesRoutes.post(
+  "/",
+  requireScope("content:write"),
+  validate("json", createEntryBody),
+  responds(entryDetail),
+  async (c) =>
+    ok(c, await createEntry(database(), c.req.valid("json"), principalOf(c).userId, principalOf(c).tokenId)),
 );
 
-entriesRoutes.get("/:id", validate("param", entryIdParam), async (c) =>
-  ok(c, await readEntry(database(), c.req.valid("param").id)),
+entriesRoutes.get(
+  "/:id",
+  requireScope("content:read"),
+  validate("param", entryIdParam),
+  responds(entryDetail),
+  async (c) => ok(c, await readEntry(database(), c.req.valid("param").id)),
 );
 
 // What the editor holds, kept as a preview, answered with the address that shows it.
 entriesRoutes.post(
   "/:id/previews",
+  requireScope("content:write"),
   validate("param", entryIdParam),
   validate("json", previewEntryBody),
+  responds(entryPreview),
   async (c) =>
     ok(
       c,
-      await createPreview(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId),
+      await createPreview(
+        database(),
+        c.req.valid("param").id,
+        c.req.valid("json"),
+        principalOf(c).userId,
+        Date.now(),
+        principalOf(c).tokenId,
+      ),
     ),
 );
 
 // The other language of the entry, created as a draft or opened where it exists.
-entriesRoutes.post("/:id/translation", validate("param", entryIdParam), async (c) =>
-  ok(c, await createTranslation(database(), c.req.valid("param").id, principalOf(c).userId)),
+entriesRoutes.post(
+  "/:id/translation",
+  requireScope("content:write"),
+  validate("param", entryIdParam),
+  responds(entryDetail),
+  async (c) =>
+    ok(
+      c,
+      await createTranslation(
+        database(),
+        c.req.valid("param").id,
+        principalOf(c).userId,
+        principalOf(c).tokenId,
+      ),
+    ),
 );
 
-entriesRoutes.put("/:id", validate("param", entryIdParam), validate("json", saveEntryBody), async (c) =>
-  ok(c, await saveEntry(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId)),
+entriesRoutes.put(
+  "/:id",
+  requireScope("content:write"),
+  validate("param", entryIdParam),
+  validate("json", saveEntryBody),
+  requirePublishForPublicSave,
+  responds(entryDetail),
+  async (c) =>
+    ok(
+      c,
+      await saveEntry(
+        database(),
+        c.req.valid("param").id,
+        c.req.valid("json"),
+        principalOf(c).userId,
+        principalOf(c).tokenId,
+      ),
+    ),
 );
 
 // What moving it to the trash affects, for the question asked first.
-entriesRoutes.get("/:id/trash-impact", validate("param", entryIdParam), async (c) =>
-  ok(c, await trashImpact(database(), c.req.valid("param").id)),
+entriesRoutes.get(
+  "/:id/trash-impact",
+  requireScope("content:read"),
+  validate("param", entryIdParam),
+  responds(entryTrashImpact),
+  async (c) => ok(c, await trashImpact(database(), c.req.valid("param").id)),
 );
 
-entriesRoutes.post("/:id/trash", validate("param", entryIdParam), async (c) =>
-  ok(c, await setTrashed(database(), c.req.valid("param").id, true, principalOf(c).userId)),
+entriesRoutes.post(
+  "/:id/trash",
+  requireScope("content:write"),
+  validate("param", entryIdParam),
+  responds(entryDetail),
+  async (c) =>
+    ok(
+      c,
+      await setTrashed(
+        database(),
+        c.req.valid("param").id,
+        true,
+        principalOf(c).userId,
+        principalOf(c).tokenId,
+      ),
+    ),
 );
 
-entriesRoutes.post("/:id/restore", validate("param", entryIdParam), async (c) =>
-  ok(c, await setTrashed(database(), c.req.valid("param").id, false, principalOf(c).userId)),
+entriesRoutes.post(
+  "/:id/restore",
+  requireScope("content:write"),
+  requirePublishScope,
+  validate("param", entryIdParam),
+  responds(entryDetail),
+  async (c) =>
+    ok(
+      c,
+      await setTrashed(
+        database(),
+        c.req.valid("param").id,
+        false,
+        principalOf(c).userId,
+        principalOf(c).tokenId,
+      ),
+    ),
 );
 
 // Empties the trash of one list, for good.
-entriesRoutes.delete("/trash", validate("query", entryListQuery), async (c) =>
-  ok(c, await emptyTrash(database(), c.req.valid("query").kind, principalOf(c).userId)),
+entriesRoutes.delete(
+  "/trash",
+  requireScope("content:write"),
+  validate("query", entryListQuery),
+  responds(emptiedTrash),
+  async (c) =>
+    ok(
+      c,
+      await emptyTrash(database(), c.req.valid("query").kind, principalOf(c).userId, principalOf(c).tokenId),
+    ),
 );

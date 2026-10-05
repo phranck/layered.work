@@ -1,24 +1,29 @@
 import { randomUUID } from "node:crypto";
 import { ErrorCode, validateFormValues } from "@layered/schemas";
 import { eq, inArray } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closeDatabase } from "../db/connect.js";
-import { auditLog, formSubmissions, forms, users } from "../db/schema/index.js";
+import { auditLog, formSubmissions, forms, mailJobs, users } from "../db/schema/index.js";
 import { app } from "../http/app.js";
 import { forgetRateLimits } from "../http/rate-limit.js";
+import { runMailJob } from "../mail/jobs.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { issueFormChallenge, verifyFormChallenge } from "./challenge.js";
 import { createForm } from "./repository.js";
 
 const suffix = randomUUID();
 const slug = `submit-${suffix}`;
+const transientSlug = `notify-only-${suffix}`;
+const confirmSlug = `confirm-${suffix}`;
 const runs = hasTestDatabase ? describe : describe.skip;
 let actorId = "";
 let formId = "";
+let transientFormId = "";
+let confirmationFormId = "";
 const declaration = {
   slug,
   name: "Submission test",
-  notificationEmail: null,
+  notificationEmail: "notify@example.test",
   successMessage: { en: "Received", de: "Erhalten" },
   storeSubmissions: true,
   fields: [
@@ -69,14 +74,47 @@ runs("public form submission", () => {
     if (!actor) throw new Error("Test actor missing");
     actorId = actor.id;
     formId = (await createForm(db, declaration, actorId)).id;
+    transientFormId = (
+      await createForm(db, { ...declaration, slug: transientSlug, storeSubmissions: false }, actorId)
+    ).id;
+    confirmationFormId = (
+      await createForm(
+        db,
+        {
+          ...declaration,
+          slug: confirmSlug,
+          confirmationEmailField: "reply",
+          fields: [
+            ...declaration.fields,
+            {
+              key: "reply",
+              type: "email" as const,
+              label: { en: "Email", de: "E-Mail" },
+              hint: { en: "", de: "" },
+              required: true,
+              minLength: 3,
+              maxLength: 254,
+              pattern: null,
+            },
+          ],
+        },
+        actorId,
+      )
+    ).id;
   });
 
   afterAll(async () => {
     const db = await testDatabase();
-    if (formId) {
+    if (formId && transientFormId && confirmationFormId) {
+      await db
+        .delete(mailJobs)
+        .where(inArray(mailJobs.formId, [formId, transientFormId, confirmationFormId]));
       await db.delete(formSubmissions).where(eq(formSubmissions.formId, formId));
-      await db.delete(auditLog).where(inArray(auditLog.subjectId, [formId]));
-      await db.delete(forms).where(eq(forms.id, formId));
+      await db.delete(formSubmissions).where(eq(formSubmissions.formId, confirmationFormId));
+      await db
+        .delete(auditLog)
+        .where(inArray(auditLog.subjectId, [formId, transientFormId, confirmationFormId]));
+      await db.delete(forms).where(inArray(forms.id, [formId, transientFormId, confirmationFormId]));
     }
     if (actorId) await db.delete(users).where(eq(users.id, actorId));
     forgetRateLimits();
@@ -114,6 +152,73 @@ runs("public form submission", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.values.name).toBe("Ada");
     expect(rows[0]?.consents).toEqual([{ key: "consent", revision: "v1", notice: "Ich stimme zu" }]);
+    expect(rows[0]?.sourceHash).toMatch(/^[0-9a-f]{12}$/);
+    expect(rows[0]?.sourceHash).not.toContain("198.51.100.1");
+    expect(rows[0]?.status).toBe("unread");
+    const jobs = await (await testDatabase()).select().from(mailJobs).where(eq(mailJobs.formId, formId));
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ recipient: "notify@example.test", submissionId: rows[0]?.id });
+    expect(jobs[0]?.body).toContain("Name: Ada");
+    expect(jobs[0]?.body).toContain("Einwilligung: yes");
+    expect(jobs[0]?.body).toContain("Ich stimme zu");
+    const sender = vi
+      .fn()
+      .mockResolvedValueOnce({ accepted: false, answer: "temporarily unavailable" })
+      .mockResolvedValueOnce({ accepted: true, answer: "Accepted as test-id." });
+    const jobId = jobs[0]?.id ?? "";
+    const firstAttempt = new Date((jobs[0]?.nextAttemptAt.getTime() ?? 0) + 1);
+    expect(await runMailJob(await testDatabase(), jobId, sender, firstAttempt)).toBe("retry");
+    const [delayed] = await (await testDatabase()).select().from(mailJobs).where(eq(mailJobs.id, jobId));
+    expect(await runMailJob(await testDatabase(), jobId, sender, delayed?.nextAttemptAt)).toBe("sent");
+    expect(sender).toHaveBeenCalledTimes(2);
+    expect(
+      await (await testDatabase()).select().from(formSubmissions).where(eq(formSubmissions.formId, formId)),
+    ).toHaveLength(1);
+  });
+
+  it("queues a notification even when the form does not retain submissions", async () => {
+    const response = await app.request(`/forms/${transientSlug}/submissions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        challenge: issueFormChallenge(transientSlug, Date.now() - 3_000),
+        honeypot: "",
+        language: "en",
+        values: { name: "Ada", consent: "yes" },
+      }),
+    });
+    expect(response.status).toBe(200);
+    const db = await testDatabase();
+    expect(
+      await db.select().from(formSubmissions).where(eq(formSubmissions.formId, transientFormId)),
+    ).toEqual([]);
+    const jobs = await db.select().from(mailJobs).where(eq(mailJobs.formId, transientFormId));
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ recipient: "notify@example.test", submissionId: null });
+  });
+
+  it("queues bilingual HTML and text confirmation to the validated email field", async () => {
+    const response = await app.request(`/forms/${confirmSlug}/submissions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        challenge: issueFormChallenge(confirmSlug, Date.now() - 3_000),
+        honeypot: "",
+        language: "de",
+        values: { name: "Ada", consent: "yes", reply: "ada@example.test" },
+      }),
+    });
+    expect(response.status).toBe(200);
+    const jobs = await (await testDatabase())
+      .select()
+      .from(mailJobs)
+      .where(eq(mailJobs.formId, confirmationFormId));
+    expect(jobs).toHaveLength(2);
+    const confirmation = jobs.find((job) => job.recipient === "ada@example.test");
+    expect(confirmation?.subject).toContain("erhalten");
+    expect(confirmation?.body).toContain("Vielen Dank");
+    expect(confirmation?.htmlBody).toContain("<strong>Submission test</strong>");
+    expect(jobs.find((job) => job.recipient === "notify@example.test")?.htmlBody).toContain("Ada");
   });
 
   it("rejects a filled honeypot and a forged challenge", async () => {

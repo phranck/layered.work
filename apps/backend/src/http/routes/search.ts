@@ -1,7 +1,8 @@
-import { searchQuery } from "@layered/schemas";
+import { searchQuery, searchResults } from "@layered/schemas";
 import { Hono } from "hono";
 import { database } from "../../db/connect.js";
 import { searchEverything } from "../../search/repository.js";
+import { responds } from "../api-metadata.js";
 import { requireSession } from "../require-session.js";
 import { ok } from "../response.js";
 import { validate } from "../validate.js";
@@ -16,6 +17,6 @@ export const searchRoutes = new Hono();
 
 searchRoutes.use("*", requireSession);
 
-searchRoutes.get("/", validate("query", searchQuery), async (c) =>
+searchRoutes.get("/", validate("query", searchQuery), responds(searchResults), async (c) =>
   ok(c, await searchEverything(database(), c.req.valid("query").q)),
 );

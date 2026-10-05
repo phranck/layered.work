@@ -1,6 +1,8 @@
+import { healthAlive, healthReady } from "@layered/schemas";
 import { Hono } from "hono";
 import { config } from "../config.js";
 import { checkReadiness } from "../db/readiness.js";
+import { responds } from "./api-metadata.js";
 
 /**
  * Liveness and readiness, which are two questions and get two answers.
@@ -18,7 +20,9 @@ export const health = new Hono();
  * fails, so it must not touch the database: a dependency that is briefly slow
  * would be reported as a dead process and every container would go with it.
  */
-health.get("/", (c) => c.json({ service: "backend", alive: true }));
+health.get("/", responds(healthAlive, { envelope: false }), (c) =>
+  c.json({ service: "backend", alive: true }),
+);
 
 /**
  * Whether this container can actually serve.
@@ -30,7 +34,7 @@ health.get("/", (c) => c.json({ service: "backend", alive: true }));
  * The `configured` block proves which variables arrived without printing any of
  * their values, which is the question actually being asked after a deployment.
  */
-health.get("/ready", async (c) => {
+health.get("/ready", responds(healthReady, { envelope: false, additionalStatus: 503 }), async (c) => {
   const readiness = await checkReadiness();
   return c.json(
     {

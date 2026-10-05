@@ -108,11 +108,23 @@ const uniqueFieldKeys = (form: { fields: FormField[] }) =>
 export const createFormBody = body({
   ...publicDeclarationFields,
   notificationEmail: z.email().max(254).nullable(),
+  /** Send the confirmation to this validated email field, when present. */
+  confirmationEmailField: z.string().max(MaxLength.Handle).nullable().optional(),
   storeSubmissions: z.boolean(),
-}).refine(uniqueFieldKeys, {
-  path: ["fields"],
-  message: "Field names must be unique.",
-});
+})
+  .refine(uniqueFieldKeys, {
+    path: ["fields"],
+    message: "Field names must be unique.",
+  })
+  .refine(
+    (form) =>
+      !form.confirmationEmailField ||
+      form.fields.some((field) => field.key === form.confirmationEmailField && field.type === "email"),
+    {
+      path: ["confirmationEmailField"],
+      message: "Choose an email field for confirmations.",
+    },
+  );
 export type CreateFormBody = z.infer<typeof createFormBody>;
 
 /** Saving replaces the declaration as a whole, so order is kept in one write. */
@@ -247,3 +259,24 @@ export const formList = z.array(formDetail);
 export type FormList = z.infer<typeof formList>;
 
 export const formIdParam = body({ id: z.uuid() });
+
+export const formSubmissionStatus = z.enum(["unread", "read", "spam"]);
+export type FormSubmissionStatus = z.infer<typeof formSubmissionStatus>;
+
+/** One stored response, with only a fingerprint of the request origin. */
+export const formSubmission = body({
+  id: z.uuid(),
+  formId: z.uuid(),
+  values: formSubmissionValues,
+  consents: z.array(body({ key: z.string(), revision: z.string(), notice: z.string() })),
+  sourceHash: z
+    .string()
+    .regex(/^[0-9a-f]{12}$/)
+    .nullable(),
+  status: formSubmissionStatus,
+  createdAt: z.iso.datetime(),
+});
+export type FormSubmission = z.infer<typeof formSubmission>;
+export const formSubmissionList = z.array(formSubmission);
+export type FormSubmissionList = z.infer<typeof formSubmissionList>;
+export const updateFormSubmission = body({ status: formSubmissionStatus });

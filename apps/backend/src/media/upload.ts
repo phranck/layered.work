@@ -10,7 +10,8 @@ import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 import { mediaContentUrl } from "../account/repository.js";
-import { media } from "../db/schema/index.js";
+import { auditActor } from "../auth/audit-actor.js";
+import { auditLog, media } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { deleteMediaObject, readMediaBytes, uploadTarget } from "./storage.js";
@@ -106,7 +107,12 @@ async function refuse(storageKey: string, message: string, detail: Record<string
  * @returns The library picture, which is an existing one when the same file was
  *   already there.
  */
-export async function completeUpload(db: Database, token: string, userId: string): Promise<UploadedMedia> {
+export async function completeUpload(
+  db: Database,
+  token: string,
+  userId: string,
+  actorTokenId?: string,
+): Promise<UploadedMedia> {
   const claims = readUploadToken(token);
   if (!claims || claims.userId !== userId) {
     throw new HttpError(ErrorCode.InvalidRequest, "This upload is not valid, or it has expired.");
@@ -168,20 +174,30 @@ export async function completeUpload(db: Database, token: string, userId: string
   // taken is not an error, and the row actually written is what is returned.
   for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt++) {
     const slug = attempt === 1 ? claims.slug : `${claims.slug}-${attempt}`;
-    const [row] = await db
-      .insert(media)
-      .values({
-        slug,
-        kind: "image",
-        mimeType: claims.type,
-        storageKey: claims.storageKey,
-        byteSize: bytes.length,
-        checksum,
-        width: decoded.width,
-        height: decoded.height,
-      })
-      .onConflictDoNothing({ target: media.slug })
-      .returning({ id: media.id, slug: media.slug });
+    const row = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(media)
+        .values({
+          slug,
+          kind: "image",
+          mimeType: claims.type,
+          storageKey: claims.storageKey,
+          byteSize: bytes.length,
+          checksum,
+          width: decoded.width,
+          height: decoded.height,
+        })
+        .onConflictDoNothing({ target: media.slug })
+        .returning({ id: media.id, slug: media.slug });
+      if (created)
+        await tx.insert(auditLog).values({
+          ...auditActor(userId, actorTokenId),
+          action: "media.uploaded",
+          subjectType: "media",
+          subjectId: created.id,
+        });
+      return created;
+    });
     if (row) {
       logger.info({ storageKey: claims.storageKey, mediaId: row.id, bytes: bytes.length }, "upload stored");
       return {

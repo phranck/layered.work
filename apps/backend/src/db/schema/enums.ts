@@ -4,6 +4,7 @@ import {
   homeBlockTypes,
   PUBLICATION_STATES,
   READING_WIDTHS,
+  TOKEN_SCOPES,
 } from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
 
@@ -77,12 +78,7 @@ export const userRole = pgEnum("user_role", ["owner", "editor"]);
  * front of a reader. A token carries the scopes it was issued with and nothing
  * widens them afterwards.
  */
-export const tokenScope = pgEnum("token_scope", [
-  "content:read",
-  "content:write",
-  "content:publish",
-  "media:write",
-]);
+export const tokenScope = pgEnum("token_scope", TOKEN_SCOPES);
 
 /**
  * What kind of file a media row holds.

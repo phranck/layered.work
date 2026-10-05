@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import { config } from "./config.js";
 import { app } from "./http/app.js";
 import { logger } from "./logger.js";
+import { startMailWorker } from "./mail/worker.js";
 
 /**
  * The API.
@@ -13,3 +14,4 @@ import { logger } from "./logger.js";
 serve({ fetch: app.fetch, port: config.PORT, hostname: config.HOST }, (address) => {
   logger.info({ host: config.HOST, port: address.port, env: config.NODE_ENV }, "backend listening");
 });
+startMailWorker();

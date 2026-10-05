@@ -1,6 +1,8 @@
 import type { CreateFormBody, FormConsent, FormSubmissionValues } from "@layered/schemas";
-import { jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { identifier, instant } from "./columns.js";
+
+export const formSubmissionStatus = pgEnum("form_submission_status", ["unread", "read", "spam"]);
 
 /** One editable declaration. Its JSON contains field order and both languages. */
 export const forms = pgTable("forms", {
@@ -20,5 +22,7 @@ export const formSubmissions = pgTable("form_submissions", {
     .references(() => forms.id),
   values: jsonb().$type<FormSubmissionValues>().notNull(),
   consents: jsonb().$type<FormConsent[]>().notNull(),
+  sourceHash: text("source_hash"),
+  status: formSubmissionStatus().notNull().default("unread"),
   createdAt: instant("created_at"),
 });
