@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jsonFeed, sitemap, sitemapPaths } from "./feeds.js";
+import { jsonFeed, rssFeed, sitemap, sitemapPaths } from "./feeds.js";
 import { languageLinks } from "./language-links.js";
 import { createRepository } from "./repository.js";
 
@@ -92,6 +92,25 @@ const repository = createRepository({
 });
 
 describe("localized public discovery", () => {
+  it("keeps both feeds renderable when historical prose contains incomplete URLs", () => {
+    const historical = createRepository({
+      ...repository.data,
+      entries: repository.data.entries.map((entry) => ({
+        ...entry,
+        body: '[Incomplete](https://)\n\n![Broken](https://[)\n\n[Valid](../valid/)\n\nButton("Download", href: "download/")\n\nCard(title: "More", href: "more/") { Prose. }',
+      })),
+    });
+    for (const language of ["en", "de"] as const) {
+      const json = jsonFeed(historical, language);
+      const rss = rssFeed(historical, language);
+      expect(json.items[0]?.content_html).toContain("Incomplete");
+      expect(json.items[0]?.content_html).toContain("https://layered.work/");
+      expect(rss).toContain("Incomplete");
+      expect(json.items[0]?.content_html).not.toContain('href="https://"');
+      expect(json.items[0]?.content_html).not.toMatch(/href="(?:download|more)\//);
+      expect(rss).not.toMatch(/href=&quot;(?:download|more)\//);
+    }
+  });
   it("declares the feed language and keeps the legacy JSON item fields", () => {
     const en = jsonFeed(repository, "en");
     const de = jsonFeed(repository, "de");
