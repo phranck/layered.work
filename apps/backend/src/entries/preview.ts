@@ -1,6 +1,6 @@
 import { createHmac, hkdfSync } from "node:crypto";
 import { type EntryPreview, ErrorCode, type PreviewEntryBody } from "@layered/schemas";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { auditActor } from "../auth/audit-actor.js";
@@ -16,7 +16,8 @@ import {
   paths,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
-import { readListingSettings } from "../settings/repository.js";
+import { readPublicNavigation } from "../navigation/public.js";
+import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 
 /**
  * Previews: an entry as a reader would see it, from what the editor holds.
@@ -199,9 +200,27 @@ export async function readPreview(db: Database, token: string, now = Date.now())
   );
 
   const { media, slugById } = await publicMedia(db, [row]);
+  const targets = await db
+    .select({ entryId: entryTranslations.entryId, language: entryTranslations.language, path: paths.path })
+    .from(paths)
+    .innerJoin(entryTranslations, eq(entryTranslations.id, paths.translationId))
+    .where(
+      and(
+        eq(paths.isCurrent, true),
+        eq(entryTranslations.state, "public"),
+        isNull(entryTranslations.trashedAt),
+      ),
+    );
+  const allTopics = await publicTopics(db);
+  const main = await readPublicNavigation(db, targets, allTopics, "main");
 
   return {
-    footerNavigation: { en: [], de: [] },
+    footerNavigation: await readPublicNavigation(db, targets, allTopics, "footer"),
+    mainNavigation: {
+      en: main.en.flatMap((group) => group.items),
+      de: main.de.flatMap((group) => group.items),
+    },
+    siteFrame: await readPublicSiteFrame(db),
     entries: [
       {
         id: row.translationId,

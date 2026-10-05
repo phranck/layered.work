@@ -19,6 +19,15 @@ test("renders stored footer groups, their order and both languages in the produc
       { title: "Gespeichert danach", items: [] },
     ],
   };
+  snapshot.mainNavigation = {
+    en: [{ label: "Stored header", href: "/posts/" }],
+    de: [{ label: "Gespeicherter Header", href: "/de/posts/" }],
+  };
+  snapshot.siteFrame = {
+    title: { en: "Stored site", de: "Gespeicherte Website" },
+    footerLine: { en: "Stored description", de: "Gespeicherte Beschreibung" },
+    social: [{ platform: "github", handle: "Own account", href: "https://example.test/account" }],
+  };
   const originalFetch = globalThis.fetch;
   const originalUrl = process.env.API_URL;
   const originalMode = process.env.WEBSITE_MODE;
@@ -42,6 +51,15 @@ test("renders stored footer groups, their order and both languages in the produc
       assert(footer.includes(label));
       assert(footer.indexOf(first) < footer.indexOf(second));
       assert(!footer.includes('aria-label="Subscribe"'));
+      assert(footer.includes(path === "/" ? "Stored description" : "Gespeicherte Beschreibung"));
+      assert(footer.includes('data-brand="github"'));
+      assert(footer.includes("https://example.test/account"));
+      assert(html.includes(path === "/" ? "Stored header" : "Gespeicherter Header"));
+      assert(html.includes(`<title>${path === "/" ? "Stored site" : "Gespeicherte Website"}</title>`));
+      assert.equal(/<main[^>]*id="main-content"/.test(html), true);
+      const missing = await app.render(new Request(`https://layered.work${path}fixture-missing-page/`));
+      assert.equal(missing.status, 404);
+      assert((await missing.text()).includes(path === "/" ? "Search the site" : "Zur Suche"));
     }
   } finally {
     globalThis.fetch = originalFetch;

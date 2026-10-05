@@ -9,6 +9,8 @@ import {
   listingSettings,
   publicFooterNavigation,
   publicForm,
+  publicMainNavigation,
+  publicSiteFrame,
   READING_WIDTHS,
   unknownHomeBlocks,
 } from "@layered/schemas";
@@ -102,6 +104,8 @@ const topicSchema = z.union([
 ]);
 const snapshotSchema = z.object({
   footerNavigation: publicFooterNavigation.optional(),
+  mainNavigation: publicMainNavigation.optional(),
+  siteFrame: publicSiteFrame.optional(),
   entries: z.array(entrySchema),
   forms: z.array(publicForm).default([]),
   topics: z.array(topicSchema),
@@ -373,6 +377,8 @@ export function createRepository(input: unknown) {
   return {
     data,
     footerNavigation: (locale: Language) => data.footerNavigation?.[locale],
+    mainNavigation: (locale: Language) => data.mainNavigation?.[locale],
+    siteFrame: () => data.siteFrame,
     contentUrl: (url: string) => {
       const path = url.split(/[?#]/, 1)[0] ?? "";
       if (!/^\/(?:media|migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) return url;

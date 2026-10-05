@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CONTENT_LANGUAGES, type ContentLanguage } from "./entries.js";
+import { navigationHref } from "./navigation.js";
 import { body, MaxLength, text } from "./request.js";
 
 /**
@@ -29,6 +30,11 @@ export const siteSettings = body({
   socialImageMediaId: z.uuid().nullable(),
 });
 export type SiteSettings = z.infer<typeof siteSettings>;
+/** Only settings and enabled account links that visitors may see. */
+export const publicSiteFrame = siteSettings.pick({ title: true, footerLine: true }).extend({
+  social: z.array(z.object({ platform: z.string(), handle: z.string(), href: navigationHref })),
+});
+export type PublicSiteFrame = z.infer<typeof publicSiteFrame>;
 
 /**
  * A sender name, which becomes part of a mail header.

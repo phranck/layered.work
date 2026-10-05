@@ -9,27 +9,28 @@ import {
 } from "../db/schema/index.js";
 
 /** Resolve stored targets only against published addresses in the requested language. */
-export async function readPublicFooterNavigation(
+export async function readPublicNavigation(
   db: PostgresJsDatabase<Record<string, unknown>>,
   entries: readonly { entryId: string; language: "en" | "de"; path: string }[],
   topics: readonly {
     id: string;
     translations: { en: { slug: string } | null; de: { slug: string } | null };
   }[],
+  placement: "main" | "footer",
 ): Promise<PublicFooterNavigation> {
   const result: PublicFooterNavigation = { en: [], de: [] };
   for (const language of CONTENT_LANGUAGES) {
     const groups = await db
       .select({ id: navigations.id, title: navigationTranslations.title })
       .from(navigations)
-      .innerJoin(
+      .leftJoin(
         navigationTranslations,
         and(
           eq(navigationTranslations.navigationId, navigations.id),
           eq(navigationTranslations.language, language),
         ),
       )
-      .where(eq(navigations.placement, "footer"))
+      .where(eq(navigations.placement, placement))
       .orderBy(asc(navigations.sortOrder), asc(navigations.id));
     const items = await db
       .select({
@@ -51,7 +52,7 @@ export async function readPublicFooterNavigation(
           eq(navigationItemTranslations.visible, true),
         ),
       )
-      .where(eq(navigations.placement, "footer"))
+      .where(eq(navigations.placement, placement))
       .orderBy(asc(navigationItems.sortOrder), asc(navigationItems.id));
     const addresses = new Map(
       entries.filter((entry) => entry.language === language).map((entry) => [entry.entryId, entry.path]),
@@ -77,9 +78,9 @@ export async function readPublicFooterNavigation(
       }),
     );
     result[language] = groups
-      .filter((group) => group.title.trim())
+      .filter((group) => placement === "main" || group.title?.trim())
       .map((group) => ({
-        title: group.title,
+        title: group.title ?? "",
         items: items
           .filter((item) => item.navigationId === group.id && (!item.parentId || resolved.has(item.parentId)))
           .flatMap((item) => {

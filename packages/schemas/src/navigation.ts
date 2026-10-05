@@ -46,6 +46,8 @@ export type FooterNavigation = z.infer<typeof footerNavigation>;
 export const publicNavigationItem = z.object({ label: z.string(), href: navigationHref });
 export const publicNavigationGroup = z.object({ title: z.string(), items: z.array(publicNavigationItem) });
 export const publicFooterNavigation = bilingual(z.array(publicNavigationGroup));
+export const publicMainNavigation = bilingual(z.array(publicNavigationItem));
+export type PublicMainNavigation = z.infer<typeof publicMainNavigation>;
 export type PublicFooterNavigation = z.infer<typeof publicFooterNavigation>;
 export const reorderFooterNavigationBody = body({
   positions: z
