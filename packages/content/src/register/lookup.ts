@@ -1,3 +1,4 @@
+import type { MediaKind } from "@layered/schemas";
 import { nearestName } from "../nearest.js";
 import { COMPONENT_NAMES, type ComponentName, components } from "./components.js";
 import type { ComponentDefinition, Parameter, Register } from "./kinds.js";
@@ -85,6 +86,23 @@ export function unnamedParameter(
 
   const parameter = definition.parameters[name];
   return parameter ? { name, parameter } : undefined;
+}
+
+/**
+ * The component a file of one kind is shown with: the one whose value written
+ * first without a name is a file of that kind.
+ *
+ * A component that takes such a file only under a name, such as a model's
+ * poster, shows something else and is not the answer.
+ *
+ * @param kind - The kind of file in the library.
+ * @returns The component, or nothing where no component shows that kind.
+ */
+export function componentForMedia(kind: MediaKind): ComponentName | undefined {
+  return COMPONENT_NAMES.find((name) => {
+    const unnamed = unnamedParameter(REGISTER[name] as ComponentDefinition);
+    return unnamed?.parameter.kind === "slug" && unnamed.parameter.media === kind;
+  });
 }
 
 /**

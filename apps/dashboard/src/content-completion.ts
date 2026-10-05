@@ -329,6 +329,15 @@ export type MediaLibrary = {
    *   includes a failed upload the dashboard has already reported.
    */
   upload(kind: MediaKind): Promise<string | null>;
+  /**
+   * Uploads files the author dropped or pasted, one after another in the order
+   * given, and calls back with each one the library took before the next one
+   * starts. A refused or failed file is reported by the dashboard and skipped.
+   */
+  uploadFiles(
+    files: readonly File[],
+    uploaded: (file: { kind: MediaKind; slug: string }) => void,
+  ): Promise<void>;
   /** What the entry that uploads is called, in the interface's language when the list opens. */
   uploadLabel(): string;
 };

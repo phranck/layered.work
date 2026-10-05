@@ -1,15 +1,58 @@
-import { ACCEPTED_IMAGE_TYPES, type MediaLibraryItem, UPLOAD_TYPES } from "@layered/schemas";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type MediaLibraryItem,
+  UPLOAD_TYPES,
+  type UploadedMedia,
+  uploadKindOf,
+} from "@layered/schemas";
 import { Button } from "@layered/ui";
 import { UploadSimpleIcon } from "@layered/ui/icons";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useRef, useState } from "react";
+import type { DashboardApi } from "./api.js";
 import type { MediaLibrary } from "./content-completion.js";
+import "./media-uploads.css";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
 
-type Progress = { id: number; name: string; percent: number; error?: unknown };
+/** How far one upload has got, and why it failed where it did. */
+export type UploadProgress = { id: number; name: string; percent: number; error?: unknown };
+
+/**
+ * Uploads files one after another, in the order given, keeping each one's
+ * progress, and hands every file the library took to `uploaded` before the
+ * next one starts.
+ *
+ * One at a time, so the requests to storage and to the API stay bounded and
+ * whatever follows an upload happens in the order of the files. A file that
+ * fails keeps its error in its progress, and the rest go on.
+ *
+ * @param api - The dashboard's API.
+ * @param files - The files, in the order the author gave them.
+ * @param setProgress - Where the progress of every file is kept.
+ * @param uploaded - What to do with each file once the library has it.
+ */
+export async function uploadInOrder(
+  api: DashboardApi,
+  files: readonly File[],
+  setProgress: Dispatch<SetStateAction<UploadProgress[]>>,
+  uploaded: (media: UploadedMedia, file: File) => Promise<void> | void,
+): Promise<void> {
+  setProgress(files.map((file, id) => ({ id, name: file.name, percent: 0 })));
+  for (const [id, file] of files.entries()) {
+    try {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
+      const media = await api.uploadMedia(file, (percent) =>
+        setProgress((current) => current.map((item) => (item.id === id ? { ...item, percent } : item))),
+      );
+      await uploaded(media, file);
+    } catch (error) {
+      setProgress((current) => current.map((item) => (item.id === id ? { ...item, error } : item)));
+    }
+  }
+}
 
 /**
  * Every cached view of the library that a new file changes: the library screen,
@@ -44,57 +87,63 @@ export function chooseFile(types: readonly string[]): Promise<File | null> {
 }
 
 /**
- * The media library as the writing surface's completion asks for it: files of
- * one kind, newest first, and an upload of a file the author chooses.
+ * The media library as the writing surface asks for it: files of one kind,
+ * newest first, an upload of a file the author chooses, and an upload of files
+ * dropped or pasted onto the text, with their progress for the surface to show.
  *
- * A failed upload is reported here and answered with null, so the surface only
- * ever learns whether there is a slug to insert.
+ * A failed upload is reported here, as a notification for the chosen file and
+ * in the progress for dropped ones, so the surface only ever learns which files
+ * there are components to insert for.
  */
-export function useMediaLibrary(): MediaLibrary {
+export function useMediaLibrary(): { library: MediaLibrary; progress: UploadProgress[] } {
   const api = useDashboardApi();
   const client = useQueryClient();
   const { notifyError } = useNotify();
   const { text } = useDashboardLanguage();
+  const [progress, setProgress] = useState<UploadProgress[]>([]);
   return {
-    search: async (kind, query) => (await api.fetchMedia(query, kind, 1, false, "newest")).items,
-    upload: async (kind) => {
-      const file = await chooseFile(UPLOAD_TYPES[kind] ?? []);
-      if (!file) return null;
-      try {
-        const uploaded = await api.uploadMedia(file);
+    progress,
+    library: {
+      search: async (kind, query) => (await api.fetchMedia(query, kind, 1, false, "newest")).items,
+      upload: async (kind) => {
+        const file = await chooseFile(UPLOAD_TYPES[kind] ?? []);
+        if (!file) return null;
+        try {
+          const uploaded = await api.uploadMedia(file);
+          await refreshMediaQueries(client);
+          return uploaded.slug;
+        } catch (error) {
+          notifyError(error);
+          return null;
+        }
+      },
+      uploadFiles: async (files, uploaded) => {
+        await uploadInOrder(api, files, setProgress, (media, file) => {
+          const kind = uploadKindOf(file.type);
+          if (kind) uploaded({ kind, slug: media.slug });
+        });
+        // A file that arrived leaves the list, and one that failed stays with
+        // its reason until the next upload replaces the list.
+        setProgress((current) => current.filter((item) => item.error !== undefined));
         await refreshMediaQueries(client);
-        return uploaded.slug;
-      } catch (error) {
-        notifyError(error);
-        return null;
-      }
+      },
+      uploadLabel: () => text("completionUpload"),
     },
-    uploadLabel: () => text("completionUpload"),
   };
 }
 /** A sequential upload queue retains per-file failures and selects the final successful file. */
 export function useMediaUploads(onComplete: (item: MediaLibraryItem) => void) {
   const api = useDashboardApi();
   const client = useQueryClient();
-  const [progress, setProgress] = useState<Progress[]>([]);
+  const [progress, setProgress] = useState<UploadProgress[]>([]);
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
-      setProgress(files.map((file, id) => ({ id, name: file.name, percent: 0 })));
-      let last: MediaLibraryItem | undefined;
-      // Serialize upload/finalization requests to bound storage/API traffic; selection follows input order.
-      for (const [id, file] of files.entries()) {
-        try {
-          // react-doctor-disable-next-line react-doctor/async-await-in-loop
-          const uploaded = await api.uploadMedia(file, (percent) =>
-            setProgress((current) => current.map((item) => (item.id === id ? { ...item, percent } : item))),
-          );
-          last = await api.fetchMediaDetail(uploaded.id);
-          await refreshMediaQueries(client);
-        } catch (error) {
-          setProgress((current) => current.map((item) => (item.id === id ? { ...item, error } : item)));
-        }
-      }
-      return last;
+      const completed: MediaLibraryItem[] = [];
+      await uploadInOrder(api, files, setProgress, async (uploaded) => {
+        completed.push(await api.fetchMediaDetail(uploaded.id));
+        await refreshMediaQueries(client);
+      });
+      return completed.at(-1);
     },
     onSuccess: (last) => {
       if (last) onComplete(last);
@@ -130,7 +179,7 @@ export function MediaUploadButton({ pending, start }: { pending: boolean; start:
     </>
   );
 }
-export function MediaUploadProgress({ items }: { items: Progress[] }) {
+export function MediaUploadProgress({ items }: { items: UploadProgress[] }) {
   const { text } = useDashboardLanguage();
   return (
     <div aria-live="polite">

@@ -4,7 +4,13 @@ import { describe, expect, it } from "vitest";
 import { validateContent } from "../validate/validate.js";
 import { COMPONENT_NAMES, components } from "./components.js";
 import type { Register } from "./kinds.js";
-import { completionList, defaultsOf, resolveComponent, unnamedParameter } from "./lookup.js";
+import {
+  completionList,
+  componentForMedia,
+  defaultsOf,
+  resolveComponent,
+  unnamedParameter,
+} from "./lookup.js";
 
 /**
  * What has to hold of the register itself, whatever is in it.
@@ -118,6 +124,10 @@ describe("every entry", () => {
 });
 
 describe("where the values come from", () => {
+  it("names the component each kind of file is shown with", () => {
+    expect(MEDIA_KINDS.map((kind) => componentForMedia(kind))).toEqual(["Image", "Video", "Pdf", "Model"]);
+  });
+
   it("names the kind of library file each file parameter takes", () => {
     const files = Object.values(components as Register).flatMap((definition) =>
       Object.values(definition.parameters).filter((parameter) => parameter.kind === "slug"),

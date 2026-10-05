@@ -13,18 +13,6 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--reading-measure) / 2)), 1fr));
   gap: var(--space-3);
 }
-.media-upload {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-.media-upload__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .media-detail__header .card__title {
   overflow: hidden;
   text-overflow: ellipsis;
