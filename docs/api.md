@@ -1,6 +1,6 @@
 # API
 
-The backend serves an OpenAPI 3.1 document at `GET /openapi.json`. Use the backend origin, currently `https://backend-2444-3000.prg1.zerops.app`, or the dashboard's `/api/` proxy for browser access. The document is public and lists every registered Hono route. Request and response shapes come from the Zod schemas in `@layered/schemas`; adding a route without a response schema fails the OpenAPI gate. The `@layered/mcp` package reads the same document with `readApiDescription(apiOrigin)` rather than keeping a copy.
+The backend serves an OpenAPI 3.1 document at `GET /openapi.json`. Use the backend origin, currently `https://backend-2444-3000.prg1.zerops.app`, or the dashboard's `/api/` proxy for browser access. The document is public and lists every registered Hono route. Request and response shapes come from the Zod schemas in `@layered/schemas`; adding a route without a response schema fails the OpenAPI gate.
 
 The document names cookie and bearer authentication separately. `x-required-scopes` lists the scopes a bearer token always needs; `x-conditional-scopes` names extra scopes needed for particular request states, such as publishing an entry. Browser session routes use a cookie. A personal access token uses `Authorization: Bearer <token>` and can be issued and revoked only from a browser session.
 
