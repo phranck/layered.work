@@ -1,5 +1,14 @@
+import type { MediaKind } from "@layered/schemas";
 import { SPACE_STEP_RANGE } from "./components.js";
 import type { Parameter } from "./kinds.js";
+
+/** What a file of each kind in the library is called in a sentence. */
+const MEDIA_NOUN: Readonly<Record<MediaKind, string>> = {
+  image: "picture",
+  video: "video",
+  document: "document",
+  model: "model",
+};
 
 /**
  * Saying in words what the register says in types.
@@ -24,7 +33,7 @@ export function accepts(parameter: Parameter): string {
     case "text":
       return "text in quotes";
     case "slug":
-      return "the name of a file in the media library, in quotes";
+      return `the name of a ${parameter.media ? MEDIA_NOUN[parameter.media] : "file"} in the media library, in quotes`;
     case "form":
       return "the name of a saved form, in quotes";
     case "number":

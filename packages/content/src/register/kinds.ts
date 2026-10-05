@@ -1,3 +1,5 @@
+import type { MediaKind } from "@layered/schemas";
+
 /**
  * What a component is, and what its parameters accept.
  *
@@ -55,6 +57,12 @@ export type Parameter = {
   range?: readonly [number, number];
   /** For text, the minimum number of non-padding characters. */
   minLength?: number;
+  /**
+   * For `slug`, the kind of file in the library it names. The editor offers only
+   * files of this kind, and the reference says which kind it is. Every `slug`
+   * parameter states one, which a test holds.
+   */
+  media?: MediaKind;
 };
 
 /** Whether a component takes a body, and whether it insists on one. */

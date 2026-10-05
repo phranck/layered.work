@@ -140,6 +140,7 @@ export const components = {
         kind: "slug",
         description: "Which picture.",
         required: true,
+        media: "image",
       },
       caption: {
         kind: "text",
@@ -180,6 +181,7 @@ export const components = {
         kind: "slug",
         description: "Which model.",
         required: true,
+        media: "model",
       },
       alt: {
         kind: "text",
@@ -191,6 +193,7 @@ export const components = {
         kind: "slug",
         description:
           "A library picture shown before the model loads. The entry's featured picture is used when absent.",
+        media: "image",
       },
       caption: { kind: "text", description: "Shown beneath it." },
     },
@@ -203,8 +206,8 @@ export const components = {
     body: "never",
     unnamed: "slug",
     parameters: {
-      slug: { kind: "slug", description: "Which video.", required: true },
-      poster: { kind: "slug", description: "A picture to show before it plays." },
+      slug: { kind: "slug", description: "Which video.", required: true, media: "video" },
+      poster: { kind: "slug", description: "A picture to show before it plays.", media: "image" },
       caption: { kind: "text", description: "Shown beneath it." },
     },
     renders: "Video",
@@ -228,7 +231,7 @@ export const components = {
     body: "never",
     unnamed: "slug",
     parameters: {
-      slug: { kind: "slug", description: "Which document.", required: true },
+      slug: { kind: "slug", description: "Which document.", required: true, media: "document" },
       label: { kind: "text", description: "What the link says. The file's own name otherwise." },
     },
     renders: "Document",
@@ -279,7 +282,7 @@ export const components = {
     parameters: {
       title: { kind: "text", description: "A heading for the card." },
       href: { kind: "text", description: "Where the whole card leads, if anywhere." },
-      image: { kind: "slug", description: "A picture across the top." },
+      image: { kind: "slug", description: "A picture across the top.", media: "image" },
     },
     renders: "Card",
   },
