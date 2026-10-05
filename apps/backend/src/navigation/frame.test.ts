@@ -47,11 +47,11 @@ it.skipIf(!hasTestDatabase)(
     const snapshot = await readPublicSnapshot(db);
     expect(snapshot).toHaveProperty("mainNavigation");
     expect(snapshot).toHaveProperty("siteFrame");
-    expect(snapshot.mainNavigation.en).toContainEqual({
+    expect(snapshot.mainNavigation?.en).toContainEqual({
       label: "Stored main",
       href: `https://example.test/${id}`,
     });
-    expect(snapshot.mainNavigation.de).toContainEqual({
+    expect(snapshot.mainNavigation?.de).toContainEqual({
       label: "Gespeichert",
       href: `https://example.test/${id}`,
     });
