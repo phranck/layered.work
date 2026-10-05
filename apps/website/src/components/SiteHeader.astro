@@ -13,6 +13,7 @@ interface Props {
 const { language, siteName, navigation, translationPath } = Astro.props;
 const homePath = language === "de" ? "/de/" : "/";
 const searchPath = language === "de" ? "/de/search/" : "/search/";
+const endpoint = language === "de" ? "/de/search.json" : "/search.json";
 const indexPath = language === "de" ? "/de/search-index.json" : "/search-index.json";
 const unavailable = language === "de"
   ? "Dieser Inhalt ist nicht auf Englisch verfügbar."
@@ -65,6 +66,7 @@ const kindNames = language === "de"
   class="search-dialog"
   data-search-dialog
   data-search-index={indexPath}
+  data-search-endpoint={endpoint}
   data-hint={searchCopy.hint}
   data-empty={searchCopy.empty}
   data-all={searchCopy.all}
@@ -76,7 +78,7 @@ const kindNames = language === "de"
 >
   <form class="search-dialog__form" role="search" method="get" action={searchPath}>
     <MagnifyingGlassIcon weight="duotone" aria-hidden="true" />
-    <input class="search-dialog__field" type="search" name="q" autocomplete="off" spellcheck="false" placeholder={searchCopy.placeholder} aria-label={searchCopy.placeholder} />
+    <input class="search-dialog__field" type="search" name="q" maxlength="120" autocomplete="off" spellcheck="false" placeholder={searchCopy.placeholder} aria-label={searchCopy.placeholder} />
   </form>
   <ul class="search-dialog__results" data-search-results></ul>
   <p class="search-dialog__note" data-search-note>{searchCopy.hint}</p>
@@ -90,6 +92,8 @@ const kindNames = language === "de"
   // component, and a browser script that loads them runs them without the
   // React preamble, which stops the development server's client code.
   import { returnFocusQuietly } from "@layered/ui/focus-return";
+  import { createRemoteSearch } from "../search/remote.js";
+  import type { PublicSearchHit } from "@layered/schemas";
   import { findEntries, type SearchIndexEntry } from "../search/overlay.js";
 
   const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]');
@@ -126,7 +130,12 @@ const kindNames = language === "de"
       note.textContent = query.trim() ? '' : (copy.hint ?? '');
       return;
     }
-    const matches = findEntries(index, query);
+    showMatches(findEntries(index, query), query);
+  }
+
+  function showMatches(matches: readonly (PublicSearchHit | SearchIndexEntry)[], query: string) {
+    if (!list || !note || !template) return;
+    list.replaceChildren();
     for (const entry of matches) {
       if (!isLocalPath(entry.path)) continue;
       const item = template.content.cloneNode(true) as DocumentFragment;
@@ -141,6 +150,12 @@ const kindNames = language === "de"
     }
     note.textContent = (!query.trim() ? copy.hint : matches.length ? copy.all : copy.empty) ?? '';
   }
+
+  const remote = copy.searchEndpoint ? createRemoteSearch(copy.searchEndpoint, (result, query) => showMatches(result.entries, query), error => {
+    if (note) note.textContent = `${copy.failed ?? error.message}${error.id ? ` (${error.id})` : ''}`;
+    console.error(JSON.stringify({ code:error.code, errorId:error.id, operation:'public_search', route:copy.searchEndpoint, status:error.status, result:'unavailable' }));
+  }) : undefined;
+  const search = (query: string) => { if (remote) remote(query); else render(query); };
 
   async function loadIndex() {
     if (index || loading) return loading ?? undefined;
@@ -163,7 +178,8 @@ const kindNames = language === "de"
     dialog.showModal();
     field?.focus();
     field?.select();
-    void loadIndex();
+    if (remote) search(field?.value ?? "");
+    else void loadIndex();
   }
 
   /** Moves the focus along the results, with the field as the position above the first. */
@@ -190,7 +206,7 @@ const kindNames = language === "de"
   // quietly: closing is not navigating to the trigger.
   dialog?.addEventListener('close', () => returnFocusQuietly(trigger));
 
-  field?.addEventListener('input', () => render(field.value));
+  field?.addEventListener('input', () => search(field.value));
 
   // The form's own submit carries the query to the search page, which is also
   // what happens without any of this script.

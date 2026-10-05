@@ -140,6 +140,8 @@ function rewriteHtml(html, requestPath) {
   return html.replace(
     /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<[a-z][^>]*>/gi,
     (tag) => {
+      // A static export uses the exported index, not a live API endpoint.
+      tag = tag.replace(/\sdata-search-endpoint=("[^"]*"|'[^']*')/gi, "");
       if (/^<!--/i.test(tag)) return tag;
       if (/^<style\b/i.test(tag)) return rewriteCss(tag, requestPath);
       if (/^<link\b/i.test(tag) && /(?<=\s)rel=["'](?:canonical|alternate)["']/i.test(tag)) return tag;

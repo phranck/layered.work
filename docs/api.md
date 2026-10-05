@@ -20,4 +20,10 @@ Most JSON successes have a `data` property. Failures use one shared shape:
 
 `code` is stable for callers; `message` is safe to display but may change. `id` is also returned as `X-Request-Id` and identifies the corresponding server log entry. The codes are `invalid_request` (400), `unauthenticated` (401), `forbidden` (403), `not_found` (404), `conflict` (409), `payload_too_large` (413), `rate_limited` (429), and `internal` (500). A `429` response also carries `Retry-After`. Internal causes and credentials are never included in the response.
 
-The health endpoints, public content snapshot, preview snapshot, CSV export and binary media response have their documented raw formats instead of the `data` envelope. A rejected public form may add `fieldErrors` beside the common `error` object so the site can mark individual fields.
+The health endpoints, public content snapshot and search, preview snapshot, CSV export and binary media response have their documented raw formats instead of the `data` envelope. A rejected public form may add `fieldErrors` beside the common `error` object so the site can mark individual fields.
+
+## Public search
+
+`GET /content/search?q=running&language=en&page=1&limit=6` is unauthenticated and returns `{ entries, total }`. Each hit contains only `path`, `title`, `kind` and `language`. PostgreSQL uses the translation's English or German configuration with `websearch_to_tsquery`, weighting titles ahead of summaries, topic names and body text. Queries are bounded to 120 characters, pages to 9999 and page sizes to 100.
+
+Only current paths of public, untrashed translations can match. An author may explicitly list an untranslated entry in the other language, following the site's existing publication rule. Hidden, draft and unreachable content is excluded inside SQL. The website's `/search.json` and `/de/search.json` routes proxy this operation, preserving its failure status, safe message and request id. File-only static previews retain their exported public index.
