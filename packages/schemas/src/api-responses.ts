@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ENTRY_KINDS, READING_WIDTHS } from "./entries.js";
 import { publicForm } from "./forms.js";
+import { focalPoint, mediaDescriptions } from "./media.js";
 import { publicFooterNavigation, publicMainNavigation } from "./navigation.js";
 import { listingSettings, publicSiteFrame } from "./settings.js";
 
@@ -58,7 +59,11 @@ const publicMedia = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   alt: z.string().optional(),
+  caption: z.string().optional(),
+  translations: mediaDescriptions.optional(),
   srcSet: z.string().optional(),
+  placeholder: z.string().optional(),
+  focalPoint: focalPoint.optional(),
 });
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
 export const publicSnapshot = z.object({

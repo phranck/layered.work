@@ -18,7 +18,10 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `setFormSubmissionStatus` | PATCH /forms/:id/submissions/:submissionId | Browser session |
 | `deleteFormSubmission` | DELETE /forms/:id/submissions/:submissionId | Browser session |
 | `fetchAccount` | GET /account | Browser session |
-| `fetchAccountMedia` | GET /account/media?search=:search&page=:page | Browser session |
+| `fetchMedia` | GET /media?search=:search&kind=:kind&page=:page&unused=:unused | media:write |
+| `fetchMediaDetail` | GET /media/:id | media:write |
+| `saveMediaMetadata` | PUT /media/:id | media:write |
+| `deleteMedia` | DELETE /media/:id | media:write |
 | `fetchEntries` | GET /entries?kind=:kind | content:read |
 | `createEntry` | POST /entries | content:write |
 | `fetchEntry` | GET /entries/:id | content:read |
@@ -70,7 +73,7 @@ The navigation methods retain their existing names and accept an optional `place
 
 Site configuration, main/footer-navigation editing, social-account editing, mail configuration and outbound test mail are owner workflows. The current token scopes grant content editing and uploading rather than owner administration. Mail-template reading and previews remain in that session-bound mail workflow.
 
-Forms and visitor submissions remain session-bound because the editorial scopes do not grant access to visitors' personal data or form administration. Dashboard counts and dashboard-wide search remain session-bound aggregations; scoped agents can read entries and topics through their corresponding endpoints. The account media picker also belongs to the account workflow. These restrictions are enforced by the API, not by hiding dashboard controls.
+Forms and visitor submissions remain session-bound because the editorial scopes do not grant access to visitors' personal data or form administration. Dashboard counts and dashboard-wide search remain session-bound aggregations; scoped agents can read entries and topics through their corresponding endpoints. The shared media library and picker use the media:write scope. The protected image content route remains session-bound. These restrictions are enforced by the API, not by hiding dashboard controls.
 
 ## Browser boundary gate
 

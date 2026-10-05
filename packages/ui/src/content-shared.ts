@@ -63,3 +63,9 @@ export function contentColumns(value: unknown): CSSProperties {
     ? ({ "--content-columns": value } as CSSProperties)
     : {};
 }
+
+/** One crop calculation for React and Astro image surfaces. */
+export function imagePosition(asset: Pick<MediaAsset, "focalPoint">): string {
+  const point = asset.focalPoint ?? { x: 0.5, y: 0.5 };
+  return `${point.x * 100}% ${point.y * 100}%`;
+}

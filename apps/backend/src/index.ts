@@ -1,8 +1,11 @@
 import { serve } from "@hono/node-server";
 import { config } from "./config.js";
+import { database } from "./db/connect.js";
 import { app } from "./http/app.js";
 import { logger } from "./logger.js";
 import { startMailWorker } from "./mail/worker.js";
+import { rebuildMediaReferenceIndex } from "./media/references.js";
+import { startMediaWorker } from "./media/worker.js";
 
 /**
  * The API.
@@ -11,7 +14,10 @@ import { startMailWorker } from "./mail/worker.js";
  * than on its first real request: the environment is checked at import time and
  * an unusable one throws before anything below runs.
  */
+await rebuildMediaReferenceIndex(database());
 serve({ fetch: app.fetch, port: config.PORT, hostname: config.HOST }, (address) => {
   logger.info({ host: config.HOST, port: address.port, env: config.NODE_ENV }, "backend listening");
 });
 startMailWorker();
+
+startMediaWorker();

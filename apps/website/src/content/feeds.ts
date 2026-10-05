@@ -37,9 +37,11 @@ function feedHtml(repository: ContentRepository, entry: Entry): string {
     createElement(ContentRenderer, {
       nodes: renderContent(entry.body, { language: entry.language }),
       media: (slug) => {
-        const asset = repository.media(slug);
+        const asset = repository.media(slug, entry.language);
         if (!asset) return undefined;
-        const poster = entry.featuredImage ? repository.media(entry.featuredImage)?.src : undefined;
+        const poster = entry.featuredImage
+          ? repository.media(entry.featuredImage, entry.language)?.src
+          : undefined;
         return {
           ...asset,
           src: absolute(asset.src),
@@ -84,7 +86,7 @@ export function jsonFeed(repository: ContentRepository, language: Language = "en
       authors: [author],
       tags: repository.entryTopics(entry, entry.language).map((topic) => topic.name),
       image: entry.featuredImage
-        ? absolute(repository.media(entry.featuredImage)?.src ?? "/logo.svg")
+        ? absolute(repository.media(entry.featuredImage, entry.language)?.src ?? "/logo.svg")
         : undefined,
       language: entry.language,
       date_published: entry.publishedAt ?? undefined,

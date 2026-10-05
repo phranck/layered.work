@@ -1,7 +1,22 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, index, integer, pgTable, real, text, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  real,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { identifier, instant } from "./columns.js";
 import { imageFormat, language, mediaKind } from "./enums.js";
+import { settings } from "./site.js";
 
 /**
  * Every file the site serves, and the sizes derived from it.
@@ -172,3 +187,56 @@ export const mediaTranslations = pgTable(
     check("media_translations_says_something", sql`num_nonnulls(${table.altText}, ${table.caption}) > 0`),
   ],
 );
+
+/** Durable processing leases fence concurrent workers and survive service restarts. */
+export const mediaProcessingState = pgEnum("media_processing_state", [
+  "queued",
+  "processing",
+  "ready",
+  "failed",
+]);
+export const mediaJobs = pgTable("media_jobs", {
+  mediaId: uuid("media_id")
+    .primaryKey()
+    .references(() => media.id, { onDelete: "cascade" }),
+  state: mediaProcessingState().notNull().default("queued"),
+  claimToken: uuid("claim_token"),
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  objectKeys: text("object_keys").array().notNull().default(sql`'{}'::text[]`),
+  errorId: uuid("error_id"),
+  createdAt: instant("created_at"),
+});
+/** Outbox survives the library row; idempotent object cleanup resumes after interruption. */
+export const mediaDeletions = pgTable("media_deletions", {
+  mediaId: uuid("media_id").primaryKey(),
+  pendingKeys: text("pending_keys").array().notNull(),
+  removedObjects: integer("removed_objects").notNull().default(0),
+  errorId: uuid("error_id"),
+  nextAttemptAt: instant("next_attempt_at"),
+  createdAt: instant("created_at"),
+});
+
+/** Listing introductions are published content and protect their named files too. */
+export const settingMediaReferences = pgTable(
+  "setting_media_references",
+  {
+    settingsKey: text("settings_key")
+      .notNull()
+      .references(() => settings.key, { onDelete: "cascade" }),
+    language: language().notNull(),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
+  },
+  (table) => [primaryKey({ columns: [table.settingsKey, table.language, table.mediaId] })],
+);
+
+/** Each generation keeps its keys independently until publication or confirmed cleanup. */
+export const mediaAttempts = pgTable("media_attempts", {
+  token: uuid().primaryKey(),
+  mediaId: uuid("media_id").notNull(),
+  objectKeys: text("object_keys").array().notNull().default(sql`'{}'::text[]`),
+  cleanupReady: boolean("cleanup_ready").notNull().default(false),
+  nextAttemptAt: instant("next_attempt_at"),
+  errorId: uuid("error_id"),
+});

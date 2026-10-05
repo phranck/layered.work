@@ -21,6 +21,7 @@ import { config } from "../config.js";
 import type { database } from "../db/connect.js";
 import { auditLog, media, settings, socialAccounts } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { replaceSettingMediaReferences } from "../media/references.js";
 
 type Database = ReturnType<typeof database>;
 
@@ -154,9 +155,8 @@ export async function saveSettings<Group extends SettingsGroup>(
   value: GroupValue[Group],
   actorUserId: string,
 ): Promise<SettingsView> {
-  if (group === "site") await requireSharingPicture((value as SiteSettings).socialImageMediaId, db);
-
   await db.transaction(async (tx) => {
+    if (group === "site") await requireSharingPicture((value as SiteSettings).socialImageMediaId, tx);
     const [current] = await tx
       .select({ value: settings.value })
       .from(settings)
@@ -173,6 +173,9 @@ export async function saveSettings<Group extends SettingsGroup>(
       .insert(settings)
       .values({ key: group, value })
       .onConflictDoUpdate({ target: settings.key, set: { value } });
+
+    if (group === "postListing" || group === "projectListing")
+      await replaceSettingMediaReferences(tx, group, (value as ListingSettings).introduction);
 
     if (changedKeys.length > 0) {
       await tx.insert(auditLog).values({
@@ -191,13 +194,14 @@ export async function saveSettings<Group extends SettingsGroup>(
  * Refuses a sharing picture that is not a raster image in the library, because
  * a social card can show nothing else.
  */
-async function requireSharingPicture(mediaId: string | null, db: Database): Promise<void> {
+async function requireSharingPicture(mediaId: string | null, db: Pick<Database, "select">): Promise<void> {
   if (!mediaId) return;
   const [picture] = await db
     .select({ id: media.id })
     .from(media)
     .where(and(eq(media.id, mediaId), eq(media.kind, "image"), inArray(media.mimeType, RASTER_MIME_TYPES)))
-    .limit(1);
+    .limit(1)
+    .for("key share");
   if (!picture) {
     throw new HttpError(ErrorCode.InvalidRequest, "Choose an existing raster image for the sharing picture.");
   }

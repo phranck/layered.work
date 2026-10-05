@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { readApiError } from "@layered/schemas";
 import ts from "typescript";
 import { build } from "vite";
-import { dashboardApiOrigin } from "./config.mjs";
+import { dashboardApiOrigin, dashboardUploadOrigin } from "./config.mjs";
 import { prepareDeployment } from "./deploy.mjs";
 import viteConfig from "./vite.config.mjs";
 
@@ -202,4 +202,55 @@ test("the local login alias reaches a development server and no built bundle", (
       else process.env[key] = value;
     }
   }
+});
+
+test("the deployed dashboard permits its configured presigned upload origin", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "layered-dashboard-upload-policy-"));
+  try {
+    await prepareDeployment(
+      pathToFileURL(`${workspace}/dist/`),
+      "http://backend.zerops:3000",
+      "https://uploads.example.test",
+    );
+    const nginx = await readFile(join(workspace, "dist/site.conf"), "utf8");
+    const connect = nginx.match(/connect-src ([^;]+);/)[1].split(" ");
+    assert.ok(connect.includes("https://uploads.example.test"));
+    assert.ok(connect.includes("'self'"));
+    assert.ok(connect.includes("https://umami.layered.work"));
+    assert.ok(!connect.includes("*"));
+    assert.ok(!connect.includes("http://backend.zerops:3000"));
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("the upload policy reads only a complete HTTPS origin from the build environment", () => {
+  const previous = process.env.S3_UPLOAD_ORIGIN;
+  try {
+    process.env.S3_UPLOAD_ORIGIN = "https://uploads.example.test/";
+    assert.equal(dashboardUploadOrigin(), "https://uploads.example.test");
+    for (const value of [
+      "http://uploads.example.test",
+      "https://user:password@uploads.example.test",
+      "https://uploads.example.test/bucket",
+      "https://uploads.example.test/?query=1",
+      "https://uploads.example.test/#fragment",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: An unresolved Zerops reference must fail the build.
+      "${assets_apiUrl}",
+    ]) {
+      process.env.S3_UPLOAD_ORIGIN = value;
+      assert.throws(() => dashboardUploadOrigin(), /S3_UPLOAD_ORIGIN/);
+    }
+    delete process.env.S3_UPLOAD_ORIGIN;
+    assert.equal(dashboardUploadOrigin(), undefined);
+  } finally {
+    if (previous === undefined) delete process.env.S3_UPLOAD_ORIGIN;
+    else process.env.S3_UPLOAD_ORIGIN = previous;
+  }
+});
+
+test("Zerops supplies its bucket API origin to the dashboard build", async () => {
+  const zerops = await readFile(new URL("../../zerops.yml", import.meta.url), "utf8");
+  const dashboard = zerops.split("  - setup: dashboard\n")[1];
+  assert.match(dashboard, /S3_UPLOAD_ORIGIN: \$\{assets_apiUrl\}/);
 });

@@ -20,13 +20,13 @@ const introduction=introductionText?renderContent(introductionText,{language}):[
 ---
 <Section.Page>
   <Section.Lead title={title} />
-  {introduction.length>0&&<div class="listing-introduction content-prose"><ContentRenderer nodes={introduction} media={repository.media} resolveUrl={repository.contentUrl} /></div>}
+  {introduction.length>0&&<div class="listing-introduction content-prose"><ContentRenderer nodes={introduction} media={(slug) => repository.media(slug, language)} resolveUrl={repository.contentUrl} /></div>}
   {search&&<form class="search-form" method="get"><label for="site-search">{de?"Suchbegriff":"Search for"}</label><div class="search-form__row"><input id="site-search" class="field" type="search" name="q" maxlength="120" value={query} /><Button type="submit" icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Suchen":"Search"}</Button></div></form>}
   <div class="listing-toolbar" hidden data-view-toolbar>
     <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon,{weight:"duotone"})}>{de?"Raster":"Grid"}</Button>
     <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon,{weight:"duotone"})}>{de?"Liste":"List"}</Button>
   </div>
-  <div class="entry-grid" data-entry-list style={listing?`--grid-columns: ${listing.columns}`:undefined}>{result.entries.map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} summaryLength={listing?.previewLength} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+  <div class="entry-grid" data-entry-list style={listing?`--grid-columns: ${listing.columns}`:undefined}>{result.entries.map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} summaryLength={listing?.previewLength} image={entry.featuredImage?repository.media(entry.featuredImage, language):undefined} />)}</div>
   {result.total===0&&<p class="empty-state">{de?"Keine passenden Einträge gefunden.":"No matching entries found."}</p>}
   {result.pages>1&&<nav class="pagination" aria-label={de?"Seitennavigation":"Pagination"}>{Array.from({length:result.pages},(_,i)=>i+1).map(number=><Button.Link href={pageUrl(number)} aria-current={number===page?"page":undefined}>{number}</Button.Link>)}</nav>}
 </Section.Page>

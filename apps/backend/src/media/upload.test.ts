@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, like } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLog, media, users } from "../db/schema/index.js";
+import { auditLog, media, mediaJobs, users } from "../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { issueUploadToken } from "./upload-token.js";
 
@@ -120,6 +120,8 @@ runs("checking an upload", () => {
     expect(result).toMatchObject({ slug: `${suiteId}-portrait`, width: 40, height: 30, existing: false });
     const [row] = await database.select().from(media).where(eq(media.id, result.id));
     expect(row?.mimeType).toBe("image/png");
+    const [job] = await database.select().from(mediaJobs).where(eq(mediaJobs.mediaId, result.id));
+    expect(job?.state).toBe("queued");
   });
 
   it("returns the existing picture for the same file, and keeps no second copy", async () => {

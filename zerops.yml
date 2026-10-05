@@ -228,6 +228,8 @@ zerops:
         # calling the public API here would add another pair of proxy hops.
         # nginx's runtime resolver does not apply /etc/resolv.conf search domains.
         API_ORIGIN: http://backend.zerops:3000
+        # The browser sends presigned PUT uploads straight to this public origin.
+        S3_UPLOAD_ORIGIN: ${assets_apiUrl}
     deploy:
       # The shell alone can answer while its API proxy is broken. Check the
       # backend through nginx before replacing a working dashboard container.

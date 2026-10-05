@@ -1,12 +1,14 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
   DEFAULT_LISTING,
+  focalPoint,
   type HomeBlock,
   homeBlockSchema,
   homeBlockTypes,
   isKnownHomeBlock,
   type ListedKind,
   listingSettings,
+  mediaDescriptions,
   publicFooterNavigation,
   publicForm,
   publicMainNavigation,
@@ -76,8 +78,10 @@ const mediaSchema = z.object({
    * where the same files lie in `public/`.
    */
   src: z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
+  focalPoint: focalPoint.optional(),
   alt: z.string().optional(),
   caption: z.string().optional(),
+  translations: mediaDescriptions.optional(),
   width: z.number().positive().optional(),
   height: z.number().positive().optional(),
   srcSet: z.string().optional(),
@@ -385,11 +389,17 @@ export function createRepository(input: unknown) {
       if (!/^\/(?:media|migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) return url;
       return `${mediaUrl(path)}${url.slice(path.length)}`;
     },
-    media: (name: string) => {
+    media: (name: string, locale: Language = "en") => {
       const asset = media.get(name);
       if (!asset) return undefined;
       return {
         ...asset,
+        ...(asset.translations
+          ? {
+              alt: asset.translations[locale].altText ?? undefined,
+              caption: asset.translations[locale].caption ?? undefined,
+            }
+          : {}),
         src: mediaUrl(asset.src),
         ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
         sizes: "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px",

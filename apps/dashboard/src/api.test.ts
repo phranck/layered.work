@@ -74,6 +74,12 @@ describe("dashboard API authentication", () => {
     const item = {
       id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
       slug: "portrait",
+      kind: "image",
+      mimeType: "image/png",
+      byteSize: 5,
+      uploadedAt: "2026-10-05T10:00:00Z",
+      processingState: "ready",
+      focalPoint: { x: 0.5, y: 0.5 },
       url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
       width: 600,
       height: 600,
@@ -95,7 +101,7 @@ describe("dashboard API authentication", () => {
         avatarMediaId: null,
       }),
     ).resolves.toMatchObject({ interfaceLanguage: "en" });
-    await expect(api.fetchAccountMedia("portrait & me", 2)).resolves.toMatchObject({ items: [item] });
+    await expect(api.fetchMedia("portrait & me", "image", 2)).resolves.toMatchObject({ items: [item] });
 
     expect(request).toHaveBeenNthCalledWith(1, "/api/account", { credentials: "include" });
     expect(request).toHaveBeenNthCalledWith(
@@ -103,7 +109,7 @@ describe("dashboard API authentication", () => {
       "/api/account",
       expect.objectContaining({ credentials: "include", method: "PATCH" }),
     );
-    expect(request).toHaveBeenNthCalledWith(3, "/api/account/media?search=portrait+%26+me&page=2", {
+    expect(request).toHaveBeenNthCalledWith(3, "/api/media?search=portrait+%26+me&kind=image&page=2", {
       credentials: "include",
     });
   });

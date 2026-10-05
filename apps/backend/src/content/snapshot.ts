@@ -1,4 +1,4 @@
-import { mediaReferences, referencedFormNames, renderContent } from "@layered/content";
+import { referencedFormNames, renderContent } from "@layered/content";
 import {
   type ListedKind,
   type ListingSettings,
@@ -26,6 +26,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
+import { referencedMediaIds } from "../media/references.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 
@@ -107,7 +108,14 @@ export interface PublicMedia {
   width?: number;
   height?: number;
   alt?: string;
+  caption?: string;
+  translations?: {
+    en: { altText: string | null; caption: string | null };
+    de: { altText: string | null; caption: string | null };
+  };
   srcSet?: string;
+  placeholder?: string;
+  focalPoint?: { x: number; y: number };
 }
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -127,8 +135,8 @@ const READABLE = ["public", "hidden"] as const;
  *
  * Only these leave the database. The library also holds what nobody has
  * published yet, such as a portrait uploaded for an account or a picture meant
- * for a draft, and the site has no use for those: it reaches a file only through
- * an entry. Publishing them would also tell anybody reading the snapshot what is
+ * for a draft, and the site has no use for those: it reaches files through
+ * entries and public listing introductions. Publishing them would also tell anybody reading the snapshot what is
  * in the library before it appears anywhere.
  *
  * A translation names a file in three ways, and all three count: as its
@@ -146,20 +154,15 @@ function namedFiles(
     socialCardMediaId?: string | null;
   }[],
   assets: readonly { id: string; slug: string; storageKey: string }[],
+  otherBodies: readonly string[] = [],
 ): Set<string> {
-  const idBySlug = new Map(assets.map((asset) => [asset.slug, asset.id]));
   const named = new Set<string>();
   for (const translation of translations) {
     if (translation.featuredMediaId) named.add(translation.featuredMediaId);
     if (translation.socialCardMediaId) named.add(translation.socialCardMediaId);
-    for (const reference of mediaReferences(translation.body)) {
-      const id = idBySlug.get(reference.slug);
-      if (id) named.add(id);
-    }
-    for (const asset of assets) {
-      if (translation.body.includes(`/${asset.storageKey}`)) named.add(asset.id);
-    }
+    for (const id of referencedMediaIds(translation.body, assets)) named.add(id);
   }
+  for (const body of otherBodies) for (const id of referencedMediaIds(body, assets)) named.add(id);
   return named;
 }
 
@@ -180,6 +183,7 @@ export async function publicMedia(
     featuredMediaId: string | null;
     socialCardMediaId?: string | null;
   }[],
+  otherBodies: readonly string[] = [],
 ): Promise<{ media: PublicMedia[]; slugById: Map<string, string> }> {
   const assets = await database
     .select({
@@ -191,15 +195,28 @@ export async function publicMedia(
       checksum: media.checksum,
       width: media.width,
       height: media.height,
-      altText: mediaTranslations.altText,
+      placeholder: media.placeholder,
+      focalX: media.focalX,
+      focalY: media.focalY,
     })
-    .from(media)
-    .leftJoin(
-      mediaTranslations,
-      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
-    );
+    .from(media);
 
-  const named = namedFiles(translations, assets);
+  const named = namedFiles(translations, assets, otherBodies);
+  const descriptions = named.size
+    ? await database
+        .select()
+        .from(mediaTranslations)
+        .where(inArray(mediaTranslations.mediaId, [...named]))
+    : [];
+  const descriptionsByMedia = new Map<string, NonNullable<PublicMedia["translations"]>>();
+  for (const description of descriptions) {
+    const localized = descriptionsByMedia.get(description.mediaId) ?? {
+      en: { altText: null, caption: null },
+      de: { altText: null, caption: null },
+    };
+    localized[description.language] = { altText: description.altText, caption: description.caption };
+    descriptionsByMedia.set(description.mediaId, localized);
+  }
   const variants = named.size
     ? await database
         .select({
@@ -220,6 +237,10 @@ export async function publicMedia(
     media: assets
       .filter((asset) => named.has(asset.id))
       .map((asset) => {
+        const localized = descriptionsByMedia.get(asset.id) ?? {
+          en: { altText: null, caption: null },
+          de: { altText: null, caption: null },
+        };
         const sizes = variantsByMedia.get(asset.id) ?? [];
         const format = sizes.some((variant) => variant.format === "webp") ? "webp" : sizes[0]?.format;
         const srcSet = sizes
@@ -229,6 +250,7 @@ export async function publicMedia(
           .join(", ");
         return {
           slug: asset.slug,
+          focalPoint: { x: asset.focalX, y: asset.focalY },
           src: `/${asset.storageKey}`,
           mime: asset.mimeType,
           filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
@@ -237,8 +259,11 @@ export async function publicMedia(
           sha256: asset.checksum,
           ...(asset.width === null ? {} : { width: asset.width }),
           ...(asset.height === null ? {} : { height: asset.height }),
-          ...(asset.altText ? { alt: asset.altText } : {}),
+          translations: localized,
+          ...(localized.en.altText === null ? {} : { alt: localized.en.altText }),
+          ...(localized.en.caption === null ? {} : { caption: localized.en.caption }),
           ...(srcSet ? { srcSet } : {}),
+          ...(asset.placeholder ? { placeholder: asset.placeholder } : {}),
         };
       }),
   };
@@ -428,7 +453,12 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.topicId]);
   }
 
-  const { media: publishedMedia, slugById } = await publicMedia(database, reachable);
+  const listings = await readListingSettings(database);
+  const { media: publishedMedia, slugById } = await publicMedia(
+    database,
+    reachable,
+    Object.values(listings).flatMap((listing) => Object.values(listing.introduction)),
+  );
 
   // Which translation each one is the counterpart of, so the site can offer the
   // other language. Both directions, because either page may be the one open.
@@ -496,7 +526,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       database,
       new Set([...currentPaths.values(), ...former.map((item) => item.source)]),
     ),
-    listings: await readListingSettings(database),
+    listings,
     homeBlocks: blocks.map((block) => ({
       type: block.type,
       enabled: block.enabled,

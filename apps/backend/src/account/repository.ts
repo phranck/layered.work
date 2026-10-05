@@ -3,7 +3,7 @@ import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, asc, eq, ilike, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { containing } from "../db/like.js";
-import { auditLog, media, users } from "../db/schema/index.js";
+import { auditLog, media, mediaJobs, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 const PAGE_SIZE = 24;
@@ -108,8 +108,17 @@ export async function listAccountMedia(
   if (query.search) filters.push(ilike(media.slug, containing(query.search)));
 
   const rows = await db
-    .select({ id: media.id, slug: media.slug, width: media.width, height: media.height })
+    .select({
+      id: media.id,
+      slug: media.slug,
+      width: media.width,
+      height: media.height,
+      processingState: mediaJobs.state,
+      focalX: media.focalX,
+      focalY: media.focalY,
+    })
     .from(media)
+    .leftJoin(mediaJobs, eq(mediaJobs.mediaId, media.id))
     .where(and(...filters))
     .orderBy(asc(media.slug), asc(media.id))
     .limit(PAGE_SIZE + 1)
@@ -122,6 +131,8 @@ export async function listAccountMedia(
       url: mediaContentUrl(row.id),
       width: row.width as number,
       height: row.height as number,
+      processingState: row.processingState ?? "ready",
+      focalPoint: { x: row.focalX, y: row.focalY },
     })),
     page: query.page,
     hasMore: rows.length > PAGE_SIZE,

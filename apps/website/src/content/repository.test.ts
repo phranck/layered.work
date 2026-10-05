@@ -288,6 +288,31 @@ describe("public content repository", () => {
 });
 
 describe("where the media are served from", () => {
+  it("uses the requested language and preserves explicitly decorative images", () => {
+    const repo = createRepository({
+      ...snapshot,
+      media: [
+        {
+          slug: "localized",
+          src: "/uploads/localized",
+          alt: "old",
+          translations: {
+            en: { altText: "", caption: "English" },
+            de: { altText: "Berge", caption: "Deutsch" },
+          },
+        },
+      ],
+    });
+    expect(repo.media("localized", "en")).toMatchObject({ alt: "", caption: "English" });
+    expect(repo.media("localized", "de")).toMatchObject({ alt: "Berge", caption: "Deutsch" });
+  });
+  it("carries the stored focal point to every image consumer", () => {
+    const asset = createRepository({
+      ...snapshot,
+      media: [{ slug: "focal", src: "/uploads/focal", focalPoint: { x: 0.2, y: 0.8 } }],
+    }).media("focal");
+    expect(asset?.focalPoint).toEqual({ x: 0.2, y: 0.8 });
+  });
   const withMedia = {
     ...snapshot,
     media: [

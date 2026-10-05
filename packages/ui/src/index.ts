@@ -24,6 +24,7 @@ export {
   type MediaAsset,
   type MediaResolver,
 } from "./content-renderer.js";
+export { imagePosition } from "./content-shared.js";
 export { Divider } from "./divider.js";
 export { Document, type DocumentProps } from "./document.js";
 export {

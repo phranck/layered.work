@@ -1,0 +1,65 @@
+.focal-point {
+  display: grid;
+  gap: var(--space-3);
+}
+.focal-point__surface {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+.focal-point__surface:focus-visible {
+  outline: none;
+  border-color: var(--accent-line);
+  box-shadow: var(--focus-halo);
+}
+.focal-point__surface > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.focal-point__marker-plane {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform var(--duration-fast) var(--ease);
+}
+.focal-point__surface:active .focal-point__marker-plane {
+  transition: none;
+}
+.focal-point__marker {
+  position: absolute;
+  width: var(--space-6);
+  height: var(--space-6);
+  border: 1px solid var(--text-on-accent);
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint-strong);
+  box-shadow: var(--focus-halo);
+  transform: translate(-50%, -50%);
+}
+.focal-point__previews {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.focal-point__previews figure {
+  margin: 0;
+  min-width: 0;
+}
+.focal-point__previews img {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  border-radius: var(--card-inner-radius);
+}
+@media (max-width: 719px) {
+  .focal-point__previews {
+    grid-template-columns: 1fr;
+  }
+}

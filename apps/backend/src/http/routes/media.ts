@@ -4,6 +4,14 @@ import {
   completeUploadBody,
   createUploadBody,
   ErrorCode,
+  focalPoint,
+  mediaDeletionResult,
+  mediaDetail,
+  mediaLibraryPage,
+  mediaLibraryQuery,
+  mediaProcessing,
+  saveMediaMetadataBody,
+  updateMediaFocalBody,
   uploadedMedia,
   uploadReceived,
   uploadTicket,
@@ -13,6 +21,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { deleteMedia } from "../../media/deletion.js";
+import { saveMediaFocalPoint } from "../../media/focal.js";
+import { getMediaDetail, listMedia, saveMediaMetadata } from "../../media/library.js";
+import { getMediaProcessing } from "../../media/processing.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
 import { readUploadToken } from "../../media/upload-token.js";
@@ -30,6 +42,62 @@ import { validate } from "../validate.js";
  * asked and only they may complete it.
  */
 export const media = new Hono();
+
+media.get(
+  "/",
+  requireScope("media:write"),
+  validate("query", mediaLibraryQuery),
+  responds(mediaLibraryPage),
+  async (c) => ok(c, await listMedia(database(), c.req.valid("query"))),
+);
+media.get(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaDetail),
+  async (c) => ok(c, await getMediaDetail(database(), c.req.valid("param").id)),
+);
+media.put(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  validate("json", saveMediaMetadataBody),
+  responds(mediaDetail),
+  async (c) =>
+    ok(c, await saveMediaMetadata(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c))),
+);
+
+media.delete(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaDeletionResult),
+  async (c) => {
+    const result = await deleteMedia(database(), c.req.valid("param").id, principalOf(c));
+    return ok(c, result, result.cleanupState === "pending" ? 202 : 200);
+  },
+);
+
+media.get(
+  "/:id/processing",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaProcessing),
+  async (c) => ok(c, await getMediaProcessing(database(), c.req.valid("param").id)),
+);
+
+media.patch(
+  "/:id/focal-point",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  validate("json", updateMediaFocalBody),
+  responds(focalPoint),
+  async (c) =>
+    ok(
+      c,
+      await saveMediaFocalPoint(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c)),
+    ),
+);
 
 media.post(
   "/uploads",
