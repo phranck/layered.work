@@ -13,6 +13,7 @@ import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
+import { SocialAccountsScreen } from "./social-accounts.js";
 import { SubmissionsScreen } from "./submissions.js";
 import { TopicsScreen } from "./topics.js";
 
@@ -29,6 +30,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   "api-tokens": AccessTokensScreen,
   "footer-nav": FooterNavigationScreen,
   "main-nav": FooterNavigationScreen,
+  social: SocialAccountsScreen,
 };
 
 export interface DashboardRouterOptions {

@@ -54,23 +54,29 @@ import {
   readApiError,
   renderedMail,
   reorderFooterNavigationBody,
+  reorderSocialAccountsBody,
   type SaveEntryBody,
   type SaveFooterNavigationBody,
   type SaveFormBody,
   type SaveMailTemplateBody,
+  type SaveSocialAccountBody,
   type SaveTopicBody,
   type SearchResults,
   type SettingsView,
   type SignedInAs,
   type SignInBody,
   type SiteSettings,
+  type SocialAccount,
   saveEntryBody,
   saveFooterNavigationBody,
   saveFormBody,
+  saveSocialAccountBody,
   saveTopicBody,
   searchResults,
   settingsView,
   signedInAs,
+  socialAccount,
+  socialAccountList,
   type TestMailResult,
   type TokenSummary,
   type TopicList,
@@ -176,6 +182,10 @@ export interface DashboardApi {
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
   fetchSettings(): Promise<SettingsView>;
+  fetchSocialAccounts(): Promise<SocialAccount[]>;
+  saveSocialAccount(id: string | null, value: SaveSocialAccountBody): Promise<SocialAccount>;
+  deleteSocialAccount(id: string): Promise<void>;
+  reorderSocialAccounts(positions: { id: string; sortOrder: number }[]): Promise<SocialAccount[]>;
   fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
   createFooterNavigation(
     value: SaveFooterNavigationBody,
@@ -389,6 +399,32 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async fetchSettings() {
       return dataOf(await request("/settings", undefined, true), settingsView);
+    },
+    async fetchSocialAccounts() {
+      return dataOf(await request("/social-accounts", undefined, true), socialAccountList);
+    },
+    async saveSocialAccount(id, value) {
+      return dataOf(
+        await request(
+          id ? `/social-accounts/${encodeURIComponent(id)}` : "/social-accounts",
+          jsonBody(id ? "PUT" : "POST", saveSocialAccountBody.parse(value)),
+          true,
+        ),
+        socialAccount,
+      );
+    },
+    async deleteSocialAccount(id) {
+      await request(`/social-accounts/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
+    },
+    async reorderSocialAccounts(positions) {
+      return dataOf(
+        await request(
+          "/social-accounts/order",
+          jsonBody("PATCH", reorderSocialAccountsBody.parse({ positions })),
+          true,
+        ),
+        socialAccountList,
+      );
     },
     async fetchFooterNavigations(placement = "footer") {
       return dataOf(await request(`/${placement}-navigation`, undefined, true), footerNavigationList);
