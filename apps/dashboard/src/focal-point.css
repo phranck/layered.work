@@ -35,6 +35,8 @@
 }
 .focal-point__marker {
   position: absolute;
+  left: 0;
+  top: 0;
   width: var(--space-6);
   height: var(--space-6);
   border: 1px solid var(--text-on-accent);
