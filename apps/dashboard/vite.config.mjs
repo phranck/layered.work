@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
+import { dashboardApiBoundary } from "./api-boundary.mjs";
 import { dashboardApiOrigin } from "./config.mjs";
 
 /**
@@ -25,7 +26,7 @@ function localLoginAlias(command) {
 
 export default defineConfig(({ command }) => ({
   root: fileURLToPath(new URL("./", import.meta.url)),
-  plugins: [react()],
+  plugins: [dashboardApiBoundary(), react()],
   publicDir: fileURLToPath(new URL("./assets/", import.meta.resolve("@layered/ui/copy-assets"))),
   define: {
     __API_BASE__: JSON.stringify("/api"),
