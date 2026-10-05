@@ -276,10 +276,12 @@ type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** Drafts may be incomplete; every translation readers can reach must be valid. */
 function requirePublishableContent(body: string, state: SaveEntryBody["state"]): void {
-  if (state !== "draft" && !validateContent(body).publishable) {
+  if (state === "draft") return;
+  const failure = validateContent(body).findings.find((finding) => finding.severity === "error");
+  if (failure) {
     throw new HttpError(
       ErrorCode.InvalidRequest,
-      "This content has validation errors. Correct them before publishing.",
+      `Cannot publish: ${(failure.component ?? "Content").slice(0, 100)} has ${failure.code} at ${failure.line}:${failure.column}. Correct this content error first.`,
     );
   }
 }

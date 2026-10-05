@@ -87,4 +87,4 @@ function Handle({ index, label, disabled }: { index: number; label: string; disa
     />
   );
 }
-export const Reorder = { List, Item, Handle };
+export const Reorder = Object.assign(List, { List, Item, Handle });

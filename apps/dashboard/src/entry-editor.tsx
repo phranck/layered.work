@@ -1,53 +1,34 @@
-import {
-  type EntryDetail,
-  type EntryKind,
-  MaxLength,
-  PUBLICATION_STATES,
-  type PublicationState,
-  READING_WIDTHS,
-  type ReadingWidth,
-  type SaveEntryBody,
-} from "@layered/schemas";
-import { Button, Card, Choice, Editor, Field, Input, Section, Segmented, Switch } from "@layered/ui";
+import { validateContent } from "@layered/content";
+import type { EntryDetail, EntryKind, SaveEntryBody } from "@layered/schemas";
+import { Button, Card, Editor, Section } from "@layered/ui";
 import {
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
-  CodeIcon,
-  EyeIcon,
   FloppyDiskIcon,
   GlobeIcon,
-  LinkIcon,
-  ListBulletsIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-  PlusIcon,
-  QuotesIcon,
-  TextBIcon,
-  TextHTwoIcon,
-  TextItalicIcon,
   TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useLocation, useNavigate, useParams } from "react-router";
-import { AddressField, isSavableSlug } from "./address-field.js";
+import { isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
 import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
-import { ContentEditor, type ContentEditorHandle } from "./content-editor.js";
+import type { ContentEditorHandle } from "./content-editor.js";
+import { type CheckedContent, contentIsPublishable } from "./content-validation.js";
 import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { steppedTextSize, useEditorTextSize } from "./editor-text-size.js";
-import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
-import { entryListKey, LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
+import { useEditorTextSize } from "./editor-text-size.js";
+import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
+import { EntryProperties } from "./entry-properties.js";
 import { entryKey } from "./entry-query.js";
+import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
-import { TopicField } from "./topic-field.js";
 import { topicListKey } from "./topics.js";
 
 /**
@@ -61,32 +42,6 @@ import { topicListKey } from "./topics.js";
 
 /** How long typing has to pause before a draft is saved by itself, in milliseconds. */
 const AUTOSAVE_DELAY_MS = 2000;
-
-/**
- * About how many characters a line holds at each reading width, measured on
- * the site's body size: 56ch, 68ch and 82ch render as about 68, 82 and 99.
- */
-const READING_WIDTH_CHARACTERS: Record<ReadingWidth, number | null> = {
-  narrow: 68,
-  normal: 82,
-  wide: 99,
-  full: null,
-};
-
-/** The labels the reading widths are offered under: sizes, since four words do not fit side by side. */
-const READING_WIDTH_LABELS: Record<ReadingWidth, string> = {
-  narrow: "S",
-  normal: "M",
-  wide: "L",
-  full: "XL",
-};
-
-/** Each state's word and its line of explanation. Its tone is `STATE_TONE`. */
-const STATE_OPTIONS: Record<PublicationState, { label: DashboardStringKey; note: DashboardStringKey }> = {
-  public: { label: "statePublic", note: "statePublicNote" },
-  draft: { label: "stateDraft", note: "stateDraftNote" },
-  hidden: { label: "stateHidden", note: "stateHiddenNote" },
-};
 
 /** What the editor changes, taken out of what it opened. */
 function draftOf(entry: EntryDetail): SaveEntryBody {
@@ -109,12 +64,13 @@ function draftOf(entry: EntryDetail): SaveEntryBody {
 function sameDraft(first: SaveEntryBody, second: SaveEntryBody): boolean {
   const { topicIds: firstTopics, ...firstFields } = first;
   const { topicIds: secondTopics, ...secondFields } = second;
+  const secondTopicIds = new Set(secondTopics);
   return (
     (Object.keys(firstFields) as (keyof typeof firstFields)[]).every(
       (key) => firstFields[key] === secondFields[key],
     ) &&
     firstTopics.length === secondTopics.length &&
-    firstTopics.every((id) => secondTopics.includes(id))
+    firstTopics.every((id) => secondTopicIds.has(id))
   );
 }
 
@@ -203,6 +159,11 @@ function EntryEditor({
   const [textSize, setTextSize] = useEditorTextSize();
   const [saved, setSaved] = useState(() => draftOf(entry));
   const [draft, setDraft] = useState(saved);
+  const [checked, setChecked] = useState<CheckedContent>(() => ({
+    source: saved.body,
+    validation: validateContent(saved.body),
+  }));
+  const publishable = contentIsPublishable(draft.body, checked);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
   const dirty = !sameDraft(draft, saved);
   const times = useMemo(() => new Intl.DateTimeFormat(language, { timeStyle: "short" }), [language]);
@@ -233,7 +194,8 @@ function EntryEditor({
   // waiting.
   // An address still being typed, such as one ending in a hyphen, is not saved
   // by any of the ways a save starts.
-  const savable = !entry.trashed && isSavableSlug(draft.slug);
+  const savable = !entry.trashed && isSavableSlug(draft.slug) && (draft.state === "draft" || publishable);
+  const publishReady = !entry.trashed && isSavableSlug(draft.slug) && publishable;
   const autosaving =
     savable && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
   useEffect(() => {
@@ -335,8 +297,6 @@ function EntryEditor({
   const openPreview = () => preview.mutate({ value: draft, target: window.open("", "_blank") });
 
   const update = (change: Partial<SaveEntryBody>) => setDraft((current) => ({ ...current, ...change }));
-  const counterpartPath = entry.counterpart ? `/${area.path}/${entry.counterpart.id}` : undefined;
-  const openCounterpart = useLinkClickHandler(counterpartPath ?? `/${area.path}`);
 
   const status = save.isPending
     ? text("savePending")
@@ -387,7 +347,8 @@ function EntryEditor({
           {!(saved.state === "public" && draft.state === "public") && (
             <Button
               tone="primary"
-              disabled={!savable || save.isPending}
+              disabled={!publishReady || save.isPending}
+              aria-describedby="content-publish-reason"
               icon={<GlobeIcon />}
               onClick={() => {
                 // The draft takes the new state as well, so what is shown and
@@ -403,231 +364,31 @@ function EntryEditor({
         </HeaderEnd>
       )}
       <Editor>
-        <Editor.Main>
-          {/* The label beside its field rather than over it, so the title takes
-              one line and the text starts higher. */}
-          <Field.Inline className="entry-editor__title" label={text("editorTitle")} htmlFor="entry-title">
-            <Input
-              id="entry-title"
-              autoFocus={focusTitle}
-              value={draft.title}
-              maxLength={MaxLength.Line}
-              lang={entry.language}
-              onChange={(event) => update({ title: event.target.value })}
-            />
-          </Field.Inline>
-          <Editor.Toolbar
-            aria-label={text("editorTools")}
-            role="toolbar"
-            groups={[
-              [
-                <Editor.Tool
-                  key="h2"
-                  label={text("toolHeading")}
-                  icon={<TextHTwoIcon />}
-                  onClick={() => editor.current?.prefixLines("## ")}
-                />,
-                <Editor.Tool
-                  key="bold"
-                  label={text("toolBold")}
-                  icon={<TextBIcon />}
-                  onClick={() => editor.current?.wrap("**", "**", text("toolPlaceholder"))}
-                />,
-                <Editor.Tool
-                  key="italic"
-                  label={text("toolItalic")}
-                  icon={<TextItalicIcon />}
-                  onClick={() => editor.current?.wrap("_", "_", text("toolPlaceholder"))}
-                />,
-              ],
-              [
-                <Editor.Tool
-                  key="quote"
-                  label={text("toolQuote")}
-                  icon={<QuotesIcon />}
-                  onClick={() => editor.current?.prefixLines("> ")}
-                />,
-                <Editor.Tool
-                  key="list"
-                  label={text("toolList")}
-                  icon={<ListBulletsIcon />}
-                  onClick={() => editor.current?.prefixLines("- ")}
-                />,
-                <Editor.Tool
-                  key="link"
-                  label={text("toolLink")}
-                  icon={<LinkIcon />}
-                  onClick={() => editor.current?.wrap("[", "](https://)", text("toolLinkText"))}
-                />,
-                <Editor.Tool
-                  key="code"
-                  label={text("toolCode")}
-                  icon={<CodeIcon />}
-                  onClick={() => editor.current?.wrap("`", "`", text("toolPlaceholder"))}
-                />,
-              ],
-              ...COMPONENT_GROUPS.map((group) =>
-                group.map((name) => {
-                  const Icon = COMPONENT_ICONS[name];
-                  return (
-                    <Editor.Tool
-                      key={name}
-                      label={name}
-                      icon={<Icon />}
-                      onClick={() => editor.current?.insertBlock(componentSnippet(name))}
-                    />
-                  );
-                }),
-              ),
-              // The size the text is written at, last, apart from the tools
-              // that change the text itself.
-              [
-                <Editor.Tool
-                  key="text-smaller"
-                  label={text("editorTextSmaller")}
-                  icon={<MagnifyingGlassMinusIcon />}
-                  disabled={steppedTextSize(textSize, -1) === textSize}
-                  onClick={() => setTextSize(steppedTextSize(textSize, -1))}
-                />,
-                <Editor.Tool
-                  key="text-larger"
-                  label={text("editorTextLarger")}
-                  icon={<MagnifyingGlassPlusIcon />}
-                  disabled={steppedTextSize(textSize, 1) === textSize}
-                  onClick={() => setTextSize(steppedTextSize(textSize, 1))}
-                />,
-              ],
-            ]}
-          />
-          <Editor.Surface data-text-size={textSize}>
-            <ContentEditor
-              editorRef={editor}
-              value={draft.body}
-              label={text("editorText")}
-              onChange={(body) => update({ body })}
-            />
-          </Editor.Surface>
-        </Editor.Main>
-        <Editor.Panel title={text("editorPublication")}>
-          <Field label={text("editorState")}>
-            <Choice
-              aria-label={text("editorState")}
-              value={draft.state}
-              onValueChange={(value) => update({ state: value as PublicationState })}
-            >
-              {PUBLICATION_STATES.map((state) => (
-                <Choice.Option
-                  key={state}
-                  value={state}
-                  label={text(STATE_OPTIONS[state].label)}
-                  note={text(STATE_OPTIONS[state].note)}
-                  tone={STATE_TONE[state]}
-                />
-              ))}
-            </Choice>
-          </Field>
-          {/* Under the state, because what a reader would see is the question the
-              state raises, whichever state it is. */}
-          <div className="entry-editor__action">
-            <Button icon={<EyeIcon weight="duotone" />} disabled={preview.isPending} onClick={openPreview}>
-              {preview.isPending ? text("previewPending") : text("preview")}
-            </Button>
-          </div>
-          <Field label={text("editorSlug")} htmlFor="entry-address">
-            <AddressField
-              inputId="entry-address"
-              path={entry.path}
-              language={entry.language}
-              title={draft.title}
-              value={draft.slug}
-              onChange={(slug) => update({ slug })}
-            />
-          </Field>
-          <Field label={text("editorLanguage")}>
-            <span className="entry-editor__value">
-              <span className="lang-tag" data-language={entry.language}>
-                {entry.language}
-              </span>
-              {text(LANGUAGE_TEXT[entry.language])}
-            </span>
-          </Field>
-          <Field label={text("editorTranslation")}>
-            {entry.counterpart && counterpartPath ? (
-              <a
-                className="entry-editor__link"
-                href={counterpartPath}
-                onClick={openCounterpart}
-                lang={entry.counterpart.language}
-              >
-                <span className="lang-tag" data-language={entry.counterpart.language}>
-                  {entry.counterpart.language}
-                </span>
-                {text("editorOpenCounterpart", entry.counterpart.title)}
-              </a>
-            ) : entry.counterpartTrashed ? (
-              <span className="entry-editor__note">
-                {text("editorTranslationInTrash", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-              </span>
-            ) : (
-              <>
-                <span className="entry-editor__note">{text("editorTranslationNone")}</span>
-                <Button
-                  icon={<PlusIcon weight="duotone" />}
-                  disabled={translate.isPending}
-                  onClick={() => translate.mutate()}
-                >
-                  {translate.isPending
-                    ? text("editorCreateCounterpartPending")
-                    : text("editorCreateCounterpart", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-                </Button>
-              </>
-            )}
-          </Field>
-          {/* Only whilst there is no other language to show instead. */}
-          {!entry.counterpart && (
-            <Field
-              label={text("editorShowInOtherLanguage", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-              htmlFor="entry-show-in-other-language"
-              hint={text("editorShowInOtherLanguageHint", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-            >
-              <Switch
-                id="entry-show-in-other-language"
-                aria-label={text(
-                  "editorShowInOtherLanguage",
-                  text(LANGUAGE_TEXT[otherLanguage(entry.language)]),
-                )}
-                checked={draft.showInOtherLanguage}
-                onCheckedChange={(showInOtherLanguage) => update({ showInOtherLanguage })}
-              />
-            </Field>
-          )}
-          <Field
-            label={text("readingWidth")}
-            hint={text("readingWidthHint", READING_WIDTH_CHARACTERS[draft.readingWidth])}
-          >
-            <Segmented
-              aria-label={text("readingWidth")}
-              value={draft.readingWidth}
-              options={READING_WIDTHS.map((width) => ({ value: width, label: READING_WIDTH_LABELS[width] }))}
-              onValueChange={(value) => update({ readingWidth: value as ReadingWidth })}
-            />
-          </Field>
-          <Field label={text("editorTopics")} htmlFor="entry-topics">
-            <TopicField
-              inputId="entry-topics"
-              language={entry.language}
-              value={draft.topicIds}
-              onChange={(topicIds) => update({ topicIds })}
-            />
-          </Field>
-          {!entry.trashed && (
-            <div className="entry-editor__action entry-editor__action--apart">
-              <Button tone="danger" icon={<TrashIcon />} onClick={() => setAskingToTrash(true)}>
-                {text("trash")}
-              </Button>
-            </div>
-          )}
-        </Editor.Panel>
+        <WritingSurface
+          title={draft.title}
+          body={draft.body}
+          language={entry.language}
+          focusTitle={focusTitle}
+          editor={editor}
+          textSize={textSize}
+          setTextSize={setTextSize}
+          onTitle={(title) => update({ title })}
+          onBody={(body) => update({ body })}
+          onValidation={setChecked}
+        />
+        <EntryProperties
+          entry={entry}
+          draft={draft}
+          checked={checked}
+          area={area}
+          update={update}
+          previewPending={preview.isPending}
+          openPreview={openPreview}
+          translationPending={translate.isPending}
+          onTranslate={() => translate.mutate()}
+          onTrash={() => setAskingToTrash(true)}
+          onSelectFinding={(finding) => editor.current?.selectFinding(finding)}
+        />
       </Editor>
       {askingToTrash && (
         <TrashDialog

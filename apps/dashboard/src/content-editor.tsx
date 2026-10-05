@@ -4,10 +4,13 @@ import type { LanguageSupport } from "@codemirror/language";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
-import { CONTENT_SYNTAX } from "@layered/content";
+import { CONTENT_SYNTAX, type Finding } from "@layered/content";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 import { contentAutocompletion } from "./content-completion.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
+import { contentValidation } from "./content-lint.js";
+import { type CheckedContent, findingMessage } from "./content-validation.js";
+import { useDashboardLanguage } from "./language-context.js";
 import { tableSync } from "./table-sync.js";
 
 /**
@@ -155,12 +158,15 @@ export interface ContentEditorHandle {
    * block, or into an empty body, or to its end.
    */
   insertBlock(text: string): void;
+  /** Selects and scrolls the reported range into view. */
+  selectFinding(finding: Pick<Finding, "from" | "to">): void;
 }
 
 /** Props for the writing surface. */
 export interface ContentEditorProps {
   /** Receives the commands the toolbar uses. */
   editorRef?: Ref<ContentEditorHandle>;
+  onValidation?: (checked: CheckedContent) => void;
   /** The body, as plain text. */
   value: string;
   /** Called with the whole body, as plain text, after every change the author makes. */
@@ -178,13 +184,25 @@ export interface ContentEditorProps {
  * replaces the document; a `value` that is only the echo of the author's own
  * typing is recognised and left alone, so the cursor does not jump.
  */
-export function ContentEditor({ value, onChange, label, editorRef }: ContentEditorProps) {
+export function ContentEditor({ value, onChange, label, editorRef, onValidation }: ContentEditorProps) {
+  const { language } = useDashboardLanguage();
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
 
   useImperativeHandle(
     editorRef,
     () => ({
+      selectFinding(finding) {
+        const current = view.current;
+        if (!current) return;
+        const from = Math.min(current.state.doc.length, finding.from);
+        const to = Math.min(current.state.doc.length, finding.to);
+        current.dispatch({
+          selection: EditorSelection.range(from, to),
+          effects: EditorView.scrollIntoView(from, { y: "center" }),
+        });
+        current.focus();
+      },
       wrap(before, after, placeholder) {
         const current = view.current;
         if (!current) return;
@@ -243,6 +261,8 @@ export function ContentEditor({ value, onChange, label, editorRef }: ContentEdit
     }),
     [],
   );
+  const validated = useEffectEvent((checked: CheckedContent) => onValidation?.(checked));
+  const message = useEffectEvent((finding: Finding) => findingMessage(finding, language));
   const changed = useEffectEvent((text: string) => onChange(text));
   const initialValue = useRef(value);
   const initialLabel = useRef(label);
@@ -255,6 +275,10 @@ export function ContentEditor({ value, onChange, label, editorRef }: ContentEdit
         doc: initialValue.current,
         extensions: [
           surfaceExtensions(initialLabel.current),
+          contentValidation(
+            (checked) => validated(checked),
+            (finding) => message(finding),
+          ),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed(update.state.doc.toString());
           }),
