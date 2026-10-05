@@ -81,7 +81,7 @@ const otherLanguage=de?"en":"de";
 const otherTopic=topic?repository?.topic(topic.id,otherLanguage):undefined;
 const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(otherLanguage,otherTopic.slug):found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
 const navigation=siteNavigation(language);
-const footer=siteFooter(language);
+const footer=siteFooter(language,repository?.footerNavigation(language));
 const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
 let formSubmission;
 if(Astro.request.method==="POST"){

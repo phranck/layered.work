@@ -12,9 +12,11 @@
 
 import type { IconProps as PhosphorIconProps } from "@phosphor-icons/react";
 import { ArrowCounterClockwiseIcon as ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
+import { ArrowDownIcon as ArrowDown } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
 import { ArrowsMergeIcon as ArrowsMerge } from "@phosphor-icons/react/dist/ssr/ArrowsMerge";
 import { ArrowsOutLineVerticalIcon as ArrowsOutLineVertical } from "@phosphor-icons/react/dist/ssr/ArrowsOutLineVertical";
+import { ArrowUpIcon as ArrowUp } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { ArticleIcon as Article } from "@phosphor-icons/react/dist/ssr/Article";
 import { CardsIcon as Cards } from "@phosphor-icons/react/dist/ssr/Cards";
 import { CaretDownIcon as CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";
@@ -92,7 +94,9 @@ function duotone(Icon: ComponentType<PhosphorIconProps>, name: string) {
 }
 
 export const ArrowCounterClockwiseIcon = duotone(ArrowCounterClockwise, "ArrowCounterClockwiseIcon");
+export const ArrowDownIcon = duotone(ArrowDown, "ArrowDownIcon");
 export const ArrowLeftIcon = duotone(ArrowLeft, "ArrowLeftIcon");
+export const ArrowUpIcon = duotone(ArrowUp, "ArrowUpIcon");
 export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsOutLineVerticalIcon");
 export const ArrowsMergeIcon = duotone(ArrowsMerge, "ArrowsMergeIcon");
 export const ArticleIcon = duotone(Article, "ArticleIcon");

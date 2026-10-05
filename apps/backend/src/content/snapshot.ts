@@ -2,6 +2,7 @@ import { mediaReferences, referencedFormNames, renderContent } from "@layered/co
 import {
   type ListedKind,
   type ListingSettings,
+  type PublicFooterNavigation,
   type PublicForm,
   publicForm,
   RESERVED_PATHS,
@@ -23,6 +24,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
+import { readPublicFooterNavigation } from "../navigation/public.js";
 import { readListingSettings } from "../settings/repository.js";
 
 /**
@@ -52,6 +54,7 @@ export interface PublicSnapshot {
   /** How the overviews of posts and projects are set up. */
   listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
+  footerNavigation: PublicFooterNavigation;
 }
 
 /** One subject and the names and addresses it has in each language. */
@@ -458,6 +461,17 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
 
   return {
     entries: publicEntries,
+    footerNavigation: await readPublicFooterNavigation(
+      database,
+      reachable
+        .filter((row) => row.state === "public")
+        .map((row) => ({
+          entryId: row.entryId,
+          language: row.language,
+          path: currentPaths.get(row.translationId) ?? "",
+        })),
+      publishedTopics,
+    ),
     forms: publishedForms,
     topics: publishedTopics,
     media: publishedMedia,

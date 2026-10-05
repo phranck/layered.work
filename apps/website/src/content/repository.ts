@@ -7,6 +7,7 @@ import {
   isKnownHomeBlock,
   type ListedKind,
   listingSettings,
+  publicFooterNavigation,
   publicForm,
   READING_WIDTHS,
   unknownHomeBlocks,
@@ -100,6 +101,7 @@ const topicSchema = z.union([
   })),
 ]);
 const snapshotSchema = z.object({
+  footerNavigation: publicFooterNavigation.optional(),
   entries: z.array(entrySchema),
   forms: z.array(publicForm).default([]),
   topics: z.array(topicSchema),
@@ -370,6 +372,7 @@ export function createRepository(input: unknown) {
       : homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
   return {
     data,
+    footerNavigation: (locale: Language) => data.footerNavigation?.[locale],
     contentUrl: (url: string) => {
       const path = url.split(/[?#]/, 1)[0] ?? "";
       if (!/^\/(?:media|migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) return url;

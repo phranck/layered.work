@@ -36,14 +36,17 @@ export function siteNavigation(language: "en" | "de"): SiteNavigationItem[] {
  *
  * @param language - The language of the page.
  */
-export function siteFooter(language: "en" | "de"): SiteFooterData {
+export function siteFooter(
+  language: "en" | "de",
+  navigation?: NonNullable<SiteFooterData["navigation"]>,
+): SiteFooterData {
   const root = language === "de" ? "/de/" : "/";
   const de = language === "de";
   return {
     description: de
       ? "Gehäuse, Platinen und Software, Schicht für Schicht."
       : "Enclosures, circuit boards and software, made layer by layer.",
-    navigation: [
+    navigation: navigation ?? [
       {
         title: de ? "Entdecken" : "Explore",
         items: [...siteNavigation(language), { label: de ? "Themen" : "Topics", href: `${root}topics/` }],

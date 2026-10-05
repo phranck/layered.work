@@ -201,6 +201,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
   const { media, slugById } = await publicMedia(db, [row]);
 
   return {
+    footerNavigation: { en: [], de: [] },
     entries: [
       {
         id: row.translationId,
