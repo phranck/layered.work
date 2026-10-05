@@ -25,12 +25,14 @@ import {
   entryList,
   entryPreview,
   entryTrashImpact,
+  type FocalPoint,
   type FooterNavigation,
   type FormDetail,
   type FormList,
   type FormSubmission,
   type FormSubmissionList,
   type FormSubmissionStatus,
+  focalPoint,
   footerNavigation,
   footerNavigationList,
   formDetail,
@@ -89,6 +91,7 @@ import {
   type UpdateAccountBody,
   type UploadedMedia,
   updateAccountBody,
+  updateMediaFocalBody,
   uploadedMedia,
   uploadTicket,
 } from "@layered/schemas";
@@ -150,6 +153,7 @@ export interface DashboardApi {
   deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
   fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
+  saveMediaFocalPoint(id: string, point: FocalPoint): Promise<FocalPoint>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
   /** Creates one draft in the site's default language. */
@@ -339,6 +343,16 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchAccountMedia(search, page) {
       const params = new URLSearchParams({ search, page: String(page) });
       return dataOf(await request(`/account/media?${params}`, undefined, true), accountMediaPage);
+    },
+    async saveMediaFocalPoint(id, point) {
+      return dataOf(
+        await request(
+          `/media/${encodeURIComponent(id)}/focal-point`,
+          jsonBody("PATCH", updateMediaFocalBody.parse(point)),
+          true,
+        ),
+        focalPoint,
+      );
     },
     async fetchEntries(kind) {
       const params = new URLSearchParams({ kind });

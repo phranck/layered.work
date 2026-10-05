@@ -1,6 +1,7 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
   DEFAULT_LISTING,
+  focalPoint,
   type HomeBlock,
   homeBlockSchema,
   homeBlockTypes,
@@ -76,6 +77,7 @@ const mediaSchema = z.object({
    * where the same files lie in `public/`.
    */
   src: z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
+  focalPoint: focalPoint.optional(),
   alt: z.string().optional(),
   caption: z.string().optional(),
   width: z.number().positive().optional(),

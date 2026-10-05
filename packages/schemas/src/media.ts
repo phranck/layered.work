@@ -108,3 +108,8 @@ export const mediaProcessing = z.object({
   ),
 });
 export type MediaProcessing = z.infer<typeof mediaProcessing>;
+
+/** The author's crop anchor, independent of any display ratio. */
+export const focalPoint = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
+export type FocalPoint = z.infer<typeof focalPoint>;
+export const updateMediaFocalBody = body({ x: focalPoint.shape.x, y: focalPoint.shape.y });

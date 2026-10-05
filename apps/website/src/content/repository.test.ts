@@ -288,6 +288,13 @@ describe("public content repository", () => {
 });
 
 describe("where the media are served from", () => {
+  it("carries the stored focal point to every image consumer", () => {
+    const asset = createRepository({
+      ...snapshot,
+      media: [{ slug: "focal", src: "/uploads/focal", focalPoint: { x: 0.2, y: 0.8 } }],
+    }).media("focal");
+    expect(asset?.focalPoint).toEqual({ x: 0.2, y: 0.8 });
+  });
   const withMedia = {
     ...snapshot,
     media: [

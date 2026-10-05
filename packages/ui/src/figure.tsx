@@ -1,7 +1,7 @@
 import type { PropsOf } from "@layered/content";
 import type { ComponentPropsWithoutRef } from "react";
 import { ContentPlaceholder } from "./content-placeholder.js";
-import { contentUrl, type MediaAsset, type MediaProps } from "./content-shared.js";
+import { contentUrl, imagePosition, type MediaAsset, type MediaProps } from "./content-shared.js";
 /** A library image and the author overrides declared in the register. */
 export type FigureProps = PropsOf<"Image"> & MediaProps;
 /** The shared semantic media frame. */
@@ -16,7 +16,6 @@ function FigureCaption(props: ComponentPropsWithoutRef<"figcaption">) {
 function FigureImage({ asset, alt }: { asset: MediaAsset; alt?: string }) {
   const src = contentUrl(asset.src, true);
   if (!src) return <ContentPlaceholder name={asset.filename ?? "image"} />;
-  const focal = asset.focalPoint;
   const placeholder =
     asset.placeholder && /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(asset.placeholder)
       ? asset.placeholder
@@ -38,7 +37,7 @@ function FigureImage({ asset, alt }: { asset: MediaAsset; alt?: string }) {
       loading="lazy"
       decoding="async"
       style={{
-        ...(focal ? { objectPosition: `${focal.x * 100}% ${focal.y * 100}%` } : {}),
+        objectPosition: imagePosition(asset),
         ...(placeholder ? { backgroundImage: `url(${placeholder})` } : {}),
       }}
     />

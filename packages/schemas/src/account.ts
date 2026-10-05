@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { mediaProcessingState } from "./media.js";
+import { focalPoint, mediaProcessingState } from "./media.js";
 import { body, MaxLength, text } from "./request.js";
 
 /** A language the editorial interface supports. */
@@ -36,6 +36,7 @@ export const accountMediaItem = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   processingState: mediaProcessingState.optional(),
+  focalPoint: focalPoint.optional(),
 });
 
 export type AccountMediaItem = z.infer<typeof accountMediaItem>;

@@ -24,6 +24,15 @@ const english: Entry = {
 };
 
 describe("an entry card", () => {
+  it("uses the library crop anchor", () => {
+    const markup = renderToStaticMarkup(
+      <EntryCard
+        entry={english}
+        image={{ slug: "focal", src: "/uploads/focal", focalPoint: { x: 0.2, y: 0.8 } }}
+      />,
+    );
+    expect(markup).toContain("object-position:20% 80%");
+  });
   it("marks an entry in another language than the page's with its language", () => {
     const markup = renderToStaticMarkup(<EntryCard entry={english} language="de" />);
     expect(markup).toContain('lang="en"');

@@ -339,6 +339,12 @@ const de = {
   invalidListingText: "Eine Überschrift oder Einleitung ist zu lang.",
 
   // Media picker
+  mediaFocal: "Fokuspunkt",
+  mediaFocalMove: "Fokuspunkt verschieben",
+  mediaFocalHint: "Ziehe den Punkt oder verwende die Pfeiltasten. Umschalt bewegt ihn in größeren Schritten.",
+  mediaCropCard: "Karte 16:10",
+  mediaCropBanner: "Banner 21:9",
+  mediaCropMobile: "Mobil 4:3",
   mediaQueued: "Wartet auf Verarbeitung",
   mediaProcessing: "Wird verarbeitet…",
   mediaReady: "Bereit",
@@ -695,6 +701,12 @@ const en: Catalogue = {
   invalidPreviewLength: `Preview length: a whole number from ${LISTING_BOUNDS.previewLength.min} to ${LISTING_BOUNDS.previewLength.max}.`,
   invalidListingText: "A headline or an introduction is too long.",
 
+  mediaFocal: "Focal point",
+  mediaFocalMove: "Move the focal point",
+  mediaFocalHint: "Drag the point or use the arrow keys. Shift moves it in larger steps.",
+  mediaCropCard: "Card 16:10",
+  mediaCropBanner: "Banner 21:9",
+  mediaCropMobile: "Mobile 4:3",
   mediaQueued: "Waiting for processing",
   mediaProcessing: "Processing…",
   mediaReady: "Ready",

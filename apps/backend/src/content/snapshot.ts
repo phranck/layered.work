@@ -109,6 +109,7 @@ export interface PublicMedia {
   alt?: string;
   srcSet?: string;
   placeholder?: string;
+  focalPoint?: { x: number; y: number };
 }
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -194,6 +195,8 @@ export async function publicMedia(
       height: media.height,
       altText: mediaTranslations.altText,
       placeholder: media.placeholder,
+      focalX: media.focalX,
+      focalY: media.focalY,
     })
     .from(media)
     .leftJoin(
@@ -231,6 +234,7 @@ export async function publicMedia(
           .join(", ");
         return {
           slug: asset.slug,
+          focalPoint: { x: asset.focalX, y: asset.focalY },
           src: `/${asset.storageKey}`,
           mime: asset.mimeType,
           filename: asset.storageKey.split("/").at(-1) ?? asset.slug,

@@ -114,6 +114,8 @@ export async function listAccountMedia(
       width: media.width,
       height: media.height,
       processingState: mediaJobs.state,
+      focalX: media.focalX,
+      focalY: media.focalY,
     })
     .from(media)
     .leftJoin(mediaJobs, eq(mediaJobs.mediaId, media.id))
@@ -130,6 +132,7 @@ export async function listAccountMedia(
       width: row.width as number,
       height: row.height as number,
       processingState: row.processingState ?? "ready",
+      focalPoint: { x: row.focalX, y: row.focalY },
     })),
     page: query.page,
     hasMore: rows.length > PAGE_SIZE,

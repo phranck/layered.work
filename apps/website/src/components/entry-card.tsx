@@ -1,4 +1,4 @@
-import { Card } from "@layered/ui";
+import { Card, imagePosition } from "@layered/ui";
 import { ArticleIcon } from "@layered/ui/icons";
 import {
   dateLabel,
@@ -44,6 +44,7 @@ export function EntryCard({
         <div className="card__media">
           <img
             src={image.src}
+            style={{ objectPosition: imagePosition(image) }}
             srcSet={image.srcSet}
             sizes="(max-width: 719px) 100vw, (max-width: 1039px) 50vw, 33vw"
             width={image.width}

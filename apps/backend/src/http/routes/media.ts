@@ -4,7 +4,9 @@ import {
   completeUploadBody,
   createUploadBody,
   ErrorCode,
+  focalPoint,
   mediaProcessing,
+  updateMediaFocalBody,
   uploadedMedia,
   uploadReceived,
   uploadTicket,
@@ -14,6 +16,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { saveMediaFocalPoint } from "../../media/focal.js";
 import { getMediaProcessing } from "../../media/processing.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
@@ -39,6 +42,19 @@ media.get(
   validate("param", z.object({ id: z.uuid() })),
   responds(mediaProcessing),
   async (c) => ok(c, await getMediaProcessing(database(), c.req.valid("param").id)),
+);
+
+media.patch(
+  "/:id/focal-point",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  validate("json", updateMediaFocalBody),
+  responds(focalPoint),
+  async (c) =>
+    ok(
+      c,
+      await saveMediaFocalPoint(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c)),
+    ),
 );
 
 media.post(
