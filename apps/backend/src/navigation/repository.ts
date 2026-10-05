@@ -13,13 +13,17 @@ import {
 import { HttpError } from "../http/response.js";
 
 type Database = ReturnType<typeof database>;
+export type NavigationPlacement = "main" | "footer";
 
-/** Footer groups, their bilingual titles and links, in their stored order. */
-export async function listFooterNavigations(db: Database): Promise<FooterNavigation[]> {
+/** Groups for one placement, their bilingual titles and links, in stored order. */
+export async function listFooterNavigations(
+  db: Database,
+  placement: NavigationPlacement = "footer",
+): Promise<FooterNavigation[]> {
   const groups = await db
     .select()
     .from(navigations)
-    .where(eq(navigations.placement, "footer"))
+    .where(eq(navigations.placement, placement))
     .orderBy(asc(navigations.sortOrder), asc(navigations.id));
   if (!groups.length) return [];
   const ids = groups.map((group) => group.id);
@@ -68,12 +72,13 @@ export async function listFooterNavigations(db: Database): Promise<FooterNavigat
   }));
 }
 
-/** Stores one group atomically; ids may reference only items already owned by it. */
+/** Stores one group atomically; existing ids must belong to it, new ids enable same-save nesting. */
 export async function saveFooterNavigation(
   db: Database,
   id: string | null,
   value: SaveFooterNavigationBody,
   actorUserId: string,
+  placement: NavigationPlacement = "footer",
 ): Promise<FooterNavigation> {
   const savedId = await db.transaction(async (tx) => {
     let navigationId = id;
@@ -81,9 +86,9 @@ export async function saveFooterNavigation(
       const [existing] = await tx
         .select({ id: navigations.id })
         .from(navigations)
-        .where(and(eq(navigations.id, navigationId), eq(navigations.placement, "footer")))
+        .where(and(eq(navigations.id, navigationId), eq(navigations.placement, placement)))
         .for("update");
-      if (!existing) throw new HttpError(ErrorCode.NotFound, "That footer navigation does not exist.");
+      if (!existing) throw new HttpError(ErrorCode.NotFound, "That navigation does not exist.");
       await tx
         .update(navigations)
         .set({ sortOrder: value.sortOrder })
@@ -91,9 +96,9 @@ export async function saveFooterNavigation(
     } else {
       const [created] = await tx
         .insert(navigations)
-        .values({ placement: "footer", sortOrder: value.sortOrder })
+        .values({ placement, sortOrder: value.sortOrder })
         .returning({ id: navigations.id });
-      if (!created) throw new Error("Footer navigation insert returned no id");
+      if (!created) throw new Error("Navigation insert returned no id");
       navigationId = created.id;
     }
     const owned = await tx
@@ -102,7 +107,16 @@ export async function saveFooterNavigation(
       .where(eq(navigationItems.navigationId, navigationId));
     const ownedById = new Map(owned.map((item) => [item.id, item]));
     const wantedIds = value.items.flatMap((item) => (item.id ? [item.id] : []));
-    if (new Set(wantedIds).size !== wantedIds.length || wantedIds.some((itemId) => !ownedById.has(itemId)))
+    const existingIds = wantedIds.length
+      ? await tx
+          .select({ id: navigationItems.id, navigationId: navigationItems.navigationId })
+          .from(navigationItems)
+          .where(inArray(navigationItems.id, wantedIds))
+      : [];
+    if (
+      new Set(wantedIds).size !== wantedIds.length ||
+      existingIds.some((item) => item.navigationId !== navigationId)
+    )
       throw new HttpError(ErrorCode.InvalidRequest, "An item does not belong to this navigation.");
     for (const item of value.items) {
       if (
@@ -132,12 +146,15 @@ export async function saveFooterNavigation(
       }
     }
     const removed = owned.filter((item) => !wantedIds.includes(item.id)).map((item) => item.id);
-    // A retained child cannot survive deleting its parent because the FK cascades.
-    if (owned.some((item) => wantedIds.includes(item.id) && item.parentId && removed.includes(item.parentId)))
-      throw new HttpError(
-        ErrorCode.InvalidRequest,
-        "Move or remove a group's children before deleting their parent.",
-      );
+    // Detach retained children before the parent deletion can cascade over them.
+    for (const item of value.items) {
+      if (
+        item.id &&
+        ownedById.get(item.id)?.parentId &&
+        removed.includes(ownedById.get(item.id)?.parentId ?? "")
+      )
+        await tx.update(navigationItems).set({ parentId: null }).where(eq(navigationItems.id, item.id));
+    }
     if (removed.length) await tx.delete(navigationItems).where(inArray(navigationItems.id, removed));
     for (const language of ["en", "de"] as const) {
       await tx
@@ -148,7 +165,11 @@ export async function saveFooterNavigation(
           set: { title: value.title[language] },
         });
     }
-    for (const [sortOrder, item] of value.items.entries()) {
+    // Insert roots before children so client-generated parent ids satisfy the FK.
+    const ordered = [...value.items.entries()].sort(
+      (a, b) => Number(Boolean(a[1].parentId)) - Number(Boolean(b[1].parentId)),
+    );
+    for (const [sortOrder, item] of ordered) {
       const fields = {
         entryId: item.entryId,
         topicId: item.topicId,
@@ -157,11 +178,12 @@ export async function saveFooterNavigation(
         sortOrder,
       };
       let itemId = item.id;
-      if (itemId) await tx.update(navigationItems).set(fields).where(eq(navigationItems.id, itemId));
+      if (itemId && ownedById.has(itemId))
+        await tx.update(navigationItems).set(fields).where(eq(navigationItems.id, itemId));
       else {
         const [created] = await tx
           .insert(navigationItems)
-          .values({ ...fields, navigationId })
+          .values({ ...fields, navigationId, ...(itemId ? { id: itemId } : {}) })
           .returning({ id: navigationItems.id });
         if (!created) throw new Error("Navigation item insert returned no id");
         itemId = created.id;
@@ -181,24 +203,29 @@ export async function saveFooterNavigation(
       action: id ? "navigation.updated" : "navigation.created",
       subjectType: "navigations",
       subjectId: navigationId,
-      detail: { placement: "footer", itemCount: value.items.length },
+      detail: { placement, itemCount: value.items.length },
     });
     return navigationId;
   });
-  const saved = (await listFooterNavigations(db)).find((group) => group.id === savedId);
-  if (!saved) throw new Error("Saved footer navigation could not be read");
+  const saved = (await listFooterNavigations(db, placement)).find((group) => group.id === savedId);
+  if (!saved) throw new Error("Saved navigation could not be read");
   return saved;
 }
 
-/** Deletes only the requested footer group and records the size of the cascade. */
-export async function deleteFooterNavigation(db: Database, id: string, actorUserId: string): Promise<void> {
+/** Deletes only the requested placement group and records the size of the cascade. */
+export async function deleteFooterNavigation(
+  db: Database,
+  id: string,
+  actorUserId: string,
+  placement: NavigationPlacement = "footer",
+): Promise<void> {
   await db.transaction(async (tx) => {
     const [group] = await tx
       .select({ id: navigations.id })
       .from(navigations)
-      .where(and(eq(navigations.id, id), eq(navigations.placement, "footer")))
+      .where(and(eq(navigations.id, id), eq(navigations.placement, placement)))
       .for("update");
-    if (!group) throw new HttpError(ErrorCode.NotFound, "That footer navigation does not exist.");
+    if (!group) throw new HttpError(ErrorCode.NotFound, "That navigation does not exist.");
     const items = await tx
       .select({ id: navigationItems.id })
       .from(navigationItems)
@@ -209,7 +236,7 @@ export async function deleteFooterNavigation(db: Database, id: string, actorUser
       action: "navigation.deleted",
       subjectType: "navigations",
       subjectId: id,
-      detail: { placement: "footer", itemCount: items.length },
+      detail: { placement, itemCount: items.length },
     });
   });
 }
@@ -219,6 +246,7 @@ export async function reorderFooterNavigations(
   db: Database,
   positions: { id: string; sortOrder: number }[],
   actorUserId: string,
+  placement: NavigationPlacement = "footer",
 ): Promise<FooterNavigation[]> {
   await db.transaction(async (tx) => {
     const rows = await tx
@@ -226,7 +254,7 @@ export async function reorderFooterNavigations(
       .from(navigations)
       .where(
         and(
-          eq(navigations.placement, "footer"),
+          eq(navigations.placement, placement),
           inArray(
             navigations.id,
             positions.map((item) => item.id),
@@ -236,7 +264,7 @@ export async function reorderFooterNavigations(
       .orderBy(asc(navigations.id))
       .for("update");
     if (rows.length !== positions.length)
-      throw new HttpError(ErrorCode.NotFound, "A footer navigation no longer exists.");
+      throw new HttpError(ErrorCode.NotFound, "A navigation no longer exists.");
     for (const item of positions) {
       await tx.update(navigations).set({ sortOrder: item.sortOrder }).where(eq(navigations.id, item.id));
       await tx.insert(auditLog).values({
@@ -248,5 +276,5 @@ export async function reorderFooterNavigations(
       });
     }
   });
-  return listFooterNavigations(db);
+  return listFooterNavigations(db, placement);
 }

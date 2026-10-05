@@ -5,7 +5,7 @@ import {
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Row } from "@layered/ui";
+import { Button, Card, Field, Input, Row, Select, Switch } from "@layered/ui";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -23,31 +23,39 @@ import { LANGUAGE_TEXT } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
+import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
+import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
 import "./footer-navigation.css";
 
-const listKey = ["footer-navigation"] as const;
-function refresh(client: QueryClient) {
-  void client.invalidateQueries({ queryKey: listKey });
+type Placement = "main" | "footer";
+const listKey = (placement: Placement) => [`${placement}-navigation`] as const;
+function refresh(client: QueryClient, placement: Placement) {
+  void client.invalidateQueries({ queryKey: listKey(placement) });
   void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
 }
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 
 export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
+  const placement: Placement = area.id === "main-nav" ? "main" : "footer";
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const session = useSession();
   const owner = session.data?.role === "owner";
-  const list = useQuery({ queryKey: listKey, queryFn: api.fetchFooterNavigations });
+  const list = useQuery({
+    queryKey: listKey(placement),
+    queryFn: () => api.fetchFooterNavigations(placement),
+  });
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const { notifyError } = useNotify();
   const reorder = useMutation({
-    mutationFn: api.reorderFooterNavigations,
-    onSuccess: () => refresh(client),
+    mutationFn: (positions: { id: string; sortOrder: number }[]) =>
+      api.reorderFooterNavigations(positions, placement),
+    onSuccess: () => refresh(client, placement),
     onError: (error) => notifyError(error),
   });
   return (
@@ -134,13 +142,14 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
       </Card>
       {dialog && "editing" in dialog && (
         <NavigationEditor
+          placement={placement}
           group={dialog.editing}
           sortOrder={Math.max(-1, ...(list.data?.map((group) => group.sortOrder) ?? [])) + 1}
           onClose={() => setDialog(null)}
         />
       )}
       {dialog && "deleting" in dialog && (
-        <NavigationDelete group={dialog.deleting} onClose={() => setDialog(null)} />
+        <NavigationDelete placement={placement} group={dialog.deleting} onClose={() => setDialog(null)} />
       )}
     </>
   );
@@ -148,10 +157,12 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
 
 type DraftItem = SaveFooterNavigationBody["items"][number] & { key: string };
 function NavigationEditor({
+  placement,
   group,
   sortOrder,
   onClose,
 }: {
+  placement: Placement;
   group: FooterNavigation | null;
   sortOrder: number;
   onClose: () => void;
@@ -167,9 +178,11 @@ function NavigationEditor({
   const [invalid, setInvalid] = useState(false);
   const save = useMutation({
     mutationFn: (value: SaveFooterNavigationBody) =>
-      group ? api.saveFooterNavigation(group.id, value) : api.createFooterNavigation(value),
+      group
+        ? api.saveFooterNavigation(group.id, value, placement)
+        : api.createFooterNavigation(value, placement),
     onSuccess: () => {
-      refresh(client);
+      refresh(client, placement);
       notify({ tone: "success", message: text("saved") });
       onClose();
     },
@@ -212,19 +225,34 @@ function NavigationEditor({
               </Field>
             ))}
           </div>
-          {items.map((item, index) => (
-            <NavigationItemFields
-              key={item.key}
-              item={item}
-              index={index}
-              length={items.length}
-              onChange={(change) => updateItem(item.key, change)}
-              onMove={(to) => setItems((current) => moveItem(current, index, to))}
-              onRemove={() =>
-                setItems((current) => current.filter((candidate) => candidate.key !== item.key))
-              }
-            />
-          ))}
+          <Reorder.List
+            count={items.length}
+            onMove={(from, to) => setItems((current) => moveItem(current, from, to))}
+          >
+            {items.map((item, index) => (
+              <Reorder.Item key={item.key} index={index}>
+                <NavigationItemFields
+                  key={item.key}
+                  item={item}
+                  parents={items.filter((candidate) => candidate.key !== item.key && !candidate.parentId)}
+                  hasChildren={items.some((candidate) => candidate.parentId === item.id)}
+                  index={index}
+                  length={items.length}
+                  onChange={(change) => updateItem(item.key, change)}
+                  onMove={(to) => setItems((current) => moveItem(current, index, to))}
+                  onRemove={() =>
+                    setItems((current) =>
+                      current
+                        .filter((candidate) => candidate.key !== item.key)
+                        .map((candidate) =>
+                          candidate.parentId === item.id ? { ...candidate, parentId: null } : candidate,
+                        ),
+                    )
+                  }
+                />
+              </Reorder.Item>
+            ))}
+          </Reorder.List>
           <Button
             icon={<PlusIcon />}
             disabled={items.length >= 100}
@@ -233,6 +261,7 @@ function NavigationEditor({
                 ...current,
                 {
                   key: crypto.randomUUID(),
+                  id: crypto.randomUUID(),
                   label: { en: "", de: "" },
                   visible: { en: true, de: true },
                   href: null,
@@ -279,6 +308,8 @@ function NavigationItemFields({
   item,
   index,
   length,
+  parents,
+  hasChildren,
   onChange,
   onMove,
   onRemove,
@@ -286,6 +317,8 @@ function NavigationItemFields({
   item: DraftItem;
   index: number;
   length: number;
+  parents: DraftItem[];
+  hasChildren: boolean;
   onChange: (change: Partial<DraftItem>) => void;
   onMove: (index: number) => void;
   onRemove: () => void;
@@ -311,16 +344,39 @@ function NavigationItemFields({
           </Field>
         ))}
       </div>
-      <Field label={text("navigationAddress")} htmlFor={`navigation-${item.key}-href`}>
-        <Input
-          id={`navigation-${item.key}-href`}
-          value={item.href ?? ""}
-          disabled={Boolean(item.entryId || item.topicId)}
-          maxLength={2048}
-          onChange={(event) => onChange({ href: event.target.value || null })}
+      <NavigationTarget item={item} itemKey={item.key} onChange={onChange} />
+      <Field label={text("navigationParent")} htmlFor={`navigation-${item.key}-parent`}>
+        <Select
+          id={`navigation-${item.key}-parent`}
+          value={item.parentId ?? ""}
+          disabled={hasChildren}
+          options={[
+            { value: "", label: text("navigationTopLevel") },
+            ...parents.flatMap((parent) =>
+              parent.id ? [{ value: parent.id, label: parent.label[language] || parent.id }] : [],
+            ),
+          ]}
+          onChange={(event) => onChange({ parentId: event.target.value || null })}
         />
       </Field>
+      <div className="settings-form__pair">
+        {CONTENT_LANGUAGES.map((code) => (
+          <Field.Inline
+            key={code}
+            label={text("navigationVisible", text(LANGUAGE_TEXT[code]))}
+            htmlFor={`navigation-${item.key}-visible-${code}`}
+          >
+            <Switch
+              id={`navigation-${item.key}-visible-${code}`}
+              aria-label={text("navigationVisible", text(LANGUAGE_TEXT[code]))}
+              checked={item.visible[code]}
+              onCheckedChange={(checked) => onChange({ visible: { ...item.visible, [code]: checked } })}
+            />
+          </Field.Inline>
+        ))}
+      </div>
       <div className="actions">
+        <Reorder.Handle index={index} label={text("moveGroup", name)} />
         <Button.Icon
           label={text("navigationUp", name)}
           icon={<ArrowUpIcon />}
@@ -339,15 +395,23 @@ function NavigationItemFields({
   );
 }
 
-function NavigationDelete({ group, onClose }: { group: FooterNavigation; onClose: () => void }) {
+function NavigationDelete({
+  placement,
+  group,
+  onClose,
+}: {
+  placement: Placement;
+  group: FooterNavigation;
+  onClose: () => void;
+}) {
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const remove = useMutation({
-    mutationFn: () => api.deleteFooterNavigation(group.id),
+    mutationFn: () => api.deleteFooterNavigation(group.id, placement),
     onSuccess: () => {
-      refresh(client);
+      refresh(client, placement);
       onClose();
     },
     onError: (error) => notifyError(error),

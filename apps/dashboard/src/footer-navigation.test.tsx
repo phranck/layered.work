@@ -43,8 +43,8 @@ afterEach(() => {
   queryClient.clear();
   vi.unstubAllGlobals();
 });
-function show() {
-  const area = dashboardAreas.find((candidate) => candidate.id === "footer-nav");
+function show(id = "footer-nav") {
+  const area = dashboardAreas.find((candidate) => candidate.id === id);
   if (!area) throw new Error("Footer area missing");
   render(
     <QueryClientProvider client={queryClient}>
@@ -66,6 +66,28 @@ it("shows the bilingual groups as rows with their links beneath them", async () 
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual(["Projekte", "Beiträge"]);
+});
+
+it("edits main navigation with language visibility, a parent and keyboard reordering", async () => {
+  show("main-nav");
+  fireEvent.click(await screen.findByRole("button", { name: "Entdecken bearbeiten" }));
+  const parents = screen.getAllByLabelText("Übergeordneter Link");
+  fireEvent.change(parents[1] as HTMLElement, { target: { value: groups[0]?.items[0]?.id } });
+  fireEvent.click(screen.getAllByRole("switch", { name: "Sichtbar auf Deutsch" })[1] as HTMLElement);
+  fireEvent.keyDown(screen.getByRole("button", { name: /„Beiträge“ verschieben/ }), { key: "ArrowUp" });
+  sent.mockImplementation(async (_path: string, init?: RequestInit) => {
+    if (init?.method === "PUT")
+      return Response.json({ data: { ...groups[0], ...JSON.parse(String(init.body)) } });
+    return Response.json({ data: groups });
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+  await waitFor(() => expect(sent.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+  const call = sent.mock.calls.find(([, init]) => init?.method === "PUT");
+  expect(call?.[0]).toContain("/main-navigation/");
+  const value = saveFooterNavigationBody.parse(JSON.parse(String(call?.[1]?.body)));
+  expect(value.items[0]?.label.de).toBe("Beiträge");
+  expect(value.items[0]?.visible.de).toBe(false);
+  expect(value.items[0]?.parentId).toBe(groups[0]?.items[0]?.id);
 });
 
 it("asks before deleting and states exactly how many links go with the group", async () => {

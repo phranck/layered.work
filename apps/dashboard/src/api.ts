@@ -176,11 +176,21 @@ export interface DashboardApi {
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
   fetchSettings(): Promise<SettingsView>;
-  fetchFooterNavigations(): Promise<FooterNavigation[]>;
-  createFooterNavigation(value: SaveFooterNavigationBody): Promise<FooterNavigation>;
-  saveFooterNavigation(id: string, value: SaveFooterNavigationBody): Promise<FooterNavigation>;
-  deleteFooterNavigation(id: string): Promise<void>;
-  reorderFooterNavigations(positions: { id: string; sortOrder: number }[]): Promise<FooterNavigation[]>;
+  fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
+  createFooterNavigation(
+    value: SaveFooterNavigationBody,
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation>;
+  saveFooterNavigation(
+    id: string,
+    value: SaveFooterNavigationBody,
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation>;
+  deleteFooterNavigation(id: string, placement?: "main" | "footer"): Promise<void>;
+  reorderFooterNavigations(
+    positions: { id: string; sortOrder: number }[],
+    placement?: "main" | "footer",
+  ): Promise<FooterNavigation[]>;
   /** Stores one group of settings and returns all of them as they now stand. */
   saveSettings<Group extends keyof SettingsGroups>(
     group: Group,
@@ -380,32 +390,36 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async fetchSettings() {
       return dataOf(await request("/settings", undefined, true), settingsView);
     },
-    async fetchFooterNavigations() {
-      return dataOf(await request("/footer-navigation", undefined, true), footerNavigationList);
+    async fetchFooterNavigations(placement = "footer") {
+      return dataOf(await request(`/${placement}-navigation`, undefined, true), footerNavigationList);
     },
-    async createFooterNavigation(value) {
+    async createFooterNavigation(value, placement = "footer") {
       return dataOf(
-        await request("/footer-navigation", jsonBody("POST", saveFooterNavigationBody.parse(value)), true),
+        await request(
+          `/${placement}-navigation`,
+          jsonBody("POST", saveFooterNavigationBody.parse(value)),
+          true,
+        ),
         footerNavigation,
       );
     },
-    async saveFooterNavigation(id, value) {
+    async saveFooterNavigation(id, value, placement = "footer") {
       return dataOf(
         await request(
-          `/footer-navigation/${encodeURIComponent(id)}`,
+          `/${placement}-navigation/${encodeURIComponent(id)}`,
           jsonBody("PUT", saveFooterNavigationBody.parse(value)),
           true,
         ),
         footerNavigation,
       );
     },
-    async deleteFooterNavigation(id) {
-      await request(`/footer-navigation/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
+    async deleteFooterNavigation(id, placement = "footer") {
+      await request(`/${placement}-navigation/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
     },
-    async reorderFooterNavigations(positions) {
+    async reorderFooterNavigations(positions, placement = "footer") {
       return dataOf(
         await request(
-          "/footer-navigation/order",
+          `/${placement}-navigation/order`,
           jsonBody("PATCH", reorderFooterNavigationBody.parse({ positions })),
           true,
         ),

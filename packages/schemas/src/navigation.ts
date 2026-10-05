@@ -43,7 +43,10 @@ export const footerNavigation = z.object({
 export const footerNavigationList = z.array(footerNavigation);
 export const navigationIdParam = z.object({ id: z.uuid() });
 export type FooterNavigation = z.infer<typeof footerNavigation>;
-export const publicNavigationItem = z.object({ label: z.string(), href: navigationHref });
+const publicNavigationLink = z.object({ label: z.string(), href: navigationHref });
+export const publicNavigationItem = publicNavigationLink.extend({
+  children: z.array(publicNavigationLink).optional(),
+});
 export const publicNavigationGroup = z.object({ title: z.string(), items: z.array(publicNavigationItem) });
 export const publicFooterNavigation = bilingual(z.array(publicNavigationGroup));
 export const publicMainNavigation = bilingual(z.array(publicNavigationItem));

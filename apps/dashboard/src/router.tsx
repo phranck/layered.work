@@ -28,6 +28,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   submissions: SubmissionsScreen,
   "api-tokens": AccessTokensScreen,
   "footer-nav": FooterNavigationScreen,
+  "main-nav": FooterNavigationScreen,
 };
 
 export interface DashboardRouterOptions {

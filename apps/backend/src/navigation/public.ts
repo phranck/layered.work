@@ -81,12 +81,29 @@ export async function readPublicNavigation(
       .filter((group) => placement === "main" || group.title?.trim())
       .map((group) => ({
         title: group.title ?? "",
-        items: items
-          .filter((item) => item.navigationId === group.id && (!item.parentId || resolved.has(item.parentId)))
-          .flatMap((item) => {
-            const link = resolved.get(item.id);
-            return link ? [link] : [];
-          }),
+        items:
+          placement === "main"
+            ? items
+                .filter((item) => item.navigationId === group.id && !item.parentId)
+                .flatMap((item) => {
+                  const link = resolved.get(item.id);
+                  if (!link) return [];
+                  const children = items
+                    .filter((child) => child.navigationId === group.id && child.parentId === item.id)
+                    .flatMap((child) => {
+                      const target = resolved.get(child.id);
+                      return target ? [target] : [];
+                    });
+                  return [{ ...link, ...(children.length ? { children } : {}) }];
+                })
+            : items
+                .filter(
+                  (item) => item.navigationId === group.id && (!item.parentId || resolved.has(item.parentId)),
+                )
+                .flatMap((item) => {
+                  const link = resolved.get(item.id);
+                  return link ? [link] : [];
+                }),
       }));
   }
   return result;
