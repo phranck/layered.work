@@ -60,7 +60,7 @@ it.skipIf(!hasTestDatabase)(
       handle: "Fixture",
       href: `https://example.test/${socialId}`,
     });
-    expect(Object.keys(snapshot.siteFrame).sort()).toEqual(["footerLine", "social", "title"]);
+    expect(Object.keys(snapshot.siteFrame).sort()).toEqual(["footerLine", "social", "socialImage", "title"]);
     await db.update(socialAccounts).set({ enabled: false }).where(eq(socialAccounts.id, socialId));
     expect(
       (await readPublicSnapshot(db)).siteFrame.social.some((account) => account.href.endsWith(socialId)),

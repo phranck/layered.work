@@ -86,6 +86,7 @@ export interface PublicEntry {
   body: string;
   topics: string[];
   featuredImage: string | null;
+  socialImage?: string | null;
   translationPath: string | null;
   featured: boolean;
   onHomePage: boolean;
@@ -139,13 +140,18 @@ const READABLE = ["public", "hidden"] as const;
  * @param assets - Every file in the library, with its storage key.
  */
 function namedFiles(
-  translations: readonly { body: string; featuredMediaId: string | null }[],
+  translations: readonly {
+    body: string;
+    featuredMediaId: string | null;
+    socialCardMediaId?: string | null;
+  }[],
   assets: readonly { id: string; slug: string; storageKey: string }[],
 ): Set<string> {
   const idBySlug = new Map(assets.map((asset) => [asset.slug, asset.id]));
   const named = new Set<string>();
   for (const translation of translations) {
     if (translation.featuredMediaId) named.add(translation.featuredMediaId);
+    if (translation.socialCardMediaId) named.add(translation.socialCardMediaId);
     for (const reference of mediaReferences(translation.body)) {
       const id = idBySlug.get(reference.slug);
       if (id) named.add(id);
@@ -169,7 +175,11 @@ function namedFiles(
  */
 export async function publicMedia(
   database: Database,
-  translations: readonly { body: string; featuredMediaId: string | null }[],
+  translations: readonly {
+    body: string;
+    featuredMediaId: string | null;
+    socialCardMediaId?: string | null;
+  }[],
 ): Promise<{ media: PublicMedia[]; slugById: Map<string, string> }> {
   const assets = await database
     .select({
@@ -367,6 +377,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       showInOtherLanguage: entryTranslations.showInOtherLanguage,
       publishedAt: entryTranslations.publishedAt,
       featuredMediaId: entryTranslations.featuredMediaId,
+      socialCardMediaId: entryTranslations.socialCardMediaId,
       kind: entries.kind,
       featured: entries.featured,
       onHomePage: entries.onHomePage,
@@ -442,6 +453,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       body: row.body,
       topics: topicsByEntry.get(row.entryId) ?? [],
       featuredImage: row.featuredMediaId ? (slugById.get(row.featuredMediaId) ?? null) : null,
+      socialImage: row.socialCardMediaId ? (slugById.get(row.socialCardMediaId) ?? null) : null,
       translationPath: counterpart ? (currentPaths.get(counterpart.translationId) ?? null) : null,
       featured: row.featured,
       onHomePage: row.onHomePage,

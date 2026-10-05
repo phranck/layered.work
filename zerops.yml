@@ -112,6 +112,7 @@ zerops:
       # so a schema is never created by a role that bypasses every grant.
       initCommands:
         - node apps/backend/dist/db/migrate.js
+        - node apps/backend/dist/social/backfill.js
       start: node apps/backend/dist/index.js
       # Liveness, and liveness only. This one runs continuously and takes a
       # container out of service when it fails, so it must not reach the

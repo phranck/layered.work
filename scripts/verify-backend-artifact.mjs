@@ -25,7 +25,11 @@ try {
 
   const result = spawnSync(
     process.execPath,
-    ["--input-type=module", "-e", "await import('./apps/backend/dist/http/app.js')"],
+    [
+      "--input-type=module",
+      "-e",
+      "await import('./apps/backend/dist/http/app.js'); const {renderSocialCard}=await import('./apps/backend/dist/social/card.js'); const card=await renderSocialCard('Artifact check'); if(card.wordmark.centerOffsetX>1)throw new Error('Uncentered social card')",
+    ],
     {
       cwd: staging,
       encoding: "utf8",

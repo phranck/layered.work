@@ -33,6 +33,7 @@ export type SiteSettings = z.infer<typeof siteSettings>;
 /** Only settings and enabled account links that visitors may see. */
 export const publicSiteFrame = siteSettings.pick({ title: true, footerLine: true }).extend({
   social: z.array(z.object({ platform: z.string(), handle: z.string(), href: navigationHref })),
+  socialImage: z.string().nullable().optional(),
 });
 export type PublicSiteFrame = z.infer<typeof publicSiteFrame>;
 

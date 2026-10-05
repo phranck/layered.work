@@ -6,7 +6,7 @@ import EntryArticle from "../../components/EntryArticle.astro";
 import { siteFooter, siteNavigation } from "../../components/site-navigation.js";
 import { loadPreview } from "../../content/preview.js";
 import { formsForPage } from "../../content/forms.js";
-import { summaryOf } from "../../content/repository.js";
+import { pageMetadata } from "../../content/metadata.js";
 import "../../styles/pages.css";
 
 /**
@@ -35,6 +35,7 @@ const forms = entry && repository ? await formsForPage(repository, nodes, entry.
 // Read by the middleware once this response exists, as on the published page.
 Astro.locals.rendersModel = rendersComponent(nodes, "Model");
 Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
+const metadata = pageMetadata(repository ?? undefined, entry);
 ---
 <SiteLayout
   title={entry ? `${de ? "Vorschau" : "Preview"}: ${entry.title}` : de ? "Vorschau nicht verfügbar" : "Preview unavailable"}
@@ -44,7 +45,8 @@ Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
   footer={siteFooter(language, repository?.footerNavigation(language), frame)}
   canonicalPath={entry?.path ?? "/"}
   readingWidth={entry?.readingWidth}
-  description={entry ? summaryOf(entry) : undefined}
+  description={metadata.description}
+  socialImage={metadata.image}
 >
   <meta slot="head" name="robots" content="noindex, nofollow" />
   <meta slot="head" name="referrer" content="no-referrer" />

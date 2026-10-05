@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { expectedTables } from "../db/readiness.js";
@@ -45,7 +45,7 @@ export const hasTestDatabase = Boolean(process.env[TEST_DATABASE_URL]);
  *
  * @returns The database the suite writes to.
  */
-export async function testDatabase(): Promise<PostgresJsDatabase<typeof schema>> {
+export async function testDatabase() {
   const url = process.env[TEST_DATABASE_URL];
   if (!url) {
     throw new Error(
