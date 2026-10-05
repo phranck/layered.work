@@ -69,6 +69,8 @@ Zerops issued the certificate through Let's Encrypt, valid to 12 December 2026, 
 
 `dashboard.layered.work` carries the same two records and is attached to the `dashboard` service. Zerops issued one certificate covering both names, so the site and the dashboard share it. `api.layered.work` has no record yet and is reached through its Zerops subdomain.
 
+`new.layered.work` carries the same two records and answers on the `website` service. It is one of the preview hosts in `apps/website/src/site.ts`, so it shows the finished site whilst `layered.work` still shows the countdown, and the smoke test checks the site there.
+
 The backend publishes its generated OpenAPI description at `/openapi.json`. The route, authentication and shared error contract are documented in [API](api.md).
 
 Adding a name to a project makes Zerops re-issue that certificate, and for a minute or two whilst it does, the existing host answers with a self-signed one. Nothing is broken; it passes.
@@ -282,7 +284,7 @@ Repository secrets and variables the deploy workflow reads.
 | `ZEROPS_DASHBOARD_SERVICE_ID` | secret | " |
 | `ZEROPS_TOKEN` | secret | A Zerops personal access token. Set, and deploying since 13 September 2026. |
 
-There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet.
+There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
 
 `security.txt` is deferred. Its two signing secrets are not set and the deploy workflow does not generate the file, so nothing depends on them. Its own issue puts both back when it is worked.
 
