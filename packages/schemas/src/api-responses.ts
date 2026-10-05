@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { ENTRY_KINDS, READING_WIDTHS } from "./entries.js";
 import { publicForm } from "./forms.js";
-import { listingSettings } from "./settings.js";
+import { publicFooterNavigation, publicMainNavigation } from "./navigation.js";
+import { listingSettings, publicSiteFrame } from "./settings.js";
 
 export const healthAlive = z.object({ service: z.literal("backend"), alive: z.literal(true) });
 const readinessCheck = z.object({ ok: z.boolean(), detail: z.string() });
@@ -60,6 +61,9 @@ const publicMedia = z.object({
 });
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
 export const publicSnapshot = z.object({
+  footerNavigation: publicFooterNavigation,
+  mainNavigation: publicMainNavigation,
+  siteFrame: publicSiteFrame,
   entries: z.array(publicEntry),
   forms: z.array(publicForm),
   topics: z.array(

@@ -9,22 +9,31 @@ import { Figure } from "./figure.js";
 /** Model parameters and the library that resolves its source. */
 export type ModelProps = PropsOf<"Model"> & MediaProps;
 /** Server-renderable viewer upgraded by the website's model-viewer island. */
-export function Model({ slug, alt, caption, media }: ModelProps) {
+export function Model({ slug, alt, caption, poster, media }: ModelProps) {
   const asset = media(slug);
   const src = contentUrl(asset?.src, true);
   if (!asset || !src) return <ContentPlaceholder name={slug} />;
-  const label = alt ?? asset.alt ?? slug;
+  const label = alt;
+  const posterUrl = contentUrl(poster ? media(poster)?.src : asset.poster, true);
   return (
     <Figure.Root className="content-model" id={slug}>
       <div className="content-model__stage">
         <div className="content-model__viewport">
-          {createElement("model-viewer", {
-            src,
-            alt: label,
-            "camera-controls": true,
-            "touch-action": "pan-y",
-            loading: "lazy",
-          })}
+          {createElement(
+            "model-viewer",
+            {
+              "data-model-src": src,
+              alt: label,
+              poster: posterUrl,
+              "auto-rotate": true,
+              "camera-controls": true,
+              "touch-action": "pan-y",
+              loading: "lazy",
+            },
+            posterUrl ? (
+              <img slot="poster" src={posterUrl} alt={label} loading="lazy" decoding="async" />
+            ) : undefined,
+          )}
           <Button.Icon
             className="content-model__zoom"
             label="Expand 3D view"

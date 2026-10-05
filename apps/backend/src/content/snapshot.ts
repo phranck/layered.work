@@ -2,7 +2,10 @@ import { mediaReferences, referencedFormNames, renderContent } from "@layered/co
 import {
   type ListedKind,
   type ListingSettings,
+  type PublicFooterNavigation,
   type PublicForm,
+  type PublicMainNavigation,
+  type PublicSiteFrame,
   publicForm,
   RESERVED_PATHS,
 } from "@layered/schemas";
@@ -23,7 +26,8 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
-import { readListingSettings } from "../settings/repository.js";
+import { readPublicNavigation } from "../navigation/public.js";
+import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 
 /**
  * The public content of the site, read out of the database in the shape the
@@ -52,6 +56,9 @@ export interface PublicSnapshot {
   /** How the overviews of posts and projects are set up. */
   listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
+  footerNavigation: PublicFooterNavigation;
+  mainNavigation: PublicMainNavigation;
+  siteFrame: PublicSiteFrame;
 }
 
 /** One subject and the names and addresses it has in each language. */
@@ -456,8 +463,22 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     .from(homeBlocks)
     .orderBy(asc(homeBlocks.sortOrder));
 
+  const targets = reachable
+    .filter((row) => row.state === "public")
+    .map((row) => ({
+      entryId: row.entryId,
+      language: row.language,
+      path: currentPaths.get(row.translationId) ?? "",
+    }));
+  const main = await readPublicNavigation(database, targets, publishedTopics, "main");
   return {
     entries: publicEntries,
+    footerNavigation: await readPublicNavigation(database, targets, publishedTopics, "footer"),
+    mainNavigation: {
+      en: main.en.flatMap((group) => group.items),
+      de: main.de.flatMap((group) => group.items),
+    },
+    siteFrame: await readPublicSiteFrame(database),
     forms: publishedForms,
     topics: publishedTopics,
     media: publishedMedia,

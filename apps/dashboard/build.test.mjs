@@ -1,13 +1,64 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { readApiError } from "@layered/schemas";
+import ts from "typescript";
+import { build } from "vite";
 import { dashboardApiOrigin } from "./config.mjs";
 import { prepareDeployment } from "./deploy.mjs";
 import viteConfig from "./vite.config.mjs";
+
+async function buildFixture(source) {
+  const workspace = await mkdtemp(join(tmpdir(), "layered-api-boundary-"));
+  try {
+    const entry = join(workspace, "entry.js");
+    await writeFile(entry, source);
+    return await build({
+      configFile: false,
+      root: workspace,
+      logLevel: "silent",
+      plugins: viteConfig({ command: "build" }).plugins,
+      build: { write: false, rollupOptions: { input: entry } },
+    });
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+}
+
+test("the dashboard build refuses a database client before resolving it", async () => {
+  await assert.rejects(
+    buildFixture('import postgres from "postgres"; globalThis.database = postgres();'),
+    /Dashboard API boundary: database or server import/,
+  );
+});
+
+test("the dashboard build refuses a direct database connection string in emitted code", async () => {
+  await assert.rejects(
+    buildFixture('globalThis.connection = "postgresql://example.test/private";'),
+    /Dashboard API boundary: database connection string/,
+  );
+});
+
+test("the dashboard build permits the same-origin API", async () => {
+  await buildFixture('globalThis.load = () => fetch("/api/entries?kind=post");');
+});
+
+test("the API surface documents every dashboard client operation", async () => {
+  const source = await readFile(new URL("./src/api.ts", import.meta.url), "utf8");
+  const tree = ts.createSourceFile("api.ts", source, ts.ScriptTarget.Latest, true);
+  const contract = tree.statements.find(
+    (node) => ts.isInterfaceDeclaration(node) && node.name.text === "DashboardApi",
+  );
+  assert.ok(contract);
+  const methods = contract.members.filter(ts.isMethodSignature).map((node) => node.name.getText(tree));
+  const document = await readFile(new URL("../../docs/api-surface.md", import.meta.url), "utf8");
+  const documented = [...document.matchAll(/^\| `([A-Za-z]+)` \|/gm)].map((match) => match[1]);
+  assert.deepEqual(documented.toSorted(), methods.toSorted());
+  assert.match(document, /GET \/forms\/:id\/submissions\/export/);
+});
 
 test("the dashboard ships shared assets and nginx policy with SPA fallback", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "layered-dashboard-build-"));

@@ -44,3 +44,25 @@ export type SearchResults = z.infer<typeof searchResults>;
 
 /** How many hits of each kind a search returns, which is more than a dialog can show at once. */
 export const SEARCH_HIT_LIMIT = 20;
+
+/** Public search never returns bodies or editorial state. */
+export const publicSearchQuery = z.strictObject({
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject controls at the public request boundary.
+  q: text(120, { pattern: /^[^\u0000-\u001f\u007f]+$/ }),
+  language: z.enum(CONTENT_LANGUAGES),
+  page: z.coerce.number().int().min(1).max(9999).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(6),
+});
+export type PublicSearchQuery = z.infer<typeof publicSearchQuery>;
+export const publicSearchHit = z.object({
+  path: z.string().regex(/^\/(?:[a-zA-Z0-9_-]+\/)*$/),
+  title: z.string(),
+  kind: z.enum(ENTRY_KINDS),
+  language: z.enum(CONTENT_LANGUAGES),
+});
+export type PublicSearchHit = z.infer<typeof publicSearchHit>;
+export const publicSearchResults = z.object({
+  entries: z.array(publicSearchHit),
+  total: z.number().int().nonnegative(),
+});
+export type PublicSearchResults = z.infer<typeof publicSearchResults>;

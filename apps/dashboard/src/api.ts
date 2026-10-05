@@ -25,11 +25,14 @@ import {
   entryList,
   entryPreview,
   entryTrashImpact,
+  type FooterNavigation,
   type FormDetail,
   type FormList,
   type FormSubmission,
   type FormSubmissionList,
   type FormSubmissionStatus,
+  footerNavigation,
+  footerNavigationList,
   formDetail,
   formList,
   formSubmission,
@@ -50,7 +53,9 @@ import {
   type RenderedMail,
   readApiError,
   renderedMail,
+  reorderFooterNavigationBody,
   type SaveEntryBody,
+  type SaveFooterNavigationBody,
   type SaveFormBody,
   type SaveMailTemplateBody,
   type SaveTopicBody,
@@ -60,6 +65,7 @@ import {
   type SignInBody,
   type SiteSettings,
   saveEntryBody,
+  saveFooterNavigationBody,
   saveFormBody,
   saveTopicBody,
   searchResults,
@@ -170,6 +176,11 @@ export interface DashboardApi {
   search(text: string): Promise<SearchResults>;
   /** The site's settings, and whether a mail key is configured. */
   fetchSettings(): Promise<SettingsView>;
+  fetchFooterNavigations(): Promise<FooterNavigation[]>;
+  createFooterNavigation(value: SaveFooterNavigationBody): Promise<FooterNavigation>;
+  saveFooterNavigation(id: string, value: SaveFooterNavigationBody): Promise<FooterNavigation>;
+  deleteFooterNavigation(id: string): Promise<void>;
+  reorderFooterNavigations(positions: { id: string; sortOrder: number }[]): Promise<FooterNavigation[]>;
   /** Stores one group of settings and returns all of them as they now stand. */
   saveSettings<Group extends keyof SettingsGroups>(
     group: Group,
@@ -368,6 +379,38 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async fetchSettings() {
       return dataOf(await request("/settings", undefined, true), settingsView);
+    },
+    async fetchFooterNavigations() {
+      return dataOf(await request("/footer-navigation", undefined, true), footerNavigationList);
+    },
+    async createFooterNavigation(value) {
+      return dataOf(
+        await request("/footer-navigation", jsonBody("POST", saveFooterNavigationBody.parse(value)), true),
+        footerNavigation,
+      );
+    },
+    async saveFooterNavigation(id, value) {
+      return dataOf(
+        await request(
+          `/footer-navigation/${encodeURIComponent(id)}`,
+          jsonBody("PUT", saveFooterNavigationBody.parse(value)),
+          true,
+        ),
+        footerNavigation,
+      );
+    },
+    async deleteFooterNavigation(id) {
+      await request(`/footer-navigation/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
+    },
+    async reorderFooterNavigations(positions) {
+      return dataOf(
+        await request(
+          "/footer-navigation/order",
+          jsonBody("PATCH", reorderFooterNavigationBody.parse({ positions })),
+          true,
+        ),
+        footerNavigationList,
+      );
     },
     async saveSettings(group, value) {
       return dataOf(await request(`/settings/${group}`, jsonBody("PUT", value), true), settingsView);

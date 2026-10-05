@@ -28,6 +28,8 @@ if (!entry) Astro.response.status = 404;
 
 const language = entry?.language ?? "en";
 const de = language === "de";
+const frame = repository?.siteFrame();
+const siteName = frame?.title[language] ?? "LAYERED.work";
 const nodes = entry ? renderContent(entry.body, { language: entry.language }) : [];
 const forms = entry && repository ? await formsForPage(repository, nodes, entry.language, undefined, true) : {};
 // Read by the middleware once this response exists, as on the published page.
@@ -37,8 +39,9 @@ Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
 <SiteLayout
   title={entry ? `${de ? "Vorschau" : "Preview"}: ${entry.title}` : de ? "Vorschau nicht verfügbar" : "Preview unavailable"}
   {language}
-  navigation={siteNavigation(language)}
-  footer={siteFooter(language)}
+  {siteName}
+  navigation={siteNavigation(language, repository?.mainNavigation(language))}
+  footer={siteFooter(language, repository?.footerNavigation(language), frame)}
   canonicalPath={entry?.path ?? "/"}
   readingWidth={entry?.readingWidth}
   description={entry ? summaryOf(entry) : undefined}

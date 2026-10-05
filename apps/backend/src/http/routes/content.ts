@@ -1,8 +1,10 @@
-import { publicSnapshot } from "@layered/schemas";
+import { publicSearchQuery, publicSearchResults, publicSnapshot } from "@layered/schemas";
 import { Hono } from "hono";
 import { type PublicSnapshot, readPublicSnapshot } from "../../content/snapshot.js";
 import { database } from "../../db/connect.js";
+import { searchPublicEntries } from "../../search/public.js";
 import { responds } from "../api-metadata.js";
+import { validate } from "../validate.js";
 
 /**
  * What the public website reads.
@@ -17,6 +19,16 @@ import { responds } from "../api-metadata.js";
  */
 
 export const content = new Hono();
+
+content.get(
+  "/search",
+  validate("query", publicSearchQuery),
+  responds(publicSearchResults, { envelope: false }),
+  async (c) => {
+    c.header("Cache-Control", "no-store");
+    return c.json(await searchPublicEntries(database(), c.req.valid("query")));
+  },
+);
 
 /**
  * How long a built snapshot is reused, in milliseconds.

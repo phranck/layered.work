@@ -1,49 +1,20 @@
 <script>
+  import { activateVisibleModels } from '@layered/ui/model-island';
   import { initializeModelViewports } from '@layered/ui/model-viewport';
   import focusStyles from '@layered/ui/focus.css?inline';
+
   initializeModelViewports();
-  if(navigator.clipboard){
-    document.querySelectorAll<HTMLButtonElement>('button[data-copy-code]').forEach(button=>{
-      button.disabled=false;
-      button.addEventListener('click',async()=>{
-        const source=button.closest('[data-code-block]')?.querySelector('code')?.textContent;
-        if(source===undefined||source===null)return;
-        try{
-          await navigator.clipboard.writeText(source);
-          button.dataset.copied='true';
-          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopiert':'Copied');
-          button.title=document.documentElement.lang==='de'?'Kopiert':'Copied';
-        }catch{
-          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopieren fehlgeschlagen':'Copy failed');
-        }
-      });
-    });
-  }
-  const models=document.querySelectorAll('model-viewer');
-  if(models.length){
-    const observer=new IntersectionObserver(entries=>{
-      if(entries.some(entry=>entry.isIntersecting)){
-        observer.disconnect();
-        import('@google/model-viewer').then(({ ModelViewerElement }) => {
-          // The two decoders, served from this site: Draco for the geometry and
-          // Basis for the textures. Left alone, model-viewer fetches both from
-          // gstatic.com, which means a request to Google on every model and that
-          // origin in connect-src. prepare-assets.mjs puts the files there.
-          ModelViewerElement.dracoDecoderLocation = '/draco/';
-          ModelViewerElement.ktx2TranscoderLocation = '/basis/';
-          // The viewer's own controls sit in its shadow root, which the page's
-          // stylesheet does not reach, so they would show the browser default
-          // focus ring instead of this site's.
-          const sheet = new CSSStyleSheet();
-          sheet.replaceSync(focusStyles);
-          models.forEach(model => {
-            if (model.shadowRoot) {
-              model.shadowRoot.adoptedStyleSheets = [...model.shadowRoot.adoptedStyleSheets, sheet];
-            }
-          });
-        });
+  activateVisibleModels(async () => {
+    const { ModelViewerElement } = await import('@google/model-viewer');
+    // Configure local decoders before exposing a visible model's source.
+    ModelViewerElement.dracoDecoderLocation = '/draco/';
+    ModelViewerElement.ktx2TranscoderLocation = '/basis/';
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(focusStyles);
+    document.querySelectorAll('model-viewer').forEach(model => {
+      if (model.shadowRoot) {
+        model.shadowRoot.adoptedStyleSheets = [...model.shadowRoot.adoptedStyleSheets, sheet];
       }
-    },{rootMargin:'200px'});
-    models.forEach(model=>observer.observe(model));
-  }
+    });
+  });
 </script>

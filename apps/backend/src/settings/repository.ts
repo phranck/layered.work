@@ -9,15 +9,17 @@ import {
   listingSettings,
   type MailSettings,
   mailSettings,
+  navigationHref,
+  type PublicSiteFrame,
   type SettingsView,
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
 import { config } from "../config.js";
 import type { database } from "../db/connect.js";
-import { auditLog, media, settings } from "../db/schema/index.js";
+import { auditLog, media, settings, socialAccounts } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 type Database = ReturnType<typeof database>;
@@ -91,6 +93,22 @@ export async function readSettings(db: Database): Promise<SettingsView> {
     analytics: readGroup("analytics", stored),
     postListing: readGroup("postListing", stored),
     projectListing: readGroup("projectListing", stored),
+  };
+}
+
+/** Public site values are read separately from mail and analytics settings. */
+export async function readPublicSiteFrame(db: Pick<Database, "select">): Promise<PublicSiteFrame> {
+  const rows = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "site"));
+  const site = readGroup("site", new Map([["site", rows[0]?.value]]));
+  const accounts = await db
+    .select({ platform: socialAccounts.platform, handle: socialAccounts.handle, href: socialAccounts.href })
+    .from(socialAccounts)
+    .where(eq(socialAccounts.enabled, true))
+    .orderBy(asc(socialAccounts.sortOrder), asc(socialAccounts.id));
+  return {
+    title: site.title,
+    footerLine: site.footerLine,
+    social: accounts.filter((account) => navigationHref.safeParse(account.href).success),
   };
 }
 

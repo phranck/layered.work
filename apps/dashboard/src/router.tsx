@@ -8,6 +8,7 @@ import { LoginScreen, type LoginScreenProps } from "./auth.js";
 import { safeReturnTo } from "./auth-routing.js";
 import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
+import { FooterNavigationScreen } from "./footer-navigation.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
@@ -26,6 +27,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   analytics: AnalyticsSettingsScreen,
   submissions: SubmissionsScreen,
   "api-tokens": AccessTokensScreen,
+  "footer-nav": FooterNavigationScreen,
 };
 
 export interface DashboardRouterOptions {

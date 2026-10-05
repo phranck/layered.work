@@ -189,7 +189,8 @@ Takes no body. Rendered by `Model`.
 | Parameter | What it is for | Takes | Default |
 | --- | --- | --- | --- |
 | `slug` (required) | Which model. | the name of a file in the media library, in quotes |  |
-| `alt` | What a screen reader says, since a model cannot be described by looking at it. | text in quotes |  |
+| `alt` (required) | What a screen reader says, since a model cannot be described by looking at it. | text in quotes |  |
+| `poster` | A library picture shown before the model loads. The entry's featured picture is used when absent. | the name of a file in the media library, in quotes |  |
 | `caption` | Shown beneath it. | text in quotes |  |
 
 `slug` may be written first without its name.

@@ -1,0 +1,23 @@
+---
+const nonce = Astro.locals.nonce;
+---
+<script is:inline nonce={nonce}>
+  if(navigator.clipboard){
+    document.querySelectorAll('button[data-copy-code]').forEach(button=>{
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.disabled=false;
+      button.addEventListener('click',async()=>{
+        const source=button.closest('[data-code-block]')?.querySelector('code')?.textContent;
+        if(source===undefined||source===null)return;
+        try{
+          await navigator.clipboard.writeText(source);
+          button.dataset.copied='true';
+          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopiert':'Copied');
+          button.title=document.documentElement.lang==='de'?'Kopiert':'Copied';
+        }catch{
+          button.setAttribute('aria-label',document.documentElement.lang==='de'?'Kopieren fehlgeschlagen':'Copy failed');
+        }
+      });
+    });
+  }
+</script>

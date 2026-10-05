@@ -1,3 +1,4 @@
+import type { PublicSiteFrame } from "@layered/schemas";
 import type { BrandName } from "@layered/ui";
 
 export interface SiteNavigationItem {
@@ -22,7 +23,8 @@ export interface SiteFooterData {
  *
  * @param language - The language of the page.
  */
-export function siteNavigation(language: "en" | "de"): SiteNavigationItem[] {
+export function siteNavigation(language: "en" | "de", stored?: SiteNavigationItem[]): SiteNavigationItem[] {
+  if (stored !== undefined) return stored;
   const root = language === "de" ? "/de/" : "/";
   const de = language === "de";
   return [
@@ -36,14 +38,29 @@ export function siteNavigation(language: "en" | "de"): SiteNavigationItem[] {
  *
  * @param language - The language of the page.
  */
-export function siteFooter(language: "en" | "de"): SiteFooterData {
+export function siteFooter(
+  language: "en" | "de",
+  navigation?: NonNullable<SiteFooterData["navigation"]>,
+  frame?: PublicSiteFrame,
+): SiteFooterData {
+  if (frame)
+    return {
+      description: frame.footerLine[language],
+      baseline: frame.title[language],
+      navigation: navigation ?? [],
+      social: frame.social.map((account) => ({
+        name: account.handle || account.platform,
+        href: account.href,
+        brand: socialBrand(account.platform),
+      })),
+    };
   const root = language === "de" ? "/de/" : "/";
   const de = language === "de";
   return {
     description: de
       ? "Gehäuse, Platinen und Software, Schicht für Schicht."
       : "Enclosures, circuit boards and software, made layer by layer.",
-    navigation: [
+    navigation: navigation ?? [
       {
         title: de ? "Entdecken" : "Explore",
         items: [...siteNavigation(language), { label: de ? "Themen" : "Topics", href: `${root}topics/` }],
@@ -58,6 +75,20 @@ export function siteFooter(language: "en" | "de"): SiteFooterData {
     ],
     baseline: "LAYERED.work · Bregenz, Austria",
   };
+}
+
+/** Unknown platforms retain their stored accessible text link. */
+function socialBrand(platform: string): BrandName | undefined {
+  switch (platform) {
+    case "mastodon":
+    case "github":
+    case "youtube":
+    case "instagram":
+    case "xing":
+      return platform;
+    default:
+      return undefined;
+  }
 }
 
 /** Compare complete route segments, so /posts-old never selects /posts. */

@@ -69,6 +69,7 @@ jobs:
           # database fails on the connection instead of skipping twenty tests.
           DATABASE_URL_TEST: postgres://layered_app:layered_local@127.0.0.1:5432/layered_test
       - run: pnpm build
+      - run: pnpm --filter @layered/website test:production
 
       # Anything a build generates and the repository keeps is checked here.
       # `packages/tokens/src/generated/` is derived from the stylesheets and

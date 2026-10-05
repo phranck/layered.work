@@ -5,10 +5,10 @@ import { ListIcon, SquaresFourIcon, MagnifyingGlassIcon } from "@layered/ui/icon
 import { createElement } from "react";
 import { EntryCard } from "./entry-card.js";
 import { type ContentRepository,type Entry,type Language } from "../content/repository.js";
-interface Props { repository:ContentRepository; language:Language; title:string; kind?:Entry['kind']; topic?:string; query?:string; page:number; search?:boolean; }
-const {repository,language,title,kind,topic,query="",page,search=false}=Astro.props;
+interface Props { repository:ContentRepository; language:Language; title:string; kind?:Entry['kind']; topic?:string; query?:string; page:number; search?:boolean; searchResult?:ReturnType<ContentRepository['list']>; }
+const {repository,language,title,kind,topic,query="",page,search=false,searchResult}=Astro.props;
 const de=language==="de";
-const result=repository.list({language,kind,topic,query,page});
+const result=searchResult??repository.list({language,kind,topic,query,page});
 if(page>1&&page>result.pages) Astro.response.status=404;
 const pageUrl=(number:number)=>{const url=new URL(Astro.url);url.searchParams.set("page",String(number));return url.pathname+url.search;};
 // An overview of posts or projects is set up in the dashboard: its introduction,

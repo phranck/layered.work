@@ -24,6 +24,20 @@ const snapshot = {
 };
 
 describe("public content repository", () => {
+  it("keeps stored footer navigation separate for each language, including an intentionally empty footer", () => {
+    const en = [
+      { title: "First", items: [{ label: "One", href: "/posts/" }] },
+      { title: "Second", items: [] },
+    ];
+    const de = [{ title: "Zuerst", items: [{ label: "Eins", href: "/de/posts/" }] }];
+    const repo = createRepository({ ...snapshot, footerNavigation: { en, de } });
+    expect(repo.footerNavigation("en")).toEqual(en);
+    expect(repo.footerNavigation("de")).toEqual(de);
+    expect(
+      createRepository({ ...snapshot, footerNavigation: { en: [], de: [] } }).footerNavigation("en"),
+    ).toEqual([]);
+    expect(createRepository(snapshot).footerNavigation("en")).toBeUndefined();
+  });
   it("honors enabled home blocks and their configured order", () => {
     const repo = createRepository({
       ...snapshot,

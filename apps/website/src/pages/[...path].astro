@@ -12,6 +12,7 @@ import ListingContent from "../components/ListingContent.astro";
 import TopicChip from "../components/TopicChip.astro";
 import { siteFooter, siteNavigation } from "../components/site-navigation.js";
 import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
+import { loadSearch, searchFailure } from "../search/query.js";
 import { loadContent } from "../content/load.js";
 import { formsForPage, submitPageForm } from "../content/forms.js";
 import { languageRoot, parseListingQuery, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
@@ -75,13 +76,23 @@ const found=home||listing||topics||!!entry;
 const gone=!found&&!!repository?.gone(path);
 if(repository&&!found)Astro.response.status=gone?410:404;
 // An overview's own headline where the dashboard sets one, and its name otherwise.
+const frame=repository?.siteFrame();
+const siteName=frame?.title[language]??"LAYERED.work";
 const headline=kind&&repository&&!invalidQuery?repository.listing(kind).headline[language].trim():"";
-const title=headline||(errorId?(de?"Inhalte nicht verfügbar":"Content unavailable"):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?"LAYERED.work":topic?(topic.untranslated?`${topic.name} (${topic.sourceLanguage.toUpperCase()})`:topic.name):(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
+let searchResult:ReturnType<ContentRepository['list']>|undefined;
+if(search&&query.trim()&&repository&&!invalidQuery){
+  try{
+    const limit=repository.listing("post").pageSize;
+    const hits=await loadSearch({q:query,language,page,limit},repository);
+    searchResult={entries:hits.entries.flatMap(hit=>{const entry=repository?.entry(hit.path);return entry?.visibility==="public"?[entry]:[];}),total:hits.total,pages:Math.ceil(hits.total/limit),page};
+  }catch(error){const failure=searchFailure(error);errorId=failure.errorId;Astro.response.status=failure.status;Astro.response.headers.set("Cache-Control","no-store");}
+}
+const title=headline||(errorId?(search?(de?"Suche nicht verfügbar":"Search unavailable"):(de?"Inhalte nicht verfügbar":"Content unavailable")):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?siteName:topic?(topic.untranslated?`${topic.name} (${topic.sourceLanguage.toUpperCase()})`:topic.name):(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
 const otherLanguage=de?"en":"de";
 const otherTopic=topic?repository?.topic(topic.id,otherLanguage):undefined;
 const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(otherLanguage,otherTopic.slug):found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
-const navigation=siteNavigation(language);
-const footer=siteFooter(language);
+const navigation=siteNavigation(language,repository?.mainNavigation(language));
+const footer=siteFooter(language,repository?.footerNavigation(language),frame);
 const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
 let formSubmission;
 if(Astro.request.method==="POST"){
@@ -102,11 +113,11 @@ Astro.locals.rendersModel=rendersComponent(nodes,"Model");
 Astro.locals.rendersYouTube=rendersComponent(nodes,"YouTube");
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
-<SiteLayout {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
+<SiteLayout {siteName} {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
   {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
-  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded."):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
+  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(search?(de?"Die Suche ist gerade nicht verfügbar.":"Search is unavailable right now."):(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded.")):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
     {home&&<HomeContent {repository} {language} />}
-    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topic?.id} {page} {query} {search} />}
+    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topic?.id} {page} {query} {search} {searchResult} />}
     {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Page>}
     {entry&&<EntryArticle {repository} {entry} {nodes} {forms} />}
   </>}

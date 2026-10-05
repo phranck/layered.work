@@ -26,6 +26,7 @@ export * from "./forms.js";
 export * from "./home-blocks.js";
 export * from "./mail-templates.js";
 export * from "./media.js";
+export * from "./navigation.js";
 export * from "./request.js";
 export * from "./search.js";
 export * from "./settings.js";
