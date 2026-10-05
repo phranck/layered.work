@@ -79,7 +79,11 @@ it.skipIf(!hasTestDatabase)(
       expect(changed).not.toBe(first);
       if (changed) createdMedia.push(changed);
       await saveEntry(db, translationId, { ...value, state: "draft" }, userId);
+      expect((await read())?.socialCardMediaId).toBeNull();
       expect((await readPublicSnapshot(db)).media.some((asset) => asset.slug === card?.slug)).toBe(false);
+      // Publishing without another title edit must use the title saved in the draft.
+      await saveEntry(db, translationId, { ...value, state: "public" }, userId);
+      expect((await read())?.socialCardMediaId).toBe(first);
     } finally {
       await db.delete(auditLog).where(eq(auditLog.actorUserId, userId));
       await db.delete(paths).where(eq(paths.translationId, translationId));

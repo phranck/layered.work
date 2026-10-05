@@ -447,6 +447,8 @@ export async function saveEntry(
         .update(entryTranslations)
         .set({
           ...fields,
+          // A saved title invalidates its derived image even while the entry is a draft.
+          ...(current.title !== value.title ? { socialCardMediaId: null } : {}),
           publishedAt: becomesPublic && !current.publishedAt ? now : current.publishedAt,
         })
         .where(eq(entryTranslations.id, id));
@@ -462,11 +464,6 @@ export async function saveEntry(
         if (!(await hasRasterPicture(tx, current.featuredMediaId))) {
           const socialCardMediaId = await storeSocialCard(tx, value.title, createdObjects);
           await tx.update(entryTranslations).set({ socialCardMediaId }).where(eq(entryTranslations.id, id));
-        } else if (current.title !== value.title && current.socialCardMediaId) {
-          await tx
-            .update(entryTranslations)
-            .set({ socialCardMediaId: null })
-            .where(eq(entryTranslations.id, id));
         }
       }
       if (changedKeys.length > 0) {
