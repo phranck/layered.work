@@ -31,7 +31,17 @@ describe("public feeds", () => {
     expect(rssFeed(repository)).toContain("<link>https://layered.work/public/</link>");
   });
   it("lists only public entries in the sitemap", () => {
-    expect(sitemapPaths(repository)).toEqual(["/", "/de/", "/public/"]);
+    expect(sitemapPaths(repository)).toEqual([
+      "/",
+      "/posts/",
+      "/projects/",
+      "/topics/",
+      "/de/",
+      "/de/posts/",
+      "/de/projects/",
+      "/de/topics/",
+      "/public/",
+    ]);
     expect(sitemap(sitemapPaths(repository))).not.toMatch(/hidden|draft|trashed/);
   });
 });

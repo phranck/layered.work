@@ -6,4 +6,6 @@ import { contentResponse } from "../content/response.js";
 export const GET: APIRoute = ({ locals }) =>
   !locals.siteVisible
     ? new Response(sitemap(["/"]), { headers: { "Content-Type": "application/xml; charset=utf-8" } })
-    : contentResponse("application/xml; charset=utf-8", (repository) => sitemap(sitemapPaths(repository)));
+    : contentResponse("application/xml; charset=utf-8", (repository) =>
+        sitemap(sitemapPaths(repository), repository),
+      );

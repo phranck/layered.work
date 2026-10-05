@@ -14,6 +14,7 @@ import { siteFooter, siteNavigation } from "../components/site-navigation.js";
 import { LEGACY_REDIRECT_TARGETS, legacyPostsPage } from "../content/legacy-redirects.js";
 import { loadSearch, searchFailure } from "../search/query.js";
 import { loadContent } from "../content/load.js";
+import { languageLinks } from "../content/language-links.js";
 import { formsForPage, submitPageForm } from "../content/forms.js";
 import { languageRoot, parseListingQuery, summaryOf, topicPath, type ContentRepository, type Language } from "../content/repository.js";
 import "../styles/pages.css";
@@ -113,7 +114,7 @@ Astro.locals.rendersModel=rendersComponent(nodes,"Model");
 Astro.locals.rendersYouTube=rendersComponent(nodes,"YouTube");
 if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
 ---
-<SiteLayout {siteName} {title} {language} {navigation} {footer} {translationPath} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
+<SiteLayout {siteName} {title} {language} {navigation} {footer} {translationPath} alternates={repository && !errorId && !invalidQuery && found ? languageLinks(repository, path) : []} canonicalPath={entry?.path??path} description={entry?summaryOf(entry):footer.description} readingWidth={entry?.readingWidth}>
   {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
   {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(search?(de?"Die Suche ist gerade nicht verfügbar.":"Search is unavailable right now."):(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded.")):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
     {home&&<HomeContent {repository} {language} />}

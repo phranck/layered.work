@@ -6,6 +6,7 @@ import "../styles/site.css";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import type { SiteFooterData, SiteNavigationItem } from "../components/site-navigation";
+import type { LanguageLink } from "../content/language-links";
 
 interface Props {
   title: string;
@@ -13,6 +14,7 @@ interface Props {
   language?: "en" | "de";
   canonicalPath?: string;
   translationPath?: string | null;
+  alternates?: LanguageLink[];
   readingWidth?: "narrow" | "normal" | "wide" | "full";
   navigation?: SiteNavigationItem[];
   footer?: SiteFooterData;
@@ -25,6 +27,7 @@ const {
   language = "en",
   canonicalPath = Astro.url.pathname,
   translationPath = null,
+  alternates = [],
   readingWidth = "normal",
   navigation = [],
   footer = {},
@@ -42,8 +45,9 @@ const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
     <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
     {description && <meta name="description" content={description} />}
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang={language} href={canonical} />
-    {translationPath && <link rel="alternate" hreflang={language === "de" ? "en" : "de"} href={new URL(translationPath, canonical)} />}
+    {alternates.map(link => <link rel="alternate" hreflang={link.language} href={new URL(link.path, canonical)} />)}
+    <link rel="alternate" type="application/rss+xml" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)} />
+    <link rel="alternate" type="application/feed+json" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)} />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
