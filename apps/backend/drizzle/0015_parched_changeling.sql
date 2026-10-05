@@ -1,0 +1,1 @@
+ALTER TABLE "media_deletions" ADD COLUMN "next_attempt_at" timestamp with time zone DEFAULT now() NOT NULL;

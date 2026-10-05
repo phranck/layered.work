@@ -30,6 +30,7 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { replaceMediaReferences } from "../media/references.js";
 import { readSettings } from "../settings/repository.js";
 import { hasRasterPicture, storeSocialCard, withCardObjects } from "../social/store.js";
 
@@ -439,6 +440,7 @@ export async function saveEntry(
       // can never publish something the reader believes is deleted.
       if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
       requirePublishableContent(value.body, value.state);
+      await replaceMediaReferences(tx, id, value.body);
 
       const now = new Date();
       const becomesPublic = value.state === "public" && current.state !== "public";
@@ -574,6 +576,7 @@ export async function createTranslation(
       })
       .returning({ id: entryTranslations.id });
     if (!translation) throw new Error("The translation was not written.");
+    await replaceMediaReferences(tx, translation.id, source.body);
     await tx.insert(paths).values({ translationId: translation.id, path });
     await tx.update(entries).set({ modifiedAt: new Date() }).where(eq(entries.id, source.entryId));
     await tx.insert(auditLog).values({

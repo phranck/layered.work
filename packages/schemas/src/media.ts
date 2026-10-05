@@ -124,6 +124,10 @@ export const mediaLibraryQuery = z.object({
   search: z.string().trim().max(MaxLength.Line).default(""),
   kind: z.enum(["all", ...MEDIA_KINDS]).default("all"),
   page: z.coerce.number().int().min(1).max(10000).default(1),
+  unused: z.preprocess(
+    (value) => (value === "true" ? true : value === "false" ? false : value),
+    z.boolean().optional(),
+  ),
 });
 export type MediaLibraryQuery = z.infer<typeof mediaLibraryQuery>;
 export const mediaLibraryItem = z.object({
@@ -150,7 +154,7 @@ export const mediaUse = z.object({
   id: z.uuid(),
   title: z.string(),
   language: z.enum(["en", "de"]),
-  kind: z.enum(["post", "page", "project"]),
+  kind: z.enum(["post", "page", "project", "account", "settings"]),
 });
 export const mediaDetail = mediaLibraryItem.extend({
   translations: mediaDescriptions,
@@ -175,3 +179,10 @@ export const saveMediaMetadataBody = body({
     ),
 });
 export type SaveMediaMetadataBody = z.infer<typeof saveMediaMetadataBody>;
+export const mediaDeletionResult = z.object({
+  deleted: z.literal(true),
+  cleanupState: z.enum(["ready", "pending"]),
+  removedObjects: z.number().int().nonnegative(),
+  errorId: z.uuid().nullable(),
+});
+export type MediaDeletionResult = z.infer<typeof mediaDeletionResult>;

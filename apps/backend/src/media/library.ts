@@ -21,9 +21,12 @@ import {
   mediaJobs,
   mediaReferences,
   mediaTranslations,
+  settings,
+  users,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { getMediaProcessing } from "./processing.js";
+import { unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
 const PAGE_SIZE = 24;
@@ -68,6 +71,7 @@ export async function listMedia(db: Database, query: MediaLibraryQuery): Promise
       and(
         query.kind === "all" ? undefined : eq(media.kind, query.kind),
         query.search ? or(ilike(media.slug, pattern), described) : undefined,
+        query.unused ? unusedMedia() : undefined,
       ),
     )
     .orderBy(asc(media.slug), asc(media.id))
@@ -76,8 +80,8 @@ export async function listMedia(db: Database, query: MediaLibraryQuery): Promise
   return { items: rows.slice(0, PAGE_SIZE).map(item), page: query.page, hasMore: rows.length > PAGE_SIZE };
 }
 /** Includes body references and both cover roles, regardless of publication or trash state. */
-export async function getMediaUses(db: Database, id: string): Promise<MediaDetail["uses"]> {
-  return db
+export async function getMediaUses(db: Pick<Database, "select">, id: string): Promise<MediaDetail["uses"]> {
+  const uses: MediaDetail["uses"] = await db
     .select({
       id: entryTranslations.id,
       title: entryTranslations.title,
@@ -94,6 +98,17 @@ export async function getMediaUses(db: Database, id: string): Promise<MediaDetai
       ),
     )
     .orderBy(asc(entryTranslations.title), asc(entryTranslations.language));
+  const portraits = await db
+    .select({ id: users.id, title: users.displayName, language: users.interfaceLanguage })
+    .from(users)
+    .where(eq(users.avatarMediaId, id));
+  uses.push(...portraits.map((portrait) => ({ ...portrait, kind: "account" as const })));
+  const sharing = await db
+    .select({ key: settings.key })
+    .from(settings)
+    .where(and(eq(settings.key, "site"), sql`${settings.value}->>'socialImageMediaId' = ${id}`));
+  if (sharing.length) uses.push({ id, title: "Site sharing image", language: "en", kind: "settings" });
+  return uses;
 }
 export async function getMediaDetail(db: Database, id: string): Promise<MediaDetail> {
   const [row] = await db

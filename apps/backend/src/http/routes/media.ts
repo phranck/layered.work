@@ -5,6 +5,7 @@ import {
   createUploadBody,
   ErrorCode,
   focalPoint,
+  mediaDeletionResult,
   mediaDetail,
   mediaLibraryPage,
   mediaLibraryQuery,
@@ -20,6 +21,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { deleteMedia } from "../../media/deletion.js";
 import { saveMediaFocalPoint } from "../../media/focal.js";
 import { getMediaDetail, listMedia, saveMediaMetadata } from "../../media/library.js";
 import { getMediaProcessing } from "../../media/processing.js";
@@ -63,6 +65,17 @@ media.put(
   responds(mediaDetail),
   async (c) =>
     ok(c, await saveMediaMetadata(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c))),
+);
+
+media.delete(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaDeletionResult),
+  async (c) => {
+    const result = await deleteMedia(database(), c.req.valid("param").id, principalOf(c));
+    return ok(c, result, result.cleanupState === "pending" ? 202 : 200);
+  },
 );
 
 media.get(

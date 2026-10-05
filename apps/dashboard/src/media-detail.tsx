@@ -6,9 +6,9 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
 import { CardDialog } from "./modal.js";
 
-const ENTRY_AREA = { post: "posts", page: "pages", project: "projects" } as const;
 function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose: () => void }) {
   const api = useDashboardApi();
   const client = useQueryClient();
@@ -19,6 +19,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   });
   const formId = useId();
   const prefix = useId();
+  const [deleting, setDeleting] = useState(false);
   const save = useMutation({
     mutationFn: () =>
       api.saveMediaMetadata(detail.id, {
@@ -148,25 +149,16 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
               ))}
             </div>
           </section>
-          <section>
-            <h3>{text("mediaUses")}</h3>
-            {!detail.uses.length && <p>{text("mediaUnused")}</p>}
-            <ul>
-              {detail.uses.map((use) => (
-                <li key={use.id}>
-                  <a href={`/${ENTRY_AREA[use.kind]}/${use.id}`}>
-                    {use.title} ({use.language.toUpperCase()})
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <MediaUses uses={detail.uses} />
           {save.isError && <ErrorNotice error={save.error} />}
         </form>
       </Card.Body>
       <Card.Footer
         actions={
           <>
+            <Button tone="danger" onClick={() => setDeleting(true)} disabled={save.isPending}>
+              {text("mediaDelete")}
+            </Button>
             <Button onClick={onClose}>{text("cancel")}</Button>
             <Button type="submit" form={formId} tone="primary" disabled={save.isPending}>
               {text(save.isPending ? "savePending" : "save")}
@@ -174,6 +166,9 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
           </>
         }
       />
+      {deleting && (
+        <MediaDeleteDialog detail={detail} onClose={() => setDeleting(false)} onDeleted={onClose} />
+      )}
     </>
   );
 }

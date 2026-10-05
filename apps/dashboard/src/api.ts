@@ -43,10 +43,12 @@ import {
   type MailSettings,
   type MailTemplate,
   type MailTemplateKind,
+  type MediaDeletionResult,
   type MediaDetail,
   type MediaLibraryPage,
   mailTemplate,
   mailTemplateList,
+  mediaDeletionResult,
   mediaDetail,
   mediaLibraryPage,
   mergeTopicBody,
@@ -154,9 +156,10 @@ export interface DashboardApi {
   ): Promise<FormSubmission>;
   deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
-  fetchMedia(search: string, kind: string, page: number): Promise<MediaLibraryPage>;
+  fetchMedia(search: string, kind: string, page: number, unused?: boolean): Promise<MediaLibraryPage>;
   fetchMediaDetail(id: string): Promise<MediaDetail>;
   saveMediaMetadata(id: string, value: SaveMediaMetadataBody): Promise<MediaDetail>;
+  deleteMedia(id: string): Promise<MediaDeletionResult>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
   /** Creates one draft in the site's default language. */
@@ -340,14 +343,19 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
       await request(path, { method: "DELETE" }, true);
     },
-    async fetchMedia(search, kind, page) {
-      return dataOf(
-        await request(`/media?${new URLSearchParams({ search, kind, page: String(page) })}`, undefined, true),
-        mediaLibraryPage,
-      );
+    async fetchMedia(search, kind, page, unused = false) {
+      const params = new URLSearchParams({ search, kind, page: String(page) });
+      if (unused) params.set("unused", "true");
+      return dataOf(await request(`/media?${params}`, undefined, true), mediaLibraryPage);
     },
     async fetchMediaDetail(id) {
       return dataOf(await request(`/media/${encodeURIComponent(id)}`, undefined, true), mediaDetail);
+    },
+    async deleteMedia(id) {
+      return dataOf(
+        await request(`/media/${encodeURIComponent(id)}`, { method: "DELETE" }, true),
+        mediaDeletionResult,
+      );
     },
     async saveMediaMetadata(id, value) {
       return dataOf(

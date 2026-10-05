@@ -50,6 +50,17 @@ it("uses the library grid as a picker and returns the stable slug", async () => 
   fireEvent.click(await screen.findByRole("button", { name: /very-long-file-name/ }));
   expect(choose).toHaveBeenCalledWith(picture.slug, expect.objectContaining({ id }));
 });
+it("requests only unused files when the filter is selected", async () => {
+  show(vi.fn());
+  await screen.findByRole("button", { name: /very-long-file-name/ });
+  fireEvent.click(screen.getByRole("switch", { name: "Nur ungenutzte Dateien" }));
+  await vi.waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/media?search=&kind=all&page=1&unused=true",
+      expect.objectContaining({ credentials: "include" }),
+    ),
+  );
+});
 it("uploads multiple dropped files with progress and selects the final successful file", async () => {
   const choose = vi.fn();
   const upload = vi.fn<DashboardApi["uploadMedia"]>(async (file, progress) => {

@@ -203,3 +203,12 @@ export const mediaJobs = pgTable("media_jobs", {
   errorId: uuid("error_id"),
   createdAt: instant("created_at"),
 });
+/** Outbox survives the library row; idempotent object cleanup resumes after interruption. */
+export const mediaDeletions = pgTable("media_deletions", {
+  mediaId: uuid("media_id").primaryKey(),
+  pendingKeys: text("pending_keys").array().notNull(),
+  removedObjects: integer("removed_objects").notNull().default(0),
+  errorId: uuid("error_id"),
+  nextAttemptAt: instant("next_attempt_at"),
+  createdAt: instant("created_at"),
+});

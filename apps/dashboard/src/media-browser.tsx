@@ -1,5 +1,5 @@
 import { MEDIA_KINDS, type MediaLibraryItem } from "@layered/schemas";
-import { Button, Card, Field, Input, imagePosition, Row, Select } from "@layered/ui";
+import { Button, Card, Field, Input, imagePosition, Row, Select, Switch } from "@layered/ui";
 import { FilesIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -71,10 +71,11 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [kind, setKind] = useState("all");
+  const [unused, setUnused] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const media = useQuery({
-    queryKey: ["media", "list", query, imageOnly ? "image" : kind, page],
-    queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page),
+    queryKey: ["media", "list", query, imageOnly ? "image" : kind, page, unused],
+    queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page, unused),
     retry: false,
     refetchInterval: (query) =>
       query.state.data?.items.some(
@@ -95,6 +96,7 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   });
   const searchId = useId();
   const kindId = useId();
+  const unusedId = useId();
   const options = [
     { value: "all", label: text("filterAll") },
     ...MEDIA_KINDS.map((value) => ({ value, label: text(KIND_LABEL[value]) })),
@@ -150,6 +152,17 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
             )}
             <Button type="submit" icon={<MagnifyingGlassIcon />} aria-label={text("mediaSearch")} />
           </form>
+          <Field.Inline label={text("mediaOnlyUnused")} htmlFor={unusedId}>
+            <Switch
+              id={unusedId}
+              aria-label={text("mediaOnlyUnused")}
+              checked={unused}
+              onCheckedChange={(next) => {
+                setUnused(next);
+                setPage(1);
+              }}
+            />
+          </Field.Inline>
           <MediaUploadProgress items={uploads.progress} />
           {media.isError && <ErrorNotice error={media.error} />}
           {media.isPending && <p>{text("loading")}</p>}

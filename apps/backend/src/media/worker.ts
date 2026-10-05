@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { database } from "../db/connect.js";
 import { logger } from "../logger.js";
+import { processMediaDeletion } from "./deletion.js";
 import { processMediaJob } from "./jobs.js";
 
 /** Run image work outside HTTP requests, recovering persisted leases after a restart. */
@@ -11,6 +12,7 @@ export function startMediaWorker(): () => void {
     active = true;
     try {
       for (let count = 0; count < 10 && (await processMediaJob(database())); count++) {}
+      await processMediaDeletion(database());
     } catch (cause) {
       logger.error(
         {
