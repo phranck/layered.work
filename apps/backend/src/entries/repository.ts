@@ -1,3 +1,4 @@
+import { validateContent } from "@layered/content";
 import {
   type ContentLanguage,
   type CreateEntryBody,
@@ -272,6 +273,16 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
+/** Drafts may be incomplete; every translation readers can reach must be valid. */
+function requirePublishableContent(body: string, state: SaveEntryBody["state"]): void {
+  if (state !== "draft" && !validateContent(body).publishable) {
+    throw new HttpError(
+      ErrorCode.InvalidRequest,
+      "This content has validation errors. Correct them before publishing.",
+    );
+  }
+}
+
 /**
  * The address a translation answers at with its last segment replaced.
  *
@@ -420,6 +431,7 @@ export async function saveEntry(
     // A translation in the trash is restored before it is written to, so a save
     // can never publish something the reader believes is deleted.
     if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
+    requirePublishableContent(value.body, value.state);
 
     const now = new Date();
     const becomesPublic = value.state === "public" && current.state !== "public";
@@ -614,12 +626,18 @@ export async function setTrashed(
 ): Promise<EntryDetail> {
   await db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ entryId: entryTranslations.entryId, trashedAt: entryTranslations.trashedAt })
+      .select({
+        entryId: entryTranslations.entryId,
+        trashedAt: entryTranslations.trashedAt,
+        body: entryTranslations.body,
+        state: entryTranslations.state,
+      })
       .from(entryTranslations)
       .where(eq(entryTranslations.id, id))
       .limit(1);
     if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
     if ((current.trashedAt !== null) === trashed) return;
+    if (!trashed) requirePublishableContent(current.body, current.state);
 
     const now = new Date();
     await tx
