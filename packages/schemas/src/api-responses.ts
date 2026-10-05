@@ -63,7 +63,7 @@ const publicMedia = z.object({
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
 export const publicSnapshot = z.object({
   footerNavigation: publicFooterNavigation,
-  mainNavigation: publicMainNavigation,
+  mainNavigation: publicMainNavigation.optional(),
   siteFrame: publicSiteFrame,
   entries: z.array(publicEntry),
   forms: z.array(publicForm),

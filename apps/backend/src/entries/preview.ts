@@ -16,7 +16,7 @@ import {
   paths,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
-import { readPublicNavigation } from "../navigation/public.js";
+import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 
 /**
@@ -216,10 +216,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
 
   return {
     footerNavigation: await readPublicNavigation(db, targets, allTopics, "footer"),
-    mainNavigation: {
-      en: main.en.flatMap((group) => group.items),
-      de: main.de.flatMap((group) => group.items),
-    },
+    mainNavigation: mainNavigationFromGroups(main),
     siteFrame: await readPublicSiteFrame(db),
     entries: [
       {

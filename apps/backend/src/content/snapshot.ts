@@ -26,7 +26,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
-import { readPublicNavigation } from "../navigation/public.js";
+import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 
 /**
@@ -57,7 +57,7 @@ export interface PublicSnapshot {
   listings: Record<ListedKind, ListingSettings>;
   homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
   footerNavigation: PublicFooterNavigation;
-  mainNavigation: PublicMainNavigation;
+  mainNavigation?: PublicMainNavigation;
   siteFrame: PublicSiteFrame;
 }
 
@@ -486,10 +486,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   return {
     entries: publicEntries,
     footerNavigation: await readPublicNavigation(database, targets, publishedTopics, "footer"),
-    mainNavigation: {
-      en: main.en.flatMap((group) => group.items),
-      de: main.de.flatMap((group) => group.items),
-    },
+    mainNavigation: mainNavigationFromGroups(main),
     siteFrame: await readPublicSiteFrame(database),
     forms: publishedForms,
     topics: publishedTopics,

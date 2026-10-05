@@ -1,4 +1,9 @@
-import { CONTENT_LANGUAGES, navigationHref, type PublicFooterNavigation } from "@layered/schemas";
+import {
+  CONTENT_LANGUAGES,
+  navigationHref,
+  type PublicFooterNavigation,
+  type PublicMainNavigation,
+} from "@layered/schemas";
 import { and, asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -7,6 +12,15 @@ import {
   navigations,
   navigationTranslations,
 } from "../db/schema/index.js";
+
+/** Project stored main groups without confusing missing configuration with an empty saved group. */
+export function mainNavigationFromGroups(groups: PublicFooterNavigation): PublicMainNavigation | undefined {
+  if (groups.en.length === 0 && groups.de.length === 0) return undefined;
+  return {
+    en: groups.en.flatMap((group) => group.items),
+    de: groups.de.flatMap((group) => group.items),
+  };
+}
 
 /** Resolve stored targets only against published addresses in the requested language. */
 export async function readPublicNavigation(
