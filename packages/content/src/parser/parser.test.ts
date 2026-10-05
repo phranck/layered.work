@@ -222,3 +222,32 @@ describe("the same input", () => {
     expect(nodesOf(text, NODE.Component)).toEqual(nodesOf(text, NODE.Component));
   });
 });
+
+describe("text beside a component on its line", () => {
+  const documents = ["Note(tone: warning) xyz {\n  Hi.\n}", "Note { Hi. } and then more text"];
+
+  it.each(documents)("loses no character of %j", (text) => {
+    const covered = new Set<number>();
+    parseContent(text).iterate({
+      enter(node) {
+        if (node.name === "Document") return;
+        for (let at = node.from; at < node.to; at += 1) covered.add(at);
+      },
+    });
+    const lost = [...text].flatMap((character, index) =>
+      /\s/.test(character) || covered.has(index) ? [] : [index],
+    );
+    expect(lost).toEqual([]);
+  });
+
+  it.each(documents)("marks the component in %j", (text) => {
+    const names: string[] = [];
+    parseContent(text).iterate({
+      enter(node) {
+        names.push(node.name);
+      },
+    });
+    expect(names).toContain(NODE.ComponentError);
+    expect(names).not.toContain(NODE.Component);
+  });
+});

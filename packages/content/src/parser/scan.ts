@@ -36,7 +36,7 @@ export type ScannedComponent = {
 /** Something the scanner could not make sense of. */
 export type ScanError = {
   /** What went wrong, in a word something else can branch on. */
-  code: "unclosed-arguments" | "unclosed-body";
+  code: "unclosed-arguments" | "unclosed-body" | "unexpected-character";
   /** Where it was noticed. */
   at: number;
   /** Safe to show a person. */
@@ -142,8 +142,35 @@ export function scanComponent(text: string, at: number): ScannedComponent | null
     cursor = closing + 1;
   }
 
+  // A component is a block and has its line to itself. Anything else on that
+  // line is a missing line break or a mistyped brace, so it is reported and the
+  // component covers it, rather than leaving it in no node at all.
+  const newline = text.indexOf("\n", cursor);
+  const lineEnd = newline === -1 ? text.length : newline;
+  const rest = text.slice(cursor, lineEnd);
+  if (rest.trim() !== "") {
+    return {
+      from: at,
+      to: lineEnd,
+      name,
+      arguments: argumentsPart,
+      body,
+      error: {
+        code: "unexpected-character",
+        at: cursor + rest.length - rest.trimStart().length,
+        message: `${name.text} shares its line with other text. A component stands on a line of its own.`,
+      },
+    };
+  }
+
   return { from: at, to: cursor, name, arguments: argumentsPart, body };
 }
+
+/**
+ * The errors that leave a component open, so that reading on to the next line
+ * may still close it. Text beside a closed component is not one of them.
+ */
+export const OPEN_ERRORS: ReadonlySet<ScanError["code"]> = new Set(["unclosed-arguments", "unclosed-body"]);
 
 /**
  * Finds the bracket or brace that closes the one at `from`.

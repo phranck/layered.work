@@ -28,6 +28,8 @@ Quotation marks separate a value inside an argument list, and nowhere else. Insi
 
 A component may hold another component, to any depth, because a body is Markdown and Markdown is where components are found.
 
+A component has its line to itself. Text after its closing bracket or brace on the same line, or between its arguments and its brace, is refused, and the error points at the first character that does not belong. Put that text on a line of its own.
+
 ## What the Markdown is
 
 GitHub's flavour of it: tables, task lists, struck-out text and bare addresses all work as they do in a repository.

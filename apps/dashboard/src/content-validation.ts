@@ -21,6 +21,7 @@ const germanReasons: Record<FindingCode, string> = {
   "unknown-field": "verweist auf ein unbekanntes Tabellenfeld",
   "missing-field": "braucht ein fehlendes Tabellenfeld",
   unclosed: "ist nicht geschlossen",
+  "unexpected-character": "steht nicht allein auf seiner Zeile",
   unreadable: "konnte nicht gelesen werden",
 };
 export function findingMessage(finding: Finding, language: "en" | "de"): string {

@@ -212,3 +212,26 @@ describe("the example the epic gives", () => {
     expect(found?.body?.text).toContain("tone: primary");
   });
 });
+
+describe("text beside a component on its line", () => {
+  it("is reported from its first character when it stands between the arguments and the brace", () => {
+    const text = "Note(tone: warning) xyz {\n  Hi.\n}";
+    const found = scan(text);
+    expect(found?.error?.code).toBe("unexpected-character");
+    expect(found?.error?.at).toBe(text.indexOf("xyz"));
+    expect(found?.to).toBe(text.indexOf("\n"));
+  });
+
+  it("is reported after a closing brace, and the component covers the whole line", () => {
+    const text = "Note { Hi. } and then more text";
+    const found = scan(text);
+    expect(found?.error?.code).toBe("unexpected-character");
+    expect(found?.error?.at).toBe(text.indexOf("and"));
+    expect(found?.to).toBe(text.length);
+    expect(found?.body?.text).toBe(" Hi. ");
+  });
+
+  it("is not made of the spaces after a component", () => {
+    expect(scan('Image("front")   \nThe next line.')?.error).toBeUndefined();
+  });
+});
