@@ -10,6 +10,7 @@ import {
   QuotesIcon,
   TextBIcon,
   TextHTwoIcon,
+  TextIndentIcon,
   TextItalicIcon,
 } from "@layered/ui/icons";
 import { lazy, type RefObject, Suspense } from "react";
@@ -123,6 +124,14 @@ export function WritingSurface({
               );
             }),
           ),
+          [
+            <Editor.Tool
+              key="reindent"
+              label={text("toolReindent")}
+              icon={<TextIndentIcon />}
+              onClick={() => editor.current?.reindent()}
+            />,
+          ],
           // The size the text is written at, last, apart from the tools
           // that change the text itself.
           [
