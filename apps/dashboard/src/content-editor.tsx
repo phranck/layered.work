@@ -8,11 +8,12 @@ import { CONTENT_SYNTAX, type Finding } from "@layered/content";
 import type { MediaKind } from "@layered/schemas";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 import { contentAutocompletion, type MediaLibrary } from "./content-completion.js";
+import { contentFileDrop } from "./content-files.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 import { contentIndentation, reindentDocument } from "./content-indent.js";
+import { insertComponentBlock } from "./content-insert.js";
 import { contentValidation } from "./content-lint.js";
 import { type CheckedContent, findingMessage } from "./content-validation.js";
-import { INDENT_UNIT } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { tableSync } from "./table-sync.js";
 
@@ -151,6 +152,7 @@ function surfaceExtensions(label: string, library?: MediaLibrary): Extension[] {
     contentLanguage(),
     contentHighlighting(),
     contentAutocompletion(library),
+    library ? contentFileDrop(library) : [],
     contentIndentation(),
     tableSync(),
     history(),
@@ -281,26 +283,7 @@ export function ContentEditor({
       insertBlock(text) {
         const current = view.current;
         if (!current) return;
-        current.dispatch(
-          current.state.changeByRange((range) => {
-            // A component is a block, so it never splits a line of prose: on
-            // an empty line it replaces the selection, and in text it goes
-            // after the line, a blank line apart.
-            const line = current.state.doc.lineAt(range.from);
-            const inText = line.text.trim() !== "";
-            const from = inText ? line.to : range.from;
-            const to = inText ? line.to : range.to;
-            const lead = inText ? "\n\n" : "";
-            const quotes = text.indexOf('""');
-            const body = text.indexOf(`{\n${INDENT_UNIT}\n}`);
-            const cursor =
-              quotes >= 0 ? quotes + 1 : body >= 0 ? body + `{\n${INDENT_UNIT}`.length : text.length;
-            return {
-              changes: { from, to, insert: `${lead}${text}` },
-              range: EditorSelection.cursor(from + lead.length + cursor),
-            };
-          }),
-        );
+        insertComponentBlock(current, text);
         current.focus();
       },
       reindent() {
@@ -319,6 +302,10 @@ export function ContentEditor({
     (kind: MediaKind, query: string) => library?.search(kind, query) ?? Promise.resolve([]),
   );
   const uploadToLibrary = useEffectEvent((kind: MediaKind) => library?.upload(kind) ?? Promise.resolve(null));
+  const uploadFilesToLibrary = useEffectEvent(
+    (files: readonly File[], uploaded: (file: { kind: MediaKind; slug: string }) => void) =>
+      library?.uploadFiles(files, uploaded) ?? Promise.resolve(),
+  );
   const libraryUploadLabel = useEffectEvent(() => library?.uploadLabel() ?? "");
   const initialValue = useRef(value);
   const initialLabel = useRef(label);
@@ -337,6 +324,7 @@ export function ContentEditor({
               ? {
                   search: (kind, query) => searchLibrary(kind, query),
                   upload: (kind) => uploadToLibrary(kind),
+                  uploadFiles: (files, uploaded) => uploadFilesToLibrary(files, uploaded),
                   uploadLabel: () => libraryUploadLabel(),
                 }
               : undefined,

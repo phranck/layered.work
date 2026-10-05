@@ -124,12 +124,22 @@ export type MediaKind = (typeof MEDIA_KINDS)[number];
  * The types an upload may declare, by the kind of file it becomes.
  *
  * A kind with no entry cannot be uploaded yet. The editor reads this to know
- * where offering an upload makes sense, so a kind added here is offered with
- * nothing else edited.
+ * where offering an upload makes sense and what a dropped file becomes, so a
+ * kind added here reaches both with nothing else edited.
  */
 export const UPLOAD_TYPES: Readonly<Partial<Record<MediaKind, readonly string[]>>> = {
   image: ACCEPTED_IMAGE_TYPES,
 };
+
+/**
+ * The kind of file an upload of this type becomes.
+ *
+ * @param type - The MIME type the file declares.
+ * @returns The kind, or nothing for a type the library does not accept.
+ */
+export function uploadKindOf(type: string): MediaKind | undefined {
+  return MEDIA_KINDS.find((kind) => UPLOAD_TYPES[kind]?.includes(type));
+}
 
 /**
  * The orders the library can be listed in: by slug, which is how the library

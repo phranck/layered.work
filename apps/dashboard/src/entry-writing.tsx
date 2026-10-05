@@ -19,7 +19,7 @@ import type { CheckedContent } from "./content-validation.js";
 import { type EditorTextSize, steppedTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { useMediaLibrary } from "./media-uploads.js";
+import { MediaUploadProgress, useMediaLibrary } from "./media-uploads.js";
 
 const ContentEditor = lazy(() =>
   import("./content-editor.js").then((module) => ({ default: module.ContentEditor })),
@@ -48,7 +48,7 @@ export function WritingSurface({
   onValidation: (checked: CheckedContent) => void;
 }) {
   const { text } = useDashboardLanguage();
-  const library = useMediaLibrary();
+  const { library, progress } = useMediaLibrary();
   return (
     <Editor.Main>
       {/* The label beside its field rather than over it, so the title takes
@@ -154,6 +154,9 @@ export function WritingSurface({
           ],
         ]}
       />
+      {/* Files dropped or pasted onto the text, while they upload, and any that
+          failed with the reason, until the next upload. */}
+      {progress.length > 0 && <MediaUploadProgress items={progress} />}
       <Editor.Surface data-text-size={textSize}>
         <Suspense fallback={<p>{text("loading")}</p>}>
           <ContentEditor

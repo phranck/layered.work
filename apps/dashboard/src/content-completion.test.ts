@@ -130,6 +130,7 @@ describe("files from the media library", () => {
         uploads.push(kind);
         return uploaded;
       },
+      uploadFiles: async () => {},
       uploadLabel: () => "Upload…",
     };
     return { source, asked, uploads };
