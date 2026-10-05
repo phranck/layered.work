@@ -57,7 +57,7 @@ export const NO_FRAMING: Readonly<Record<string, string>> = Object.freeze({
   "X-Frame-Options": "DENY",
 });
 
-/** The Umami instance, which is the only third party any page talks to. */
+/** The Umami instance used by the site and dashboard. */
 export const ANALYTICS_ORIGIN = "https://umami.layered.work";
 
 /**
@@ -112,10 +112,11 @@ export const API_POLICY = contentSecurityPolicy({
  * put in a frame can be clicked through by the page around it.
  *
  * The dashboard reaches its API through the same-origin nginx proxy. An
- * explicit API origin remains available for interfaces without that proxy;
- * omitting it permits only this host and the analytics instance.
+ * explicit API origin remains available for interfaces without that proxy.
+ * Presigned uploads additionally reach the configured bucket API origin.
+ * This is the write endpoint, separate from the CDN used by public images.
  */
-export function dashboardPolicy(apiOrigin?: string): string {
+export function dashboardPolicy(apiOrigin?: string, uploadOrigin?: string): string {
   return contentSecurityPolicy({
     "default-src": ["'none'"],
     "script-src": ["'self'"],
@@ -125,7 +126,12 @@ export function dashboardPolicy(apiOrigin?: string): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", ...(apiOrigin ? [apiOrigin] : []), ANALYTICS_ORIGIN],
+    "connect-src": [
+      "'self'",
+      ...(apiOrigin ? [apiOrigin] : []),
+      ANALYTICS_ORIGIN,
+      ...(uploadOrigin ? [uploadOrigin] : []),
+    ],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'self'"],
