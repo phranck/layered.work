@@ -47,7 +47,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const signOut = useSignOut();
   const fileInput = useRef<HTMLInputElement>(null);
   const upload = useMutation({
-    mutationFn: api.uploadMedia,
+    mutationFn: (file: File) => api.uploadMedia(file),
     onSuccess: (picture) => {
       // The upload becomes the draft portrait, exactly as a chosen picture does,
       // and is kept only when the account is saved.
@@ -56,12 +56,14 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
       queryClient.invalidateQueries({ queryKey: ["account-media"] });
     },
   });
+  const accountPending = save.isPending || signOut.isPending;
+  const avatarPending = accountPending || upload.isPending;
 
   // Command-S submits the dialog as its Save button does. Registered after the
   // screen behind it, so it is the dialog that saves whilst it is open.
   const form = useRef<HTMLFormElement>(null);
   useSaveShortcut(() => {
-    if (!save.isPending && !signOut.isPending && !upload.isPending) form.current?.requestSubmit();
+    if (!avatarPending) form.current?.requestSubmit();
   });
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>) {
@@ -203,7 +205,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                   type="button"
                   tone="danger"
                   onClick={submitSignOut}
-                  disabled={signOut.isPending || save.isPending}
+                  disabled={accountPending}
                   icon={<SignOutIcon weight="duotone" />}
                 >
                   {signOut.isPending ? text("signOutPending") : text("signOut")}
@@ -211,7 +213,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                 <Button
                   type="button"
                   onClick={dismiss}
-                  disabled={save.isPending || signOut.isPending}
+                  disabled={accountPending}
                   icon={<XIcon weight="duotone" />}
                 >
                   {text("cancel")}
@@ -219,7 +221,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                 <Button
                   type="submit"
                   tone="primary"
-                  disabled={save.isPending || signOut.isPending || upload.isPending}
+                  disabled={avatarPending}
                   icon={<FloppyDiskIcon weight="duotone" />}
                 >
                   {save.isPending ? text("savePending") : text("save")}

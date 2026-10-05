@@ -1,21 +1,9 @@
 import type { AccountMediaItem } from "@layered/schemas";
-import { Button, Card, Field, Input, imagePosition } from "@layered/ui";
-import { ImagesIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import { ErrorNotice } from "./error-notice.js";
-import { FocalPointDialog } from "./focal-point.js";
-import { useDashboardLanguage } from "./language-context.js";
+import { useId } from "react";
+import { MediaBrowser } from "./media-browser.js";
 import { CardDialog } from "./modal.js";
 
-const PROCESSING_LABEL = {
-  queued: "mediaQueued",
-  processing: "mediaProcessing",
-  ready: "mediaReady",
-  failed: "mediaFailed",
-} as const;
-
+/** The shared browser returns the stable slug plus the image metadata its caller needs. */
 export function MediaPicker({
   onCancel,
   onChoose,
@@ -23,96 +11,25 @@ export function MediaPicker({
   onCancel: () => void;
   onChoose: (item: AccountMediaItem) => void;
 }) {
-  const api = useDashboardApi();
-  const { text } = useDashboardLanguage();
-  const [editing, setEditing] = useState<AccountMediaItem | null>(null);
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const media = useQuery({
-    queryKey: ["account-media", query, page],
-    queryFn: () => api.fetchAccountMedia(query, page),
-    retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.items.some(
-        (item) => item.processingState === "queued" || item.processingState === "processing",
-      )
-        ? 2_000
-        : false,
-  });
-
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPage(1);
-    setQuery(search.trim());
-  }
-
-  if (editing)
-    return (
-      <FocalPointDialog
-        id={editing.id}
-        src={editing.url}
-        initial={editing.focalPoint}
-        onClose={() => setEditing(null)}
-      />
-    );
-
+  const labelId = useId();
   return (
-    <CardDialog labelId="media-picker-title" onClose={onCancel}>
-      <Card.Header id="media-picker-title" title={text("mediaPicker")} />
-      <Card.Body>
-        <form className="media-picker__search" onSubmit={submitSearch}>
-          <Field label={text("mediaSearch")} htmlFor="media-search">
-            <Input
-              id="media-search"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              autoFocus
-            />
-          </Field>
-          <Button
-            type="submit"
-            icon={<MagnifyingGlassIcon weight="duotone" />}
-            aria-label={text("mediaSearch")}
-          />
-        </form>
-        {media.isError && <ErrorNotice error={media.error} fallback="mediaLoadError" />}
-        {media.isSuccess && media.data.items.length === 0 && <p>{text("mediaEmpty")}</p>}
-        {media.data && (
-          <div className="media-picker__grid">
-            {media.data.items.map((item) => (
-              <div key={item.id} className="media-picker__entry">
-                <button className="media-picker__item" type="button" onClick={() => onChoose(item)}>
-                  <img src={item.url} alt="" loading="lazy" style={{ objectPosition: imagePosition(item) }} />
-                  <span>{item.slug}</span>
-                  <small>{text(PROCESSING_LABEL[item.processingState ?? "ready"])}</small>
-                </button>
-                <Button onClick={() => setEditing(item)}>{text("mediaFocal")}</Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={onCancel} icon={<XIcon weight="duotone" />}>
-              {text("cancel")}
-            </Button>
-            {page > 1 && (
-              <Button onClick={() => setPage((current) => current - 1)}>{text("previousPage")}</Button>
-            )}
-            {media.data?.hasMore && (
-              <Button
-                onClick={() => setPage((current) => current + 1)}
-                icon={<ImagesIcon weight="duotone" />}
-              >
-                {text("nextPage")}
-              </Button>
-            )}
-          </>
-        }
+    <CardDialog labelId={labelId} onClose={onCancel}>
+      <MediaBrowser
+        labelId={labelId}
+        imageOnly
+        onCancel={onCancel}
+        onChoose={(_slug, item) => {
+          if (item.url && item.width && item.height)
+            onChoose({
+              id: item.id,
+              slug: item.slug,
+              url: item.url,
+              width: item.width,
+              height: item.height,
+              processingState: item.processingState,
+              focalPoint: item.focalPoint,
+            });
+        }}
       />
     </CardDialog>
   );

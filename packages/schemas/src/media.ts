@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body } from "./request.js";
+import { body, MaxLength } from "./request.js";
 
 /**
  * Uploading a file into the media library.
@@ -113,3 +113,65 @@ export type MediaProcessing = z.infer<typeof mediaProcessing>;
 export const focalPoint = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 export type FocalPoint = z.infer<typeof focalPoint>;
 export const updateMediaFocalBody = body({ x: focalPoint.shape.x, y: focalPoint.shape.y });
+
+/** Supported library kinds; upload acceptance remains a separate byte-level policy. */
+export const MEDIA_KINDS = ["image", "video", "document", "model"] as const;
+export const mediaDescriptions = z.object({
+  en: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
+  de: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
+});
+export const mediaLibraryQuery = z.object({
+  search: z.string().trim().max(MaxLength.Line).default(""),
+  kind: z.enum(["all", ...MEDIA_KINDS]).default("all"),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
+});
+export type MediaLibraryQuery = z.infer<typeof mediaLibraryQuery>;
+export const mediaLibraryItem = z.object({
+  id: z.uuid(),
+  slug: z.string(),
+  kind: z.enum(MEDIA_KINDS),
+  mimeType: z.string(),
+  byteSize: z.number().int().nonnegative(),
+  width: z.number().int().positive().nullable(),
+  height: z.number().int().positive().nullable(),
+  uploadedAt: z.iso.datetime(),
+  url: z.string().nullable(),
+  processingState: mediaProcessingState,
+  focalPoint,
+});
+export type MediaLibraryItem = z.infer<typeof mediaLibraryItem>;
+export const mediaLibraryPage = z.object({
+  items: z.array(mediaLibraryItem),
+  page: z.number().int().positive(),
+  hasMore: z.boolean(),
+});
+export type MediaLibraryPage = z.infer<typeof mediaLibraryPage>;
+export const mediaUse = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  language: z.enum(["en", "de"]),
+  kind: z.enum(["post", "page", "project"]),
+});
+export const mediaDetail = mediaLibraryItem.extend({
+  translations: mediaDescriptions,
+  processing: mediaProcessing,
+  uses: z.array(mediaUse),
+});
+export type MediaDetail = z.infer<typeof mediaDetail>;
+export const saveMediaMetadataBody = body({
+  focalPoint,
+  translations: z
+    .array(
+      body({
+        language: z.enum(["en", "de"]),
+        altText: z.string().max(MaxLength.Paragraph).nullable(),
+        caption: z.string().max(MaxLength.Paragraph).nullable(),
+      }),
+    )
+    .length(2)
+    .refine(
+      (items) => new Set(items.map((item) => item.language)).size === 2,
+      "Both languages must be supplied once.",
+    ),
+});
+export type SaveMediaMetadataBody = z.infer<typeof saveMediaMetadataBody>;

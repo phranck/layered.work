@@ -27,9 +27,9 @@ interface Props {
 const { repository, entry, nodes, forms } = Astro.props;
 const language = entry.language;
 const de = language === "de";
-const feature = entry.featuredImage ? repository.media(entry.featuredImage) : undefined;
+const feature = entry.featuredImage ? repository.media(entry.featuredImage, language) : undefined;
 const resolveMedia = (slug: string) => {
-  const asset = repository.media(slug);
+  const asset = repository.media(slug, language);
   return asset ? { ...asset, poster: feature?.src } : undefined;
 };
 // A project opens with its picture and closes with the other projects; a post
@@ -48,7 +48,7 @@ const entryTopics = repository.entryTopics(entry, language);
     <ContentRenderer {nodes} {forms} media={resolveMedia} resolveUrl={repository.contentUrl} />
   </div>
 </article>
-{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} {language} topics={repository.entryTopics(related, language)} image={related.featuredImage ? repository.media(related.featuredImage) : undefined} />)}</div></Section.Page>}
+{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} {language} topics={repository.entryTopics(related, language)} image={related.featuredImage ? repository.media(related.featuredImage, language) : undefined} />)}</div></Section.Page>}
 {rendersComponent(nodes, "Model") && <ModelViewer />}
 <CodeCopy />
 {forms && Object.keys(forms).length > 0 && <FormBehavior />}

@@ -11,6 +11,7 @@ import { EntryListScreen } from "./entry-list.js";
 import { FooterNavigationScreen } from "./footer-navigation.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
+import { MediaScreen } from "./media-screen.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { SocialAccountsScreen } from "./social-accounts.js";
@@ -23,6 +24,7 @@ import { TopicsScreen } from "./topics.js";
  */
 const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
   tags: TopicsScreen,
+  media: MediaScreen,
   settings: SiteSettingsScreen,
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,

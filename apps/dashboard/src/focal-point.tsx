@@ -1,11 +1,7 @@
 import type { FocalPoint } from "@layered/schemas";
-import { Button, Card, imagePosition } from "@layered/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type KeyboardEvent, type PointerEvent, useId, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import { ErrorNotice } from "./error-notice.js";
+import { imagePosition } from "@layered/ui";
+import { type KeyboardEvent, type PointerEvent, useId } from "react";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
 import "./focal-point.css";
 
 type EditorProps = { src: string; point: FocalPoint; onChange: (point: FocalPoint) => void };
@@ -106,57 +102,3 @@ function FocalContent(props: EditorProps) {
 }
 /** Shared coordinate editor with composable source and ratio previews. */
 export const FocalPointEditor = Object.assign(FocalContent, { Root: FocalRoot, Previews: FocalPreviews });
-
-export function FocalPointDialog({
-  id,
-  src,
-  initial,
-  onClose,
-}: {
-  id: string;
-  src: string;
-  initial?: FocalPoint;
-  onClose: () => void;
-}) {
-  const [point, setPoint] = useState(initial ?? { x: 0.5, y: 0.5 });
-  const { text } = useDashboardLanguage();
-  const api = useDashboardApi();
-  const client = useQueryClient();
-  const save = useMutation({
-    mutationFn: () => api.saveMediaFocalPoint(id, point),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["account-media"] });
-      await client.invalidateQueries({ queryKey: ["media"] });
-      onClose();
-    },
-  });
-  const titleId = useId();
-  const formId = useId();
-  return (
-    <CardDialog labelId={titleId} onClose={onClose}>
-      <Card.Header id={titleId} title={text("mediaFocal")} />
-      <Card.Body>
-        <form
-          id={formId}
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate();
-          }}
-        >
-          <FocalPointEditor src={src} point={point} onChange={setPoint} />
-        </form>
-        {save.isError && <ErrorNotice error={save.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={onClose}>{text("cancel")}</Button>
-            <Button type="submit" form={formId} tone="primary" disabled={save.isPending}>
-              {text(save.isPending ? "savePending" : "save")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
-  );
-}

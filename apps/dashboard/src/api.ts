@@ -1,8 +1,6 @@
 import {
-  type AccountMediaPage,
   type AccountProfile,
   type AnalyticsSettings,
-  accountMediaPage,
   accountProfile,
   type CreateEntryBody,
   type CreateFormBody,
@@ -25,14 +23,12 @@ import {
   entryList,
   entryPreview,
   entryTrashImpact,
-  type FocalPoint,
   type FooterNavigation,
   type FormDetail,
   type FormList,
   type FormSubmission,
   type FormSubmissionList,
   type FormSubmissionStatus,
-  focalPoint,
   footerNavigation,
   footerNavigationList,
   formDetail,
@@ -47,8 +43,12 @@ import {
   type MailSettings,
   type MailTemplate,
   type MailTemplateKind,
+  type MediaDetail,
+  type MediaLibraryPage,
   mailTemplate,
   mailTemplateList,
+  mediaDetail,
+  mediaLibraryPage,
   mergeTopicBody,
   type PreviewEntryBody,
   previewEntryBody,
@@ -61,6 +61,7 @@ import {
   type SaveFooterNavigationBody,
   type SaveFormBody,
   type SaveMailTemplateBody,
+  type SaveMediaMetadataBody,
   type SaveSocialAccountBody,
   type SaveTopicBody,
   type SearchResults,
@@ -72,6 +73,7 @@ import {
   saveEntryBody,
   saveFooterNavigationBody,
   saveFormBody,
+  saveMediaMetadataBody,
   saveSocialAccountBody,
   saveTopicBody,
   searchResults,
@@ -91,12 +93,12 @@ import {
   type UpdateAccountBody,
   type UploadedMedia,
   updateAccountBody,
-  updateMediaFocalBody,
   uploadedMedia,
   uploadTicket,
 } from "@layered/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 import { type DashboardStringKey, ERROR_CODE_TEXT } from "./dashboard-i18n.js";
+import { uploadWithProgress } from "./upload-request.js";
 
 /**
  * A failure the dashboard can put in front of the reader.
@@ -152,8 +154,9 @@ export interface DashboardApi {
   ): Promise<FormSubmission>;
   deleteFormSubmission(formId: string, submissionId: string): Promise<void>;
   fetchAccount(): Promise<AccountProfile>;
-  fetchAccountMedia(search: string, page: number): Promise<AccountMediaPage>;
-  saveMediaFocalPoint(id: string, point: FocalPoint): Promise<FocalPoint>;
+  fetchMedia(search: string, kind: string, page: number): Promise<MediaLibraryPage>;
+  fetchMediaDetail(id: string): Promise<MediaDetail>;
+  saveMediaMetadata(id: string, value: SaveMediaMetadataBody): Promise<MediaDetail>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
   /** Creates one draft in the site's default language. */
@@ -237,7 +240,7 @@ export interface DashboardApi {
    * @returns The library picture, which is an existing one when the same file
    *   was already there.
    */
-  uploadMedia(file: File): Promise<UploadedMedia>;
+  uploadMedia(file: File, progress?: (percent: number) => void): Promise<UploadedMedia>;
   signIn(credentials: SignInBody): Promise<SignedInAs>;
   signOut(): Promise<void>;
 }
@@ -337,22 +340,27 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       const path = `/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`;
       await request(path, { method: "DELETE" }, true);
     },
-    async fetchAccount() {
-      return dataOf(await request("/account", undefined, true), accountProfile);
+    async fetchMedia(search, kind, page) {
+      return dataOf(
+        await request(`/media?${new URLSearchParams({ search, kind, page: String(page) })}`, undefined, true),
+        mediaLibraryPage,
+      );
     },
-    async fetchAccountMedia(search, page) {
-      const params = new URLSearchParams({ search, page: String(page) });
-      return dataOf(await request(`/account/media?${params}`, undefined, true), accountMediaPage);
+    async fetchMediaDetail(id) {
+      return dataOf(await request(`/media/${encodeURIComponent(id)}`, undefined, true), mediaDetail);
     },
-    async saveMediaFocalPoint(id, point) {
+    async saveMediaMetadata(id, value) {
       return dataOf(
         await request(
-          `/media/${encodeURIComponent(id)}/focal-point`,
-          jsonBody("PATCH", updateMediaFocalBody.parse(point)),
+          `/media/${encodeURIComponent(id)}`,
+          jsonBody("PUT", saveMediaMetadataBody.parse(value)),
           true,
         ),
-        focalPoint,
+        mediaDetail,
       );
+    },
+    async fetchAccount() {
+      return dataOf(await request("/account", undefined, true), accountProfile);
     },
     async fetchEntries(kind) {
       const params = new URLSearchParams({ kind });
@@ -523,7 +531,7 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));
       return dataOf(await request("/account", sent, true), accountProfile);
     },
-    async uploadMedia(file) {
+    async uploadMedia(file, progress) {
       const asked = createUploadBody.safeParse({ filename: file.name, type: file.type, size: file.size });
       if (!asked.success) throw new DashboardApiError("uploadRefused");
       const ticket = dataOf(
@@ -535,18 +543,28 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       // is a presigned bucket address, which is authorised by its signature and
       // must not be sent the cookie.
       const local = ticket.url.startsWith("/");
-      let sent: Response;
-      try {
-        sent = await fetch(local ? `${__API_BASE__}${ticket.url}` : ticket.url, {
-          method: "PUT",
-          headers: ticket.headers,
-          body: file,
-          credentials: local ? "include" : "omit",
-        });
-      } catch {
-        throw new DashboardApiError("uploadNotSent");
+      if (progress) {
+        await uploadWithProgress(
+          local ? `${__API_BASE__}${ticket.url}` : ticket.url,
+          ticket.headers,
+          file,
+          local,
+          progress,
+        );
+      } else {
+        let sent: Response;
+        try {
+          sent = await fetch(local ? `${__API_BASE__}${ticket.url}` : ticket.url, {
+            method: "PUT",
+            headers: ticket.headers,
+            body: file,
+            credentials: local ? "include" : "omit",
+          });
+        } catch {
+          throw new DashboardApiError("uploadNotSent");
+        }
+        if (!sent.ok) throw new DashboardApiError("uploadNotAccepted");
       }
-      if (!sent.ok) throw new DashboardApiError("uploadNotAccepted");
 
       return dataOf(
         await request("/media/uploads/complete", jsonBody("POST", { token: ticket.token }), true),

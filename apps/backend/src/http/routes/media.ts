@@ -5,7 +5,11 @@ import {
   createUploadBody,
   ErrorCode,
   focalPoint,
+  mediaDetail,
+  mediaLibraryPage,
+  mediaLibraryQuery,
   mediaProcessing,
+  saveMediaMetadataBody,
   updateMediaFocalBody,
   uploadedMedia,
   uploadReceived,
@@ -17,6 +21,7 @@ import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
 import { saveMediaFocalPoint } from "../../media/focal.js";
+import { getMediaDetail, listMedia, saveMediaMetadata } from "../../media/library.js";
 import { getMediaProcessing } from "../../media/processing.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
@@ -35,6 +40,30 @@ import { validate } from "../validate.js";
  * asked and only they may complete it.
  */
 export const media = new Hono();
+
+media.get(
+  "/",
+  requireScope("media:write"),
+  validate("query", mediaLibraryQuery),
+  responds(mediaLibraryPage),
+  async (c) => ok(c, await listMedia(database(), c.req.valid("query"))),
+);
+media.get(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  responds(mediaDetail),
+  async (c) => ok(c, await getMediaDetail(database(), c.req.valid("param").id)),
+);
+media.put(
+  "/:id",
+  requireScope("media:write"),
+  validate("param", z.object({ id: z.uuid() })),
+  validate("json", saveMediaMetadataBody),
+  responds(mediaDetail),
+  async (c) =>
+    ok(c, await saveMediaMetadata(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c))),
+);
 
 media.get(
   "/:id/processing",

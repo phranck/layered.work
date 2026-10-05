@@ -12,8 +12,8 @@ const root=languageRoot(language);
 const entries=repository.publicEntries(language).filter(entry=>entry.onHomePage);
 const featured=entries.find(entry=>entry.featured)??entries.find(entry=>entry.kind!=="page");
 const hero=entries.find(entry=>entry.slug==="next-mini-replica-interest")??entries.find(entry=>entry.kind==="project"&&entry.featuredImage)??featured;
-const heroImage=hero?.featuredImage?repository.media(hero.featuredImage):undefined;
-const featureImage=featured?.featuredImage?repository.media(featured.featuredImage):undefined;
+const heroImage=hero?.featuredImage?repository.media(hero.featuredImage, language):undefined;
+const featureImage=featured?.featuredImage?repository.media(featured.featuredImage, language):undefined;
 // A grid block's type is not its listing's address, and the two were only ever equal by
 // accident: renaming the block to match the database turned "View all" into /project_grid/.
 const gridKind=(type:string)=>type==="project_grid"?"project":"post";
@@ -54,7 +54,7 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
 ) : block.type==="project_grid"||block.type==="post_grid" ? (
   <Section.Band>
     <Section.Title eyebrow={gridKicker(block.type)} title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage):undefined} />)}</div>
+    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage, language):undefined} />)}</div>
     {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
   </Section.Band>
 ) : block.type==="topic_bar" ? (

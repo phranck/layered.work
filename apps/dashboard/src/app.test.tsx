@@ -143,6 +143,7 @@ const topics = [
 
 function successfulGet(input: RequestInfo | URL) {
   const url = String(input);
+  if (url.includes("/media?")) return json({ data: { items: [], page: 1, hasMore: false } });
   if (url.endsWith("/topics")) return json({ data: topics });
   if (url.endsWith(`/entries/${draftDetail.id}`)) return json({ data: draftDetail });
   if (url.endsWith("/settings")) return json({ data: settings });
@@ -1202,20 +1203,20 @@ describe("dashboard shell", () => {
   it("keeps failed counts visible as an error with its error id", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(json({ data: signedIn }))
-        .mockResolvedValueOnce(json({ data: account }))
-        .mockResolvedValueOnce(
-          json(
-            { error: { code: "internal", message: "Zahlen konnten nicht geladen werden.", id: "req-54" } },
-            500,
-          ),
+      vi.fn((input) =>
+        Promise.resolve(
+          String(input).endsWith("/dashboard/counts")
+            ? json(
+                {
+                  error: { code: "internal", message: "Zahlen konnten nicht geladen werden.", id: "req-54" },
+                },
+                500,
+              )
+            : successfulGet(input),
         ),
+      ),
     );
-    // An area without a list, so the only protected request is the counts.
     renderDashboard("/media");
-
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Auf dem Server ist ein Fehler aufgetreten.");
     expect(alert.textContent).not.toContain("Zahlen konnten nicht geladen werden.");
@@ -1234,14 +1235,14 @@ describe("dashboard shell", () => {
   });
 
   it("removes cached counts when the current session becomes signed out", async () => {
+    let sessions = 0;
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(json({ data: signedIn }))
-        .mockResolvedValueOnce(json({ data: account }))
-        .mockResolvedValueOnce(json({ data: counts }))
-        .mockResolvedValueOnce(json({ data: null })),
+      vi.fn((input) =>
+        Promise.resolve(
+          String(input).endsWith("/auth/me") && ++sessions > 1 ? json({ data: null }) : successfulGet(input),
+        ),
+      ),
     );
     const { router } = renderDashboard("/media");
 
@@ -1271,6 +1272,7 @@ describe("dashboard shell", () => {
           });
         }
         if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
+        if (url.includes("/media?")) return Promise.resolve(successfulGet(input));
         countRequests += 1;
         if (countRequests === 1) return Promise.resolve(json({ data: counts }));
         return new Promise<Response>((resolve) => {
@@ -1280,7 +1282,7 @@ describe("dashboard shell", () => {
     );
     const { api, router } = renderDashboard("/media");
 
-    await screen.findByRole("heading", { name: "Medien" });
+    await screen.findByRole("heading", { name: "Medien", level: 1 });
     // The sidebar's own count request has to have taken the first answer, so
     // the request below is the one left waiting. The heading can appear before
     // that request is made when the machine is busy.
@@ -1387,6 +1389,7 @@ describe("dashboard shell", () => {
       }
       if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
       if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
+      if (url.includes("/media?")) return Promise.resolve(successfulGet(input));
       return Promise.resolve(json({ data: signedInAfterRequest ? signedIn : null }));
     });
     vi.stubGlobal("fetch", request);
@@ -1406,7 +1409,7 @@ describe("dashboard shell", () => {
     );
     signedInAfterRequest = true;
     resolveSignIn(json({ data: signedIn }));
-    expect(await screen.findByRole("heading", { name: "Medien" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Medien", level: 1 })).toBeTruthy();
   });
 
   it("saves account changes and applies the language across the dashboard immediately", async () => {
@@ -1414,6 +1417,12 @@ describe("dashboard shell", () => {
     const mediaItem = {
       id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
       slug: "portrait",
+      kind: "image",
+      mimeType: "image/png",
+      byteSize: 5,
+      uploadedAt: "2026-10-05T10:00:00Z",
+      processingState: "ready",
+      focalPoint: { x: 0.5, y: 0.5 },
       url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
       width: 600,
       height: 600,
@@ -1422,7 +1431,7 @@ describe("dashboard shell", () => {
       const url = String(input);
       if (url.endsWith("/account") && init?.method === "PATCH")
         return Promise.resolve(json({ data: englishAccount }));
-      if (url.includes("/account/media?"))
+      if (url.includes("/media?"))
         return Promise.resolve(json({ data: { items: [mediaItem], page: 1, hasMore: false } }));
       return Promise.resolve(successfulGet(input));
     });
@@ -1432,7 +1441,7 @@ describe("dashboard shell", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Frank Updated" } });
     fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
-    fireEvent.click(await screen.findByRole("button", { name: "portrait" }));
+    fireEvent.click(await screen.findByRole("button", { name: /portrait/ }));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
 
@@ -1453,13 +1462,19 @@ describe("dashboard shell", () => {
     const mediaItem = {
       id: "f6209cc7-086d-4d28-a67e-4d1ad3f750aa",
       slug: "portrait",
+      kind: "image",
+      mimeType: "image/png",
+      byteSize: 5,
+      uploadedAt: "2026-10-05T10:00:00Z",
+      processingState: "ready",
+      focalPoint: { x: 0.5, y: 0.5 },
       url: "/api/account/media/f6209cc7-086d-4d28-a67e-4d1ad3f750aa/content",
       width: 600,
       height: 600,
     };
     const request = vi.fn((input, _init?: RequestInit) => {
       const url = String(input);
-      if (url.includes("/account/media?"))
+      if (url.includes("/media?"))
         return Promise.resolve(json({ data: { items: [mediaItem], page: 1, hasMore: false } }));
       return Promise.resolve(successfulGet(input));
     });
@@ -1469,7 +1484,7 @@ describe("dashboard shell", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
-    fireEvent.click(await screen.findByRole("button", { name: "portrait" }));
+    fireEvent.click(await screen.findByRole("button", { name: /portrait/ }));
     expect(
       screen.getByRole("dialog", { name: "Benutzerkonto" }).querySelector("img")?.getAttribute("src"),
     ).toBe(mediaItem.url);
@@ -1674,6 +1689,7 @@ describe("dashboard shell", () => {
         const url = String(input);
         if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
         if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
+        if (url.includes("/media?")) return Promise.resolve(successfulGet(input));
         if (url.endsWith("/auth/sign-out")) return Promise.resolve(json({ data: { signedOut: true } }));
         return Promise.resolve(json({ data: signedIn }));
       }),
@@ -1712,6 +1728,7 @@ describe("dashboard shell", () => {
         const url = String(input);
         if (url.endsWith("/dashboard/counts")) return Promise.resolve(json({ data: counts }));
         if (url.endsWith("/account")) return Promise.resolve(json({ data: account }));
+        if (url.includes("/media?")) return Promise.resolve(successfulGet(input));
         if (url.endsWith("/auth/sign-out")) {
           return Promise.resolve(
             json({ error: { code: "internal", message: "Abmeldung fehlgeschlagen.", id: "logout-1" } }, 500),

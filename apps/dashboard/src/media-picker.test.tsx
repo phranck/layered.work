@@ -24,6 +24,11 @@ it("shows the processing state for every image without changing the picker inter
           items: ["queued", "processing", "ready", "failed"].map((processingState, index) => ({
             id: `00000000-0000-4000-8000-00000000000${index + 1}`,
             slug: `image-${index}`,
+            kind: "image",
+            mimeType: "image/png",
+            byteSize: 123,
+            uploadedAt: "2026-10-05T10:00:00Z",
+            focalPoint: { x: 0.5, y: 0.5 },
             url: `/image-${index}`,
             width: 400,
             height: 200,

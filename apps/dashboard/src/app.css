@@ -470,41 +470,6 @@ dialog.account-dialog::backdrop {
 .sidebar__footer .row__tile {
   border-radius: var(--radius-pill);
 }
-.media-picker__search {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: end;
-}
-.media-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-block-start: var(--space-5);
-}
-.media-picker__item {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: var(--space-2);
-  color: var(--text-secondary);
-  background: var(--surface-raised);
-  border: 1px solid var(--edge-hairline);
-  border-radius: var(--radius-control);
-  cursor: pointer;
-}
-.media-picker__item img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: var(--card-inner-radius);
-}
-.media-picker__item span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* --- Entry editor -----------------------------------------------------------
    The way back out stands where the list's eyebrow stood and takes the
    eyebrow's lettering, so the heading below it does not move when an entry
@@ -954,8 +919,5 @@ dialog.account-dialog::backdrop {
   }
   .account__portrait {
     align-self: center;
-  }
-  .media-picker__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -107,6 +107,11 @@ export interface PublicMedia {
   width?: number;
   height?: number;
   alt?: string;
+  caption?: string;
+  translations?: {
+    en: { altText: string | null; caption: string | null };
+    de: { altText: string | null; caption: string | null };
+  };
   srcSet?: string;
   placeholder?: string;
   focalPoint?: { x: number; y: number };
@@ -193,18 +198,28 @@ export async function publicMedia(
       checksum: media.checksum,
       width: media.width,
       height: media.height,
-      altText: mediaTranslations.altText,
       placeholder: media.placeholder,
       focalX: media.focalX,
       focalY: media.focalY,
     })
-    .from(media)
-    .leftJoin(
-      mediaTranslations,
-      and(eq(mediaTranslations.mediaId, media.id), eq(mediaTranslations.language, "en")),
-    );
+    .from(media);
 
   const named = namedFiles(translations, assets);
+  const descriptions = named.size
+    ? await database
+        .select()
+        .from(mediaTranslations)
+        .where(inArray(mediaTranslations.mediaId, [...named]))
+    : [];
+  const descriptionsByMedia = new Map<string, NonNullable<PublicMedia["translations"]>>();
+  for (const description of descriptions) {
+    const localized = descriptionsByMedia.get(description.mediaId) ?? {
+      en: { altText: null, caption: null },
+      de: { altText: null, caption: null },
+    };
+    localized[description.language] = { altText: description.altText, caption: description.caption };
+    descriptionsByMedia.set(description.mediaId, localized);
+  }
   const variants = named.size
     ? await database
         .select({
@@ -225,6 +240,10 @@ export async function publicMedia(
     media: assets
       .filter((asset) => named.has(asset.id))
       .map((asset) => {
+        const localized = descriptionsByMedia.get(asset.id) ?? {
+          en: { altText: null, caption: null },
+          de: { altText: null, caption: null },
+        };
         const sizes = variantsByMedia.get(asset.id) ?? [];
         const format = sizes.some((variant) => variant.format === "webp") ? "webp" : sizes[0]?.format;
         const srcSet = sizes
@@ -243,7 +262,9 @@ export async function publicMedia(
           sha256: asset.checksum,
           ...(asset.width === null ? {} : { width: asset.width }),
           ...(asset.height === null ? {} : { height: asset.height }),
-          ...(asset.altText ? { alt: asset.altText } : {}),
+          translations: localized,
+          ...(localized.en.altText === null ? {} : { alt: localized.en.altText }),
+          ...(localized.en.caption === null ? {} : { caption: localized.en.caption }),
           ...(srcSet ? { srcSet } : {}),
           ...(asset.placeholder ? { placeholder: asset.placeholder } : {}),
         };
