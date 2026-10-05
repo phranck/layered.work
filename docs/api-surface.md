@@ -35,11 +35,15 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `deleteTopic` | DELETE /topics/:id | content:write |
 | `search` | GET /search?q=:query | Browser session |
 | `fetchSettings` | GET /settings | Browser session |
-| `fetchFooterNavigations` | GET /footer-navigation | Browser session |
-| `createFooterNavigation` | POST /footer-navigation | Owner browser session |
-| `saveFooterNavigation` | PUT /footer-navigation/:id | Owner browser session |
-| `deleteFooterNavigation` | DELETE /footer-navigation/:id | Owner browser session |
-| `reorderFooterNavigations` | PATCH /footer-navigation/order | Owner browser session |
+| `fetchSocialAccounts` | GET /social-accounts | Browser session |
+| `saveSocialAccount` | POST /social-accounts or PUT /social-accounts/:id | Owner browser session |
+| `deleteSocialAccount` | DELETE /social-accounts/:id | Owner browser session |
+| `reorderSocialAccounts` | PATCH /social-accounts/order | Owner browser session |
+| `fetchFooterNavigations` | GET /footer-navigation or /main-navigation | Browser session |
+| `createFooterNavigation` | POST /footer-navigation or /main-navigation | Owner browser session |
+| `saveFooterNavigation` | PUT /footer-navigation/:id or /main-navigation/:id | Owner browser session |
+| `deleteFooterNavigation` | DELETE /footer-navigation/:id or /main-navigation/:id | Owner browser session |
+| `reorderFooterNavigations` | PATCH /footer-navigation/order or /main-navigation/order | Owner browser session |
 | `saveSettings` | PUT /settings/site, /settings/mail, /settings/analytics, /settings/postListing or /settings/projectListing | Owner browser session |
 | `sendTestMail` | POST /settings/mail/test | Owner browser session |
 | `fetchAccessTokens` | GET /access-tokens | Browser session |
@@ -62,7 +66,9 @@ The upload URL is either an API route (`PUT /media/uploads/:token/content`, used
 
 Account profile, session management and token issuance or revocation require the account's browser session. An editorial token is not authority to change its owner's identity or issue another credential.
 
-Site configuration, footer-navigation editing, mail configuration and outbound test mail are owner workflows. The current token scopes grant content editing and uploading rather than owner administration. Mail-template reading and previews remain in that session-bound mail workflow.
+The navigation methods retain their existing names and accept an optional `placement` of `main` or `footer`; omitting it selects the footer routes.
+
+Site configuration, main/footer-navigation editing, social-account editing, mail configuration and outbound test mail are owner workflows. The current token scopes grant content editing and uploading rather than owner administration. Mail-template reading and previews remain in that session-bound mail workflow.
 
 Forms and visitor submissions remain session-bound because the editorial scopes do not grant access to visitors' personal data or form administration. Dashboard counts and dashboard-wide search remain session-bound aggregations; scoped agents can read entries and topics through their corresponding endpoints. The account media picker also belongs to the account workflow. These restrictions are enforced by the API, not by hiding dashboard controls.
 
