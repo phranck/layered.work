@@ -19,6 +19,7 @@ import type { CheckedContent } from "./content-validation.js";
 import { type EditorTextSize, steppedTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { useMediaLibrary } from "./media-uploads.js";
 
 const ContentEditor = lazy(() =>
   import("./content-editor.js").then((module) => ({ default: module.ContentEditor })),
@@ -47,6 +48,7 @@ export function WritingSurface({
   onValidation: (checked: CheckedContent) => void;
 }) {
   const { text } = useDashboardLanguage();
+  const library = useMediaLibrary();
   return (
     <Editor.Main>
       {/* The label beside its field rather than over it, so the title takes
@@ -156,6 +158,7 @@ export function WritingSurface({
         <Suspense fallback={<p>{text("loading")}</p>}>
           <ContentEditor
             editorRef={editor}
+            library={library}
             value={body}
             label={text("editorText")}
             onChange={(body) => onBody(body)}

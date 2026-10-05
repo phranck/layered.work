@@ -8,6 +8,7 @@ import {
 } from "@codemirror/autocomplete";
 import { syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 import {
   accepts,
   argumentsOf,
@@ -22,6 +23,7 @@ import {
   writtenKindOf,
   writtenValueOf,
 } from "@layered/content";
+import { type MediaKind, type MediaLibraryItem, UPLOAD_TYPES } from "@layered/schemas";
 import type { SyntaxNode } from "@lezer/common";
 import { componentSnippet, WITH_STOPS } from "./editor-toolbar.js";
 
@@ -179,13 +181,6 @@ function valuesFor(parameter: Parameter, fields: () => Set<string>): string[] {
 }
 
 /**
- * Completes component names at the start of a line, parameter names inside an
- * argument list, and values after a parameter's colon.
- *
- * @param context - Where the cursor is, and whether completion was asked for.
- * @returns What to offer, or null where nothing in the language fits.
- */
-/**
  * One parameter, as the list offers it.
  *
  * Text is inserted with its quotes and the cursor between them. A parameter
@@ -217,6 +212,13 @@ function parameterOption(
   };
 }
 
+/**
+ * Completes component names at the start of a line, parameter names inside an
+ * argument list, and values after a parameter's colon.
+ *
+ * @param context - Where the cursor is, and whether completion was asked for.
+ * @returns What to offer, or null where nothing in the language fits.
+ */
 export function contentCompletions(context: CompletionContext): CompletionResult | null {
   const { state, pos: position } = context;
   const line = state.doc.lineAt(position);
@@ -307,13 +309,145 @@ export function contentCompletions(context: CompletionContext): CompletionResult
   return { from: position - typed.length, options, validFor: /^[a-z][A-Za-z0-9]*$/ };
 }
 
+/** A file of the library, as the completion list offers it. */
+export type LibraryFile = Pick<MediaLibraryItem, "slug" | "kind" | "url">;
+
+/**
+ * What completion asks of the media library.
+ *
+ * Handed in rather than fetched here, so the list can be tested without a
+ * server and the surface stays a surface: the dashboard decides how a file is
+ * found and how one is uploaded.
+ */
+export type MediaLibrary = {
+  /** Files of one kind whose slug, alt text or caption contains the query, newest first. */
+  search(kind: MediaKind, query: string): Promise<readonly LibraryFile[]>;
+  /**
+   * Lets the author choose a file of that kind and uploads it.
+   *
+   * @returns The new file's slug, or null when nothing was uploaded, which
+   *   includes a failed upload the dashboard has already reported.
+   */
+  upload(kind: MediaKind): Promise<string | null>;
+  /** What the entry that uploads is called, in the interface's language when the list opens. */
+  uploadLabel(): string;
+};
+
+/** An entry of the list that can carry a picture to show before its name. */
+type LibraryCompletion = Completion & { thumbnail?: string };
+
+/**
+ * A quoted value being written at the end of an argument list: the parameter's
+ * name where one is written, and what has been typed inside the quotes.
+ */
+const OPEN_STRING = /(?:^|,)\s*(?:([a-z][A-Za-z0-9]*)\s*:\s*)?"([^"]*)$/;
+
+/**
+ * Puts a slug into the quotes it is being written in, closing them where they
+ * are still open, and leaves the cursor after the closing quote.
+ */
+function insertSlug(view: EditorView, slug: string, from: number, to: number): void {
+  const closed = view.state.sliceDoc(to, to + 1) === '"';
+  view.dispatch({
+    changes: { from, to, insert: closed ? slug : `${slug}"` },
+    selection: { anchor: from + slug.length + 1 },
+    userEvent: "input.complete",
+  });
+}
+
+/**
+ * The entry that uploads.
+ *
+ * The chooser opens within the keystroke or click that picked the entry,
+ * because a browser opens one only in answer to the person. Once the upload is
+ * done the slug goes where the author was typing, or to the cursor where that
+ * text has changed in the meantime.
+ */
+function uploadEntry(library: MediaLibrary, kind: MediaKind): Completion {
+  return {
+    label: library.uploadLabel(),
+    apply: (view, _completion, from, to) => {
+      const typed = view.state.sliceDoc(from, to);
+      void library.upload(kind).then((slug) => {
+        if (!slug || !view.dom.isConnected) return;
+        const head = view.state.selection.main.head;
+        const unchanged = view.state.sliceDoc(from, to) === typed;
+        insertSlug(view, slug, unchanged ? from : head, unchanged ? to : head);
+      });
+    },
+  };
+}
+
+/**
+ * Completes a file inside the quotes of a parameter that names one.
+ *
+ * Only files of the kind the register gives that parameter are offered, newest
+ * first, matching what has been typed against their slug, alt text and caption.
+ * The list is the library's own answer, so it is shown as given rather than
+ * filtered a second time here, and asked again as the author types. The entry
+ * that uploads comes last, where the library accepts uploads of that kind.
+ *
+ * @param library - Where the files come from.
+ * @returns A completion source for the surface.
+ */
+export function libraryCompletions(library: MediaLibrary) {
+  return async (context: CompletionContext): Promise<CompletionResult | null> => {
+    const { state, pos: position } = context;
+    const before = state.sliceDoc(state.doc.lineAt(position).from, position);
+    const open = OPEN_ARGUMENTS.exec(before);
+    const definition = open ? definitionOf(open[1] ?? "") : undefined;
+    const quoted = OPEN_STRING.exec(open?.[2] ?? "");
+    if (!definition || !quoted) return null;
+
+    // A value written without a name belongs to the unnamed parameter only when
+    // it is the first argument.
+    const name = quoted[1] ?? (quoted.index === 0 ? definition.unnamed : undefined);
+    const parameter = name ? definition.parameters[name] : undefined;
+    if (parameter?.kind !== "slug" || !parameter.media) return null;
+
+    const kind = parameter.media;
+    const typed = quoted[2] ?? "";
+    const files = await library.search(kind, typed);
+    if (context.aborted) return null;
+
+    const options: Completion[] = files.map(
+      (file): LibraryCompletion => ({
+        label: file.slug,
+        thumbnail: file.kind === "image" ? (file.url ?? undefined) : undefined,
+        apply: (view, _completion, from, to) => insertSlug(view, file.slug, from, to),
+      }),
+    );
+    if (UPLOAD_TYPES[kind]) options.push(uploadEntry(library, kind));
+    return { from: position - typed.length, options, filter: false };
+  };
+}
+
+/** A picture's thumbnail before its name in the list, and nothing beside any other entry. */
+function thumbnailOf(completion: Completion): Node | null {
+  const source = (completion as LibraryCompletion).thumbnail;
+  if (!source) return null;
+  const image = document.createElement("img");
+  image.className = "cm-completionThumbnail";
+  image.src = source;
+  image.alt = "";
+  image.loading = "lazy";
+  return image;
+}
+
 /**
  * The completion, as one extension for the surface.
  *
  * It opens while a name is typed and on Ctrl-Space, and its list closes on
  * Escape; Enter takes the highlighted entry, and Tab then moves between the
  * places a snippet leaves open.
+ *
+ * @param library - The media library, which completes the quotes of a file
+ *   parameter where it is given.
  */
-export function contentAutocompletion() {
-  return autocompletion({ override: [contentCompletions], icons: false });
+export function contentAutocompletion(library?: MediaLibrary) {
+  return autocompletion({
+    override: library ? [contentCompletions, libraryCompletions(library)] : [contentCompletions],
+    icons: false,
+    addToOptions: [{ render: thumbnailOf, position: 20 }],
+  });
 }
