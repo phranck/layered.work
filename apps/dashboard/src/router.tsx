@@ -10,6 +10,7 @@ import { EntryEditorScreen } from "./entry-editor.js";
 import { EntryListScreen } from "./entry-list.js";
 import { FooterNavigationScreen } from "./footer-navigation.js";
 import { FormEditorScreen, FormsScreen } from "./forms.js";
+import { HomeBlocksScreen } from "./home-blocks.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { MediaScreen } from "./media-screen.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
@@ -20,7 +21,8 @@ import { TopicsScreen } from "./topics.js";
 
 /**
  * The areas with a screen of their own rather than an entry list: the topics,
- * and the System group's areas, each of which is one group of the site's settings.
+ * the media, the home page's blocks, the navigations and accounts, and the
+ * System group's areas, each of which is one group of the site's settings.
  */
 const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
   tags: TopicsScreen,
@@ -33,6 +35,7 @@ const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }
   "footer-nav": FooterNavigationScreen,
   "main-nav": FooterNavigationScreen,
   social: SocialAccountsScreen,
+  blocks: HomeBlocksScreen,
 };
 
 export interface DashboardRouterOptions {

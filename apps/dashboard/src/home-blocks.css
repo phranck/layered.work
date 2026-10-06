@@ -1,0 +1,24 @@
+/* The block's name and summary are the part of its row that opens it in the
+   panel. The row keeps its own padding, edge and active tint, so this button
+   brings none of its own and only takes the space the text would. */
+.home-block__select {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+/* The row of types a block can be added from, which wraps rather than
+   shortening a type's name. */
+.home-block__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}

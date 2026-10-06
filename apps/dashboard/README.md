@@ -28,7 +28,13 @@ The entry's state, Save and Publish stand at the end of the bar, and the way bac
 
 Command-K on an Apple platform and Control-K elsewhere takes the reader to the search for the screen they are on. On an entry list it focuses the list's own field, which matches titles and topic names. The arrow keys move into the rows, and Escape gives the focus back. On a screen without a list it opens a dialog that asks `GET /search?q=…` for entries by title and topic and for media by slug and alt text. The shortcut does nothing whilst another text field has focus.
 
-Command-S on an Apple platform and Control-S elsewhere saves wherever a screen has a Save button: the entry editor, each settings card and the account dialog (`src/save-shortcut.tsx`). It runs exactly what the button runs and does nothing while the button is disabled. A dialog over a screen is the one saved. The shortcut never opens the browser's own Save Page dialog inside the dashboard, also where nothing can be saved.
+Command-S on an Apple platform and Control-S elsewhere saves wherever a screen has a Save button: the entry editor, the block panel, each settings card and the account dialog (`src/save-shortcut.tsx`). It runs exactly what the button runs and does nothing while the button is disabled. A dialog over a screen is the one saved. The shortcut never opens the browser's own Save Page dialog inside the dashboard, also where nothing can be saved.
+
+## Home page
+
+The Blocks area arranges the home page. The list of blocks and the settings of the open one stand side by side in the same `Editor` the entry editor uses. A row shows the block's type and a summary read from its settings, so the summary changes when a setting does. A block is moved by its grip, switched off without losing its settings, added from the types at the foot of the card, and removed after a question. The hero opens the page, so it cannot be moved, removed or added a second time.
+
+The panel draws its fields from the block's declaration in `@layered/schemas` (`HOME_BLOCKS`), so a setting added there appears here with no other edit (`src/home-block-settings.tsx`). A text is written in both languages. Left empty, the site shows the text the field offers as its placeholder. A draft is checked against the same declaration the API checks, and a refused value names its setting. Every author sees the blocks, and only the owner can change them.
 
 ## Settings
 
