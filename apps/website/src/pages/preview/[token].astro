@@ -47,6 +47,7 @@ const metadata = pageMetadata(repository ?? undefined, entry);
   readingWidth={entry?.readingWidth}
   description={metadata.description}
   socialImage={metadata.image}
+  leadImage={entry && repository ? repository.featuredImage(entry) : undefined}
 >
   <meta slot="head" name="robots" content="noindex, nofollow" />
   <meta slot="head" name="referrer" content="no-referrer" />

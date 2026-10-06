@@ -28,10 +28,27 @@ import { type ContentRepository, createRepository } from "./repository.js";
  */
 const CACHE_MS = 30_000;
 
+/**
+ * How long a held snapshot keeps answering whilst a newer one is fetched, in
+ * milliseconds.
+ *
+ * Past `CACHE_MS` a render does not wait for the backend. It answers from what
+ * is held and starts a refresh, and the renders after it read what the refresh
+ * brought. A refresh costs the backend a pass over the database once its own
+ * cache has run out, and on the deployed containers that is several hundred
+ * milliseconds; without this, whichever reader came first after the cache ran
+ * out paid for it in their first byte. Past this limit the held snapshot is too
+ * old to show, so the render waits, as it does when nothing is held yet.
+ */
+const STALE_MS = 5 * 60_000;
+
 /** How long to wait for the backend before falling back to the file. */
 const TIMEOUT_MS = 2_000;
 
 let held: { repository: ContentRepository; fetchedAt: number } | undefined;
+
+/** The refresh in progress, shared so renders arriving together ask the backend once. */
+let pending: Promise<ContentRepository> | undefined;
 
 /**
  * Asks the backend for the published content.
@@ -78,27 +95,57 @@ async function fromFile(): Promise<unknown | undefined> {
 }
 
 /**
+ * Fetches the content and holds it, once at a time.
+ *
+ * @returns The repository built from what arrived.
+ * @throws When neither the backend nor the file can supply a snapshot.
+ */
+function refresh(): Promise<ContentRepository> {
+  pending ??= (async () => {
+    try {
+      const data = (await fromBackend()) ?? (await fromFile());
+      if (!data) {
+        throw new Error(
+          "Neither API_URL nor WEBSITE_CONTENT_FILE produced a snapshot, so there is nothing to render.",
+        );
+      }
+
+      const repository = createRepository(data);
+      held = { repository, fetchedAt: Date.now() };
+      return repository;
+    } finally {
+      pending = undefined;
+    }
+  })();
+  return pending;
+}
+
+/**
  * The content repository every page reads from.
+ *
+ * Fresh for `CACHE_MS`. After that it answers from what is held whilst a
+ * refresh runs behind the render, until the held snapshot reaches `STALE_MS`.
  *
  * @throws When neither the backend nor the file can supply a snapshot, because
  *   a site with no content is a fault rather than an empty site.
  */
 export async function loadContent(): Promise<ContentRepository> {
-  if (held && Date.now() - held.fetchedAt < CACHE_MS) return held.repository;
+  const age = held ? Date.now() - held.fetchedAt : Number.POSITIVE_INFINITY;
+  if (held && age < CACHE_MS) return held.repository;
 
-  const data = (await fromBackend()) ?? (await fromFile());
-  if (!data) {
-    throw new Error(
-      "Neither API_URL nor WEBSITE_CONTENT_FILE produced a snapshot, so there is nothing to render.",
-    );
+  if (held && age < STALE_MS) {
+    // A refresh that fails leaves the held snapshot where it is, and the next
+    // render past `CACHE_MS` tries again. Once the snapshot is too old to show,
+    // a render waits for the refresh and the page reports a failure itself.
+    refresh().catch(() => undefined);
+    return held.repository;
   }
 
-  const repository = createRepository(data);
-  held = { repository, fetchedAt: Date.now() };
-  return repository;
+  return refresh();
 }
 
 /** Drops the held snapshot, so a test sees what it just changed. */
 export function forgetLoadedContent(): void {
   held = undefined;
+  pending = undefined;
 }
