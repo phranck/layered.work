@@ -47,6 +47,11 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `saveFooterNavigation` | PUT /footer-navigation/:id or /main-navigation/:id | Owner browser session |
 | `deleteFooterNavigation` | DELETE /footer-navigation/:id or /main-navigation/:id | Owner browser session |
 | `reorderFooterNavigations` | PATCH /footer-navigation/order or /main-navigation/order | Owner browser session |
+| `fetchHomeBlocks` | GET /home-blocks | Browser session |
+| `addHomeBlock` | POST /home-blocks | Owner browser session |
+| `saveHomeBlock` | PUT /home-blocks/:id | Owner browser session |
+| `reorderHomeBlocks` | PATCH /home-blocks/order | Owner browser session |
+| `deleteHomeBlock` | DELETE /home-blocks/:id | Owner browser session |
 | `saveSettings` | PUT /settings/site, /settings/mail, /settings/analytics, /settings/postListing or /settings/projectListing | Owner browser session |
 | `sendTestMail` | POST /settings/mail/test | Owner browser session |
 | `fetchAccessTokens` | GET /access-tokens | Browser session |
@@ -71,7 +76,7 @@ Account profile, session management and token issuance or revocation require the
 
 The navigation methods retain their existing names and accept an optional `placement` of `main` or `footer`; omitting it selects the footer routes.
 
-Site configuration, main/footer-navigation editing, social-account editing, mail configuration and outbound test mail are owner workflows. The current token scopes grant content editing and uploading rather than owner administration. Mail-template reading and previews remain in that session-bound mail workflow.
+Site configuration, main/footer-navigation editing, social-account editing, home page block editing, mail configuration and outbound test mail are owner workflows. The current token scopes grant content editing and uploading rather than owner administration. Mail-template reading and previews remain in that session-bound mail workflow.
 
 Forms and visitor submissions remain session-bound because the editorial scopes do not grant access to visitors' personal data or form administration. Dashboard counts and dashboard-wide search remain session-bound aggregations; scoped agents can read entries and topics through their corresponding endpoints. The shared media library and picker use the media:write scope. The protected image content route remains session-bound. These restrictions are enforced by the API, not by hiding dashboard controls.
 

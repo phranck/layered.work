@@ -1,7 +1,9 @@
 import {
   type AccountProfile,
+  type AddHomeBlockBody,
   type AnalyticsSettings,
   accountProfile,
+  addHomeBlockBody,
   type CreateEntryBody,
   type CreateFormBody,
   type CreateTopicBody,
@@ -35,6 +37,8 @@ import {
   formList,
   formSubmission,
   formSubmissionList,
+  homeBlock,
+  homeBlockList,
   type IssuedToken,
   type IssueTokenBody,
   issuedToken,
@@ -59,10 +63,12 @@ import {
   readApiError,
   renderedMail,
   reorderFooterNavigationBody,
+  reorderHomeBlocksBody,
   reorderSocialAccountsBody,
   type SaveEntryBody,
   type SaveFooterNavigationBody,
   type SaveFormBody,
+  type SaveHomeBlockBody,
   type SaveMailTemplateBody,
   type SaveMediaMetadataBody,
   type SaveSocialAccountBody,
@@ -73,9 +79,11 @@ import {
   type SignInBody,
   type SiteSettings,
   type SocialAccount,
+  type StoredHomeBlock,
   saveEntryBody,
   saveFooterNavigationBody,
   saveFormBody,
+  saveHomeBlockBody,
   saveMediaMetadataBody,
   saveSocialAccountBody,
   saveTopicBody,
@@ -222,6 +230,16 @@ export interface DashboardApi {
     positions: { id: string; sortOrder: number }[],
     placement?: "main" | "footer",
   ): Promise<FooterNavigation[]>;
+  /** The home page's blocks in the order of the page, the declared set where nothing is arranged yet. */
+  fetchHomeBlocks(): Promise<StoredHomeBlock[]>;
+  /** A new block of one type at the end of the page, on its defaults. */
+  addHomeBlock(value: AddHomeBlockBody): Promise<StoredHomeBlock>;
+  /** Stores whether a block is on the page and what it is set to. */
+  saveHomeBlock(id: string, value: SaveHomeBlockBody): Promise<StoredHomeBlock>;
+  /** Puts the blocks in a new order and returns all of them as they now stand. */
+  reorderHomeBlocks(positions: { id: string; sortOrder: number }[]): Promise<StoredHomeBlock[]>;
+  /** Takes a block off the page for good. */
+  deleteHomeBlock(id: string): Promise<void>;
   /** Stores one group of settings and returns all of them as they now stand. */
   saveSettings<Group extends keyof SettingsGroups>(
     group: Group,
@@ -504,6 +522,38 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
         ),
         footerNavigationList,
       );
+    },
+    async fetchHomeBlocks() {
+      return dataOf(await request("/home-blocks", undefined, true), homeBlockList);
+    },
+    async addHomeBlock(value) {
+      return dataOf(
+        await request("/home-blocks", jsonBody("POST", addHomeBlockBody.parse(value)), true),
+        homeBlock,
+      );
+    },
+    async saveHomeBlock(id, value) {
+      return dataOf(
+        await request(
+          `/home-blocks/${encodeURIComponent(id)}`,
+          jsonBody("PUT", saveHomeBlockBody.parse(value)),
+          true,
+        ),
+        homeBlock,
+      );
+    },
+    async reorderHomeBlocks(positions) {
+      return dataOf(
+        await request(
+          "/home-blocks/order",
+          jsonBody("PATCH", reorderHomeBlocksBody.parse({ positions })),
+          true,
+        ),
+        homeBlockList,
+      );
+    },
+    async deleteHomeBlock(id) {
+      await request(`/home-blocks/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
     },
     async saveSettings(group, value) {
       return dataOf(await request(`/settings/${group}`, jsonBody("PUT", value), true), settingsView);

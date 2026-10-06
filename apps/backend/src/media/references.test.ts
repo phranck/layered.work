@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { SaveEntryBody } from "@layered/schemas";
+import { DEFAULT_SETTINGS, type SaveEntryBody } from "@layered/schemas";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   entries,
   entryTranslations,
+  homeBlocks,
   media,
   mediaDeletions,
   mediaJobs,
@@ -206,6 +207,68 @@ it.each([
     expect(storage.keys.has(`test/${id}-variant`)).toBe(false);
     expect(storage.keys.has(`test/${other}`)).toBe(true);
   });
+  it("protects the site's sharing picture for as long as the setting names it", async () => {
+    const { db, id } = await fixture();
+    const [previous] = await db.select().from(settings).where(eq(settings.key, "site"));
+    const store = (value: unknown) =>
+      db
+        .insert(settings)
+        .values({ key: "site", value })
+        .onConflictDoUpdate({ target: settings.key, set: { value } });
+    await store({ ...DEFAULT_SETTINGS.site, socialImageMediaId: id });
+    try {
+      expect((await getMediaDetail(db, id)).uses).toEqual([
+        expect.objectContaining({ kind: "settings", title: "Site sharing image" }),
+      ]);
+      expect(
+        (
+          await listMedia(db, {
+            search: `reference-${id}`,
+            kind: "all",
+            page: 1,
+            order: "slug",
+            unused: true,
+          })
+        ).items,
+      ).toEqual([]);
+      await expect(deleteMedia(db, id)).rejects.toThrow(/Site sharing image/);
+      expect(storage.keys.has(`test/${id}`)).toBe(true);
+    } finally {
+      if (previous) await store(previous.value);
+      else await db.delete(settings).where(eq(settings.key, "site"));
+    }
+    expect(await deleteMedia(db, id)).toMatchObject({ cleanupState: "ready", removedObjects: 2 });
+  });
+
+  it("protects a picture a home page block shows for as long as the block names it", async () => {
+    const { db, id } = await fixture();
+    const [block] = await db
+      .insert(homeBlocks)
+      .values({ type: "hero", sortOrder: 0, settings: { picture: id } })
+      .returning({ id: homeBlocks.id });
+    if (!block) throw new Error("No test block");
+    try {
+      expect((await getMediaDetail(db, id)).uses).toEqual([
+        expect.objectContaining({ kind: "settings", title: "Home page block hero" }),
+      ]);
+      expect(
+        (
+          await listMedia(db, {
+            search: `reference-${id}`,
+            kind: "all",
+            page: 1,
+            order: "slug",
+            unused: true,
+          })
+        ).items,
+      ).toEqual([]);
+      await expect(deleteMedia(db, id)).rejects.toThrow(/Home page block hero/);
+    } finally {
+      await db.delete(homeBlocks).where(eq(homeBlocks.id, block.id));
+    }
+    expect(await deleteMedia(db, id)).toMatchObject({ cleanupState: "ready", removedObjects: 2 });
+  });
+
   it("protects both languages of a listing introduction until its real uses are removed", async () => {
     const { db, id } = await fixture();
     const key = `owned-${randomUUID()}`;

@@ -6,6 +6,7 @@ import {
   entryTranslations,
   formerTopicSlugs,
   forms,
+  homeBlocks,
   media,
   mediaVariants,
   paths,
@@ -390,6 +391,33 @@ runs("the public snapshot", () => {
     expect(snapshot.media.find((asset) => asset.slug === "responsive-cover")?.srcSet).toBe(
       "/migration/responsive-cover-variant-480.webp 480w",
     );
+  });
+
+  it("names a home page block's picture by its slug, and publishes that file", async () => {
+    const database = await testDatabase();
+    const [picture] = await database
+      .insert(media)
+      .values({
+        slug: "front-panel",
+        kind: "image",
+        mimeType: "image/png",
+        storageKey: "uploads/FrontPanel1",
+        byteSize: 10,
+        checksum: "b".repeat(64),
+        width: 10,
+        height: 10,
+      })
+      .returning({ id: media.id });
+    if (!picture) throw new Error("no picture");
+    await database
+      .insert(homeBlocks)
+      .values({ type: "hero", sortOrder: 0, settings: { picture: picture.id, showPicture: false } });
+
+    const snapshot = await readPublicSnapshot(database);
+
+    expect(snapshot.homeBlocks[0]?.settings).toMatchObject({ picture: "front-panel", showPicture: false });
+    expect(snapshot.media.map((asset) => asset.slug)).toEqual(["front-panel"]);
+    expect(JSON.stringify(snapshot.homeBlocks)).not.toContain(picture.id);
   });
 
   it("leaves out a translation nothing can link to", async () => {

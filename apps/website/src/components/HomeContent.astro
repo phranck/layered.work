@@ -1,4 +1,5 @@
 ---
+import { homeBlockSettings, homeBlockText } from "@layered/schemas";
 import { Button, Card, Section, imagePosition } from "@layered/ui";
 import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
 import { createElement, Fragment as ReactFragment } from "react";
@@ -9,14 +10,11 @@ interface Props { repository:ContentRepository; language:Language; }
 const {repository,language}=Astro.props;
 const de=language==="de";
 const root=languageRoot(language);
-const entries=repository.publicEntries(language).filter(entry=>entry.onHomePage);
-const featured=entries.find(entry=>entry.featured)??entries.find(entry=>entry.kind!=="page");
-const hero=entries.find(entry=>entry.slug==="next-mini-replica-interest")??entries.find(entry=>entry.kind==="project"&&entry.featuredImage)??featured;
-const heroImage=hero?.featuredImage?repository.media(hero.featuredImage, language):undefined;
+const featured=repository.homeFeatured(language);
+const {entry:hero,image:heroImage}=repository.homeHero(language);
 const featureImage=featured?.featuredImage?repository.media(featured.featuredImage, language):undefined;
 // A grid block's type is not its listing's address, and the two were only ever equal by
 // accident: renaming the block to match the database turned "View all" into /project_grid/.
-const gridKind=(type:string)=>type==="project_grid"?"project":"post";
 const gridPath=(type:string)=>type==="project_grid"?"projects":"posts";
 // Each band opens with a kicker naming what it holds, in the words the navigation
 // uses for the same thing, so the page and the menu call it one name.
@@ -27,12 +25,13 @@ const gridKicker=(type:string)=>type==="project_grid"?kicker(StackSimpleIcon,de?
 const unknown=repository.unknownBlocks();
 if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN",operation:"render_home_blocks",result:"skipped",types:unknown}));
 ---
-{repository.blocks().map(block=>block.type==="hero" ? (
-  <section class="hero section--band">
+{repository.blocks().map(block=>block.type==="hero" ? (()=>{
+  const settings=homeBlockSettings("hero",block.settings);
+  return <section class="hero section--band">
     <div class="hero__copy">
-      <p class="eyebrow">Bregenz, Vorarlberg</p>
-      <h1 class="title-hero">{block.settings.title??(de?"Gehäuse, Platinen und Software, die Schicht für Schicht entsteht.":"Enclosures, circuit boards and software, made layer by layer.")}</h1>
-      <p class="lede">{block.settings.description??(de?"Nachbauten der NeXT-Hardware in klein, Raspberry-Pi-Gehäuse aus dem eigenen Drucker und das, was beim Bauen an Software anfällt. Alles dokumentiert, damit es jemand nachbauen kann.":"Small recreations of NeXT hardware, 3D-printed Raspberry Pi enclosures and the software made along the way. Documented so you can build them, too.")}</p>
+      <p class="eyebrow">{homeBlockText("hero",settings,"eyebrow",language)}</p>
+      <h1 class="title-hero">{homeBlockText("hero",settings,"title",language)}</h1>
+      <p class="lede">{homeBlockText("hero",settings,"description",language)}</p>
       <div class="actions">
         <Button.Link href={`${root}projects/`} tone="primary" icon={createElement(StackSimpleIcon,{weight:"duotone"})}>{de?"Projekte ansehen":"Explore projects"}</Button.Link>
         <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon,{weight:"duotone"})}>{de?"Beiträge lesen":"Read the posts"}</Button.Link>
@@ -40,23 +39,26 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
     </div>
     {hero&&heroImage&&<a class="plate-stack" href={hero.path} aria-label={hero.title}>
       <div class="plate plate--back"></div><div class="plate plate--middle"></div>
-      <div class="plate plate--front"><img style={`object-position:${imagePosition(heroImage)}`} src={heroImage.src} srcset={heroImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
+      <div class="plate plate--front"><img style={`object-position:${imagePosition(heroImage)}`} src={heroImage.src} srcset={heroImage.srcSet} sizes={heroImage.sizes} width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
     </a>}
-  </section>
-) : block.type==="featured_entry"&&featured ? (
+  </section>;
+})() : block.type==="featured_entry"&&featured ? (
   <Section.Band>
-    <Section.Title eyebrow={kicker(StarIcon,de?"Im Vordergrund":"In focus")} title={block.settings.title??(de?"Woran gerade gearbeitet wird":"From the workbench")} />
+    <Section.Title eyebrow={kicker(StarIcon,de?"Im Vordergrund":"In focus")} title={homeBlockText("featured_entry",homeBlockSettings("featured_entry",block.settings),"title",language)} />
     <Card.Link href={featured.path}><div class="feature">
       {featureImage&&<div class="feature__media"><img style={`object-position:${imagePosition(featureImage)}`} src={featureImage.src} srcset={featureImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={featureImage.width} height={featureImage.height} alt={featureImage.alt??""} loading="lazy" /></div>}
       <div class="feature__body"><div class="meta"><time datetime={featured.publishedAt??undefined}>{dateLabel(featured)}</time><span>{readingTime(featured)} min</span></div><h3 class="title-page">{featured.title}</h3><p class="lede">{summaryOf(featured)}</p><Button.Inert icon={createElement(ArticleIcon,{weight:"duotone"})} tone="primary">{de?"Weiterlesen":"Read more"}</Button.Inert></div>
     </div></Card.Link>
   </Section.Band>
-) : block.type==="project_grid"||block.type==="post_grid" ? (
-  <Section.Band>
-    <Section.Title eyebrow={gridKicker(block.type)} title={block.settings.title??(block.type==="project_grid"?(de?"Gebaut, gedruckt, gelötet":"Built, printed, soldered"):(de?"Notizen aus der Werkstatt":"Notes from the workshop"))} actions={createElement(Button.Link,{href:`${root}${gridPath(block.type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{entries.filter(entry=>entry.kind===gridKind(block.type)).slice(0,block.settings.limit??6).map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage, language):undefined} />)}</div>
-    {!entries.some(entry=>entry.kind===gridKind(block.type))&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
-  </Section.Band>
-) : block.type==="topic_bar" ? (
-  <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={block.settings.title??(de?"Themen im Archiv":"Browse by topic")} /><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Band>
-) : null)}
+) : block.type==="project_grid"||block.type==="post_grid" ? (()=>{
+  const type=block.type==="project_grid"?"project_grid":"post_grid";
+  const grid=repository.homeGrid(type,block.settings,language);
+  return <Section.Band>
+    <Section.Title eyebrow={gridKicker(type)} title={homeBlockText(type,homeBlockSettings(type,block.settings),"title",language)} actions={createElement(Button.Link,{href:`${root}${gridPath(type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
+    <div class="entry-grid">{grid.entries.map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage, language):undefined} />)}</div>
+    {!grid.any&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
+  </Section.Band>;
+})() : block.type==="topic_bar" ? (()=>{
+  const settings=homeBlockSettings("topic_bar",block.settings);
+  return <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={homeBlockText("topic_bar",settings,"title",language)} /><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={settings.showCounts?topic.count:undefined} />)}</div></Section.Band>;
+})() : null)}

@@ -2,7 +2,6 @@ import {
   type AnalyticsSettings,
   analyticsSettings,
   DEFAULT_SETTINGS,
-  ErrorCode,
   LISTING_GROUP,
   type ListedKind,
   type ListingSettings,
@@ -15,12 +14,12 @@ import {
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { and, asc, eq, inArray } from "drizzle-orm";
-import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
+import { asc, eq, inArray } from "drizzle-orm";
+import { mediaContentUrl } from "../account/repository.js";
 import { config } from "../config.js";
 import type { database } from "../db/connect.js";
 import { auditLog, media, settings, socialAccounts } from "../db/schema/index.js";
-import { HttpError } from "../http/response.js";
+import { holdLibraryPicture } from "../media/pictures.js";
 import { replaceSettingMediaReferences } from "../media/references.js";
 
 type Database = ReturnType<typeof database>;
@@ -195,14 +194,6 @@ export async function saveSettings<Group extends SettingsGroup>(
  * a social card can show nothing else.
  */
 async function requireSharingPicture(mediaId: string | null, db: Pick<Database, "select">): Promise<void> {
-  if (!mediaId) return;
-  const [picture] = await db
-    .select({ id: media.id })
-    .from(media)
-    .where(and(eq(media.id, mediaId), eq(media.kind, "image"), inArray(media.mimeType, RASTER_MIME_TYPES)))
-    .limit(1)
-    .for("key share");
-  if (!picture) {
-    throw new HttpError(ErrorCode.InvalidRequest, "Choose an existing raster image for the sharing picture.");
-  }
+  if (mediaId)
+    await holdLibraryPicture(db, mediaId, "Choose an existing raster image for the sharing picture.");
 }
