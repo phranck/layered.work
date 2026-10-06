@@ -5,10 +5,9 @@ import { describe, expect, it } from "vitest";
 import { createRepository } from "./repository.js";
 
 /**
- * The file the deployment reads, checked as the deployment will read it.
+ * The file the deployment falls back to, checked as the deployment will read it.
  *
- * It is written by a script on one machine and committed, so nothing between
- * here and production looks at it again. These are the questions that would
+ * It is committed, and nothing between here and production looks at it again. These are the questions that would
  * otherwise be answered by somebody noticing a draft on the live site.
  */
 const snapshot = JSON.parse(

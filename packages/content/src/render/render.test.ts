@@ -374,6 +374,35 @@ describe("what somebody typed", () => {
     );
   });
 
+  it("takes the backslash off a line that would otherwise be a component", () => {
+    expect(renderContent("\\Grid(3) lines were enough.\n")).toEqual([
+      {
+        kind: "element",
+        tag: "p",
+        attributes: {},
+        children: [{ kind: "text", value: "Grid(3) lines were enough." }],
+      },
+    ]);
+  });
+
+  it("reads the same line without the backslash as a component", () => {
+    expect(renderContent("Grid(3) lines were enough.\n")).toEqual([{ kind: "placeholder", name: "Grid" }]);
+  });
+
+  it("takes the backslash off an escaped line in a list and in a body", () => {
+    expect(outline('- \\Image("a") stays a sentence.\n')).toBe(
+      ["ul", "  li", "    p", '      text "Image(\\"a\\") stays a sentence."'].join("\n"),
+    );
+    expect(outline("Note {\n  \\Grid(3) lines.\n}\n")).toBe(
+      ['Note → Note {"tone":"info"}', "  p", '    text "Grid(3) lines."'].join("\n"),
+    );
+  });
+
+  it("keeps a backslash that stands before no component", () => {
+    expect(outline("\\Grid lines.\n")).toBe(["p", '  text "\\\\Grid lines."'].join("\n"));
+    expect(outline("Write \\Grid(3) here.\n")).toBe(["p", '  text "Write \\\\Grid(3) here."'].join("\n"));
+  });
+
   it("decodes the entities it knows and leaves the rest alone", () => {
     expect(outline("&amp; &#228; &#xE4; &auml;\n")).toBe(
       [

@@ -23,6 +23,13 @@ interface Props {
   siteName?: string;
   socialImage?: SocialImage;
   article?: Record<string, unknown>;
+  /**
+   * The picture a reader sees first, which the head asks for ahead of the
+   * fonts, so it arrives alongside the document rather than after it has been
+   * read. It has to name the candidates and widths the page's `img` names, or
+   * the browser fetches the picture twice.
+   */
+  leadImage?: { src: string; srcSet?: string; sizes?: string };
 }
 
 const {
@@ -38,6 +45,7 @@ const {
   siteName = "LAYERED.work",
   socialImage = { url: "https://layered.work/og.png", width: 1200, height: 630, alt: "LAYERED.work" },
   article,
+  leadImage,
 } = Astro.props;
 const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
 const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
@@ -72,6 +80,7 @@ const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
     <link rel="alternate" type="application/rss+xml" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)} />
     <link rel="alternate" type="application/feed+json" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)} />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    {leadImage && <link rel="preload" as="image" href={leadImage.src} imagesrcset={leadImage.srcSet} imagesizes={leadImage.sizes} fetchpriority="high" />}
     <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css" />

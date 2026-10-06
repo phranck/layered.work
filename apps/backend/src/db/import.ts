@@ -4,15 +4,19 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { connectOnce, databaseUrl } from "./connect.js";
-import { importContent, type Snapshot, withDrafts } from "./import-content.js";
+import { holdsEntries, importContent, type Snapshot, withDrafts } from "./import-content.js";
 
 /**
- * Puts a content snapshot into the database it is pointed at.
+ * Puts a content snapshot into an empty database.
  *
  * Reads the file rather than the Publii database, which #97 already read and
  * which nothing here touches again. The default is the snapshot this repository
  * publishes. That file holds no drafts, so `--drafts-from` names the migration
  * output, and the drafts are taken from there and nothing else is.
+ *
+ * A database that already holds entries is refused. It is what the site
+ * publishes, and the snapshot would overwrite every text written in the
+ * dashboard since.
  *
  * ```sh
  * pnpm --filter @layered/backend db:import
@@ -25,6 +29,13 @@ import { importContent, type Snapshot, withDrafts } from "./import-content.js";
  */
 
 const DEFAULT_SNAPSHOT = "../../../website/content/site.json";
+
+/** What the command says when the database already holds content. */
+const REFUSAL = [
+  "The database already holds entries, so nothing was imported.",
+  "It is what the site publishes, and an import would overwrite the text written in the dashboard.",
+  "Import into an empty database only, such as one `pnpm db:reset` has just rebuilt.",
+].join("\n");
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -46,8 +57,14 @@ const variantRoot = resolve(
 
 const sql = connectOnce(databaseUrl());
 try {
-  const report = await importContent(drizzle(sql), snapshot, { variantRoot });
-  console.log(JSON.stringify({ file, draftsFrom: draftsFrom ?? null, ...report }, null, 2));
+  const database = drizzle(sql);
+  if (await holdsEntries(database)) {
+    process.stderr.write(`${REFUSAL}\n`);
+    process.exitCode = 1;
+  } else {
+    const report = await importContent(database, snapshot, { variantRoot });
+    console.log(JSON.stringify({ file, draftsFrom: draftsFrom ?? null, ...report }, null, 2));
+  }
 } finally {
   await sql.end({ timeout: 5 });
 }

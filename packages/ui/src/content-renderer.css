@@ -276,6 +276,7 @@
 .content-code__source {
   min-width: 0;
   overflow-x: auto;
+  color: var(--code-foreground);
 }
 .content-code__source code {
   font: inherit;

@@ -48,6 +48,7 @@ export const componentHighlighting: MarkdownConfig = {
       [NODE.ArgumentKeyword]: tags.atom,
       [NODE.ArgumentUnknown]: tags.invalid,
       [NODE.ComponentError]: tags.invalid,
+      [NODE.ComponentEscape]: CONTENT_TAGS.syntax,
     }),
   ],
 };

@@ -27,7 +27,7 @@ interface Props {
 const { repository, entry, nodes, forms } = Astro.props;
 const language = entry.language;
 const de = language === "de";
-const feature = entry.featuredImage ? repository.media(entry.featuredImage, language) : undefined;
+const feature = repository.featuredImage(entry);
 const resolveMedia = (slug: string) => {
   const asset = repository.media(slug, language);
   return asset ? { ...asset, poster: feature?.src } : undefined;
@@ -40,11 +40,11 @@ const entryTopics = repository.entryTopics(entry, language);
 ---
 <article>
   {project && feature
-    ? <header class="project-hero"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entryTopics.map((topic) => <TopicChip {topic} {language} />)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
+    ? <header class="project-hero"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes={feature.sizes} width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entryTopics.map((topic) => <TopicChip {topic} {language} />)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
     : <header class="article-head"><div class="cluster">{entryTopics.map((topic) => <TopicChip {topic} {language} />)}</div><h1 class="title-page">{entry.title}</h1><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></header>}
   {project && entry.specs.length > 0 && <div class="spec-grid">{entry.specs.map((spec) => <div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
   <div class="article-body">
-    {feature && !project && <figure class="article-cover"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes="(max-width: 719px) 100vw, 1180px" width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /></figure>}
+    {feature && !project && <figure class="article-cover"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes={feature.sizes} width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /></figure>}
     <ContentRenderer {nodes} {forms} media={resolveMedia} resolveUrl={repository.contentUrl} />
   </div>
 </article>

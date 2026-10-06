@@ -72,6 +72,10 @@ describe("the colours of a document", () => {
     expect(roles('Image("front"')).toBe("NNNNNXXXXXXXX");
   });
 
+  it("colors the backslash of an escaped component line as the language's punctuation", () => {
+    expect(roles("\\Grid(3) lines.")).toBe("S..............");
+  });
+
   it("colours emphasis in a paragraph, its marks included", () => {
     expect(roles("Was it *NeXTstep*, or not?")).toBe(".......IIIIIIIIII.........");
   });

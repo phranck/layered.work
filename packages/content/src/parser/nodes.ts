@@ -30,6 +30,11 @@ export const NODE = {
   ComponentBody: "ComponentBody",
   /** A component that could not be read, which is marked rather than swallowed. */
   ComponentError: "ComponentError",
+  /**
+   * The backslash in front of a line that would otherwise be a component. It is
+   * the language's syntax, so it never reaches the page.
+   */
+  ComponentEscape: "ComponentEscape",
 } as const;
 
 /** One of the node names above. */

@@ -1,5 +1,12 @@
 import type { Tree } from "@lezer/common";
-import type { BlockContext, Element, Line, MarkdownConfig, MarkdownParser } from "@lezer/markdown";
+import type {
+  BlockContext,
+  Element,
+  InlineContext,
+  Line,
+  MarkdownConfig,
+  MarkdownParser,
+} from "@lezer/markdown";
 import { dedent } from "./dedent.js";
 import { NODE, VALUE_NODE } from "./nodes.js";
 import { OPEN_ERRORS, type ScannedComponent, scanComponent, startsComponent } from "./scan.js";
@@ -126,6 +133,32 @@ function copyNode(
   return cx.elt(node.type.name, toDocument(node.from), toDocument(node.to), children);
 }
 
+/** The character codes the escape below looks at, as an inline parser is handed them. */
+const BACKSLASH = 92;
+const NEWLINE = 10;
+const SPACE = 32;
+const TAB = 9;
+
+/**
+ * Whether nothing but indentation stands before this position on its line.
+ *
+ * Read within the inline section alone, because that is all an inline parser
+ * can see. The section begins where a paragraph's text begins, which is after a
+ * list marker or a quote marker, and that is exactly where the block parser
+ * would have looked for a component.
+ *
+ * @param cx - The inline parse in progress.
+ * @param at - The position to ask about, in the document.
+ */
+function startsLine(cx: InlineContext, at: number): boolean {
+  for (let before = at - 1; before >= cx.offset; before -= 1) {
+    const code = cx.char(before);
+    if (code === NEWLINE) return true;
+    if (code !== SPACE && code !== TAB) return false;
+  }
+  return true;
+}
+
 /**
  * The extension, as Lezer takes it.
  *
@@ -181,6 +214,24 @@ export const componentSyntax: MarkdownConfig = {
         cx.addElement(element);
         cx.nextLine();
         return true;
+      },
+    },
+  ],
+
+  // The escape is the language's own, so the language takes the backslash off.
+  // A block parser cannot do it: it either takes a whole line or none of it, and
+  // the rest of this line belongs to a paragraph that may run on. Markdown's own
+  // escape would not take it either, because it only escapes punctuation and a
+  // component's name starts with a letter, so this runs ahead of that one.
+  parseInline: [
+    {
+      name: "ComponentEscape",
+      before: "Escape",
+
+      parse(cx: InlineContext, next: number, at: number) {
+        if (next !== BACKSLASH || !startsLine(cx, at)) return -1;
+        if (!startsComponent(cx.slice(at + 1, cx.end), 0)) return -1;
+        return cx.addElement(cx.elt(NODE.ComponentEscape, at, at + 1));
       },
     },
   ],

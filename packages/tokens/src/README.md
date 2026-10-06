@@ -26,9 +26,9 @@ Without a bundler, link `index.css` and the `@import` chain inside it resolves. 
 
 `scale.css` holds every stepped series and not one colour: the thirteen lightness steps of the neutral ramp, the type scale, the space scale, the two chosen card numbers, the control radii and the motion values. These are chosen.
 
-`palettes.css` holds the colour worlds. A palette supplies exactly four things: the chroma and hue of the neutral ramp, the five accent steps, the colour of text sitting on the accent, and the four status colours. These are chosen.
+`palettes.css` holds the color worlds. A palette supplies exactly four things: the chroma and hue of the neutral ramp, the five accent steps, the color of text sitting on the accent, and the four status colors. Beside them stand the logo's stripe colors and the syntax scheme, the eight colors code is drawn in, which follow neither the accent nor the ramp. These are chosen.
 
-`semantic.css` holds what follows from the two above and nothing that was chosen: the ramp itself, the surfaces, the text colours, the scrims, the sheen, the emboss, the derived radii and the elevation set. This is the layer components read.
+`semantic.css` holds what follows from the two above and nothing that was chosen: the ramp itself, the surfaces, the text colors, the scrims, the sheen, the emboss, the derived radii, the elevation set and the role of each syntax color in a code block. This is the layer components read.
 
 `workbench.css` holds the dashboard's density, scoped to `.workbench`. It overrides no colours and no shapes, because the dashboard takes those from the site; it states the spacing steps, the control height, the workbench card geometry and, for the content area, a type size two pixels above the site's. These are properties of the task rather than of the design.
 

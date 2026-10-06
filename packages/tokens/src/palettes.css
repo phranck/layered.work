@@ -2,8 +2,9 @@
  * Layer 2 of the token system: the palette.
  *
  * The palette supplies four things and nothing else: the chroma and hue of the
- * neutral ramp, the five accent steps, the colour of text sitting on the accent,
- * and the four status colours, plus the original logo's four brand colours.
+ * neutral ramp, the five accent steps, the color of text sitting on the accent,
+ * and the four status colors, plus the original logo's four brand colors and
+ * the syntax scheme for code.
  * The lightness steps of the neutral ramp are in
  * scale.css, so this file holds colour and no spacing.
  *
@@ -44,4 +45,22 @@
   --state-info: #a07cdb;
   --state-warning: #d1a13e;
   --state-danger: #d4584f;
+
+  /* The syntax scheme: GitHub's dark colors for code, which the site's code
+     blocks and the dashboard's editor both draw from, so a keyword or a string
+     looks the same wherever somebody reads it. semantic.css gives each color
+     its roles.
+
+     These are the one set of colors that does not follow the accent or the
+     neutral ramp, and deliberately: each role has to stay distinguishable from
+     the others, which a palette cannot promise. A scheme bound to the accent
+     would collapse two roles into one hue the day the accent moves. */
+  --syntax-text: #c9d1d9;
+  --syntax-gray: #8b949e;
+  --syntax-red: #ff7b72;
+  --syntax-sky: #a5d6ff;
+  --syntax-blue: #79c0ff;
+  --syntax-purple: #d2a8ff;
+  --syntax-orange: #ffa657;
+  --syntax-green: #7ee787;
 }

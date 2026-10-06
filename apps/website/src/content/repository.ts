@@ -276,6 +276,16 @@ function mediaUrl(path: string): string {
 const EXPORT_MEDIA_PREFIX = "/media/";
 
 /**
+ * The widths a picture inside an article is drawn at, as a `sizes` attribute.
+ *
+ * An entry's cover, a project's hero and every figure in a body sit in the
+ * article's column: the window less its margin below 720 pixels, 92 percent
+ * of it up to 1180, and 1092 pixels beyond. A larger figure here makes the
+ * browser fetch a wider candidate than the page draws.
+ */
+const ARTICLE_IMAGE_SIZES = "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px";
+
+/**
  * Where `scripts/publii/upload.mjs` put every migrated file in the bucket, which
  * is also the start of its storage key in the database.
  */
@@ -379,6 +389,29 @@ export function createRepository(input: unknown) {
     data.homeBlocks?.length
       ? data.homeBlocks
       : homeBlockTypes.map((type, sortOrder) => ({ type, sortOrder, enabled: true, settings: {} }));
+  /**
+   * One asset as a page in this language draws it: its own address, its
+   * candidates, and the widths it is drawn at.
+   *
+   * @param name - The asset's slug.
+   * @param locale - Which language's alt text and caption it carries.
+   */
+  const localizedMedia = (name: string, locale: Language = "en") => {
+    const asset = media.get(name);
+    if (!asset) return undefined;
+    return {
+      ...asset,
+      ...(asset.translations
+        ? {
+            alt: asset.translations[locale].altText ?? undefined,
+            caption: asset.translations[locale].caption ?? undefined,
+          }
+        : {}),
+      src: mediaUrl(asset.src),
+      ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
+      sizes: ARTICLE_IMAGE_SIZES,
+    };
+  };
   return {
     data,
     footerNavigation: (locale: Language) => data.footerNavigation?.[locale],
@@ -389,22 +422,19 @@ export function createRepository(input: unknown) {
       if (!/^\/(?:media|migration|uploads)\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/.test(path)) return url;
       return `${mediaUrl(path)}${url.slice(path.length)}`;
     },
-    media: (name: string, locale: Language = "en") => {
-      const asset = media.get(name);
-      if (!asset) return undefined;
-      return {
-        ...asset,
-        ...(asset.translations
-          ? {
-              alt: asset.translations[locale].altText ?? undefined,
-              caption: asset.translations[locale].caption ?? undefined,
-            }
-          : {}),
-        src: mediaUrl(asset.src),
-        ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
-        sizes: "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px",
-      };
-    },
+    media: localizedMedia,
+    /**
+     * The picture an entry opens with, as its page draws it.
+     *
+     * The page draws it and asks for it ahead of the document in the head, and
+     * both read it from here, so the two name the same candidates at the same
+     * size and the browser fetches it once.
+     *
+     * @param entry - The entry being read.
+     * @returns The picture, or nothing when the entry has none.
+     */
+    featuredImage: (entry: Entry) =>
+      entry.featuredImage ? localizedMedia(entry.featuredImage, entry.language) : undefined,
     entry: (name: string) => {
       const entry = entries.get(name);
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;

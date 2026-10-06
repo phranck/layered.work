@@ -17,6 +17,7 @@ import {
   testDatabase,
 } from "../test-support/database.js";
 import {
+  holdsEntries,
   importContent,
   isPubliiSizeCopy,
   migratedStorageKey,
@@ -392,5 +393,14 @@ runs("importing a snapshot", () => {
     expect(after?.id).toBe(before?.id);
     expect(after?.createdAt.toISOString()).toBe("2019-01-01T00:00:00.000Z");
     expect(after?.modifiedAt.toISOString()).toBe("2021-01-05T00:00:00.000Z");
+  });
+
+  it("says whether a database already holds entries, which is what keeps the command out of one", async () => {
+    await emptyTestDatabase();
+    const database = await testDatabase();
+    expect(await holdsEntries(database)).toBe(false);
+
+    await importContent(database, snapshot);
+    expect(await holdsEntries(database)).toBe(true);
   });
 });

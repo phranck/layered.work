@@ -183,6 +183,12 @@ describe("what is not a component", () => {
     expect(nodesOf(text, NODE.Component)).toHaveLength(0);
   });
 
+  it("a line escaped with a backslash, which marks the backslash and nothing else", () => {
+    const text = "\\Grid(3) lines were enough.\n";
+    expect(nodesOf(text, NODE.ComponentEscape)).toEqual([{ from: 0, to: 1, text: "\\" }]);
+    expect(nodesOf(text, "Paragraph")[0]?.text).toBe("\\Grid(3) lines were enough.");
+  });
+
   it("a lower-case name", () => {
     expect(nodesOf('image("a")\n', NODE.Component)).toHaveLength(0);
   });
