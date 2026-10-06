@@ -34,6 +34,8 @@ Content is Markdown with a component syntax modelled on SwiftUI, so that an auth
 
 Zerops, in the `LAYERED` organisation. `zerops-project-import.yml` describes the project and its services, `zerops.yml` describes how each service is built and run.
 
+[Hosting](docs/hosting.md) describes the services, the addresses and the local database. [Secrets and environment](docs/secrets.md) lists every variable the services read and what happens when one is missing.
+
 ## License
 
 Private. Not published under any licence.

@@ -273,41 +273,10 @@ Zerops backs the database up daily between 00:00 and 01:00 UTC, keeping at least
 
 The object storage is not covered by that backup.
 
-## What GitHub holds
+## Secrets and environment
 
-Repository secrets and variables the deploy workflow reads.
+[Secrets and environment](secrets.md) lists every variable the three services read, the repository secrets the deploy workflow needs, and what happens when one is missing.
 
-| Name | Kind | What it is |
-| --- | --- | --- |
-| `ZEROPS_BACKEND_SERVICE_ID` | secret | The service id, which `zcli service list` prints and this repository does not |
-| `ZEROPS_WEBSITE_SERVICE_ID` | secret | " |
-| `ZEROPS_DASHBOARD_SERVICE_ID` | secret | " |
-| `ZEROPS_TOKEN` | secret | A Zerops personal access token. Set, and deploying since 13 September 2026. |
+## What the smoke test asks
 
-There are no repository variables, as in every sibling project. What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
-
-`security.txt` is deferred. Its two signing secrets are not set and the deploy workflow does not generate the file, so nothing depends on them. Its own issue puts both back when it is worked.
-
-## What the backend refuses to start without
-
-`apps/backend/src/config.ts` checks the environment at import time, so a service that cannot be configured fails whilst starting and names what is missing. Three of its variables have to exist in production and are not set by the code:
-
-| Variable | Where it comes from | Why |
-| --- | --- | --- |
-| `SITE_ORIGIN` | `zerops.yml`, as `https://layered.work` | The origin the API may be called from with a cookie. Read from configuration rather than from a request header, which a caller controls |
-| `DASHBOARD_ORIGIN` | `zerops.yml`, as `https://dashboard.layered.work` | The same, for the dashboard |
-| `SESSION_SECRET` | The service's own secret variables, in the Zerops interface | It signs the session cookie, so its strength is its length. At least 32 characters, and never in this repository |
-
-The value Zerops generates for `<@generateRandomString(<32>)>` in an import file is the right shape for the last of those.
-
-**A secret's length cannot be read out of `zcli project env`.** That command prints every value wrapped in quotes, and for a secret it prints a fixed-width placeholder rather than the value. Every secret on a service therefore looks the same length:
-
-```
-backend_S3_SECRET_ACCESS_KEY shape: "AAAAAAAA"
-backend_SESSION_SECRET       shape: "AAAAAAAA"
-backend_SMTP2GO_API_KEY      shape: "AAAAAAAA"
-```
-
-That is after replacing every alphanumeric with `A`. `SESSION_SECRET` is over 32 characters, which is why the service starts at all, and it still prints as eight.
-
-On 13 September 2026 that placeholder was read as a measurement and reported as a figure: "ten characters, around sixty bits". The secret really was too short, but the evidence for that was the application refusing to boot with `SESSION_SECRET: Too small`, which is the real value being read by the thing that uses it. Ask the application, not the listing.
+What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
