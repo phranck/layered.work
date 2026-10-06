@@ -7,7 +7,7 @@ Markdown covers prose: headings, paragraphs, lists, links, tables and code. It h
 
 ## The four rules
 
-**A line that begins with a capitalised name followed by `(` or `{` is a component.** Everything else on the page is Markdown. A line that genuinely starts that way and is meant as prose is escaped with a backslash, as in `\Grid(3) lines were enough.`
+**A line that begins with a capitalised name followed by `(` or `{` is a component.** Everything else on the page is Markdown. A line that genuinely starts that way and is meant as prose is escaped with a backslash, as in `\Grid(3) lines were enough.` The backslash keeps the line a sentence and does not appear on the page, which reads `Grid(3) lines were enough.` A backslash anywhere else is Markdown's, which only escapes punctuation.
 
 **Arguments read as they do in Swift.** The first value may be written without a name, for the principal thing, and everything after it is written as `name: value`. Text goes in quotes, numbers and keywords go bare.
 

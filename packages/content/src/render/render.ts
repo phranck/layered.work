@@ -226,7 +226,7 @@ function renderNode(node: SyntaxNode, context: Context): RenderNode[] {
   const name = node.name;
 
   // Syntax, and a definition that says where a link points. Neither is content.
-  if (MARKS.has(name) || name === "LinkReference") return [];
+  if (MARKS.has(name) || name === "LinkReference" || name === NODE.ComponentEscape) return [];
 
   if (name === NODE.Component) return [componentNode(node, context)];
   if (name === NODE.ComponentError) return [placeholderNode(node, context)];
