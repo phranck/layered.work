@@ -4,7 +4,20 @@
   font-weight: 400;
   font-display: swap;
   src: url("./fonts/barlow-400.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/barlow-400-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -13,7 +26,20 @@
   font-weight: 500;
   font-display: swap;
   src: url("./fonts/barlow-500.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/barlow-500-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -22,7 +48,20 @@
   font-weight: 600;
   font-display: swap;
   src: url("./fonts/barlow-600.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/barlow-600-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -31,7 +70,20 @@
   font-weight: 700;
   font-display: swap;
   src: url("./fonts/barlow-700.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/barlow-700-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -40,7 +92,20 @@
   font-weight: 800;
   font-display: swap;
   src: url("./fonts/barlow-800.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/barlow-800-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -49,7 +114,20 @@
   font-weight: 400;
   font-display: swap;
   src: url("./fonts/barlow-condensed-400.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/barlow-condensed-400-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -58,7 +136,20 @@
   font-weight: 500;
   font-display: swap;
   src: url("./fonts/barlow-condensed-500.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/barlow-condensed-500-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -67,7 +158,20 @@
   font-weight: 600;
   font-display: swap;
   src: url("./fonts/barlow-condensed-600.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/barlow-condensed-600-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -76,7 +180,20 @@
   font-weight: 700;
   font-display: swap;
   src: url("./fonts/barlow-condensed-700.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/barlow-condensed-700-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -85,7 +202,20 @@
   font-weight: 800;
   font-display: swap;
   src: url("./fonts/barlow-condensed-800.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/barlow-condensed-800-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -94,7 +224,20 @@
   font-weight: 400;
   font-display: swap;
   src: url("./fonts/firacode-nerd-400.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "FiraCode Nerd Font";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/firacode-nerd-400-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
@@ -112,7 +255,20 @@
   font-weight: 700;
   font-display: swap;
   src: url("./fonts/firacode-nerd-700.woff2") format("woff2");
-  unicode-range: U+0000-017F, U+0300-036F, U+2000-206F, U+20AC, U+2122, U+2190-21FF, U+2200-22FF;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193,
+    U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "FiraCode Nerd Font";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/firacode-nerd-700-extended.woff2") format("woff2");
+  unicode-range:
+    U+0100-0130, U+0132-0151, U+0154-017F, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+2194-21FF,
+    U+2200-2211, U+2213-2214, U+2216-22FF;
 }
 
 @font-face {
