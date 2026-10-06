@@ -12,7 +12,7 @@
  *   scale.css      Every stepped series, and not one colour. Lightness steps,
  *                  type, space, geometry, motion. Chosen values.
  *   palettes.css   The colour worlds. Chroma and hue for the neutral ramp, the
- *                  accent ramp, status colours. Chosen values.
+ *                  accent ramp, status colors, the syntax scheme. Chosen values.
  *   semantic.css   What follows from the two above, and what components read.
  *                  Derived values only.
  *   workbench.css  The dashboard's density, scoped to `.workbench`.

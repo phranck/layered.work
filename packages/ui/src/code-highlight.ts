@@ -1,4 +1,4 @@
-import { createHighlighterCoreSync } from "shiki/core";
+import { createCssVariablesTheme, createHighlighterCoreSync } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import css from "shiki/langs/css.mjs";
 import html from "shiki/langs/html.mjs";
@@ -9,7 +9,13 @@ import python from "shiki/langs/python.mjs";
 import shell from "shiki/langs/shellscript.mjs";
 import swift from "shiki/langs/swift.mjs";
 import typescript from "shiki/langs/typescript.mjs";
-import theme from "shiki/themes/github-dark.mjs";
+
+/**
+ * Every token names a `--code-` property rather than a color, and
+ * `@layered/tokens` defines those properties from its syntax scheme. The block
+ * therefore follows the token system, and the highlighter holds no color.
+ */
+const theme = createCssVariablesTheme({ name: "layered-code", variablePrefix: "--code-" });
 
 // Synchronous tokenization keeps the initial server-rendered document colored.
 // Include the migrated languages and common web examples, with no client fetch.

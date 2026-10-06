@@ -28,6 +28,17 @@ describe("code block highlighting", () => {
     expect(colors.size).toBeGreaterThan(1);
   });
 
+  it("draws every token in a color of the token system", () => {
+    const code = draw('let name = "World" // greeting', "swift").querySelector("code");
+    // A span without a style is a line break between two tokens, which takes the
+    // block's own color.
+    const colors = Array.from(code?.querySelectorAll("span[style]") ?? [], (span) =>
+      span.getAttribute("style"),
+    );
+    expect(new Set(colors).size).toBeGreaterThan(1);
+    for (const color of colors) expect(color).toMatch(/^color:var\(--code-[a-z-]+\)$/);
+  });
+
   it.each([
     ["swift", "swift"],
     ["bash", "gnubash"],

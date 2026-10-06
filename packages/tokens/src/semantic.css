@@ -162,6 +162,26 @@
   --content-note-warning: var(--state-warning);
   --content-note-danger: var(--state-danger);
 
+  /* --- Code ---------------------------------------------------------------
+     What each part of a highlighted code block is drawn in. The names are the
+     ones Shiki's CSS variables theme writes into every token, with `--code-` in
+     front, so the highlighter names these properties and nothing else. Every
+     one clears 4.5:1 against the block's surface, which the status colors do
+     not all do: the danger red reaches 4.2:1 there. */
+  --code-foreground: var(--syntax-text);
+  --code-token-comment: var(--syntax-gray);
+  --code-token-keyword: var(--syntax-red);
+  --code-token-string: var(--syntax-sky);
+  --code-token-string-expression: var(--syntax-sky);
+  --code-token-link: var(--syntax-sky);
+  --code-token-constant: var(--syntax-blue);
+  --code-token-function: var(--syntax-purple);
+  --code-token-parameter: var(--syntax-orange);
+  --code-token-punctuation: var(--syntax-text);
+  --code-token-inserted: var(--syntax-green);
+  --code-token-deleted: var(--syntax-red);
+  --code-token-changed: var(--syntax-orange);
+
   /* --- Wordmark ----------------------------------------------------------- */
   --logo-height: calc(var(--logo-ink-height) / var(--logo-ink-ratio));
 
