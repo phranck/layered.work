@@ -1,6 +1,20 @@
 # What the website reads, and which addresses it answers
 
-The content itself is migrated from the old Publii site by the pipeline in `scripts/publii/`. It reads a Publii database that lives on one machine, and the pipeline itself is in this repository, because it is the only reproducible description of how the old site became this one. What belongs here besides it is the shape that pipeline produces, because the website parses it, and the addresses the site has to keep answering, because its route implements them.
+The content was migrated from the old Publii site by the pipeline in `scripts/publii/`. It reads a Publii database that lives on one machine, and the pipeline itself is in this repository, because it is the only reproducible description of how the old site became this one. What belongs here besides it is the shape of the snapshot the website parses, and the addresses the site has to keep answering, because its route implements them.
+
+## Where an article's text lives
+
+**The database decides what an article says.** The dashboard edits it, and the site asks the backend for it on every render. Two files hold an earlier copy of the same text, and neither can write it back:
+
+| Source | What it is | What it may still do |
+| --- | --- | --- |
+| The database | The content, edited in the dashboard | Everything |
+| `apps/website/content/site.json` | The snapshot committed at the cutover | The site reads it only when the backend is unreachable or holds no entries. `db:import` loads it into an empty database |
+| `migration-out/site.json` | The pipeline's output, drafts included, on the machine that ran it | `db:import --drafts-from` takes the drafts from it, and only into an empty database |
+
+`db:import` refuses a database that already holds entries, because the snapshot would overwrite everything written in the dashboard since and the run would still look successful. Nothing writes the committed snapshot from the pipeline's output, because a rerun would undo the corrections made in that file after the cutover, such as #202 and #205.
+
+The committed snapshot no longer matches the database everywhere. On 6 October 2026 four entries had a different body in production than in the file, and the database holds the old `/projects/` page as the projects overview's introduction rather than as an entry. #286 generates the file from the database, so the fallback says what the site says.
 
 ## The content snapshot
 
@@ -57,13 +71,13 @@ The token names one preview and is signed with a key derived from `SESSION_SECRE
 
 ## Getting the content into a database
 
-`db:import` writes the published snapshot into the database `DATABASE_URL` names. That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the published file are taken from there, so every editorial correction made since the cutover stands.
+`db:import` writes the committed snapshot into the database `DATABASE_URL` names, which has to be empty. That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the committed file are taken from there, so every editorial correction made in that file stands.
 
 ```bash
 pnpm --filter @layered/backend db:import --drafts-from ../../migration-out/site.json
 ```
 
-Publii copied some files into several post directories, and the migration gave each copy its own slug. The database holds a file once, by checksum. The import therefore keeps the first slug and rewrites every body that names another copy to name the kept one, so no picture goes missing when the site reads from the database. The size copies Publii made of every picture stay out of the library, because this site generates its own. Running the import again leaves the same rows.
+Publii copied some files into several post directories, and the migration gave each copy its own slug. The database holds a file once, by checksum. The import therefore keeps the first slug and rewrites every body that names another copy to name the kept one, so no picture goes missing when the site reads from the database. The size copies Publii made of every picture stay out of the library, because this site generates its own.
 
 ## Proving nothing was lost
 

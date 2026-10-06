@@ -732,3 +732,20 @@ export async function importContent(
 
   return report;
 }
+
+/**
+ * Whether the database already holds a piece of writing.
+ *
+ * The database is what the site publishes, and what the dashboard edits. An
+ * import into one that holds entries would write the snapshot's text over
+ * everything written since, and report it as a successful run, which is why the
+ * `db:import` command asks this first and refuses. `importContent` itself stays
+ * repeatable, because its own tests and a fresh database rely on that.
+ *
+ * @param database - The database to ask, already connected.
+ * @returns True when `entries` has at least one row.
+ */
+export async function holdsEntries(database: Database): Promise<boolean> {
+  const [row] = await database.select({ id: entries.id }).from(entries).limit(1);
+  return row !== undefined;
+}

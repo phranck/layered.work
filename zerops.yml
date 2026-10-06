@@ -179,9 +179,10 @@ zerops:
         # itself. Set it to `countdown` to put the notice back up without moving
         # the date and without a deployment, or to `site` to open early.
         WEBSITE_MODE: auto
-        # What the deployed site reads until it reads the database. The file is
-        # committed and carries only what a reader may reach, which a test in
-        # the website enforces.
+        # What the deployed site reads when the backend is unreachable or holds
+        # no entries. The database decides what an article says; this file is
+        # the snapshot committed at the cutover and carries only what a reader
+        # may reach, which a test in the website enforces.
         WEBSITE_CONTENT_FILE: /var/www/apps/website/content/site.json
         # Where the media are: the bucket's root. Every file's storage key is the
         # key of its object there, `migration/…` for the old site's files and
