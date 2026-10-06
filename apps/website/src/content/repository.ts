@@ -286,6 +286,16 @@ const EXPORT_MEDIA_PREFIX = "/media/";
 const ARTICLE_IMAGE_SIZES = "(max-width: 719px) 100vw, (max-width: 1179px) 92vw, 1092px";
 
 /**
+ * The widths the home page's hero picture is drawn at, as a `sizes` attribute.
+ *
+ * Below 1040 pixels the hero is one column, the window less its gutters. From
+ * there it is the second of two columns at 1 : 0.92 with a 64 pixel gap, inside
+ * the 1180 pixel page less 88 pixels of gutter, which reaches 492 pixels once
+ * the page stops growing.
+ */
+const HOME_HERO_SIZES = "(max-width: 1039px) 92vw, (max-width: 1179px) calc(48vw - 73px), 492px";
+
+/**
  * Where `scripts/publii/upload.mjs` put every migrated file in the bucket, which
  * is also the start of its storage key in the database.
  */
@@ -412,6 +422,13 @@ export function createRepository(input: unknown) {
       sizes: ARTICLE_IMAGE_SIZES,
     };
   };
+  /** The entries the home page may show, newest first. */
+  const homeEntries = (locale: Language) => publicEntries(locale).filter((entry) => entry.onHomePage);
+  /** The entry the featured block shows: the one marked as featured, or else the newest that is not a page. */
+  const homeFeatured = (locale: Language) => {
+    const candidates = homeEntries(locale);
+    return candidates.find((entry) => entry.featured) ?? candidates.find((entry) => entry.kind !== "page");
+  };
   return {
     data,
     footerNavigation: (locale: Language) => data.footerNavigation?.[locale],
@@ -435,6 +452,26 @@ export function createRepository(input: unknown) {
      */
     featuredImage: (entry: Entry) =>
       entry.featuredImage ? localizedMedia(entry.featuredImage, entry.language) : undefined,
+    homeEntries,
+    homeFeatured,
+    /**
+     * The entry the home page's hero shows, and its picture as the hero draws it.
+     *
+     * The hero block draws it and the head asks for it ahead of the document, so
+     * both read it from here and name the same candidates at the same widths.
+     *
+     * @param locale - The home page's language.
+     * @returns The entry and its picture, either of which may be absent.
+     */
+    homeHero(locale: Language) {
+      const candidates = homeEntries(locale);
+      const entry =
+        candidates.find((candidate) => candidate.slug === "next-mini-replica-interest") ??
+        candidates.find((candidate) => candidate.kind === "project" && candidate.featuredImage) ??
+        homeFeatured(locale);
+      const picture = entry?.featuredImage ? localizedMedia(entry.featuredImage, locale) : undefined;
+      return { entry, image: picture ? { ...picture, sizes: HOME_HERO_SIZES } : undefined };
+    },
     entry: (name: string) => {
       const entry = entries.get(name);
       return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;

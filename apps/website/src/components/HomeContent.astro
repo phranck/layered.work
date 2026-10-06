@@ -9,10 +9,9 @@ interface Props { repository:ContentRepository; language:Language; }
 const {repository,language}=Astro.props;
 const de=language==="de";
 const root=languageRoot(language);
-const entries=repository.publicEntries(language).filter(entry=>entry.onHomePage);
-const featured=entries.find(entry=>entry.featured)??entries.find(entry=>entry.kind!=="page");
-const hero=entries.find(entry=>entry.slug==="next-mini-replica-interest")??entries.find(entry=>entry.kind==="project"&&entry.featuredImage)??featured;
-const heroImage=hero?.featuredImage?repository.media(hero.featuredImage, language):undefined;
+const entries=repository.homeEntries(language);
+const featured=repository.homeFeatured(language);
+const {entry:hero,image:heroImage}=repository.homeHero(language);
 const featureImage=featured?.featuredImage?repository.media(featured.featuredImage, language):undefined;
 // A grid block's type is not its listing's address, and the two were only ever equal by
 // accident: renaming the block to match the database turned "View all" into /project_grid/.
@@ -40,7 +39,7 @@ if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN
     </div>
     {hero&&heroImage&&<a class="plate-stack" href={hero.path} aria-label={hero.title}>
       <div class="plate plate--back"></div><div class="plate plate--middle"></div>
-      <div class="plate plate--front"><img style={`object-position:${imagePosition(heroImage)}`} src={heroImage.src} srcset={heroImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
+      <div class="plate plate--front"><img style={`object-position:${imagePosition(heroImage)}`} src={heroImage.src} srcset={heroImage.srcSet} sizes={heroImage.sizes} width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
     </a>}
   </section>
 ) : block.type==="featured_entry"&&featured ? (
