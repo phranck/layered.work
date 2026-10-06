@@ -29,7 +29,7 @@ import { type ContentRepository, createRepository } from "./repository.js";
 const CACHE_MS = 30_000;
 
 /**
- * How long a held snapshot keeps answering whilst a newer one is fetched, in
+ * How long a held snapshot keeps answering while a newer one is fetched, in
  * milliseconds.
  *
  * Past `CACHE_MS` a render does not wait for the backend. It answers from what
@@ -123,7 +123,7 @@ function refresh(): Promise<ContentRepository> {
 /**
  * The content repository every page reads from.
  *
- * Fresh for `CACHE_MS`. After that it answers from what is held whilst a
+ * Fresh for `CACHE_MS`. After that it answers from what is held while a
  * refresh runs behind the render, until the held snapshot reaches `STALE_MS`.
  *
  * @throws When neither the backend nor the file can supply a snapshot, because

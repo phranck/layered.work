@@ -59,7 +59,7 @@ There are no repository variables, as in every sibling project.
 
 ## The website
 
-The site reads its variables whilst it renders, so a missing one shows up on a page rather than at start.
+The site reads its variables while it renders, so a missing one shows up on a page rather than at start.
 
 | Variable | Value in production | Without it |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ The site reads its variables whilst it renders, so a missing one shows up on a p
 
 ## The dashboard
 
-The dashboard is static files behind nginx, so it reads its two variables whilst it is built.
+The dashboard is static files behind nginx, so it reads its two variables while it is built.
 
 | Variable | Value in production | Without it |
 | --- | --- | --- |

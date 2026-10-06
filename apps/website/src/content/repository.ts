@@ -279,7 +279,7 @@ const EXPORT_MEDIA_PREFIX = "/media/";
  * The widths a picture inside an article is drawn at, as a `sizes` attribute.
  *
  * An entry's cover, a project's hero and every figure in a body sit in the
- * article's column: the window less its margin below 720 pixels, 92 per cent
+ * article's column: the window less its margin below 720 pixels, 92 percent
  * of it up to 1180, and 1092 pixels beyond. A larger figure here makes the
  * browser fetch a wider candidate than the page draws.
  */

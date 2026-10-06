@@ -72,7 +72,7 @@ describe("the colours of a document", () => {
     expect(roles('Image("front"')).toBe("NNNNNXXXXXXXX");
   });
 
-  it("colours the backslash of an escaped component line as the language's punctuation", () => {
+  it("colors the backslash of an escaped component line as the language's punctuation", () => {
     expect(roles("\\Grid(3) lines.")).toBe("S..............");
   });
 
