@@ -17,6 +17,7 @@ import {
   auditLog,
   entries,
   entryTranslations,
+  homeBlocks,
   media,
   mediaJobs,
   mediaReferences,
@@ -27,7 +28,7 @@ import {
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { getMediaProcessing } from "./processing.js";
-import { unusedMedia } from "./usage.js";
+import { namesPictureInBlock, unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
 const PAGE_SIZE = 24;
@@ -118,6 +119,12 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
     .from(settings)
     .where(and(eq(settings.key, "site"), sql`${settings.value}->>'socialImageMediaId' = ${id}`));
   if (sharing.length) uses.push({ id, title: "Site sharing image", language: "en", kind: "settings" });
+  const blocks = await db
+    .select({ id: homeBlocks.id, type: homeBlocks.type })
+    .from(homeBlocks)
+    .where(namesPictureInBlock(id));
+  for (const block of blocks)
+    uses.push({ id: block.id, title: `Home page block ${block.type}`, language: "en", kind: "settings" });
   const introductions = await db
     .select({ key: settingMediaReferences.settingsKey, language: settingMediaReferences.language })
     .from(settingMediaReferences)

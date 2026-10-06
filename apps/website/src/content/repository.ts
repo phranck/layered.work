@@ -3,7 +3,9 @@ import {
   DEFAULT_LISTING,
   focalPoint,
   type HomeBlock,
+  type HomeBlockType,
   homeBlockSchema,
+  homeBlockSettings,
   homeBlockTypes,
   isKnownHomeBlock,
   type ListedKind,
@@ -424,10 +426,20 @@ export function createRepository(input: unknown) {
   };
   /** The entries the home page may show, newest first. */
   const homeEntries = (locale: Language) => publicEntries(locale).filter((entry) => entry.onHomePage);
-  /** The entry the featured block shows: the one marked as featured, or else the newest that is not a page. */
+  /** The settings of the first block of a type on the page, on its defaults where there is none. */
+  const blockSettings = (type: HomeBlockType) =>
+    homeBlockSettings(type, declaredBlocks().find((block) => block.type === type)?.settings);
+  /**
+   * The entry the featured block shows: the one marked as featured, or the newest
+   * that is not a page, as the block's `source` says. Marked falls back to the
+   * newest where nothing is marked.
+   */
   const homeFeatured = (locale: Language) => {
     const candidates = homeEntries(locale);
-    return candidates.find((entry) => entry.featured) ?? candidates.find((entry) => entry.kind !== "page");
+    const newest = candidates.find((entry) => entry.kind !== "page");
+    return blockSettings("featured_entry").source === "newest"
+      ? newest
+      : (candidates.find((entry) => entry.featured) ?? newest);
   };
   return {
     data,
@@ -469,8 +481,30 @@ export function createRepository(input: unknown) {
         candidates.find((candidate) => candidate.slug === "next-mini-replica-interest") ??
         candidates.find((candidate) => candidate.kind === "project" && candidate.featuredImage) ??
         homeFeatured(locale);
-      const picture = entry?.featuredImage ? localizedMedia(entry.featuredImage, locale) : undefined;
+      const settings = blockSettings("hero");
+      const chosen = typeof settings.picture === "string" ? settings.picture : entry?.featuredImage;
+      const picture = settings.showPicture && chosen ? localizedMedia(chosen, locale) : undefined;
       return { entry, image: picture ? { ...picture, sizes: HOME_HERO_SIZES } : undefined };
+    },
+    /**
+     * The entries one grid block shows, in its order and up to its limit.
+     *
+     * @param type - Which of the two grids it is.
+     * @param stored - The block's settings, as the snapshot holds them.
+     * @param locale - The home page's language.
+     */
+    homeGrid(type: "project_grid" | "post_grid", stored: unknown, locale: Language) {
+      const settings = homeBlockSettings(type, stored);
+      const kind = type === "project_grid" ? "project" : "post";
+      const featured = settings.excludeFeatured === true ? homeFeatured(locale) : undefined;
+      const matching = homeEntries(locale).filter((entry) => entry.kind === kind && entry !== featured);
+      const ordered =
+        settings.order === "oldest"
+          ? [...matching].reverse()
+          : settings.order === "title"
+            ? [...matching].sort((left, right) => left.title.localeCompare(right.title, locale))
+            : matching;
+      return { entries: ordered.slice(0, Number(settings.limit)), any: matching.length > 0 };
     },
     entry: (name: string) => {
       const entry = entries.get(name);

@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   entries,
   entryTranslations,
+  homeBlocks,
   media,
   mediaDeletions,
   mediaJobs,
@@ -235,6 +236,35 @@ it.each([
     } finally {
       if (previous) await store(previous.value);
       else await db.delete(settings).where(eq(settings.key, "site"));
+    }
+    expect(await deleteMedia(db, id)).toMatchObject({ cleanupState: "ready", removedObjects: 2 });
+  });
+
+  it("protects a picture a home page block shows for as long as the block names it", async () => {
+    const { db, id } = await fixture();
+    const [block] = await db
+      .insert(homeBlocks)
+      .values({ type: "hero", sortOrder: 0, settings: { picture: id } })
+      .returning({ id: homeBlocks.id });
+    if (!block) throw new Error("No test block");
+    try {
+      expect((await getMediaDetail(db, id)).uses).toEqual([
+        expect.objectContaining({ kind: "settings", title: "Home page block hero" }),
+      ]);
+      expect(
+        (
+          await listMedia(db, {
+            search: `reference-${id}`,
+            kind: "all",
+            page: 1,
+            order: "slug",
+            unused: true,
+          })
+        ).items,
+      ).toEqual([]);
+      await expect(deleteMedia(db, id)).rejects.toThrow(/Home page block hero/);
+    } finally {
+      await db.delete(homeBlocks).where(eq(homeBlocks.id, block.id));
     }
     expect(await deleteMedia(db, id)).toMatchObject({ cleanupState: "ready", removedObjects: 2 });
   });

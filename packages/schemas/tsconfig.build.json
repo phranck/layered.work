@@ -7,5 +7,6 @@
     "rootDir": "src",
     "module": "NodeNext",
     "moduleResolution": "nodenext"
-  }
+  },
+  "exclude": ["src/**/*.test.ts"]
 }

@@ -287,6 +287,60 @@ describe("public content repository", () => {
   });
 });
 
+describe("the home page's blocks, as their settings say", () => {
+  const dated = (id: number, kind: string, publishedAt: string, extra: Record<string, unknown> = {}) => ({
+    ...entry(id),
+    title: `Title ${String.fromCharCode(76 - id)}`,
+    kind,
+    publishedAt,
+    ...extra,
+  });
+  const page = (homeBlocks: { type: string; settings?: Record<string, unknown> }[]) =>
+    createRepository({
+      ...snapshot,
+      entries: [
+        dated(1, "project", "2026-04-01T00:00:00Z", { featuredImage: "own-picture" }),
+        dated(2, "post", "2026-03-01T00:00:00Z", { featured: true }),
+        dated(3, "post", "2026-02-01T00:00:00Z"),
+        dated(4, "post", "2026-01-01T00:00:00Z"),
+      ],
+      media: [
+        { slug: "own-picture", src: "/uploads/own" },
+        { slug: "chosen-picture", src: "/uploads/chosen" },
+      ],
+      homeBlocks: homeBlocks.map((block, sortOrder) => ({
+        enabled: true,
+        sortOrder,
+        settings: {},
+        ...block,
+      })),
+    });
+
+  it("shows the hero's own picture where one is chosen, the entry's otherwise, and none when switched off", () => {
+    expect(page([{ type: "hero" }]).homeHero("en").image?.src).toBe("/uploads/own");
+    expect(page([{ type: "hero", settings: { picture: "chosen-picture" } }]).homeHero("en").image?.src).toBe(
+      "/uploads/chosen",
+    );
+    expect(page([{ type: "hero", settings: { showPicture: false } }]).homeHero("en").image).toBeUndefined();
+  });
+
+  it("features the marked entry, or the newest when the block asks for that", () => {
+    expect(page([{ type: "featured_entry" }]).homeFeatured("en")?.id).toBe(2);
+    expect(page([{ type: "featured_entry", settings: { source: "newest" } }]).homeFeatured("en")?.id).toBe(1);
+  });
+
+  it("fills a grid in its order, up to its limit, and without the featured entry where asked", () => {
+    const grid = (settings: Record<string, unknown>) =>
+      page([{ type: "featured_entry" }, { type: "post_grid", settings }])
+        .homeGrid("post_grid", settings, "en")
+        .entries.map((item) => item.id);
+    expect(grid({})).toEqual([2, 3, 4]);
+    expect(grid({ order: "oldest", limit: 2 })).toEqual([4, 3]);
+    expect(grid({ order: "title" })).toEqual([4, 3, 2]);
+    expect(grid({ excludeFeatured: true })).toEqual([3, 4]);
+  });
+});
+
 describe("where the media are served from", () => {
   it("uses the requested language and preserves explicitly decorative images", () => {
     const repo = createRepository({

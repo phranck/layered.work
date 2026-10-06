@@ -1,5 +1,6 @@
 import { referencedFormNames, renderContent } from "@layered/content";
 import {
+  homeBlockSettings,
   type ListedKind,
   type ListingSettings,
   type PublicFooterNavigation,
@@ -26,6 +27,7 @@ import {
   topics,
   topicTranslations,
 } from "../db/schema/index.js";
+import { HOME_PICTURE_KEYS, pictureIdsOf } from "../home/blocks.js";
 import { referencedMediaIds } from "../media/references.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
@@ -184,6 +186,7 @@ export async function publicMedia(
     socialCardMediaId?: string | null;
   }[],
   otherBodies: readonly string[] = [],
+  otherFiles: readonly string[] = [],
 ): Promise<{ media: PublicMedia[]; slugById: Map<string, string> }> {
   const assets = await database
     .select({
@@ -202,6 +205,7 @@ export async function publicMedia(
     .from(media);
 
   const named = namedFiles(translations, assets, otherBodies);
+  for (const id of otherFiles) named.add(id);
   const descriptions = named.size
     ? await database
         .select()
@@ -454,10 +458,20 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   }
 
   const listings = await readListingSettings(database);
+  const blocks = await database
+    .select({
+      type: homeBlocks.type,
+      enabled: homeBlocks.enabled,
+      sortOrder: homeBlocks.sortOrder,
+      settings: homeBlocks.settings,
+    })
+    .from(homeBlocks)
+    .orderBy(asc(homeBlocks.sortOrder), asc(homeBlocks.createdAt));
   const { media: publishedMedia, slugById } = await publicMedia(
     database,
     reachable,
     Object.values(listings).flatMap((listing) => Object.values(listing.introduction)),
+    blocks.flatMap((block) => pictureIdsOf(block.type, block.settings)),
   );
 
   // Which translation each one is the counterpart of, so the site can offer the
@@ -495,16 +509,6 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   const publishedTopics = await publicTopics(database);
   former.push(...(await formerTopicAddresses(database, publishedTopics)));
 
-  const blocks = await database
-    .select({
-      type: homeBlocks.type,
-      enabled: homeBlocks.enabled,
-      sortOrder: homeBlocks.sortOrder,
-      settings: homeBlocks.settings,
-    })
-    .from(homeBlocks)
-    .orderBy(asc(homeBlocks.sortOrder));
-
   const targets = reachable
     .filter((row) => row.state === "public")
     .map((row) => ({
@@ -527,11 +531,12 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       new Set([...currentPaths.values(), ...former.map((item) => item.source)]),
     ),
     listings,
-    homeBlocks: blocks.map((block) => ({
-      type: block.type,
-      enabled: block.enabled,
-      sortOrder: block.sortOrder,
-      settings: (block.settings ?? {}) as Record<string, unknown>,
-    })),
+    // A picture is stored as a file's id and the site knows its files by slug.
+    homeBlocks: blocks.map((block) => {
+      const settings = homeBlockSettings(block.type, block.settings);
+      for (const key of HOME_PICTURE_KEYS)
+        if (typeof settings[key] === "string") settings[key] = slugById.get(settings[key]) ?? null;
+      return { type: block.type, enabled: block.enabled, sortOrder: block.sortOrder, settings };
+    }),
   };
 }
