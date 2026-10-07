@@ -1,9 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { readPublicSnapshot } from "../content/snapshot.js";
+import { writePublicSnapshot } from "../content/snapshot.js";
 import { connectOnce, databaseUrl } from "./connect.js";
 import { compare, readSource, readTarget, type Verification } from "./verify-migration.js";
 import { missingObjects, missingRenderedObjects } from "./verify-storage.js";
@@ -119,7 +119,7 @@ try {
   }
 
   const out = values["snapshot-out"];
-  if (out) await writeFile(resolve(out), `${JSON.stringify(await readPublicSnapshot(database), null, 2)}\n`);
+  if (out) await writePublicSnapshot(database, resolve(out));
 
   const passed = verification.passed && missing.length === 0 && missingRendered.length === 0;
   console.log(passed ? "Nothing differs." : "Differences found.");

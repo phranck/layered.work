@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mediaReferences } from "@layered/content";
-import { LISTING_PATHS, listingSettings } from "@layered/schemas";
+import { DEFAULT_LISTING, LISTING_PATHS, listingSettings } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -28,7 +28,9 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  gonePaths,
   media,
+  mediaTranslations,
   mediaVariants,
   paths,
   settings,
@@ -207,16 +209,31 @@ runs("importing a snapshot", () => {
 
   it("leaves Publii's size copies out of the library", async () => {
     const database = await testDatabase();
-    await importContent(database, snapshot);
-
     // The responsive copies and gallery thumbnails Publii made of every picture
     // are superseded by the variants this site generates, and nothing names them.
-    const copies = new Set(
-      snapshot.media.filter((asset) => isPubliiSizeCopy(asset.source)).map((asset) => asset.slug),
-    );
-    expect(copies.size).toBeGreaterThan(0);
-    const slugs = (await database.select({ slug: media.slug }).from(media)).map((row) => row.slug);
-    expect(slugs.filter((slug) => copies.has(slug))).toEqual([]);
+    const copies = ["posts/1/responsive/hero-md.webp", "posts/1/gallery/plate-thumbnail.jpg"];
+    const fixture: Snapshot = {
+      entries: [],
+      topics: [],
+      redirects: [],
+      media: copies.map((source, index) => ({
+        slug: `size-copy-${index}`,
+        src: `/media/${source.split("/").at(-1)}`,
+        mime: "image/webp",
+        filename: source.split("/").at(-1) ?? source,
+        source,
+        bytes: 10,
+        sha256: String(index).repeat(64),
+        width: 10,
+        height: 10,
+      })),
+    };
+    expect(fixture.media.every((asset) => isPubliiSizeCopy(asset.source))).toBe(true);
+
+    const report = await importContent(database, fixture);
+
+    expect(report.media).toBe(0);
+    expect(await database.select().from(media).where(eq(media.slug, "size-copy-0"))).toEqual([]);
   });
 
   it("imports measured responsive variants and does not duplicate them on a second run", async () => {
@@ -250,7 +267,7 @@ runs("importing a snapshot", () => {
         ],
       };
       const database = await testDatabase();
-      const report = await importContent(database, fixture, { variantRoot: root });
+      const report = await importContent(database, fixture, { roots: { exported: root } });
       expect(report.variants).toBe(1);
       const [variant] = await database.select().from(mediaVariants);
       expect(variant).toMatchObject({
@@ -261,7 +278,7 @@ runs("importing a snapshot", () => {
         storageKey: "migration/variant-fixture-variant-480.webp",
       });
 
-      await importContent(database, fixture, { variantRoot: root });
+      await importContent(database, fixture, { roots: { exported: root } });
       expect(await database.select().from(mediaVariants)).toHaveLength(1);
 
       const originalAsset = fixture.media[0];
@@ -277,7 +294,7 @@ runs("importing a snapshot", () => {
           },
         ],
       };
-      await expect(importContent(database, missing, { variantRoot: root })).rejects.toThrow();
+      await expect(importContent(database, missing, { roots: { exported: root } })).rejects.toThrow();
       expect(await database.select().from(media).where(eq(media.slug, "missing-variant-fixture"))).toEqual(
         [],
       );
@@ -300,22 +317,136 @@ runs("importing a snapshot", () => {
   });
 
   it("writes a page at an overview's address as that overview's introduction, and keeps one written since", async () => {
+    await emptyTestDatabase();
     const database = await testDatabase();
-    const projectsPage = overviewPages.find((entry) => entry.path === "/projects/");
-    expect(projectsPage, "the published snapshot holds the old projects page").toBeDefined();
-    await importContent(database, snapshot);
+    const example = snapshot.entries[0];
+    if (!example) throw new Error("The published snapshot holds no entries");
+    // How the migration output carries the text above the projects: as a page
+    // at the overview's own address.
+    const projectsPage = {
+      ...example,
+      id: "projects-page",
+      slug: "projects",
+      path: "/projects/",
+      kind: "page" as const,
+      language: "en" as const,
+      body: "What the workshop builds.\n",
+      translationPath: null,
+    };
+    const withPage: Snapshot = { entries: [projectsPage], topics: [], media: [], redirects: [] };
+    await importContent(database, withPage);
 
     const stored = async () =>
       listingSettings.parse(
         (await database.select().from(settings).where(eq(settings.key, "projectListing")))[0]?.value,
       );
-    expect((await stored()).introduction.en).toBe(projectsPage?.body.trim());
+    expect((await stored()).introduction.en).toBe(projectsPage.body.trim());
     expect(await database.select().from(paths).where(eq(paths.path, "/projects/"))).toEqual([]);
 
     const written = { ...(await stored()), introduction: { en: "Written in the dashboard.", de: "" } };
     await database.update(settings).set({ value: written }).where(eq(settings.key, "projectListing"));
-    await importContent(database, snapshot);
+    await importContent(database, withPage);
     expect((await stored()).introduction.en).toBe("Written in the dashboard.");
+  });
+
+  it("reads a snapshot written from the database, which names its files by storage key", async () => {
+    await emptyTestDatabase();
+    const store = await mkdtemp(join(tmpdir(), "layered-store-"));
+    try {
+      await mkdir(join(store, "variants", "fixture"), { recursive: true });
+      const bytes = await sharp({
+        create: { width: 480, height: 320, channels: 3, background: "#556677" },
+      })
+        .webp()
+        .toBuffer();
+      await writeFile(join(store, "variants", "fixture", "small.webp"), bytes);
+      const example = snapshot.entries[0];
+      if (!example) throw new Error("The published snapshot holds no entries");
+      const fixture: Snapshot = {
+        entries: [
+          {
+            ...example,
+            id: "stored-entry",
+            slug: "stored-entry",
+            path: "/stored-entry/",
+            language: "en",
+            translationPath: null,
+            topics: [],
+            featuredImage: "stored-picture",
+            socialImage: "stored-picture",
+            showInOtherLanguage: true,
+          },
+        ],
+        topics: [],
+        redirects: [],
+        media: [
+          {
+            slug: "stored-picture",
+            src: "/uploads/stored-picture-key",
+            mime: "image/webp",
+            filename: "stored-picture-key",
+            source: "uploads/stored-picture-key",
+            bytes: 10,
+            sha256: "c".repeat(64),
+            width: 960,
+            height: 640,
+            translations: {
+              en: { altText: "A front plate", caption: null },
+              de: { altText: "Eine Frontplatte", caption: "Gefräst" },
+            },
+            focalPoint: { x: 0.25, y: 0.75 },
+            placeholder: "data:image/webp;base64,UklGRg==",
+            srcSet: "/variants/fixture/small.webp 480w",
+          },
+        ],
+        listings: {
+          project: { ...DEFAULT_LISTING, introduction: { en: "Built here.", de: "Hier gebaut." } },
+        },
+        gone: ["/removed-entry/"],
+      };
+      const database = await testDatabase();
+
+      await importContent(database, fixture, { roots: { exported: store, stored: store } });
+
+      const [picture] = await database.select().from(media).where(eq(media.slug, "stored-picture"));
+      if (!picture) throw new Error("The picture was not imported");
+      expect(picture).toMatchObject({
+        storageKey: "uploads/stored-picture-key",
+        focalX: 0.25,
+        focalY: 0.75,
+        placeholder: "data:image/webp;base64,UklGRg==",
+      });
+      const descriptions = await database
+        .select({ language: mediaTranslations.language, altText: mediaTranslations.altText })
+        .from(mediaTranslations)
+        .where(eq(mediaTranslations.mediaId, picture.id));
+      expect(descriptions.map((row) => `${row.language} ${row.altText}`).sort()).toEqual([
+        "de Eine Frontplatte",
+        "en A front plate",
+      ]);
+      expect(
+        await database
+          .select({ storageKey: mediaVariants.storageKey, height: mediaVariants.height })
+          .from(mediaVariants),
+      ).toEqual([{ storageKey: "variants/fixture/small.webp", height: 320 }]);
+      expect(await database.select().from(entryTranslations)).toEqual([
+        expect.objectContaining({
+          showInOtherLanguage: true,
+          featuredMediaId: picture.id,
+          socialCardMediaId: picture.id,
+        }),
+      ]);
+      const [listing] = await database.select().from(settings).where(eq(settings.key, "projectListing"));
+      expect(listingSettings.parse(listing?.value).introduction).toEqual({
+        en: "Built here.",
+        de: "Hier gebaut.",
+      });
+      expect(await database.select({ path: gonePaths.path }).from(gonePaths)).toEqual([
+        { path: "/removed-entry/" },
+      ]);
+    } finally {
+      await rm(store, { recursive: true, force: true });
+    }
   });
 
   it("changes nothing the second time it runs", async () => {

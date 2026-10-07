@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { referencedFormNames, renderContent } from "@layered/content";
 import {
   homeBlockSettings,
@@ -539,4 +540,15 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       return { type: block.type, enabled: block.enabled, sortOrder: block.sortOrder, settings };
     }),
   };
+}
+
+/**
+ * Writes what the site reads from this database to a file, in the form of the
+ * committed fallback `apps/website/content/site.json`.
+ *
+ * @param database - The database to read from.
+ * @param file - Where the snapshot goes. An existing file is replaced.
+ */
+export async function writePublicSnapshot(database: Database, file: string): Promise<void> {
+  await writeFile(file, `${JSON.stringify(await readPublicSnapshot(database), null, 2)}\n`);
 }
