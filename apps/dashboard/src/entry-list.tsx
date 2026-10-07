@@ -27,6 +27,7 @@ import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
+import { contentLanguageOptions } from "./translated.js";
 
 /**
  * What the reader narrowed the list to. `all` leaves that dimension open, and
@@ -331,11 +332,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 onValueChange={(value) =>
                   setFilter((current) => ({ ...current, language: value as EntryFilter["language"] }))
                 }
-                options={[
-                  { value: "all", label: text("filterAll") },
-                  { value: "en", label: "EN" },
-                  { value: "de", label: "DE" },
-                ]}
+                options={[{ value: "all", label: text("filterAll") }, ...contentLanguageOptions()]}
               />
               {filter.state === "trash" && rows.length > 0 && (
                 <Button tone="danger" icon={<TrashIcon />} onClick={() => setEmptying(true)}>
