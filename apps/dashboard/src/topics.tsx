@@ -23,7 +23,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
@@ -471,10 +471,9 @@ function TopicDeleteDialog({
   const api = useDashboardApi();
   const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notify, notifyError } = useNotify();
+  const { notify } = useNotify();
   const remove = useMutation({
     mutationFn: () => api.deleteTopic(topic.id),
-    onError: (error) => notifyError(error),
     onSuccess: () => {
       refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("topicDeleted") });
@@ -482,28 +481,15 @@ function TopicDeleteDialog({
     },
   });
   return (
-    <CardDialog labelId="topic-delete-title" onClose={onClose}>
-      <Card.Header id="topic-delete-title" title={text("topicDeleteTitle", name)} />
-      <Card.Body>
-        <p>{text("topicDeleteBody", topic.entryCount)}</p>
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {remove.isPending ? text("topicDeletePending") : text("deleteTopic")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("topicDeleteTitle", name)}
+      confirm={remove.isPending ? text("topicDeletePending") : text("deleteTopic")}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      <p>{text("topicDeleteBody", topic.entryCount)}</p>
+    </ConfirmDialog>
   );
 }

@@ -22,7 +22,7 @@ import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { NAMED_VALUES_KEY, useNamedValues } from "./named-values-query.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
@@ -230,48 +230,37 @@ function ValueDelete({ value, onClose }: { value: NamedValue; onClose: () => voi
   const api = useDashboardApi();
   const refresh = useRefresh();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const remove = useMutation({
     mutationFn: () => api.deleteNamedValue(value.id),
     onSuccess: () => {
       refresh();
       onClose();
     },
-    onError: (error) => notifyError(error),
   });
   const inUse = value.usedBy.length > 0;
   const place = (use: NamedValueUse) =>
     use.kind === "entry" ? use.title : text("valueUseListing", use.listing);
   return (
-    <CardDialog labelId="value-delete-title" onClose={onClose}>
-      <Card.Header id="value-delete-title" title={text("navigationDelete", written(value.name))} />
-      <Card.Body>
-        {inUse ? (
-          <>
-            <p>{text("valueInUse")}</p>
-            <ul>
-              {value.usedBy.map((use) => (
-                <li key={use.kind === "entry" ? use.entryId : use.listing}>{place(use)}</li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p>{text("valueDeleteBody")}</p>
-        )}
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button tone="danger" disabled={inUse || remove.isPending} onClick={() => remove.mutate()}>
-              {text("navigationDelete", written(value.name))}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("navigationDelete", written(value.name))}
+      busy={remove.isPending}
+      blocked={inUse}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      {inUse ? (
+        <>
+          <p>{text("valueInUse")}</p>
+          <ul>
+            {value.usedBy.map((use) => (
+              <li key={use.kind === "entry" ? use.entryId : use.listing}>{place(use)}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>{text("valueDeleteBody")}</p>
+      )}
+    </ConfirmDialog>
   );
 }

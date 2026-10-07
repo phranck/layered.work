@@ -27,7 +27,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { blockSummary, blockTypeKey, settingKey } from "./home-block-labels.js";
 import { HomeBlockSettingsFields } from "./home-block-settings.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
@@ -299,8 +299,6 @@ function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (rem
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
-  const name = text(blockTypeKey(block.type));
   const remove = useMutation({
     mutationFn: () => api.deleteHomeBlock(block.id),
     onSuccess: () => {
@@ -308,32 +306,16 @@ function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (rem
       void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
       onClose(true);
     },
-    onError: (error) => notifyError(error),
   });
   return (
-    <CardDialog labelId="home-block-remove-title" onClose={() => onClose(false)}>
-      <Card.Header id="home-block-remove-title" title={text("homeBlockRemove", name)} />
-      <Card.Body>
-        <p>{text("homeBlockRemoveBody")}</p>
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={() => onClose(false)} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {text("homeBlockRemove", name)}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("homeBlockRemove", text(blockTypeKey(block.type)))}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={() => onClose(false)}
+    >
+      <p>{text("homeBlockRemoveBody")}</p>
+    </ConfirmDialog>
   );
 }

@@ -12,7 +12,6 @@ import {
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
-  XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
@@ -24,7 +23,7 @@ import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
@@ -216,7 +215,6 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const [emptying, setEmptying] = useState(false);
   const empty = useMutation({
     mutationFn: () => api.emptyTrash(kind),
-    onError: (error) => notifyError(error),
     onSuccess: ({ deleted }) => {
       refresh();
       setEmptying(false);
@@ -446,29 +444,16 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         )}
       </Card>
       {emptying && (
-        <CardDialog labelId="empty-trash-title" onClose={() => setEmptying(false)}>
-          <Card.Header id="empty-trash-title" title={text("emptyTrashTitle")} />
-          <Card.Body>
-            <p>{text("emptyTrashBody", rows.length)}</p>
-          </Card.Body>
-          <Card.Footer
-            actions={
-              <>
-                <Button icon={<XIcon />} onClick={() => setEmptying(false)} autoFocus>
-                  {text("cancel")}
-                </Button>
-                <Button
-                  tone="danger"
-                  icon={<TrashIcon />}
-                  disabled={empty.isPending}
-                  onClick={() => empty.mutate()}
-                >
-                  {empty.isPending ? text("emptyTrashPending") : text("emptyTrash")}
-                </Button>
-              </>
-            }
-          />
-        </CardDialog>
+        <ConfirmDialog
+          title={text("emptyTrashTitle")}
+          confirm={empty.isPending ? text("emptyTrashPending") : text("emptyTrash")}
+          busy={empty.isPending}
+          error={empty.error}
+          onConfirm={() => empty.mutate()}
+          onClose={() => setEmptying(false)}
+        >
+          <p>{text("emptyTrashBody", rows.length)}</p>
+        </ConfirmDialog>
       )}
     </>
   );

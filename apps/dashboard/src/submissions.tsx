@@ -6,7 +6,7 @@ import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import "./submissions.css";
@@ -34,7 +34,6 @@ const words = {
     deleteTitle: "Delete submission?",
     deleteWarning: "This permanently deletes the submission and cannot be undone.",
     deleteConfirm: "Delete permanently",
-    cancel: "Cancel",
     unknown: "Unknown",
   },
   de: {
@@ -59,7 +58,6 @@ const words = {
     deleteTitle: "Einsendung löschen?",
     deleteWarning: "Diese Einsendung wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.",
     deleteConfirm: "Endgültig löschen",
-    cancel: "Abbrechen",
     unknown: "Unbekannt",
   },
 } as const;
@@ -122,7 +120,6 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
       setConfirmDelete(false);
       await refresh();
     },
-    onError: (error) => notifyError(error),
   });
 
   return (
@@ -250,24 +247,16 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
         )}
       </div>
       {confirmDelete && selected && (
-        <CardDialog labelId="delete-submission-title" onClose={() => setConfirmDelete(false)}>
-          <Card.Header id="delete-submission-title" title={w.deleteTitle} />
-          <Card.Body>
-            <p>{w.deleteWarning}</p>
-          </Card.Body>
-          <Card.Footer
-            actions={
-              <>
-                <Button onClick={() => setConfirmDelete(false)} autoFocus>
-                  {w.cancel}
-                </Button>
-                <Button tone="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
-                  {w.deleteConfirm}
-                </Button>
-              </>
-            }
-          />
-        </CardDialog>
+        <ConfirmDialog
+          title={w.deleteTitle}
+          confirm={w.deleteConfirm}
+          busy={remove.isPending}
+          error={remove.error}
+          onConfirm={() => remove.mutate()}
+          onClose={() => setConfirmDelete(false)}
+        >
+          <p>{w.deleteWarning}</p>
+        </ConfirmDialog>
       )}
     </>
   );

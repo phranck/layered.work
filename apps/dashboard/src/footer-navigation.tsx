@@ -20,7 +20,7 @@ import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
@@ -386,39 +386,22 @@ function NavigationDelete({
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const remove = useMutation({
     mutationFn: () => api.deleteFooterNavigation(group.id, placement),
     onSuccess: () => {
       refresh(client, placement);
       onClose();
     },
-    onError: (error) => notifyError(error),
   });
   return (
-    <CardDialog labelId="navigation-delete-title" onClose={onClose}>
-      <Card.Header id="navigation-delete-title" title={text("navigationDelete", group.title[language])} />
-      <Card.Body>
-        <p>{text("navigationDeleteBody", group.items.length)}</p>
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {text("navigationDelete", group.title[language])}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("navigationDelete", group.title[language])}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      <p>{text("navigationDeleteBody", group.items.length)}</p>
+    </ConfirmDialog>
   );
 }

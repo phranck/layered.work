@@ -1,12 +1,8 @@
 import type { MediaDetail } from "@layered/schemas";
-import { Button, Card } from "@layered/ui";
-import { TrashIcon, XIcon } from "@layered/ui/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
-import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 
 const ENTRY_AREA = { post: "posts", page: "pages", project: "projects" } as const;
@@ -59,7 +55,6 @@ export function MediaDeleteDialog({
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
-  const titleId = useId();
   const processing = detail.processing.state === "queued" || detail.processing.state === "processing";
   const remove = useMutation({
     mutationFn: () => api.deleteMedia(detail.id),
@@ -82,43 +77,26 @@ export function MediaDeleteDialog({
     },
   });
   return (
-    <CardDialog labelId={titleId} onClose={onClose}>
-      <Card.Header id={titleId} title={text("mediaDeleteTitle", detail.slug)} />
-      <Card.Body>
-        <p>
-          {text(
-            detail.uses.length
-              ? "mediaDeleteBlocked"
-              : processing
-                ? "mediaDeleteProcessing"
-                : "mediaDeleteBody",
-          )}
-        </p>
-        <MediaUses uses={detail.uses} />
-        {remove.isError && (
-          <ErrorNotice
-            error={remove.error}
-            keyFor={(error) => (error.code === "conflict" ? "mediaDeleteConflict" : undefined)}
-          />
+    <ConfirmDialog
+      title={text("mediaDeleteTitle", detail.slug)}
+      confirm={text(remove.isPending ? "mediaDeletePending" : "mediaDelete")}
+      busy={remove.isPending}
+      blocked={detail.uses.length > 0 || processing}
+      error={remove.error}
+      errorKeyFor={(error) => (error.code === "conflict" ? "mediaDeleteConflict" : undefined)}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      <p>
+        {text(
+          detail.uses.length
+            ? "mediaDeleteBlocked"
+            : processing
+              ? "mediaDeleteProcessing"
+              : "mediaDeleteBody",
         )}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose} autoFocus disabled={remove.isPending}>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending || detail.uses.length > 0 || processing}
-              onClick={() => remove.mutate()}
-            >
-              {text(remove.isPending ? "mediaDeletePending" : "mediaDelete")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+      </p>
+      <MediaUses uses={detail.uses} />
+    </ConfirmDialog>
   );
 }
