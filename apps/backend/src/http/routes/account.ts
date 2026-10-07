@@ -16,6 +16,7 @@ import {
 } from "../../account/repository.js";
 import { observeMediaStream } from "../../account/stream.js";
 import { database } from "../../db/connect.js";
+import { isUniqueViolation } from "../../db/unique-violation.js";
 import { logger } from "../../logger.js";
 import { readMediaObject } from "../../media/storage.js";
 import { responds } from "../api-metadata.js";
@@ -38,7 +39,7 @@ account.patch("/", validate("json", updateAccountBody), responds(accountProfile)
   try {
     return ok(c, await updateAccountProfile(database(), principalOf(c).userId, c.req.valid("json")));
   } catch (error) {
-    if (isEmailConflict(error)) {
+    if (isUniqueViolation(error, "users_email_unique")) {
       throw new HttpError(ErrorCode.Conflict, "That email address is already used by another account.");
     }
     throw error;
@@ -77,22 +78,3 @@ account.get(
     return c.body(stream);
   },
 );
-
-function isEmailConflict(error: unknown): boolean {
-  const seen = new Set<unknown>();
-  let candidate = error;
-  for (let depth = 0; depth < 5 && typeof candidate === "object" && candidate !== null; depth += 1) {
-    if (seen.has(candidate)) return false;
-    seen.add(candidate);
-    if (
-      "code" in candidate &&
-      candidate.code === "23505" &&
-      "constraint_name" in candidate &&
-      candidate.constraint_name === "users_email_unique"
-    ) {
-      return true;
-    }
-    candidate = "cause" in candidate ? candidate.cause : undefined;
-  }
-  return false;
-}
