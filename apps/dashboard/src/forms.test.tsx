@@ -81,9 +81,7 @@ describe("form builder", () => {
     fireEvent.change(screen.getByLabelText("Label"), { target: { value: "Email address" } });
     chooseTextLanguage("de");
     fireEvent.change(screen.getByLabelText("Label"), { target: { value: "E-Mail-Adresse" } });
-    fireEvent.keyDown(screen.getByRole("button", { name: /Drag to reorder.*Email address/ }), {
-      key: "ArrowUp",
-    });
+    fireEvent.keyDown(screen.getByRole("button", { name: /Move “Email address”/ }), { key: "ArrowUp" });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
