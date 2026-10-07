@@ -10,6 +10,8 @@
  * parser around it, and the block parser that follows only has to place nodes.
  */
 
+import { readValueReference } from "./value.js";
+
 /** Where one argument was written, and what kind of thing it is. */
 export type ScannedArgument = {
   /** Absent for the value written first without a name. */
@@ -76,8 +78,10 @@ export function startsComponent(text: string, at: number): boolean {
   const next = text[after + gap];
 
   // `(` may follow immediately or not at all; `{` needs the gap to be there or
-  // not, but either way the next thing has to be one of the two. A capitalised
-  // word followed by anything else is a sentence.
+  // not, but either way the next thing has to be one of the two. A capitalized
+  // word followed by anything else is a sentence, and so is one followed by a
+  // reference to a named value, as in `Hello {{ name }}`.
+  if (next === "{" && readValueReference(text.slice(after + gap))) return false;
   return next === "(" || next === "{";
 }
 

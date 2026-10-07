@@ -14,6 +14,18 @@ describe("mail template rendering", () => {
     expect(german.text).not.toBe(english.text);
   });
 
+  it("fills placeholders that stand on a line of their own, which the content language reads as value references", () => {
+    const rendered = renderMailTemplate(DEFAULT_MAIL_TEMPLATES.submission_notification, "en", {
+      formName: "Contact",
+      submittedAt: "2026-10-07",
+      fields: "Name: Ada",
+      consents: "Newsletter: yes",
+    });
+    expect(rendered.text).toContain("Name: Ada");
+    expect(rendered.text).toContain("Newsletter: yes");
+    expect(rendered.html).toContain("<p>Name: Ada</p>");
+  });
+
   it("refuses unknown values by name and unsafe content components", () => {
     const template = DEFAULT_MAIL_TEMPLATES.submission_confirmation;
     expect(() =>

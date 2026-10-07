@@ -39,6 +39,8 @@ export const FINDING = {
   ValueNotPermitted: "value-not-permitted",
   /** A media name that nothing in the library answers to. */
   UnknownMedia: "unknown-media",
+  /** A reference to a named value that no value answers to. */
+  UnknownValue: "unknown-value",
   /** A body on a component that holds nothing. */
   BodyNotAccepted: "body-not-accepted",
   /** No body on a component that exists to hold something. */
