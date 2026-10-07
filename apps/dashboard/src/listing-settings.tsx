@@ -1,12 +1,12 @@
 import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLength } from "@layered/schemas";
 import { Field, Input, Segmented } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { type DashboardStringKey, dashboardText } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { SETTINGS_KEY, SettingsCard } from "./settings.js";
+import { useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -23,28 +23,8 @@ export const LISTING_SETTINGS_OPEN_KEY = "layered:dashboard:listing-settings-ope
 /** Each overview's name, as the site shows it where no headline is set. */
 const DEFAULT_HEADLINE: Record<ListedKind, DashboardStringKey> = { post: "posts", project: "projects" };
 
-/** Whether the card was left open, where the browser allows reading it. */
-function readOpen(): boolean {
-  try {
-    return window.localStorage.getItem(LISTING_SETTINGS_OPEN_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-/** The card's open state, kept for the next visit. */
-function useRememberedOpen(): [boolean, (open: boolean) => void] {
-  const [open, setOpen] = useState(readOpen);
-  const change = (next: boolean) => {
-    setOpen(next);
-    try {
-      window.localStorage.setItem(LISTING_SETTINGS_OPEN_KEY, String(next));
-    } catch {
-      // The card still opens and closes for this visit.
-    }
-  };
-  return [open, change];
-}
+/** Whether a stored value says the card was left open. */
+const restoredOpen = (stored: string | null) => stored === "true";
 
 /** A whole number typed into a field, or NaN for one that is empty, which the schema refuses with its reason. */
 const typedNumber = (value: string) => Number.parseInt(value, 10);
@@ -56,7 +36,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
-  const [open, setOpen] = useRememberedOpen();
+  const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);
   const group = LISTING_GROUP[kind];
 
   if (settings.isError) return <ErrorNotice error={settings.error} />;

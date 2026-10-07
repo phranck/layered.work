@@ -34,6 +34,11 @@
       "development": "./src/sky.ts",
       "default": "./dist/sky.js"
     },
+    "./stored": {
+      "types": "./src/stored.ts",
+      "development": "./src/stored.ts",
+      "default": "./dist/stored.js"
+    },
     "./icons": {
       "types": "./src/icons.ts",
       "development": "./src/icons.ts",
