@@ -2,7 +2,7 @@ import { type CreateFormBody, createFormBody, type FormField, type FormFieldType
 import { Button, Card, Editor, Field, FormControls, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type PointerEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -11,6 +11,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
@@ -249,7 +250,6 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [addType, setAddType] = useState<FormFieldType>("shortText");
   const [problem, setProblem] = useState("");
-  const [dragged, setDragged] = useState<number | null>(null);
 
   useEffect(() => {
     if (loaded.data) {
@@ -307,19 +307,6 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   };
   const selectedField = selected === null ? null : draft?.fields[selected];
 
-  const onPointerUp = (event: PointerEvent<HTMLButtonElement>) => {
-    if (dragged === null || !draft) return;
-    const row = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>("[data-field-index]");
-    const to = Number(row?.dataset.fieldIndex);
-    if (row && Number.isInteger(to)) {
-      change(reorderFields(draft, dragged, to));
-      setSelected(to);
-    }
-    setDragged(null);
-  };
-
   return (
     <>
       <ScreenTitle title={draft?.name || text("formNew")} />
@@ -346,51 +333,35 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
                 />
                 <Card.Body>
-                  <div className="forms-fields">
+                  <Reorder.List
+                    className="forms-fields"
+                    count={draft.fields.length}
+                    onMove={(from, to) => {
+                      change(reorderFields(draft, from, to));
+                      setSelected(to);
+                    }}
+                  >
                     {draft.fields.map((field, index) => (
-                      <div
-                        key={field.key}
-                        className="forms-fields__row"
-                        data-field-index={index}
-                        data-selected={selected === index || undefined}
-                      >
-                        <button
-                          type="button"
-                          className="forms-fields__grip"
-                          aria-label={text("moveGroup", field.label[language] || field.key)}
-                          title={text("moveGroup", field.label[language] || field.key)}
-                          onPointerDown={(event) => {
-                            event.currentTarget.setPointerCapture(event.pointerId);
-                            setDragged(index);
-                          }}
-                          onPointerUp={onPointerUp}
-                          onPointerCancel={() => setDragged(null)}
-                          onKeyDown={(event) => {
-                            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
-                            event.preventDefault();
-                            const to = Math.max(
-                              0,
-                              Math.min(draft.fields.length - 1, index + (event.key === "ArrowUp" ? -1 : 1)),
-                            );
-                            change(reorderFields(draft, index, to));
-                            setSelected(to);
-                          }}
-                        >
-                          ⋮⋮
-                        </button>
-                        <button
-                          type="button"
-                          className="forms-fields__select"
-                          onClick={() => setSelected(index)}
-                        >
-                          <span>{field.label[language] || field.key}</span>
-                          <small>
-                            {FIELD_NAMES[field.type][language]} · {field.key}
-                          </small>
-                        </button>
-                      </div>
+                      <Reorder.Item key={field.key} index={index}>
+                        <div className="forms-fields__row" data-selected={selected === index || undefined}>
+                          <Reorder.Handle
+                            index={index}
+                            label={text("moveGroup", field.label[language] || field.key)}
+                          />
+                          <button
+                            type="button"
+                            className="forms-fields__select"
+                            onClick={() => setSelected(index)}
+                          >
+                            <span>{field.label[language] || field.key}</span>
+                            <small>
+                              {FIELD_NAMES[field.type][language]} · {field.key}
+                            </small>
+                          </button>
+                        </div>
+                      </Reorder.Item>
                     ))}
-                  </div>
+                  </Reorder.List>
                 </Card.Body>
                 <Card.Footer
                   actions={

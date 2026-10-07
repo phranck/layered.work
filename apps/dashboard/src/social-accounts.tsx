@@ -20,7 +20,7 @@ import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
-import "./footer-navigation.css";
+
 const listKey = ["social-accounts"] as const;
 type Dialog = { editing: SocialAccount | null } | { deleting: SocialAccount } | null;
 const platformOptions = SOCIAL_PLATFORMS.map((value) => ({ value, label: SOCIAL_PLATFORM_NAMES[value] }));

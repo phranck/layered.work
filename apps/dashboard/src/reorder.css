@@ -1,0 +1,10 @@
+/* The handle is a button of the UI package, whose `.button` rule sets the
+   pointer with the weight of one class. Two classes here, so the cursor says
+   the row is dragged rather than pressed. */
+.button.reorder-handle {
+  cursor: grab;
+  touch-action: none;
+}
+.button.reorder-handle:active {
+  cursor: grabbing;
+}

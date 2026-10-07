@@ -36,7 +36,6 @@ import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
 import { Translated } from "./translated.js";
-import "./footer-navigation.css";
 import "./home-blocks.css";
 
 /**
