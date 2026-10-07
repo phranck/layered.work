@@ -48,6 +48,7 @@ export function resolveValues(source: string, values: ReadonlyMap<string, string
       const nameNode = node.node.getChild(NODE.ValueName);
       const value = nameNode ? values.get(source.slice(nameNode.from, nameNode.to)) : undefined;
       if (value !== undefined) references.push({ from: node.from, to: node.to, text: asMarkdownText(value) });
+      // A reference holds only its name, so there is nothing further down to find.
       return false;
     },
   });
@@ -59,4 +60,26 @@ export function resolveValues(source: string, values: ReadonlyMap<string, string
     at = reference.to;
   }
   return resolved + source.slice(at);
+}
+
+/**
+ * The names a body refers to, read the way `resolveValues` reads them.
+ *
+ * What a value may not be deleted over, so it counts exactly the references
+ * that would otherwise be left pointing at nothing, and none in code.
+ *
+ * @param source - The body as written.
+ * @returns Each name once.
+ */
+export function referencedValueNames(source: string): Set<string> {
+  const names = new Set<string>();
+  if (!source.includes("{{")) return names;
+  parseContent(source).iterate({
+    enter(node) {
+      if (node.name !== NODE.ValueName) return true;
+      names.add(source.slice(node.from, node.to));
+      return false;
+    },
+  });
+  return names;
 }

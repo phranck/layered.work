@@ -134,6 +134,13 @@
       "when": 1791380884201,
       "tag": "0018_add_entry_specs",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791409779966,
+      "tag": "0019_named_values",
+      "breakpoints": true
     }
   ]
 }
