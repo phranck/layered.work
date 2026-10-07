@@ -5,7 +5,7 @@ import { media, mediaAttempts, mediaJobs, mediaVariants } from "../db/schema/ind
 import { logger } from "../logger.js";
 import { processMediaAttemptCleanup, settleMediaAttempt } from "./attempts.js";
 import { deleteMediaObject, readMediaBytes, writeMediaBytes } from "./storage.js";
-import { deriveImageVariants } from "./variants.js";
+import { deriveImageVariants, variantMimeType } from "./variants.js";
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
 const LEASE_MS = 300_000;
@@ -88,7 +88,7 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
     });
     if (!reserved.length) return true;
     for (const variant of variants)
-      await writeMediaBytes(variant.storageKey, variant.bytes, `image/${variant.format}`);
+      await writeMediaBytes(variant.storageKey, variant.bytes, variantMimeType(variant.format));
     published = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(mediaJobs).where(owned).for("update");
       if (!current) return false;

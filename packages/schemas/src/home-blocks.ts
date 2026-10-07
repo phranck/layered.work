@@ -43,6 +43,14 @@ export type HomeBlockSetting =
   | { key: string; kind: "choice"; options: readonly [string, ...string[]]; default: string }
   | { key: string; kind: "picture" };
 
+/**
+ * Whether the countdown's sky of nodes is drawn behind a block.
+ *
+ * Every kind of block declares it, and it is off unless somebody switches it on,
+ * so a page arranged before it existed looks as it did.
+ */
+const SKY_SETTING: HomeBlockSetting = { key: "sky", kind: "flag", default: false };
+
 /** What one kind of block is and what it can be set to. */
 export interface HomeBlockDeclaration {
   /**
@@ -82,6 +90,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       },
       { key: "showPicture", kind: "flag", default: true },
       { key: "picture", kind: "picture" },
+      SKY_SETTING,
     ],
   },
   featured_entry: {
@@ -93,6 +102,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
         fallback: { en: "From the workbench", de: "Woran gerade gearbeitet wird" },
       },
       { key: "source", kind: "choice", options: ["featured", "newest"], default: "featured" },
+      SKY_SETTING,
     ],
   },
   project_grid: {
@@ -105,6 +115,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       },
       { key: "limit", kind: "number", ...HOME_GRID_LIMIT, default: 6 },
       { key: "order", kind: "choice", options: ["newest", "oldest", "title"], default: "newest" },
+      SKY_SETTING,
     ],
   },
   post_grid: {
@@ -118,6 +129,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       { key: "limit", kind: "number", ...HOME_GRID_LIMIT, default: 6 },
       { key: "order", kind: "choice", options: ["newest", "oldest", "title"], default: "newest" },
       { key: "excludeFeatured", kind: "flag", default: false },
+      SKY_SETTING,
     ],
   },
   topic_bar: {
@@ -125,6 +137,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
     settings: [
       { key: "title", kind: "line", fallback: { en: "Browse by topic", de: "Themen im Archiv" } },
       { key: "showCounts", kind: "flag", default: true },
+      SKY_SETTING,
     ],
   },
 };

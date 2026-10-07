@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { zoomOf } from "./interface-scale.js";
 
 /**
  * The order of the sidebar's groups, which the reader sets by dragging a
@@ -127,9 +128,17 @@ function writeStored(ids: readonly string[]): void {
   }
 }
 
-/** What a drag knows from its first moment, so nothing is read back off the page whilst it runs. */
+/**
+ * What a drag knows from its first moment, so nothing is read back off the page while it runs.
+ *
+ * Every position is in the document's pixels, which are what a transform is
+ * written in. The window's pixels, which the pointer and the boxes are measured
+ * in, differ from them by the interface scale's zoom.
+ */
 interface Drag {
   pointerId: number;
+  /** The zoom the window's pixels are divided by to give the document's. */
+  zoom: number;
   from: number;
   to: number;
   originY: number;
@@ -207,7 +216,7 @@ export function useSidebarOrder<Group extends { id: string }>(
       element.style.transition = "none";
       element.style.transform = "";
       const top = previous.get(id);
-      const delta = top === undefined ? 0 : top - element.getBoundingClientRect().top;
+      const delta = top === undefined ? 0 : (top - element.getBoundingClientRect().top) / zoomOf(element);
       if (Math.abs(delta) >= 0.5) element.style.transform = `translateY(${delta}px)`;
       element.getBoundingClientRect();
       element.style.transition = "";
@@ -269,9 +278,10 @@ export function useSidebarOrder<Group extends { id: string }>(
 
       // One read of the layout, before anything moves. Reading a box again
       // during the drag would measure the transform just written.
+      const zoom = zoomOf(container.current);
       const boxes = present.map((element) => {
         const box = element.getBoundingClientRect();
-        return { top: box.top, height: box.height };
+        return { top: box.top / zoom, height: box.height / zoom };
       });
       const pitches = boxes.map((box, index) => {
         const next = boxes[index + 1];
@@ -279,10 +289,11 @@ export function useSidebarOrder<Group extends { id: string }>(
       });
       const state: Drag = {
         pointerId: event.pointerId,
+        zoom,
         from,
         to: from,
-        originY: event.clientY,
-        containerTop: container.current.getBoundingClientRect().top,
+        originY: event.clientY / zoom,
+        containerTop: container.current.getBoundingClientRect().top / zoom,
         boxes,
         pitches,
         elements: present,
@@ -300,7 +311,7 @@ export function useSidebarOrder<Group extends { id: string }>(
     onPointerMove(event) {
       const state = drag.current;
       if (!state || state.pointerId !== event.pointerId) return;
-      const offset = event.clientY - state.originY;
+      const offset = event.clientY / state.zoom - state.originY;
       const dragged = state.elements[state.from];
       if (dragged) dragged.style.transform = `translateY(${offset}px)`;
       const to = dropIndex(state.boxes, state.from, offset);

@@ -9,7 +9,7 @@ import {
   hasTestDatabase,
   testDatabase,
 } from "../test-support/database.js";
-import { media } from "./schema/index.js";
+import { media, mediaVariants } from "./schema/index.js";
 import { syncMissingObjects } from "./sync-media.js";
 
 const runs = hasTestDatabase ? describe : describe.skip;
@@ -132,5 +132,85 @@ runs("syncing the library to the bucket", () => {
       }),
     ).rejects.toThrow("uploads/changed");
     expect(uploads).toBe(0);
+  });
+
+  /** An image whose original the bucket already holds, with one derived size of the given recorded length. */
+  async function imageWithSize(sizeBytes: Buffer, recordedSize = sizeBytes.length): Promise<string> {
+    const database = await testDatabase();
+    const original = Buffer.from("original picture");
+    const [row] = await database
+      .insert(media)
+      .values({
+        slug: "cover",
+        kind: "image",
+        mimeType: "image/jpeg",
+        storageKey: "uploads/cover.jpg",
+        byteSize: original.length,
+        checksum: checksum(original),
+        width: 1200,
+        height: 600,
+      })
+      .returning({ id: media.id });
+    if (!row) throw new Error("No image row.");
+    const storageKey = `variants/${row.id}/attempt/cover.avif`;
+    await mkdir(join(root, "variants", row.id, "attempt"), { recursive: true });
+    await writeFile(join(root, storageKey), sizeBytes);
+    await database.insert(mediaVariants).values({
+      mediaId: row.id,
+      format: "avif",
+      width: 348,
+      height: 174,
+      byteSize: recordedSize,
+      storageKey,
+    });
+    return storageKey;
+  }
+
+  it("uploads a size the bucket is missing beside an original it holds, with the size's type", async () => {
+    const size = Buffer.from("derived size");
+    const storageKey = await imageWithSize(size);
+    const objects = new Map<string, Buffer>([["uploads/cover.jpg", Buffer.from("original picture")]]);
+    const types = new Map<string, string>();
+
+    const synced = await syncMissingObjects(await testDatabase(), root, {
+      exists: async (key) => objects.has(key),
+      put: async (key, bytes, mimeType) => {
+        objects.set(key, bytes);
+        types.set(key, mimeType);
+      },
+      read: async (key) => objects.get(key) ?? Promise.reject(new Error(`Missing ${key}`)),
+    });
+
+    expect(synced).toEqual([storageKey]);
+    expect(objects.get(storageKey)).toEqual(size);
+    expect(types.get(storageKey)).toBe("image/avif");
+  });
+
+  it("refuses a size whose local bytes differ from its recorded length before uploading anything", async () => {
+    const storageKey = await imageWithSize(Buffer.from("truncated"), 4096);
+    let uploads = 0;
+
+    await expect(
+      syncMissingObjects(await testDatabase(), root, {
+        exists: async (key) => key === "uploads/cover.jpg",
+        put: async () => {
+          uploads += 1;
+        },
+        read: async () => Buffer.alloc(0),
+      }),
+    ).rejects.toThrow(storageKey);
+    expect(uploads).toBe(0);
+  });
+
+  it("fails when the bucket returns a size of a different length than was uploaded", async () => {
+    const storageKey = await imageWithSize(Buffer.from("derived size"));
+
+    await expect(
+      syncMissingObjects(await testDatabase(), root, {
+        exists: async (key) => key === "uploads/cover.jpg",
+        put: async () => {},
+        read: async () => Buffer.from("cut"),
+      }),
+    ).rejects.toThrow(storageKey);
   });
 });

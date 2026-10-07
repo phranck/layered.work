@@ -59,7 +59,7 @@ export { Row, RowList, type RowTextProps } from "./row.js";
 export { Section, type SectionLeadProps, type SectionTitleProps } from "./section.js";
 export { isApplePlatform, Shortcut, type ShortcutPlatform, type ShortcutProps } from "./shortcut.js";
 export { Sidebar } from "./sidebar.js";
-export { SkyBackdrop } from "./sky-backdrop.js";
+export { SkyBackdrop, SkyBand } from "./sky-backdrop.js";
 export { Spacer } from "./spacer.js";
 export { Stack, type StackProps } from "./stack.js";
 export { Video, type VideoProps } from "./video.js";

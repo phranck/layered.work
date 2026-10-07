@@ -2,12 +2,34 @@
 @import "@layered/ui/base.css";
 @import "@layered/ui/index.css";
 
+/* The interface scale. `interface-scale.ts` names the steps and writes the
+   chosen one onto the root element; the factors are here. M is the size the
+   dashboard is designed at, so it states nothing. `zoom` scales pixels and rem
+   alike, which a larger root font size would not, because spacing, heights and
+   icons are pixels. --viewport-height divides by the same factor, so the frame
+   still fits the window. */
+:root {
+  zoom: var(--interface-zoom);
+}
+
+:root[data-interface-scale="s"] {
+  --interface-zoom: 0.9;
+}
+
+:root[data-interface-scale="l"] {
+  --interface-zoom: 1.1;
+}
+
+:root[data-interface-scale="xl"] {
+  --interface-zoom: 1.25;
+}
+
 .workbench {
   display: grid;
   flex: 1;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--viewport-height);
+  min-height: var(--viewport-height);
   font-size: var(--text-body);
   line-height: var(--leading-normal);
 }

@@ -18,12 +18,16 @@ import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { DASHBOARD_LANGUAGES } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
+import { INTERFACE_SCALES, restoredScale, useInterfaceScale } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSignOut } from "./session-queries.js";
+
+/** The interface sizes as the segmented control offers them, labeled like the reading width's steps. */
+const SCALE_OPTIONS = INTERFACE_SCALES.map((scale) => ({ value: scale, label: scale.toUpperCase() }));
 
 export function AccountDialog({ account, onClose }: { account: AccountProfile; onClose: () => void }) {
   const api = useDashboardApi();
@@ -38,6 +42,10 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   });
   const [avatarUrl, setAvatarUrl] = useState(account.avatarUrl);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Kept by this browser rather than by the account, and applied with the
+  // account's own changes when the dialog is saved, as the language is.
+  const [scale, chooseScale] = useInterfaceScale();
+  const [scaleDraft, setScaleDraft] = useState(scale);
   const savingRef = useRef(false);
   const signingOutRef = useRef(false);
   const save = useMutation({
@@ -84,6 +92,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
     savingRef.current = true;
     try {
       await save.mutateAsync(draft);
+      chooseScale(scaleDraft);
       notify({ tone: "success", message: text("saved") });
       onClose();
     } catch {
@@ -187,6 +196,14 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                         interfaceLanguage: value as UpdateAccountBody["interfaceLanguage"],
                       }))
                     }
+                  />
+                </Field>
+                <Field label={text("accountScale")} hint={text("accountScaleHint")}>
+                  <Segmented
+                    aria-label={text("accountScale")}
+                    value={scaleDraft}
+                    options={SCALE_OPTIONS}
+                    onValueChange={(value) => setScaleDraft(restoredScale(value))}
                   />
                 </Field>
                 {(upload.error || save.error || signOut.error) && (

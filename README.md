@@ -8,7 +8,7 @@ The website at [layered.work](https://layered.work) and the editorial dashboard 
 | --- | --- | --- |
 | Website | `layered.work` | Posts, project pages and a composed home page, in German and English |
 | Dashboard | `dashboard.layered.work` | Where everything on the website is written and arranged |
-| API | `api.layered.work` | What both of the above talk to |
+| API | none, reached inside the Zerops project | What both of the above talk to |
 
 The work is planned entirely in GitHub Issues on the `layered.work` project board. The epics carry the specifications, the sub-issues carry the steps.
 

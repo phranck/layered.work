@@ -1,0 +1,10 @@
+<script>
+  import { startSky } from "@layered/ui/sky";
+
+  // A band's sky is rendered to static markup, where no effect runs, so every
+  // web on the page is started here. Astro includes this script once, however
+  // many bands carry a sky.
+  document.querySelectorAll<HTMLCanvasElement>(".sky--band canvas").forEach((canvas) => {
+    startSky(canvas);
+  });
+</script>

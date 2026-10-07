@@ -64,6 +64,12 @@ const SEGMENT_WORD_LIMIT = 10;
  * @param language - The interface language, which is also the language whose texts it quotes.
  */
 export function blockSummary(text: Text, block: StoredHomeBlock, language: InterfaceLanguage): string {
+  const summary = contentSummary(text, block, language);
+  return block.settings.sky === true ? `${summary} · ${text("homeSummarySky")}` : summary;
+}
+
+/** What a block shows, before anything it shows behind it. */
+function contentSummary(text: Text, block: StoredHomeBlock, language: InterfaceLanguage): string {
   const settings = block.settings;
   switch (block.type) {
     case "hero":

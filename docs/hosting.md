@@ -38,7 +38,7 @@ The repository is public, which is what makes that free: GitHub bills Actions mi
 
 ## Addresses
 
-Until DNS points at the project, everything is reached through the Zerops subdomains. They are enabled on the three application services and the documentation calls them unsuitable for production, which is exactly what they are for here.
+Each application service also answers on a Zerops subdomain. They are enabled on all three, and the Zerops documentation calls them unsuitable for production.
 
 | Service | Address |
 | --- | --- |
@@ -65,9 +65,11 @@ This cost an hour on 13 September 2026. The process was healthy the whole time a
 
 The A record is Zerops' shared IPv4, which lmaa.space and musiccloud.io answer on as well, so routing is by host name rather than by address. That is what `sharedIpv4: true` in the import file buys, against $3 per 30 days for a dedicated address.
 
-Zerops issued the certificate through Let's Encrypt, valid to 12 December 2026, covering `layered.work` alone. HTTP answers 301 to HTTPS.
+`dashboard.layered.work` carries the same two records and is attached to the `dashboard` service.
 
-`dashboard.layered.work` carries the same two records and is attached to the `dashboard` service. Zerops issued one certificate covering both names, so the site and the dashboard share it. `api.layered.work` has no record yet and is reached through its Zerops subdomain.
+Zerops issues the certificate through Let's Encrypt. One certificate covers `layered.work`, `dashboard.layered.work` and `new.layered.work`, and on 7 October 2026 it was valid to 20 December 2026. HTTP answers 301 to HTTPS on all three.
+
+**The API has no public name, because nothing outside the project addresses it by one.** The site's server asks it at `http://backend:3000` inside the project. The dashboard's nginx passes `/api/` on to `http://backend.zerops:3000`, so a browser only ever talks to the host whose page it shows. A name for the API costs a DNS record and a certificate, and it is attached once a client outside the project needs one.
 
 `new.layered.work` carries the same two records and answers on the `website` service. It is one of the preview hosts in `apps/website/src/site.ts`, so it shows the finished site whilst `layered.work` still shows the countdown, and the smoke test checks the site there.
 
@@ -230,7 +232,7 @@ ln -s ../apps/website/public/media media-local/migration
 
 The site addresses a file as its key behind `MEDIA_ORIGIN`, which is the bucket's root in production. Locally `MEDIA_ORIGIN` is unset, so the address is the bare key, and the website's development server answers it from `media-local/` through `apps/website/tools/local-media.mjs`. `pnpm --filter @layered/backend db:verify` asks the store for every key in the library and fails where one names no object.
 
-Before a batch release, put the four bucket values in the ignored `.env.local` as `ZEROPS_S3_ENDPOINT`, `ZEROPS_S3_BUCKET`, `ZEROPS_S3_ACCESS_KEY_ID`, and `ZEROPS_S3_SECRET_ACCESS_KEY`, then run `pnpm --filter @layered/backend db:sync-media` from the local checkout. Only this command maps those values to `S3_*`; ordinary local backend runs continue to use `media-local/`. The command refuses a database outside localhost, reads the library's storage keys from the local database, and uploads only objects absent from the bucket. It checks the local bytes against the database's size and SHA-256 before upload, then reads each uploaded object back and checks it again. Keep `DATABASE_URL` pointed at the local database.
+Before a batch release, put the four bucket values in the ignored `.env.local` as `ZEROPS_S3_ENDPOINT`, `ZEROPS_S3_BUCKET`, `ZEROPS_S3_ACCESS_KEY_ID`, and `ZEROPS_S3_SECRET_ACCESS_KEY`, then run `pnpm --filter @layered/backend db:sync-media` from the local checkout. Only this command maps those values to `S3_*`; ordinary local backend runs continue to use `media-local/`. The command refuses a database outside localhost, reads the storage keys of every original and every generated size from the local database, and uploads only objects absent from the bucket. Before the first upload it checks every local file against the database. An original is checked against its size and SHA-256, and a generated size against its byte count, because `media_variants` records no checksum. Each uploaded object is then read back and checked again. Keep `DATABASE_URL` pointed at the local database.
 
 An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
 
@@ -320,7 +322,7 @@ To put a backup back into production, restore it into the local container in pla
 
 ### The bucket
 
-Zerops does not back up [object storage](https://docs.zerops.io/guides/object-storage-integration). This machine holds every object the bucket serves: the migrated files and their sizes in `apps/website/public/media/`, which the migration pipeline staged and git ignores, and every upload in `media-local/uploads/`. A lost bucket is filled again from here: `scripts/publii/upload.mjs` uploads the migrated files and their sizes, `db:sync-media` every original in the library, and `db:verify-bucket` names whatever is still missing. The sizes the backend generated for an upload are uploaded by neither yet, which #292 covers.
+Zerops does not back up [object storage](https://docs.zerops.io/guides/object-storage-integration). This machine holds every object the bucket serves: the migrated files and their sizes in `apps/website/public/media/`, which the migration pipeline staged and git ignores, every upload in `media-local/uploads/`, and the sizes the backend generated for an upload in `media-local/variants/`. A lost bucket is filled again from here: `scripts/publii/upload.mjs` uploads the migrated files and their sizes, `db:sync-media` every original and every size in the library, and `db:verify-bucket` names whatever is still missing.
 
 ## Secrets and environment
 
@@ -328,4 +330,4 @@ Zerops does not back up [object storage](https://docs.zerops.io/guides/object-st
 
 ## What the smoke test asks
 
-What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
+What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, because the API has no public name. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.

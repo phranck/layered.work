@@ -81,7 +81,12 @@ describe("reading a block's settings", () => {
       limit: 6,
       order: "title",
       excludeFeatured: false,
+      sky: false,
     });
+  });
+
+  it("reads every kind of block stored before the sky existed with the sky off", () => {
+    for (const type of homeBlockTypes) expect(homeBlockSettings(type, {}).sky, type).toBe(false);
   });
 
   it("reads a picture the snapshot names by its slug", () => {
