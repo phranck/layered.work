@@ -88,6 +88,7 @@ runs("scoped bearer requests", () => {
       showInOtherLanguage: false,
       slug: `scoped-${randomUUID()}`,
       topicIds: [],
+      specs: [],
     };
     const refused = await app.request(`/entries/${detail.id}`, {
       method: "PUT",

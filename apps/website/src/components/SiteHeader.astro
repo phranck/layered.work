@@ -15,15 +15,32 @@ const homePath = language === "de" ? "/de/" : "/";
 const searchPath = language === "de" ? "/de/search/" : "/search/";
 const endpoint = language === "de" ? "/de/search.json" : "/search.json";
 const indexPath = language === "de" ? "/de/search-index.json" : "/search-index.json";
-const unavailable = language === "de"
-  ? "Dieser Inhalt ist nicht auf Englisch verfügbar."
-  : "This content is not available in German.";
-const searchCopy = language === "de"
-  ? { label: "Suchen", placeholder: "Beiträge und Projekte durchsuchen", empty: "Nichts gefunden.", hint: "Tippe, um zu suchen.", all: "Alle Ergebnisse anzeigen", failed: "Die Suche ist gerade nicht verfügbar." }
-  : { label: "Search", placeholder: "Search posts and projects", empty: "Nothing found.", hint: "Type to search.", all: "Show every result", failed: "Search is unavailable right now." };
-const kindNames = language === "de"
-  ? { post: "Beitrag", project: "Projekt", page: "Seite" }
-  : { post: "Post", project: "Project", page: "Page" };
+const unavailable =
+  language === "de"
+    ? "Dieser Inhalt ist nicht auf Englisch verfügbar."
+    : "This content is not available in German.";
+const searchCopy =
+  language === "de"
+    ? {
+        label: "Suchen",
+        placeholder: "Beiträge und Projekte durchsuchen",
+        empty: "Nichts gefunden.",
+        hint: "Tippe, um zu suchen.",
+        all: "Alle Ergebnisse anzeigen",
+        failed: "Die Suche ist gerade nicht verfügbar.",
+      }
+    : {
+        label: "Search",
+        placeholder: "Search posts and projects",
+        empty: "Nothing found.",
+        hint: "Type to search.",
+        all: "Show every result",
+        failed: "Search is unavailable right now.",
+      };
+const kindNames =
+  language === "de"
+    ? { post: "Beitrag", project: "Projekt", page: "Seite" }
+    : { post: "Post", project: "Project", page: "Page" };
 ---
 
 <header class="site-header">
@@ -32,35 +49,79 @@ const kindNames = language === "de"
     <nav class="site-nav" aria-label={language === "de" ? "Hauptnavigation" : "Main navigation"}>
       {navigation.map((item) => (
         <div class="site-nav__item">
-          <a href={item.href} aria-current={isCurrentPath(Astro.url.pathname, item.href) ? "page" : undefined}>{item.label}</a>
-          {item.children && item.children.length > 0 && <details class="site-nav__branch">
-            <summary aria-label={language === "de" ? `Untermenü ${item.label}` : `${item.label} submenu`}>▾</summary>
-            <ul>{item.children.map(child => <li><a href={child.href} aria-current={isCurrentPath(Astro.url.pathname, child.href) ? "page" : undefined}>{child.label}</a></li>)}</ul>
-          </details>}
+          <a
+            href={item.href}
+            aria-current={isCurrentPath(Astro.url.pathname, item.href) ? "page" : undefined}
+          >
+            {item.label}
+          </a>
+          {item.children && item.children.length > 0 && (
+            <details class="site-nav__branch">
+              <summary aria-label={language === "de" ? `Untermenü ${item.label}` : `${item.label} submenu`}>
+                ▾
+              </summary>
+              <ul>
+                {item.children.map((child) => (
+                  <li>
+                    <a
+                      href={child.href}
+                      aria-current={isCurrentPath(Astro.url.pathname, child.href) ? "page" : undefined}
+                    >
+                      {child.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       ))}
     </nav>
     <div class="header-tools">
-      <a class="search-trigger" href={searchPath} data-search-trigger aria-label={searchCopy.label} aria-keyshortcuts="Meta+K Control+K">
+      <a
+        class="search-trigger"
+        href={searchPath}
+        data-search-trigger
+        aria-label={searchCopy.label}
+        aria-keyshortcuts="Meta+K Control+K"
+      >
         <MagnifyingGlassIcon weight="duotone" aria-hidden="true" />
         <span>{searchCopy.label}</span>
         <Shortcut shortcutKey="K" platform="apple" aria-hidden="true" />
       </a>
       <div class="lang-switch" role="group" aria-label={language === "de" ? "Sprache" : "Language"}>
-        {(["en", "de"] as const).map((code) => (
+        {(["en", "de"] as const).map((code) =>
           code === language ? (
-            <span class="lang-switch__option" aria-current="true" lang={code}>{code.toUpperCase()}</span>
+            <span class="lang-switch__option" aria-current="true" lang={code}>
+              {code.toUpperCase()}
+            </span>
           ) : translationPath ? (
-            <a class="lang-switch__option" href={translationPath} hreflang={code} lang={code} title={code === "de" ? "Deutsch" : "English"}>
+            <a
+              class="lang-switch__option"
+              href={translationPath}
+              hreflang={code}
+              lang={code}
+              title={code === "de" ? "Deutsch" : "English"}
+            >
               {code.toUpperCase()}
             </a>
           ) : (
-            <span class="lang-switch__option" aria-disabled="true" aria-describedby="translation-unavailable" tabindex="0" title={unavailable}>
+            <span
+              class="lang-switch__option"
+              aria-disabled="true"
+              aria-describedby="translation-unavailable"
+              tabindex="0"
+              title={unavailable}
+            >
               {code.toUpperCase()}
             </span>
-          )
-        ))}
-        {!translationPath && <span id="translation-unavailable" class="lang-switch__explanation" role="tooltip">{unavailable}</span>}
+          ),
+        )}
+        {!translationPath && (
+          <span id="translation-unavailable" class="lang-switch__explanation" role="tooltip">
+            {unavailable}
+          </span>
+        )}
       </div>
     </div>
   </div>
@@ -82,12 +143,28 @@ const kindNames = language === "de"
 >
   <form class="search-dialog__form" role="search" method="get" action={searchPath}>
     <MagnifyingGlassIcon weight="duotone" aria-hidden="true" />
-    <input class="search-dialog__field" type="search" name="q" maxlength="120" autocomplete="off" spellcheck="false" placeholder={searchCopy.placeholder} aria-label={searchCopy.placeholder} />
+    <input
+      class="search-dialog__field"
+      type="search"
+      name="q"
+      maxlength="120"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder={searchCopy.placeholder}
+      aria-label={searchCopy.placeholder}
+    />
   </form>
   <ul class="search-dialog__results" data-search-results></ul>
-  <p class="search-dialog__note" data-search-note>{searchCopy.hint}</p>
+  <p class="search-dialog__note" data-search-note>
+    {searchCopy.hint}
+  </p>
   <template data-search-result-template>
-    <li><a class="search-result"><span class="search-result__title"></span><span class="search-result__kind"></span></a></li>
+    <li>
+      <a class="search-result">
+        <span class="search-result__title"></span>
+        <span class="search-result__kind"></span>
+      </a>
+    </li>
   </template>
 </dialog>
 
@@ -100,7 +177,7 @@ const kindNames = language === "de"
   import type { PublicSearchHit } from "@layered/schemas";
   import { findEntries, type SearchIndexEntry } from "../search/overlay.js";
 
-  const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]');
+  const dialog = document.querySelector<HTMLDialogElement>("[data-search-dialog]");
   // Every string the script shows is rendered by the server, so the overlay
   // speaks the language of the page it sits on without a second copy here.
   const copy = dialog?.dataset ?? ({} as DOMStringMap);
@@ -109,29 +186,29 @@ const kindNames = language === "de"
     project: copy.kindProject,
     page: copy.kindPage,
   };
-  const field = dialog?.querySelector<HTMLInputElement>('.search-dialog__field');
-  const list = dialog?.querySelector<HTMLUListElement>('[data-search-results]');
-  const note = dialog?.querySelector<HTMLParagraphElement>('[data-search-note]');
-  const template = dialog?.querySelector<HTMLTemplateElement>('[data-search-result-template]');
-  const form = dialog?.querySelector<HTMLFormElement>('.search-dialog__form');
+  const field = dialog?.querySelector<HTMLInputElement>(".search-dialog__field");
+  const list = dialog?.querySelector<HTMLUListElement>("[data-search-results]");
+  const note = dialog?.querySelector<HTMLParagraphElement>("[data-search-note]");
+  const template = dialog?.querySelector<HTMLTemplateElement>("[data-search-result-template]");
+  const form = dialog?.querySelector<HTMLFormElement>(".search-dialog__form");
 
   let index: SearchIndexEntry[] | null = null;
   let loading: Promise<void> | null = null;
 
   /** Site-relative and single-slashed, so nothing from the index can become an origin. */
-  const isLocalPath = (path: string) => path.startsWith('/') && !path.startsWith('//');
+  const isLocalPath = (path: string) => path.startsWith("/") && !path.startsWith("//");
 
   // The paths in the index are the site's own, which is right wherever the site
   // is the root. Under a prefix, such as the local preview export, the index
   // itself is the one address that already carries that prefix, so the results
   // take theirs from it.
-  const base = (dialog?.dataset.searchIndex ?? '').replace(/(?:\/de)?\/search-index\.json$/, '');
+  const base = (dialog?.dataset.searchIndex ?? "").replace(/(?:\/de)?\/search-index\.json$/, "");
 
   function render(query: string) {
     if (!list || !note || !template) return;
     list.replaceChildren();
     if (!index) {
-      note.textContent = query.trim() ? '' : (copy.hint ?? '');
+      note.textContent = query.trim() ? "" : (copy.hint ?? "");
       return;
     }
     showMatches(findEntries(index, query), query);
@@ -143,36 +220,56 @@ const kindNames = language === "de"
     for (const entry of matches) {
       if (!isLocalPath(entry.path)) continue;
       const item = template.content.cloneNode(true) as DocumentFragment;
-      const link = item.querySelector('a');
+      const link = item.querySelector("a");
       if (!link) continue;
-      link.setAttribute('href', `${base}${entry.path}`);
-      const title = link.querySelector('.search-result__title');
-      const kind = link.querySelector('.search-result__kind');
+      link.setAttribute("href", `${base}${entry.path}`);
+      const title = link.querySelector(".search-result__title");
+      const kind = link.querySelector(".search-result__kind");
       if (title) title.textContent = entry.title;
       if (kind) kind.textContent = kinds[entry.kind] ?? entry.kind;
       list.append(item);
     }
-    note.textContent = (!query.trim() ? copy.hint : matches.length ? copy.all : copy.empty) ?? '';
+    note.textContent = (!query.trim() ? copy.hint : matches.length ? copy.all : copy.empty) ?? "";
   }
 
-  const remote = copy.searchEndpoint ? createRemoteSearch(copy.searchEndpoint, (result, query) => showMatches(result.entries, query), error => {
-    if (note) note.textContent = `${copy.failed ?? error.message}${error.id ? ` (${error.id})` : ''}`;
-    console.error(JSON.stringify({ code:error.code, errorId:error.id, operation:'public_search', route:copy.searchEndpoint, status:error.status, result:'unavailable' }));
-  }) : undefined;
-  const search = (query: string) => { if (remote) remote(query); else render(query); };
+  const remote = copy.searchEndpoint
+    ? createRemoteSearch(
+        copy.searchEndpoint,
+        (result, query) => showMatches(result.entries, query),
+        (error) => {
+          if (note) note.textContent = `${copy.failed ?? error.message}${error.id ? ` (${error.id})` : ""}`;
+          console.error(
+            JSON.stringify({
+              code: error.code,
+              errorId: error.id,
+              operation: "public_search",
+              route: copy.searchEndpoint,
+              status: error.status,
+              result: "unavailable",
+            }),
+          );
+        },
+      )
+    : undefined;
+  const search = (query: string) => {
+    if (remote) remote(query);
+    else render(query);
+  };
 
   async function loadIndex() {
     if (index || loading) return loading ?? undefined;
     const source = dialog?.dataset.searchIndex;
     if (!source) return;
-    loading = fetch(source, { headers: { Accept: 'application/json' } })
-      .then(response => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+    loading = fetch(source, { headers: { Accept: "application/json" } })
+      .then((response) =>
+        response.ok ? response.json() : Promise.reject(new Error(String(response.status))),
+      )
       .then((entries: SearchIndexEntry[]) => {
         index = entries;
-        render(field?.value ?? '');
+        render(field?.value ?? "");
       })
       .catch(() => {
-        if (note) note.textContent = copy.failed ?? '';
+        if (note) note.textContent = copy.failed ?? "";
       });
     return loading;
   }
@@ -188,7 +285,7 @@ const kindNames = language === "de"
 
   /** Moves the focus along the results, with the field as the position above the first. */
   function step(direction: 1 | -1) {
-    const options = Array.from(list?.querySelectorAll<HTMLAnchorElement>('a.search-result') ?? []);
+    const options = Array.from(list?.querySelectorAll<HTMLAnchorElement>("a.search-result") ?? []);
     if (options.length === 0) return;
     const current = options.indexOf(document.activeElement as HTMLAnchorElement);
     const next = current + direction;
@@ -196,9 +293,9 @@ const kindNames = language === "de"
     else options[Math.min(next, options.length - 1)]?.focus();
   }
 
-  const trigger = document.querySelector<HTMLAnchorElement>('[data-search-trigger]');
+  const trigger = document.querySelector<HTMLAnchorElement>("[data-search-trigger]");
 
-  trigger?.addEventListener('click', event => {
+  trigger?.addEventListener("click", (event) => {
     if (!dialog) return;
     event.preventDefault();
     open();
@@ -208,37 +305,43 @@ const kindNames = language === "de"
   // the page itself when the overlay was opened by the shortcut. The reader
   // came from the trigger either way, so that is where they go back to, and
   // quietly: closing is not navigating to the trigger.
-  dialog?.addEventListener('close', () => returnFocusQuietly(trigger));
+  dialog?.addEventListener("close", () => returnFocusQuietly(trigger));
 
-  field?.addEventListener('input', () => search(field.value));
+  field?.addEventListener("input", () => search(field.value));
 
   // The form's own submit carries the query to the search page, which is also
   // what happens without any of this script.
-  form?.addEventListener('submit', () => dialog?.close());
+  form?.addEventListener("submit", () => dialog?.close());
 
-  dialog?.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
+  dialog?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
       // A search input takes the first Escape to clear itself, so the dialog
       // would need two presses to close. One is what the reader expects.
       event.preventDefault();
       dialog.close();
       return;
     }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
-    step(event.key === 'ArrowDown' ? 1 : -1);
+    step(event.key === "ArrowDown" ? 1 : -1);
   });
 
   // Clicking the backdrop lands on the dialog itself, never on its panel.
-  dialog?.addEventListener('click', event => {
+  dialog?.addEventListener("click", (event) => {
     if (event.target === dialog) dialog.close();
   });
 
-  document.addEventListener('keydown', event => {
-    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'k') return;
-    if (document.querySelector('dialog[open]')) return;
+  document.addEventListener("keydown", (event) => {
+    if (
+      !(event.metaKey || event.ctrlKey) ||
+      event.altKey ||
+      event.shiftKey ||
+      event.key.toLowerCase() !== "k"
+    )
+      return;
+    if (document.querySelector("dialog[open]")) return;
     event.preventDefault();
     if (dialog) open();
-    else document.querySelector<HTMLAnchorElement>('.search-trigger')?.click();
+    else document.querySelector<HTMLAnchorElement>(".search-trigger")?.click();
   });
 </script>

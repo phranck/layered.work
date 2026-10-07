@@ -1,5 +1,11 @@
 import { validateContent } from "@layered/content";
-import type { EntryDetail, EntryKind, SaveEntryBody } from "@layered/schemas";
+import {
+  type EntryDetail,
+  type EntryKind,
+  entrySpecs,
+  type SaveEntryBody,
+  saveEntryBody,
+} from "@layered/schemas";
 import { Button, Card, Editor, Section } from "@layered/ui";
 import {
   ArrowCounterClockwiseIcon,
@@ -53,25 +59,46 @@ function draftOf(entry: EntryDetail): SaveEntryBody {
     readingWidth: entry.readingWidth,
     showInOtherLanguage: entry.showInOtherLanguage,
     topicIds: entry.topics.map((topic) => topic.id),
+    specs: entry.specs,
     slug: entry.slug,
   };
 }
 
 /**
  * Whether two drafts say the same thing. Compared field by field, never by
- * serialising, and the topics as a set, because their order means nothing.
+ * serialising: the topics as a set, because their order means nothing, and the
+ * specification pair by pair, because its order is what the page shows.
  */
 function sameDraft(first: SaveEntryBody, second: SaveEntryBody): boolean {
-  const { topicIds: firstTopics, ...firstFields } = first;
-  const { topicIds: secondTopics, ...secondFields } = second;
+  const { topicIds: firstTopics, specs: firstSpecs, ...firstFields } = first;
+  const { topicIds: secondTopics, specs: secondSpecs, ...secondFields } = second;
   const secondTopicIds = new Set(secondTopics);
   return (
     (Object.keys(firstFields) as (keyof typeof firstFields)[]).every(
       (key) => firstFields[key] === secondFields[key],
     ) &&
     firstTopics.length === secondTopics.length &&
-    firstTopics.every((id) => secondTopicIds.has(id))
+    firstTopics.every((id) => secondTopicIds.has(id)) &&
+    firstSpecs.length === secondSpecs.length &&
+    firstSpecs.every(
+      (pair, index) => pair.label === secondSpecs[index]?.label && pair.value === secondSpecs[index]?.value,
+    )
   );
+}
+
+/**
+ * The draft as a save would store it.
+ *
+ * The API trims a title, a summary, an address and every specification pair,
+ * so a draft holding a trailing space differs from what its own save returns.
+ * Compared as written, it would stay unsaved after every save, and a draft
+ * would save itself again every two seconds for as long as it stays open. The
+ * schema the API reads is applied here as well. A draft it refuses stays as it
+ * is, which differs from anything stored.
+ */
+function asStored(draft: SaveEntryBody): SaveEntryBody {
+  const parsed = saveEntryBody.safeParse(draft);
+  return parsed.success ? parsed.data : draft;
 }
 
 /**
@@ -165,7 +192,7 @@ function EntryEditor({
   }));
   const publishable = contentIsPublishable(draft.body, checked);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
-  const dirty = !sameDraft(draft, saved);
+  const dirty = !sameDraft(asStored(draft), saved);
   const times = useMemo(() => new Intl.DateTimeFormat(language, { timeStyle: "short" }), [language]);
 
   const save = useMutation({
@@ -193,9 +220,11 @@ function EntryEditor({
   // what is being written are drafts, so choosing "public" is never saved by
   // waiting.
   // An address still being typed, such as one ending in a hyphen, is not saved
-  // by any of the ways a save starts.
-  const savable = !entry.trashed && isSavableSlug(draft.slug) && (draft.state === "draft" || publishable);
-  const publishReady = !entry.trashed && isSavableSlug(draft.slug) && publishable;
+  // by any of the ways a save starts, and neither is a specification pair still
+  // missing its label or its value.
+  const writable = !entry.trashed && isSavableSlug(draft.slug) && entrySpecs.safeParse(draft.specs).success;
+  const savable = writable && (draft.state === "draft" || publishable);
+  const publishReady = writable && publishable;
   const autosaving =
     savable && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
   useEffect(() => {

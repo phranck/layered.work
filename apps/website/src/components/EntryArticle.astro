@@ -6,7 +6,13 @@ import CodeCopy from "./CodeCopy.astro";
 import FormBehavior from "./FormBehavior.astro";
 import TopicChip from "./TopicChip.astro";
 import { EntryCard } from "./entry-card.js";
-import { dateLabel, readingTime, summaryOf, type ContentRepository, type Entry } from "../content/repository.js";
+import {
+  dateLabel,
+  readingTime,
+  summaryOf,
+  type ContentRepository,
+  type Entry,
+} from "../content/repository.js";
 
 /**
  * One entry as a reader sees it: its head, its specification, its body, and
@@ -38,17 +44,98 @@ const project = entry.kind === "project";
 const neighbours = project ? repository.otherEntries(entry) : repository.related(entry);
 const entryTopics = repository.entryTopics(entry, language);
 ---
+
 <article>
-  {project && feature
-    ? <header class="project-hero"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes={feature.sizes} width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /><div class="project-hero__scrim"></div><div class="project-hero__copy"><div class="cluster">{entryTopics.map((topic) => <TopicChip {topic} {language} />)}</div><h1 class="title-page">{entry.title}</h1><p class="project-hero__summary">{summaryOf(entry)}</p><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></div></header>
-    : <header class="article-head"><div class="cluster">{entryTopics.map((topic) => <TopicChip {topic} {language} />)}</div><h1 class="title-page">{entry.title}</h1><div class="meta"><time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time><span>{readingTime(entry)} min</span><span>{entry.language.toUpperCase()}</span></div></header>}
-  {project && entry.specs.length > 0 && <div class="spec-grid">{entry.specs.map((spec) => <div class="spec"><span class="spec__label">{spec.label}</span><span class="spec__value">{spec.value}</span></div>)}</div>}
+  {project && feature ? (
+    <header class="project-hero">
+      <img
+        style={`object-position:${imagePosition(feature)}`}
+        src={feature.src}
+        srcset={feature.srcSet}
+        sizes={feature.sizes}
+        width={feature.width}
+        height={feature.height}
+        alt={feature.alt ?? ""}
+        fetchpriority="high"
+      />
+      <div class="project-hero__scrim"></div>
+      <div class="project-hero__copy">
+        <div class="cluster">
+          {entryTopics.map((topic) => (
+            <TopicChip {topic} {language} />
+          ))}
+        </div>
+        <h1 class="title-page">{entry.title}</h1>
+        <p class="project-hero__summary">{summaryOf(entry)}</p>
+        <div class="meta">
+          <time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time>
+          <span>{readingTime(entry)} min</span>
+          <span>{entry.language.toUpperCase()}</span>
+        </div>
+      </div>
+    </header>
+  ) : (
+    <header class="article-head">
+      <div class="cluster">
+        {entryTopics.map((topic) => (
+          <TopicChip {topic} {language} />
+        ))}
+      </div>
+      <h1 class="title-page">{entry.title}</h1>
+      <div class="meta">
+        <time datetime={entry.publishedAt ?? undefined}>{dateLabel(entry)}</time>
+        <span>{readingTime(entry)} min</span>
+        <span>{entry.language.toUpperCase()}</span>
+      </div>
+    </header>
+  )}
+  {project && entry.specs.length > 0 && (
+    <div class="spec-grid">
+      {entry.specs.map((spec) => (
+        <div class="spec">
+          <span class="spec__label">{spec.label}</span>
+          <span class="spec__value">{spec.value}</span>
+        </div>
+      ))}
+    </div>
+  )}
   <div class="article-body">
-    {feature && !project && <figure class="article-cover"><img style={`object-position:${imagePosition(feature)}`} src={feature.src} srcset={feature.srcSet} sizes={feature.sizes} width={feature.width} height={feature.height} alt={feature.alt ?? ""} fetchpriority="high" /></figure>}
+    {feature && !project && (
+      <figure class="article-cover">
+        <img
+          style={`object-position:${imagePosition(feature)}`}
+          src={feature.src}
+          srcset={feature.srcSet}
+          sizes={feature.sizes}
+          width={feature.width}
+          height={feature.height}
+          alt={feature.alt ?? ""}
+          fetchpriority="high"
+        />
+      </figure>
+    )}
     <ContentRenderer {nodes} {forms} media={resolveMedia} resolveUrl={repository.contentUrl} />
   </div>
 </article>
-{neighbours.length > 0 && <Section.Page><Section.Title title={project ? (de ? "Andere Projekte" : "Other projects") : (de ? "Verwandte Beiträge" : "Related entries")} /><div class="entry-grid">{neighbours.map((related) => <EntryCard entry={related} {language} topics={repository.entryTopics(related, language)} image={related.featuredImage ? repository.media(related.featuredImage, language) : undefined} />)}</div></Section.Page>}
+{neighbours.length > 0 && (
+  <Section.Page>
+    <Section.Title
+      title={
+        project ? (de ? "Andere Projekte" : "Other projects") : de ? "Verwandte Beiträge" : "Related entries"
+      }
+    />
+    <div class="entry-grid">
+      {neighbours.map((related) => (
+        <EntryCard
+          entry={related}
+          {language}
+          topics={repository.entryTopics(related, language)}
+          image={related.featuredImage ? repository.media(related.featuredImage, language) : undefined}
+        />
+      ))}
+    </div>
+  </Section.Page>
+)}
 {rendersComponent(nodes, "Model") && <ModelViewer />}
 <CodeCopy />
 {forms && Object.keys(forms).length > 0 && <FormBehavior />}

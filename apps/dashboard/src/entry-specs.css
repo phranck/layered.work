@@ -1,0 +1,31 @@
+/* The pairs of a project's specification, one under the other. */
+.spec-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A pair's label over its value, with its grip and its remove button beside
+   them, so neither field shares the panel's narrow width with the other. */
+.spec-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.spec-pair__fields,
+.spec-pair__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Set in from the edge as a field's hint is, in the tone the editor's own
+   unsaved state uses, because it says why Save is not available. */
+.spec-pairs__problem {
+  margin: 0;
+  padding-inline-start: var(--control-text-inset);
+  font-size: var(--text-sm);
+  color: var(--state-warning);
+}

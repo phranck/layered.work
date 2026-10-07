@@ -34,6 +34,7 @@ it("blocks publishing an unknown component, names the reason, and still saves th
     counterpart: null,
     counterpartTrashed: false,
     trashed: false,
+    specs: [],
   };
   const sent = vi.fn(async (path: string, init?: RequestInit) =>
     Response.json({

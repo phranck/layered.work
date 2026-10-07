@@ -1,6 +1,7 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
   DEFAULT_LISTING,
+  entrySpecs,
   focalPoint,
   type HomeBlock,
   type HomeBlockType,
@@ -56,20 +57,10 @@ const entrySchema = z.object({
   showInOtherLanguage: z.boolean().default(false),
   /**
    * What an entry states about itself beside its prose, as the author's own
-   * pairs rather than as fixed fields.
-   *
-   * A board project names its manufacturing and its electronics; a woodworking
-   * one names its timber and its finish. Fixed columns would fit one of those
-   * and be empty for the other, so the entry carries what it has and the band
-   * shows exactly that.
-   *
-   * Bounded because the band lays the pairs out in one row per screen width. A
-   * ninth pair is a paragraph rather than a specification.
+   * pairs, which the project page shows as the band under its hero. The bounds
+   * are the ones a save is held to, from `@layered/schemas`.
    */
-  specs: z
-    .array(z.object({ label: z.string().min(1).max(40), value: z.string().min(1).max(80) }))
-    .max(8)
-    .default([]),
+  specs: entrySpecs.default([]),
 });
 const mediaSchema = z.object({
   slug,
@@ -122,8 +113,7 @@ const snapshotSchema = z.object({
   gone: z.array(path).default([]),
   /**
    * How the overviews of posts and projects are set up in the dashboard. A
-   * snapshot without them, such as the one committed from the export, uses
-   * the defaults.
+   * snapshot without them, such as the migration output, uses the defaults.
    */
   listings: z
     .object({ post: listingSettings, project: listingSettings })
@@ -250,9 +240,9 @@ export interface SearchIndexEntry {
  *
  * The database's snapshot records every asset by its storage key, as `/<key>`,
  * and the bucket answers each object at its key below `MEDIA_ORIGIN`, so the
- * address is the two put together. The snapshot committed from the export,
- * which the site falls back to, records `/media/<file>` instead, and that file
- * lies below `migration/` in the bucket.
+ * address is the two put together. A snapshot written by the migration
+ * pipeline records `/media/<file>` instead, and that file lies below
+ * `migration/` in the bucket.
  *
  * Unset means the path is already the address, which is the local case: the
  * development server answers a key from the directory the backend reads, and

@@ -10,9 +10,8 @@ import { type ContentRepository, createRepository } from "./repository.js";
  * a second implementation: `createRepository` cannot tell them apart.
  *
  * The order is the point. The database is what a person edits, so it leads. The
- * file is what the migration produced, so it is what the site falls back to
- * rather than an error page, and it stops being needed once the database holds
- * everything the file does.
+ * file is what `db:snapshot` last wrote from the local database, so it is what
+ * the site falls back to rather than an error page.
  *
  * A missing source is an operational error and never an empty successful page,
  * which is why both being absent throws rather than returning nothing.

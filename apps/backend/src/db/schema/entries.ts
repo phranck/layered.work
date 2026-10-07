@@ -1,7 +1,9 @@
+import type { EntrySpec } from "@layered/schemas";
 import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -85,6 +87,14 @@ export const entryTranslations = pgTable(
      * post that was never translated.
      */
     showInOtherLanguage: boolean("show_in_other_language").notNull().default(false),
+
+    /**
+     * The specification pairs a project page shows under its hero, in their
+     * order. Per translation, because a label is written in the page's
+     * language. `entrySpecs` in `@layered/schemas` bounds what a save may put
+     * here.
+     */
+    specs: jsonb().$type<EntrySpec[]>().notNull().default([]),
 
     /** When it first became public. Null whilst it never has been. */
     publishedAt: timestamp("published_at", { withTimezone: true }),

@@ -75,6 +75,33 @@ export type EntryList = z.infer<typeof entryList>;
 export const entryIdParam = z.strictObject({ id: z.uuid() });
 
 /**
+ * How many specification pairs one translation may carry. The project page
+ * lays them out in one band, and a ninth pair is a paragraph rather than a
+ * specification.
+ */
+export const MAX_ENTRY_SPECS = 8;
+
+/** How long a pair's label and its value may be, so each pair stays one line of the band. */
+export const ENTRY_SPEC_LENGTH = { label: 40, value: 80 } as const;
+
+/**
+ * One pair of a project's specification: what is stated, such as "Electronics",
+ * and what it says.
+ *
+ * Free pairs rather than fixed fields, decided by phranck on 21 September 2026,
+ * because a board project names its manufacturing and its electronics and a
+ * woodworking one its timber and its finish. Neither half may be empty.
+ */
+export const entrySpec = body({
+  label: text(ENTRY_SPEC_LENGTH.label),
+  value: text(ENTRY_SPEC_LENGTH.value),
+});
+export type EntrySpec = z.infer<typeof entrySpec>;
+
+/** A translation's specification, in the order the band shows it. */
+export const entrySpecs = z.array(entrySpec).max(MAX_ENTRY_SPECS);
+
+/**
  * One translation of one entry, as the editor opens it.
  *
  * Everything the editor shows or changes: the text, the properties in its
@@ -123,6 +150,8 @@ export const entryDetail = z.object({
   counterpartTrashed: z.boolean(),
   /** Whether this translation is in the trash. */
   trashed: z.boolean(),
+  /** The specification pairs, which a project page shows under its hero. */
+  specs: entrySpecs,
 });
 export type EntryDetail = z.infer<typeof entryDetail>;
 
@@ -172,6 +201,7 @@ export const saveEntryBody = body({
   readingWidth: z.enum(READING_WIDTHS),
   showInOtherLanguage: z.boolean(),
   topicIds: z.array(z.uuid()).max(MAX_TOPICS_PER_ENTRY),
+  specs: entrySpecs,
   /**
    * The last segment of the address. A changed one becomes the current address
    * and the old one keeps answering as a redirect.

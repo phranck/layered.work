@@ -5,60 +5,193 @@ import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/ico
 import { createElement, Fragment as ReactFragment } from "react";
 import TopicChip from "./TopicChip.astro";
 import { EntryCard } from "./entry-card.js";
-import { dateLabel, languageRoot, readingTime, summaryOf, type ContentRepository, type Language } from "../content/repository.js";
-interface Props { repository:ContentRepository; language:Language; }
-const {repository,language}=Astro.props;
-const de=language==="de";
-const root=languageRoot(language);
-const featured=repository.homeFeatured(language);
-const {entry:hero,image:heroImage}=repository.homeHero(language);
-const featureImage=featured?.featuredImage?repository.media(featured.featuredImage, language):undefined;
+import {
+  dateLabel,
+  languageRoot,
+  readingTime,
+  summaryOf,
+  type ContentRepository,
+  type Language,
+} from "../content/repository.js";
+interface Props {
+  repository: ContentRepository;
+  language: Language;
+}
+const { repository, language } = Astro.props;
+const de = language === "de";
+const root = languageRoot(language);
+const featured = repository.homeFeatured(language);
+const { entry: hero, image: heroImage } = repository.homeHero(language);
+const featureImage = featured?.featuredImage ? repository.media(featured.featuredImage, language) : undefined;
 // A grid block's type is not its listing's address, and the two were only ever equal by
 // accident: renaming the block to match the database turned "View all" into /project_grid/.
-const gridPath=(type:string)=>type==="project_grid"?"projects":"posts";
+const gridPath = (type: string) => (type === "project_grid" ? "projects" : "posts");
 // Each band opens with a kicker naming what it holds, in the words the navigation
 // uses for the same thing, so the page and the menu call it one name.
-const kicker=(icon:typeof StarIcon,label:string)=>createElement(ReactFragment,null,createElement(icon,{weight:"duotone","aria-hidden":true,className:"eyebrow__icon"}),label);
-const gridKicker=(type:string)=>type==="project_grid"?kicker(StackSimpleIcon,de?"Projekte":"Projects"):kicker(ArticleIcon,de?"Beiträge":"Posts");
+const kicker = (icon: typeof StarIcon, label: string) =>
+  createElement(
+    ReactFragment,
+    null,
+    createElement(icon, { weight: "duotone", "aria-hidden": true, className: "eyebrow__icon" }),
+    label,
+  );
+const gridKicker = (type: string) =>
+  type === "project_grid"
+    ? kicker(StackSimpleIcon, de ? "Projekte" : "Projects")
+    : kicker(ArticleIcon, de ? "Beiträge" : "Posts");
 // A block this build cannot render leaves a shorter page and no other trace, so it is said
 // once here, where it is known that the home page is what came out short.
-const unknown=repository.unknownBlocks();
-if(unknown.length) console.warn(JSON.stringify({code:"WEBSITE_HOME_BLOCK_UNKNOWN",operation:"render_home_blocks",result:"skipped",types:unknown}));
+const unknown = repository.unknownBlocks();
+if (unknown.length)
+  console.warn(
+    JSON.stringify({
+      code: "WEBSITE_HOME_BLOCK_UNKNOWN",
+      operation: "render_home_blocks",
+      result: "skipped",
+      types: unknown,
+    }),
+  );
 ---
-{repository.blocks().map(block=>block.type==="hero" ? (()=>{
-  const settings=homeBlockSettings("hero",block.settings);
-  return <section class="hero section--band">
-    <div class="hero__copy">
-      <p class="eyebrow">{homeBlockText("hero",settings,"eyebrow",language)}</p>
-      <h1 class="title-hero">{homeBlockText("hero",settings,"title",language)}</h1>
-      <p class="lede">{homeBlockText("hero",settings,"description",language)}</p>
-      <div class="actions">
-        <Button.Link href={`${root}projects/`} tone="primary" icon={createElement(StackSimpleIcon,{weight:"duotone"})}>{de?"Projekte ansehen":"Explore projects"}</Button.Link>
-        <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon,{weight:"duotone"})}>{de?"Beiträge lesen":"Read the posts"}</Button.Link>
-      </div>
-    </div>
-    {hero&&heroImage&&<a class="plate-stack" href={hero.path} aria-label={hero.title}>
-      <div class="plate plate--back"></div><div class="plate plate--middle"></div>
-      <div class="plate plate--front"><img style={`object-position:${imagePosition(heroImage)}`} src={heroImage.src} srcset={heroImage.srcSet} sizes={heroImage.sizes} width={heroImage.width} height={heroImage.height} alt={heroImage.alt??""} fetchpriority="high" /><div class="plate__caption"><strong>{hero.title}</strong></div></div>
-    </a>}
-  </section>;
-})() : block.type==="featured_entry"&&featured ? (
-  <Section.Band>
-    <Section.Title eyebrow={kicker(StarIcon,de?"Im Vordergrund":"In focus")} title={homeBlockText("featured_entry",homeBlockSettings("featured_entry",block.settings),"title",language)} />
-    <Card.Link href={featured.path}><div class="feature">
-      {featureImage&&<div class="feature__media"><img style={`object-position:${imagePosition(featureImage)}`} src={featureImage.src} srcset={featureImage.srcSet} sizes="(max-width: 1039px) 100vw, 50vw" width={featureImage.width} height={featureImage.height} alt={featureImage.alt??""} loading="lazy" /></div>}
-      <div class="feature__body"><div class="meta"><time datetime={featured.publishedAt??undefined}>{dateLabel(featured)}</time><span>{readingTime(featured)} min</span></div><h3 class="title-page">{featured.title}</h3><p class="lede">{summaryOf(featured)}</p><Button.Inert icon={createElement(ArticleIcon,{weight:"duotone"})} tone="primary">{de?"Weiterlesen":"Read more"}</Button.Inert></div>
-    </div></Card.Link>
-  </Section.Band>
-) : block.type==="project_grid"||block.type==="post_grid" ? (()=>{
-  const type=block.type==="project_grid"?"project_grid":"post_grid";
-  const grid=repository.homeGrid(type,block.settings,language);
-  return <Section.Band>
-    <Section.Title eyebrow={gridKicker(type)} title={homeBlockText(type,homeBlockSettings(type,block.settings),"title",language)} actions={createElement(Button.Link,{href:`${root}${gridPath(type)}/`,icon:createElement(ArticleIcon,{weight:"duotone"})},de?"Alle ansehen":"View all")} />
-    <div class="entry-grid">{grid.entries.map(entry=><EntryCard entry={entry} {language} topics={repository.entryTopics(entry, language)} image={entry.featuredImage?repository.media(entry.featuredImage, language):undefined} />)}</div>
-    {!grid.any&&<p class="empty-state">{de?"In dieser Sprache gibt es noch keine Einträge.":"There are no entries in this language yet."}</p>}
-  </Section.Band>;
-})() : block.type==="topic_bar" ? (()=>{
-  const settings=homeBlockSettings("topic_bar",block.settings);
-  return <Section.Band><Section.Title eyebrow={kicker(TagIcon,de?"Themen":"Topics")} title={homeBlockText("topic_bar",settings,"title",language)} /><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={settings.showCounts?topic.count:undefined} />)}</div></Section.Band>;
-})() : null)}
+
+{repository.blocks().map((block) =>
+  block.type === "hero" ? (
+    (() => {
+      const settings = homeBlockSettings("hero", block.settings);
+      return (
+        <section class="hero section--band">
+          <div class="hero__copy">
+            <p class="eyebrow">{homeBlockText("hero", settings, "eyebrow", language)}</p>
+            <h1 class="title-hero">{homeBlockText("hero", settings, "title", language)}</h1>
+            <p class="lede">{homeBlockText("hero", settings, "description", language)}</p>
+            <div class="actions">
+              <Button.Link
+                href={`${root}projects/`}
+                tone="primary"
+                icon={createElement(StackSimpleIcon, { weight: "duotone" })}
+              >
+                {de ? "Projekte ansehen" : "Explore projects"}
+              </Button.Link>
+              <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon, { weight: "duotone" })}>
+                {de ? "Beiträge lesen" : "Read the posts"}
+              </Button.Link>
+            </div>
+          </div>
+          {hero && heroImage && (
+            <a class="plate-stack" href={hero.path} aria-label={hero.title}>
+              <div class="plate plate--back"></div>
+              <div class="plate plate--middle"></div>
+              <div class="plate plate--front">
+                <img
+                  style={`object-position:${imagePosition(heroImage)}`}
+                  src={heroImage.src}
+                  srcset={heroImage.srcSet}
+                  sizes={heroImage.sizes}
+                  width={heroImage.width}
+                  height={heroImage.height}
+                  alt={heroImage.alt ?? ""}
+                  fetchpriority="high"
+                />
+                <div class="plate__caption">
+                  <strong>{hero.title}</strong>
+                </div>
+              </div>
+            </a>
+          )}
+        </section>
+      );
+    })()
+  ) : block.type === "featured_entry" && featured ? (
+    <Section.Band>
+      <Section.Title
+        eyebrow={kicker(StarIcon, de ? "Im Vordergrund" : "In focus")}
+        title={homeBlockText(
+          "featured_entry",
+          homeBlockSettings("featured_entry", block.settings),
+          "title",
+          language,
+        )}
+      />
+      <Card.Link href={featured.path}>
+        <div class="feature">
+          {featureImage && (
+            <div class="feature__media">
+              <img
+                style={`object-position:${imagePosition(featureImage)}`}
+                src={featureImage.src}
+                srcset={featureImage.srcSet}
+                sizes="(max-width: 1039px) 100vw, 50vw"
+                width={featureImage.width}
+                height={featureImage.height}
+                alt={featureImage.alt ?? ""}
+                loading="lazy"
+              />
+            </div>
+          )}
+          <div class="feature__body">
+            <div class="meta">
+              <time datetime={featured.publishedAt ?? undefined}>{dateLabel(featured)}</time>
+              <span>{readingTime(featured)} min</span>
+            </div>
+            <h3 class="title-page">{featured.title}</h3>
+            <p class="lede">{summaryOf(featured)}</p>
+            <Button.Inert icon={createElement(ArticleIcon, { weight: "duotone" })} tone="primary">
+              {de ? "Weiterlesen" : "Read more"}
+            </Button.Inert>
+          </div>
+        </div>
+      </Card.Link>
+    </Section.Band>
+  ) : block.type === "project_grid" || block.type === "post_grid" ? (
+    (() => {
+      const type = block.type === "project_grid" ? "project_grid" : "post_grid";
+      const grid = repository.homeGrid(type, block.settings, language);
+      return (
+        <Section.Band>
+          <Section.Title
+            eyebrow={gridKicker(type)}
+            title={homeBlockText(type, homeBlockSettings(type, block.settings), "title", language)}
+            actions={createElement(
+              Button.Link,
+              { href: `${root}${gridPath(type)}/`, icon: createElement(ArticleIcon, { weight: "duotone" }) },
+              de ? "Alle ansehen" : "View all",
+            )}
+          />
+          <div class="entry-grid">
+            {grid.entries.map((entry) => (
+              <EntryCard
+                entry={entry}
+                {language}
+                topics={repository.entryTopics(entry, language)}
+                image={entry.featuredImage ? repository.media(entry.featuredImage, language) : undefined}
+              />
+            ))}
+          </div>
+          {!grid.any && (
+            <p class="empty-state">
+              {de
+                ? "In dieser Sprache gibt es noch keine Einträge."
+                : "There are no entries in this language yet."}
+            </p>
+          )}
+        </Section.Band>
+      );
+    })()
+  ) : block.type === "topic_bar" ? (
+    (() => {
+      const settings = homeBlockSettings("topic_bar", block.settings);
+      return (
+        <Section.Band>
+          <Section.Title
+            eyebrow={kicker(TagIcon, de ? "Themen" : "Topics")}
+            title={homeBlockText("topic_bar", settings, "title", language)}
+          />
+          <div class="tag-rail">
+            {repository.topics(language).map((topic) => (
+              <TopicChip {topic} {language} count={settings.showCounts ? topic.count : undefined} />
+            ))}
+          </div>
+        </Section.Band>
+      );
+    })()
+  ) : null,
+)}

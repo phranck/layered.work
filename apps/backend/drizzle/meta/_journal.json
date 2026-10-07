@@ -127,6 +127,13 @@
       "when": 1791229013216,
       "tag": "0017_watery_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791380884201,
+      "tag": "0018_add_entry_specs",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
+import { writeFile } from "node:fs/promises";
 import { referencedFormNames, renderContent } from "@layered/content";
 import {
+  type EntrySpec,
   homeBlockSettings,
   type ListedKind,
   type ListingSettings,
@@ -96,6 +98,8 @@ export interface PublicEntry {
   readingWidth: string;
   /** Listed in the other language as well whilst that language has no version a reader can open. */
   showInOtherLanguage: boolean;
+  /** The specification pairs a project page shows under its hero. */
+  specs: EntrySpec[];
 }
 
 /** One asset, in the shape the site's repository parses. */
@@ -404,6 +408,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       state: entryTranslations.state,
       readingWidth: entryTranslations.readingWidth,
       showInOtherLanguage: entryTranslations.showInOtherLanguage,
+      specs: entryTranslations.specs,
       publishedAt: entryTranslations.publishedAt,
       featuredMediaId: entryTranslations.featuredMediaId,
       socialCardMediaId: entryTranslations.socialCardMediaId,
@@ -503,6 +508,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       onHomePage: row.onHomePage,
       readingWidth: row.readingWidth,
       showInOtherLanguage: row.showInOtherLanguage,
+      specs: row.specs,
     };
   });
 
@@ -539,4 +545,15 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
       return { type: block.type, enabled: block.enabled, sortOrder: block.sortOrder, settings };
     }),
   };
+}
+
+/**
+ * Writes what the site reads from this database to a file, in the form of the
+ * committed fallback `apps/website/content/site.json`.
+ *
+ * @param database - The database to read from.
+ * @param file - Where the snapshot goes. An existing file is replaced.
+ */
+export async function writePublicSnapshot(database: Database, file: string): Promise<void> {
+  await writeFile(file, `${JSON.stringify(await readPublicSnapshot(database), null, 2)}\n`);
 }

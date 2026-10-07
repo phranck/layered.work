@@ -1,10 +1,13 @@
 <!-- The native POST remains the fallback. This script only replaces the form in place. -->
 <script>
   function validateChoiceGroups(form: HTMLFormElement): void {
-    const message = form.querySelector<HTMLInputElement>('input[name="_language"]')?.value === "de"
-      ? "Bitte wähle mindestens eine Option."
-      : "Select at least one option.";
-    for (const group of Array.from(form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-required-choice="true"]'))) {
+    const message =
+      form.querySelector<HTMLInputElement>('input[name="_language"]')?.value === "de"
+        ? "Bitte wähle mindestens eine Option."
+        : "Select at least one option.";
+    for (const group of Array.from(
+      form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-required-choice="true"]'),
+    )) {
       const choices = Array.from(group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
       choices[0]?.setCustomValidity(choices.some((choice) => choice.checked) ? "" : message);
     }
@@ -41,9 +44,10 @@
       const error = document.createElement("p");
       error.className = "form-controls__error";
       error.setAttribute("role", "alert");
-      error.textContent = form.querySelector<HTMLInputElement>('input[name="_language"]')?.value === "de"
-        ? "Senden fehlgeschlagen. Bitte versuche es erneut."
-        : "Sending failed. Please try again.";
+      error.textContent =
+        form.querySelector<HTMLInputElement>('input[name="_language"]')?.value === "de"
+          ? "Senden fehlgeschlagen. Bitte versuche es erneut."
+          : "Sending failed. Please try again.";
       form.append(error);
     }
   });

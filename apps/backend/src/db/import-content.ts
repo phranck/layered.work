@@ -2,12 +2,16 @@ import { stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { mediaReferences } from "@layered/content";
 import {
+  createFormBody,
   DEFAULT_LISTING,
+  type EntrySpec,
   LISTED_KINDS,
   LISTING_GROUP,
   LISTING_PATHS,
   type ListedKind,
+  type ListingSettings,
   listingSettings,
+  type PublicForm,
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -17,6 +21,8 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  forms,
+  gonePaths,
   media,
   mediaTranslations,
   mediaVariants,
@@ -40,7 +46,7 @@ import {
  * its translation currently answers at, because that is the one value the
  * snapshot and the database both hold and neither invents.
  *
- * When the staged media directory is supplied, each responsive size is measured
+ * When the media directories are supplied, each responsive size is measured
  * from its file and written beside the original. The file check runs before
  * any database write, so a missing size cannot leave a partial import.
  */
@@ -65,11 +71,18 @@ export interface SnapshotEntry {
   featured: boolean;
   onHomePage: boolean;
   readingWidth: "narrow" | "normal" | "wide" | "full";
+  /** Listed in the other language whilst that one has no version. Absent from the migration output. */
+  showInOtherLanguage?: boolean;
+  /** The picture a shared link shows, by slug. Absent from the migration output. */
+  socialImage?: string | null;
+  /** The specification pairs of a project. Absent from the migration output. */
+  specs?: EntrySpec[];
 }
 
 /** One asset as the snapshot holds it. */
 export interface SnapshotMedia {
   slug: string;
+  /** `/media/<file>` in the migration output, `/<storage key>` in a snapshot read from the database. */
   src: string;
   mime: string;
   filename: string;
@@ -79,15 +92,33 @@ export interface SnapshotMedia {
   width?: number;
   height?: number;
   alt?: string;
+  caption?: string;
+  /** The description in each language. Absent from the migration output, which knew English alt text only. */
+  translations?: Record<"en" | "de", { altText: string | null; caption: string | null }>;
   srcSet?: string;
+  placeholder?: string;
+  focalPoint?: { x: number; y: number };
 }
 
-/** The whole snapshot, as `site.json` holds it. */
+/**
+ * A whole snapshot: the migration output, or what `readPublicSnapshot` wrote to
+ * `site.json`. The second carries everything the first does and names its
+ * files by storage key.
+ */
 export interface Snapshot {
   entries: SnapshotEntry[];
   topics: (PublicTopic | { id: number | string; slug: string; name: string })[];
   media: SnapshotMedia[];
   redirects: { source: string; target: string }[];
+  /**
+   * How the overviews are set up. Absent from the migration output, which
+   * carried the projects introduction as a page at the overview's address.
+   */
+  listings?: Partial<Record<ListedKind, ListingSettings>>;
+  /** Addresses that answer 410. Absent from the migration output. */
+  gone?: string[];
+  /** The forms the entries embed, as a reader sees them. */
+  forms?: PublicForm[];
 }
 
 /** What the import wrote, so the caller can say it rather than guess. */
@@ -141,6 +172,51 @@ export function migratedStorageKey(src: string): string {
   return `${MIGRATION_PREFIX}${basename(src)}`;
 }
 
+/** Where the old site served every file, and where the website's `public/` still holds them. */
+const EXPORT_PREFIX = "/media/";
+
+/**
+ * The storage key a path in a snapshot names.
+ *
+ * The migration output names a file where the old site served it, which
+ * `migratedStorageKey` turns into the key the upload gave it. A snapshot read
+ * from the database names the key itself after a slash, because that is the
+ * path the bucket and the local store answer it at.
+ *
+ * @param path - A file's `src`, or one candidate of its `srcSet`.
+ */
+export function storageKeyOf(path: string): string {
+  return path.startsWith(EXPORT_PREFIX) ? migratedStorageKey(path) : path.slice(1);
+}
+
+/** Where a picture is cropped around when nothing says otherwise: its middle, as the table's default. */
+const DEFAULT_FOCUS = 0.5;
+
+/**
+ * The directories a snapshot's files are read from when their sizes are
+ * measured.
+ *
+ * @property exported - What answers the old site's `/media/…` paths, which is
+ *   the website's `public/`.
+ * @property stored - The local media store, which holds every object at its
+ *   storage key. Only a snapshot read from the database names files there.
+ */
+export interface MediaRoots {
+  exported: string;
+  stored?: string;
+}
+
+/**
+ * The file on disk a path in a snapshot names.
+ *
+ * @throws When the path lies in the media store and no store was given.
+ */
+function fileOf(path: string, roots: MediaRoots): string {
+  if (path.startsWith(EXPORT_PREFIX)) return resolve(roots.exported, `.${path}`);
+  if (!roots.stored) throw new Error(`${path} lies in the media store, so MEDIA_LOCAL_DIR has to name it.`);
+  return resolve(roots.stored, `.${path}`);
+}
+
 /** Where `scripts/publii/upload.mjs` writes every migrated object in the bucket. */
 const MIGRATION_PREFIX = "migration/";
 
@@ -155,7 +231,8 @@ export interface StagedVariant {
   byteSize: number;
 }
 
-const VARIANT_PATH = /^(\/media\/[a-zA-Z0-9_.-]+\.(?:avif|webp|jpe?g|png)) ([1-9]\d*)w$/i;
+/** One `srcSet` candidate: a path below one top directory, never climbing out of it, and its width. */
+const VARIANT_PATH = /^(\/(?!.*\.\.)[a-z]+\/[a-zA-Z0-9_./-]+\.(?:avif|webp|jpe?g|png)) ([1-9]\d*)w$/i;
 const VARIANT_FORMAT: Record<string, StagedVariant["format"]> = {
   avif: "avif",
   webp: "webp",
@@ -165,7 +242,7 @@ const VARIANT_FORMAT: Record<string, StagedVariant["format"]> = {
 };
 
 /** Reads every responsive file named by the snapshot and verifies its dimensions and format. */
-export async function stageVariants(snapshot: Snapshot, root: string): Promise<StagedVariant[]> {
+export async function stageVariants(snapshot: Snapshot, roots: MediaRoots): Promise<StagedVariant[]> {
   const staged: StagedVariant[] = [];
   const checksums = new Set<string>();
   const keys = new Set<string>();
@@ -177,8 +254,8 @@ export async function stageVariants(snapshot: Snapshot, root: string): Promise<S
       if (!match) throw new Error(`Invalid responsive source for ${asset.slug}: ${candidate.trim()}`);
       const [, path, descriptor] = match;
       if (!path || !descriptor) throw new Error(`Invalid responsive source for ${asset.slug}.`);
-      const file = resolve(root, `.${path}`);
-      const storageKey = migratedStorageKey(path);
+      const file = fileOf(path, roots);
+      const storageKey = storageKeyOf(path);
       if (keys.has(storageKey)) throw new Error(`Two responsive sources name ${storageKey}.`);
       keys.add(storageKey);
       const format = VARIANT_FORMAT[extname(path).slice(1).toLowerCase()];
@@ -243,8 +320,12 @@ async function writeVariants(database: Database, staged: readonly StagedVariant[
 }
 
 /** Backfills responsive variants without reimporting editorial content. */
-export async function importVariants(database: Database, snapshot: Snapshot, root: string): Promise<number> {
-  return writeVariants(database, await stageVariants(snapshot, root));
+export async function importVariants(
+  database: Database,
+  snapshot: Snapshot,
+  roots: MediaRoots,
+): Promise<number> {
+  return writeVariants(database, await stageVariants(snapshot, roots));
 }
 
 /**
@@ -309,29 +390,21 @@ async function importMedia(
       continue;
     }
 
+    const described = {
+      kind,
+      mimeType: asset.mime,
+      storageKey: storageKeyOf(asset.src),
+      byteSize: asset.bytes,
+      width: asset.width ?? null,
+      height: asset.height ?? null,
+      focalX: asset.focalPoint?.x ?? DEFAULT_FOCUS,
+      focalY: asset.focalPoint?.y ?? DEFAULT_FOCUS,
+      placeholder: asset.placeholder ?? null,
+    };
     const [row] = await database
       .insert(media)
-      .values({
-        slug: asset.slug,
-        kind,
-        mimeType: asset.mime,
-        storageKey: migratedStorageKey(asset.src),
-        byteSize: asset.bytes,
-        checksum: asset.sha256,
-        width: asset.width ?? null,
-        height: asset.height ?? null,
-      })
-      .onConflictDoUpdate({
-        target: media.slug,
-        set: {
-          kind,
-          mimeType: asset.mime,
-          storageKey: migratedStorageKey(asset.src),
-          byteSize: asset.bytes,
-          width: asset.width ?? null,
-          height: asset.height ?? null,
-        },
-      })
+      .values({ slug: asset.slug, checksum: asset.sha256, ...described })
+      .onConflictDoUpdate({ target: media.slug, set: described })
       .returning({ id: media.id });
 
     if (!row) continue;
@@ -339,16 +412,22 @@ async function importMedia(
     bychecksum.set(asset.sha256, { id: row.id, slug: asset.slug });
     report.media += 1;
 
-    // The alt text the migration preserved. English, because that is the
-    // language it was written in, and a row saying nothing is refused by the
-    // table rather than written empty.
-    if (asset.alt) {
+    // The migration output carries the English alt text it preserved, and a
+    // snapshot read from the database carries both languages. A language saying
+    // nothing gets no row, because the table refuses an empty one.
+    const descriptions = asset.translations ?? {
+      en: { altText: asset.alt ?? null, caption: asset.caption ?? null },
+      de: { altText: null, caption: null },
+    };
+    for (const language of ["en", "de"] as const) {
+      const { altText, caption } = descriptions[language];
+      if (altText === null && caption === null) continue;
       await database
         .insert(mediaTranslations)
-        .values({ mediaId: row.id, language: "en", altText: asset.alt })
+        .values({ mediaId: row.id, language, altText, caption })
         .onConflictDoUpdate({
           target: [mediaTranslations.mediaId, mediaTranslations.language],
-          set: { altText: asset.alt },
+          set: { altText, caption },
         });
     }
   }
@@ -361,9 +440,9 @@ async function importMedia(
  * and slug. The migration output still names topics by English slug, while the
  * published snapshot names them by id.
  *
- * The old site had one language of topic names, so each becomes an English
- * translation. A German name for the same topic is a row somebody adds later,
- * which is what the table is shaped for.
+ * The migration output knows a topic's English name only, because the old site
+ * had one language of topic names. A snapshot read from the database brings
+ * each name it holds, in both languages.
  */
 async function importTopics(
   database: Database,
@@ -526,8 +605,8 @@ async function importEntry(
   }
   report.entries += 1;
 
+  const mediaIdOf = (slug: string | null | undefined) => (slug ? (mediaBySlug.get(slug) ?? null) : null);
   for (const entry of group) {
-    const featuredMediaId = entry.featuredImage ? (mediaBySlug.get(entry.featuredImage) ?? null) : null;
     const translationValues = {
       entryId,
       language: entry.language,
@@ -536,8 +615,11 @@ async function importEntry(
       body: withKeptMedia(entry.body, keptMedia),
       state: entry.visibility as "public" | "draft" | "hidden",
       readingWidth: entry.readingWidth,
+      showInOtherLanguage: entry.showInOtherLanguage ?? false,
+      specs: entry.specs ?? [],
       publishedAt: entry.publishedAt ? new Date(entry.publishedAt) : null,
-      featuredMediaId,
+      featuredMediaId: mediaIdOf(entry.featuredImage),
+      socialCardMediaId: mediaIdOf(entry.socialImage),
     };
 
     const [translation] = await database
@@ -669,18 +751,69 @@ async function importListingIntroduction(
 }
 
 /**
+ * Writes how the overviews are set up, where the database has no setting for
+ * one yet.
+ *
+ * A snapshot read from the database carries the settings whole, introductions
+ * included. One written in the dashboard since stays, as an introduction does
+ * in `importListingIntroduction`.
+ */
+async function importListings(database: Database, snapshot: Snapshot): Promise<void> {
+  for (const kind of LISTED_KINDS) {
+    const value = snapshot.listings?.[kind];
+    if (!value) continue;
+    await database
+      .insert(settings)
+      .values({ key: LISTING_GROUP[kind], value: listingSettings.parse(value) })
+      .onConflictDoNothing();
+  }
+}
+
+/**
+ * Writes the forms a snapshot carries, where the database has none of that
+ * slug, so a page embedding one still shows it.
+ *
+ * A snapshot holds what a reader sees of a form and nothing of where its
+ * submissions go. A form written here keeps its submissions in the dashboard
+ * and sends no mail until somebody names an address there.
+ */
+async function importForms(database: Database, snapshot: Snapshot): Promise<void> {
+  for (const form of snapshot.forms ?? []) {
+    const declaration = createFormBody.parse({
+      ...form,
+      notificationEmail: null,
+      confirmationEmailField: null,
+      storeSubmissions: true,
+    });
+    await database
+      .insert(forms)
+      .values({ slug: declaration.slug, name: declaration.name, declaration })
+      .onConflictDoNothing();
+  }
+}
+
+/** Writes the addresses that answer 410, so a rebuilt site still says they are gone. */
+async function importGone(database: Database, snapshot: Snapshot): Promise<void> {
+  for (const path of snapshot.gone ?? []) {
+    await database.insert(gonePaths).values({ path }).onConflictDoNothing();
+  }
+}
+
+/**
  * Writes a whole snapshot.
  *
  * @param database - The database to write to, already connected.
- * @param snapshot - The parsed `site.json`.
+ * @param snapshot - The parsed `site.json`, or the migration output.
+ * @param options - Where the files are whose sizes are measured and written
+ *   beside them. Without it, no sizes are written.
  * @returns What was written, and what was left out and why.
  */
 export async function importContent(
   database: Database,
   snapshot: Snapshot,
-  options?: { variantRoot: string },
+  options?: { roots: MediaRoots },
 ): Promise<ImportReport> {
-  const staged = options ? await stageVariants(snapshot, options.variantRoot) : [];
+  const staged = options ? await stageVariants(snapshot, options.roots) : [];
   const report: ImportReport = {
     media: 0,
     variants: 0,
@@ -695,6 +828,9 @@ export async function importContent(
   const mediaBySlug = await importMedia(database, snapshot, report);
   report.variants = await writeVariants(database, staged);
   const topicsByReference = await importTopics(database, snapshot, report);
+  await importListings(database, snapshot);
+  await importGone(database, snapshot);
+  await importForms(database, snapshot);
 
   const redirectsByTarget = new Map<string, string[]>();
   for (const redirect of snapshot.redirects) {

@@ -15,6 +15,7 @@ import { ContentFindings } from "./content-findings.js";
 import type { CheckedContent } from "./content-validation.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
+import { SpecsField } from "./entry-specs.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { DashboardArea } from "./routes.js";
 import { TopicField } from "./topic-field.js";
@@ -184,6 +185,8 @@ export function EntryProperties({
           onChange={(topicIds) => update({ topicIds })}
         />
       </Field>
+      {/* Only a project page shows the pairs, so nothing else is offered them. */}
+      {entry.kind === "project" && <SpecsField specs={draft.specs} onChange={(specs) => update({ specs })} />}
       {!entry.trashed && (
         <div className="entry-editor__action entry-editor__action--apart">
           <Button tone="danger" icon={<TrashIcon />} onClick={onTrash}>

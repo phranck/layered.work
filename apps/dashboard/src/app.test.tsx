@@ -123,6 +123,7 @@ const draftDetail = {
   counterpart: null,
   counterpartTrashed: false,
   trashed: false,
+  specs: [],
 };
 
 /** The topics, one of which the draft has and one of which has no German name. */
@@ -750,6 +751,24 @@ describe("dashboard shell", () => {
     expect(document.querySelector(".app-bar__center .notification")).toBeNull();
   });
 
+  it("saves a draft ending in a space once, because the space is not kept", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method !== "PUT") return Promise.resolve(successfulGet(input));
+      // The API trims the title, as the schema it reads says.
+      const sent = JSON.parse(String(init.body));
+      return Promise.resolve(json({ data: { ...draftDetail, ...sent, title: sent.title.trim() } }));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "Ends in a space " } });
+    const saves = () => request.mock.calls.filter(([, init]) => init?.method === "PUT").length;
+    await waitFor(() => expect(saves()).toBe(1), { timeout: 3500 });
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(saves()).toBe(1);
+    expect(screen.getByRole("status").textContent).toMatch(/^Automatisch gespeichert um /);
+  }, 10_000);
+
   it("never saves a change to a public entry by itself, and asks before leaving it unsaved", async () => {
     const published = { ...draftDetail, state: "public", publishedAt: "2025-09-02T00:00:00.000Z" };
     const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
@@ -967,6 +986,60 @@ describe("dashboard shell", () => {
     await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
     const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(String(put?.[1]?.body))).toMatchObject({ showInOtherLanguage: true });
+  });
+
+  it("writes a project's specification pair by pair, and saves it only once every pair is complete", async () => {
+    const project = {
+      ...draftDetail,
+      kind: "project",
+      state: "public",
+      publishedAt: "2025-09-02T00:00:00.000Z",
+      specs: [{ label: "Status", value: "In Arbeit" }],
+    };
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "PUT"
+          ? json({ data: { ...project, ...JSON.parse(String(init.body)) } })
+          : String(input).endsWith(`/entries/${draftDetail.id}`)
+            ? json({ data: project })
+            : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard(`/projects/${draftDetail.id}`);
+
+    expect(await screen.findByLabelText("Bezeichnung 1")).toHaveProperty("value", "Status");
+    const save = screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement;
+    fireEvent.click(screen.getByRole("button", { name: "Paar hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Bezeichnung 2"), { target: { value: "Fertigung" } });
+    expect(save.disabled).toBe(true);
+    expect(
+      screen.getByText(
+        "Jedes Paar braucht eine Bezeichnung und einen Wert, bevor der Eintrag gespeichert werden kann.",
+      ),
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Wert 2"), { target: { value: "FDM, PETG" } });
+    expect(save.disabled).toBe(false);
+    fireEvent.keyDown(screen.getByRole("button", { name: /„Fertigung“ verschieben/ }), { key: "ArrowUp" });
+    fireEvent.click(save);
+
+    await waitFor(() => expect(request.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    const put = request.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body)).specs).toEqual([
+      { label: "Fertigung", value: "FDM, PETG" },
+      { label: "Status", value: "In Arbeit" },
+    ]);
+  });
+
+  it("offers a post no specification, because only a project page shows one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard(`/posts/${draftDetail.id}`);
+
+    await screen.findByLabelText("Titel");
+    expect(screen.queryByRole("button", { name: "Paar hinzufügen" })).toBeNull();
   });
 
   it("does not offer the other language's lists once that language exists", async () => {

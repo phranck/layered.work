@@ -5,14 +5,18 @@ import { parseArgs } from "node:util";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { connectOnce, databaseUrl } from "./connect.js";
 import { holdsEntries, importContent, type Snapshot, withDrafts } from "./import-content.js";
+import { mediaRoots } from "./media-roots.js";
 
 /**
  * Puts a content snapshot into an empty database.
  *
- * Reads the file rather than the Publii database, which #97 already read and
- * which nothing here touches again. The default is the snapshot this repository
- * publishes. That file holds no drafts, so `--drafts-from` names the migration
- * output, and the drafts are taken from there and nothing else is.
+ * The default is the snapshot this repository publishes, which `db:snapshot`
+ * writes from a database, so an import rebuilds what that database published.
+ * That file holds no drafts, so `--drafts-from` names the migration output, and
+ * the drafts are taken from there and nothing else is. Navigations, home page
+ * blocks and the site's frame are set in the dashboard and are not imported.
+ * A form is imported as a reader sees it, keeping its submissions in the
+ * dashboard and sending no mail until an address is named there.
  *
  * A database that already holds entries is refused. It is what the site
  * publishes, and the snapshot would overwrite every text written in the
@@ -24,8 +28,10 @@ import { holdsEntries, importContent, type Snapshot, withDrafts } from "./import
  * pnpm --filter @layered/backend db:import --variant-root /path/to/website/public
  * ```
  *
- * The default variant root is this checkout's website/public directory. The
- * staged migration images must be present there or supplied with the option.
+ * The sizes of every picture are measured from their files: the old site's
+ * `/media/…` files in the website's `public/`, or the directory
+ * `--variant-root` names, and every other file in `MEDIA_LOCAL_DIR` at its
+ * storage key.
  */
 
 const DEFAULT_SNAPSHOT = "../../../website/content/site.json";
@@ -51,9 +57,7 @@ const file = resolve(positionals[0] ?? fileURLToPath(new URL(DEFAULT_SNAPSHOT, i
 const published = await readSnapshot(file);
 const draftsFrom = values["drafts-from"];
 const snapshot = draftsFrom ? withDrafts(published, await readSnapshot(draftsFrom)) : published;
-const variantRoot = resolve(
-  values["variant-root"] ?? fileURLToPath(new URL("../../../website/public/", import.meta.url)),
-);
+const roots = mediaRoots(values["variant-root"]);
 
 const sql = connectOnce(databaseUrl());
 try {
@@ -62,7 +66,7 @@ try {
     process.stderr.write(`${REFUSAL}\n`);
     process.exitCode = 1;
   } else {
-    const report = await importContent(database, snapshot, { variantRoot });
+    const report = await importContent(database, snapshot, { roots });
     console.log(JSON.stringify({ file, draftsFrom: draftsFrom ?? null, ...report }, null, 2));
   }
 } finally {

@@ -1,23 +1,31 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { renderContent } from "@layered/content";
+import { referencedFormNames, renderContent } from "@layered/content";
 import { describe, expect, it } from "vitest";
 import { createRepository } from "./repository.js";
 
 /**
  * The file the deployment falls back to, checked as the deployment will read it.
  *
- * It is committed, and nothing between here and production looks at it again. These are the questions that would
- * otherwise be answered by somebody noticing a draft on the live site.
+ * `db:snapshot` writes it from the local database, and nothing between here and
+ * production looks at it again. These are the questions that would otherwise be
+ * answered by somebody noticing a draft on the live site. Each one is a property
+ * every regenerated file has to keep, not a fact of the day it was written.
  */
 const snapshot = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../content/site.json", import.meta.url)), "utf8"),
 );
 
+type Topic = {
+  id: string;
+  translations: Record<"en" | "de", { slug: string; name: string } | null>;
+};
+
 describe("the published snapshot", () => {
   it("carries only entries a reader may reach", () => {
-    const states = [...new Set(snapshot.entries.map((entry: { visibility: string }) => entry.visibility))];
-    expect(states.sort()).toEqual(["hidden", "public"]);
+    for (const entry of snapshot.entries as { path: string; visibility: string }[]) {
+      expect(["public", "hidden"], entry.path).toContain(entry.visibility);
+    }
   });
 
   it("names no password, because nothing in it is behind one", () => {
@@ -30,63 +38,52 @@ describe("the published snapshot", () => {
     expect(repository.topics("en").length).toBeGreaterThan(0);
   });
 
-  it("restores the NeXT mini interest form on its original page", () => {
+  it("carries the declaration of every form an entry embeds", () => {
     const repository = createRepository(snapshot);
-    const entry = repository.entry("/next-mini-replica-interest/");
-    const form = repository.form("next-mini-hardware-interest");
-    expect(entry?.body).toContain('Form("next-mini-hardware-interest")');
-    expect(entry?.body).not.toContain("Brevo");
-    expect(form?.fields.map((field) => field.key)).toEqual([
-      "first-name",
-      "last-name",
-      "email",
-      "newsletter",
-      "hardware",
-      "enclosure-finish",
-      "comment",
-    ]);
-    expect(form?.fields.find((field) => field.key === "hardware")).toMatchObject({
-      required: true,
-      options: [{ value: "nextcube-mini" }, { value: "megapixel-display" }, { value: "soundbox" }],
-    });
-  });
-
-  it("restores the four migrated YouTube embeds as content components", () => {
-    const paths = [
-      "/projects/pandadock/",
-      "/de/nextstep-on-rpi5-de/",
-      "/nextstep-on-rpi5-en/",
-      "/rpi5-with-external-leds/",
-    ];
-    for (const path of paths) {
-      const entry = snapshot.entries.find((candidate: { path: string }) => candidate.path === path);
-      expect(entry?.body, path).toContain("YouTube(");
-      expect(entry?.body, path).not.toMatch(/\]\(https:\/\/www\.youtube\.com\/embed\//);
+    for (const entry of snapshot.entries as { path: string; body: string }[]) {
+      for (const name of referencedFormNames(renderContent(entry.body))) {
+        expect(repository.form(name), `${entry.path} embeds ${name}`).toBeDefined();
+      }
     }
   });
 
-  it("uses topic ids and localized topic fields in the committed fallback", () => {
-    const ids = new Set(snapshot.topics.map((topic: { id: string }) => topic.id));
-    for (const topic of snapshot.topics as {
-      id: string;
-      translations: { en: { slug: string; name: string }; de: null };
-    }[]) {
-      expect(topic.translations.en.slug).toBeTruthy();
-      expect(topic.translations.en.name).toBeTruthy();
-      expect(topic.translations.de).toBeNull();
+  it("embeds YouTube through its component and never as a link to the player", () => {
+    for (const entry of snapshot.entries as { path: string; body: string }[]) {
+      expect(entry.body, entry.path).not.toMatch(/\]\(https:\/\/www\.youtube\.com\/embed\//);
     }
-    for (const entry of snapshot.entries as { topics: string[] }[]) {
-      for (const id of entry.topics) expect(ids.has(id)).toBe(true);
+  });
+
+  it("names every topic in a language, and gives entries only topics it carries", () => {
+    const ids = new Set((snapshot.topics as Topic[]).map((topic) => topic.id));
+    for (const topic of snapshot.topics as Topic[]) {
+      const named = Object.values(topic.translations).filter((translation) => translation !== null);
+      expect(named.length, topic.id).toBeGreaterThan(0);
+      for (const translation of named) {
+        expect(translation?.slug, topic.id).toBeTruthy();
+        expect(translation?.name, topic.id).toBeTruthy();
+      }
+    }
+    for (const entry of snapshot.entries as { path: string; topics: string[] }[]) {
+      for (const id of entry.topics) expect(ids.has(id), `${entry.path} names topic ${id}`).toBe(true);
     }
   });
 
   it("keeps every redirect pointing at something it carries", () => {
     const repository = createRepository(snapshot);
+    const topicPages = new Set(
+      (snapshot.topics as Topic[]).flatMap((topic) =>
+        (["en", "de"] as const).flatMap((language) => {
+          const translation = topic.translations[language];
+          return translation ? [`${language === "de" ? "/de" : ""}/topics/${translation.slug}/`] : [];
+        }),
+      ),
+    );
     for (const redirect of snapshot.redirects as { source: string; target: string }[]) {
-      // A target is either an entry in this file or one of the site's own
-      // sections. Anything else is a redirect into a 404.
+      // A target is an entry in this file, a topic page it names, or one of the
+      // site's own sections. Anything else is a redirect into a 404.
       const reachable =
         repository.entry(redirect.target) !== undefined ||
+        topicPages.has(redirect.target) ||
         /^\/(de\/)?(posts|projects|topics|search)?\/$/.test(redirect.target);
       expect(reachable, `${redirect.source} points at ${redirect.target}`).toBe(true);
     }

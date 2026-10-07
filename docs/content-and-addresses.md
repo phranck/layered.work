@@ -9,18 +9,24 @@ The content was migrated from the old Publii site by the pipeline in `scripts/pu
 | Source | What it is | What it may still do |
 | --- | --- | --- |
 | The database | The content, edited in the dashboard | Everything |
-| `apps/website/content/site.json` | The snapshot committed at the cutover | The site reads it only when the backend is unreachable or holds no entries. `db:import` loads it into an empty database |
+| `apps/website/content/site.json` | What the site reads from the local database, written by `db:snapshot` | The site reads it only when the backend is unreachable or holds no entries. `db:import` loads it into an empty database |
 | `migration-out/site.json` | The pipeline's output, drafts included, on the machine that ran it | `db:import --drafts-from` takes the drafts from it, and only into an empty database |
 
-`db:import` refuses a database that already holds entries, because the snapshot would overwrite everything written in the dashboard since and the run would still look successful. Nothing writes the committed snapshot from the pipeline's output, because a rerun would undo the corrections made in that file after the cutover, such as #202 and #205.
+`db:import` refuses a database that already holds entries, because the snapshot would overwrite everything written in the dashboard since and the run would still look successful. Nothing writes the committed snapshot from the pipeline's output, because a rerun would undo the corrections made since the cutover, such as #202 and #205.
 
-The committed snapshot no longer matches the database everywhere. On 6 October 2026 four entries had a different body in production than in the file, and the database holds the old `/projects/` page as the projects overview's introduction rather than as an entry. #286 generates the file from the database, so the fallback says what the site says.
+The file is written from the local database, because that is the one production is overwritten from (`docs/hosting.md`), and never by hand:
+
+```bash
+pnpm --filter @layered/backend db:snapshot
+```
+
+It writes `readPublicSnapshot`, the same function the backend answers `/content/snapshot` with, so the fallback says what the site says. Run it after changing content locally and before the local database is pushed to Zerops. It refuses a database holding no entries, which would leave the site nothing to fall back to. It was last written on 7 October 2026.
 
 ## The content snapshot
 
-The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the trash or was deleted from it. Beside them, `listings` holds how the overviews of posts and projects are set up in the dashboard: entries per page, columns, a headline and an introduction per language, and the preview length. A snapshot without it, such as the one committed from the export, uses the defaults.
+The snapshot contains arrays named `entries`, `topics`, `media`, `redirects`, and `gone`. `gone` lists the addresses that answer 410, because their entry is in the trash or was deleted from it. Beside them, `listings` holds how the overviews of posts and projects are set up in the dashboard: entries per page, columns, a headline and an introduction per language, and the preview length. A snapshot without it, such as the migration output, uses the defaults. The snapshot also carries the forms its entries embed, the home page's blocks, the navigations and the site's frame.
 
-Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `createdAt`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, `showInOtherLanguage`, and `template`. `showInOtherLanguage` lists a public entry in the other language's listings, feeds and search as well, marked with its language, whilst that language has no published version of it. Dates are ISO strings or null. For translated entries, `createdAt` is the earliest Publii creation and `updatedAt` is the latest modification across both languages. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
+Entries expose `id`, `title`, `slug`, `path`, `language`, `visibility`, `kind`, `createdAt`, `publishedAt`, `updatedAt`, `summary`, `body`, `topics`, `featuredImage`, `socialImage`, `translationPath`, `featured`, `onHomePage`, `readingWidth`, `showInOtherLanguage`, and `specs`. `showInOtherLanguage` lists a public entry in the other language's listings, feeds and search as well, marked with its language, whilst that language has no published version of it. `specs` holds a project's specification pairs, each a `label` and a `value`, in the order the band under the project's picture shows them. Dates are ISO strings or null. `createdAt` and `updatedAt` belong to the entry, so both languages of one carry the same two. Image and translation references are nullable. `body` is complete Markdown with content components, rather than the prototype's truncated paragraphs.
 
 Visibility is `public`, `hidden`, `draft`, or `trashed`. All 21 records remain in the aggregate so the report can account for them; route and listing policies exclude drafts and trash, and exclude hidden entries from public listings. An `excluded_homepage` flag yields `onHomePage: false`.
 
@@ -30,7 +36,7 @@ Existing English paths come from the generated Publii output and remain unchange
 
 The slugs `posts`, `pages` and `projects` belong to the site, at the root and under `/en/` and `/de/` (`RESERVED_SLUGS` in `packages/schemas/src/settings.ts`). No entry can take one of those addresses, and deleting an entry never marks one as gone. Publii's `/projects/` was a page holding the text above the projects. The import writes such a page as the introduction of that overview rather than as a page, and leaves an introduction alone once one has been written in the dashboard. On this site the text reads "Random selection of some of my projects. The topics range from woodworking and 3D printing to some electronics."
 
-Topics expose `id`, `slug`, and `name`. Media expose `slug`, `src`, `mime`, `filename`, `source`, `bytes`, and `sha256`; images also receive dimensions, responsive `srcSet`, and a WebP data-URL placeholder when variants are generated. Existing alt text is preserved. Missing alt text is reported rather than invented.
+Topics expose `id` and, under `translations`, a `slug` and a `name` in each language that has one, `null` in the other. Media expose `slug`, `src`, `mime`, `filename`, `source`, `bytes`, and `sha256`, where `src` is the file's storage key behind a slash and `source` the key itself. Images also carry their dimensions, a `srcSet` of storage keys, a `focalPoint`, a WebP data-URL `placeholder`, and under `translations` the alt text and caption in each language. Missing alt text is reported rather than invented.
 
 Media slugs come from filenames. Collisions receive the owning entry ID or containing directory, then a stable path hash if necessary. Every source file except the two ISOs is copied byte-for-byte and verified. The two NeXTSTEP images those ISOs held are 740 MB that exist elsewhere, so the two posts offering them link to the Internet Archive item `NeXTSTEP33CISC` instead. The pipeline carries that mapping from ISO filename to external address and applies it without being asked, because a run that misses it writes dead download links and says so only in its own report. Responsive variants are generated separately with the Sharp version already supplied by Astro; originals are never resized or replaced. Existing Publii responsive images and thumbnails are preserved but do not spawn further variants.
 
@@ -71,7 +77,9 @@ The token names one preview and is signed with a key derived from `SESSION_SECRE
 
 ## Getting the content into a database
 
-`db:import` writes the committed snapshot into the database `DATABASE_URL` names, which has to be empty. That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the committed file are taken from there, so every editorial correction made in that file stands.
+`db:import` writes the committed snapshot into the database `DATABASE_URL` names, which has to be empty. It writes the entries, the topics, the library with every picture's sizes, the overviews' settings, the forms and the addresses that answer 410. A form arrives keeping its submissions in the dashboard and sending no mail, because the snapshot does not say where its mail went. The sizes are measured from the files in `MEDIA_LOCAL_DIR`, at their storage keys. Navigations, home page blocks and the site's frame are set in the dashboard and are not imported. Imported into an empty database on 7 October 2026 and written out again, the committed snapshot came back the same apart from the generated ids and the home page's blocks.
+
+That snapshot holds no drafts, because it sits in this public repository, so the drafts come from the migration output on the machine that produced it. Only entries that are drafts and absent from the committed file are taken from there, so every editorial correction made since stands.
 
 ```bash
 pnpm --filter @layered/backend db:import --drafts-from ../../migration-out/site.json
