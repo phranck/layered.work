@@ -17,8 +17,8 @@
 # something that passed the gate.
 #
 # Domains are not in this file. Zerops manages domains and certificates outside
-# the import, so `layered.work`, `dashboard.layered.work` and `api.layered.work`
-# are attached in the GUI once DNS points at the project.
+# the import, so `layered.work`, `dashboard.layered.work` and `new.layered.work`
+# are attached in the GUI. The API has no public name and needs none.
 
 project:
   name: layered.work

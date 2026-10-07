@@ -38,7 +38,7 @@ The repository is public, which is what makes that free: GitHub bills Actions mi
 
 ## Addresses
 
-Until DNS points at the project, everything is reached through the Zerops subdomains. They are enabled on the three application services and the documentation calls them unsuitable for production, which is exactly what they are for here.
+Each application service also answers on a Zerops subdomain. They are enabled on all three, and the Zerops documentation calls them unsuitable for production.
 
 | Service | Address |
 | --- | --- |
@@ -65,9 +65,11 @@ This cost an hour on 13 September 2026. The process was healthy the whole time a
 
 The A record is Zerops' shared IPv4, which lmaa.space and musiccloud.io answer on as well, so routing is by host name rather than by address. That is what `sharedIpv4: true` in the import file buys, against $3 per 30 days for a dedicated address.
 
-Zerops issued the certificate through Let's Encrypt, valid to 12 December 2026, covering `layered.work` alone. HTTP answers 301 to HTTPS.
+`dashboard.layered.work` carries the same two records and is attached to the `dashboard` service.
 
-`dashboard.layered.work` carries the same two records and is attached to the `dashboard` service. Zerops issued one certificate covering both names, so the site and the dashboard share it. `api.layered.work` has no record yet and is reached through its Zerops subdomain.
+Zerops issues the certificate through Let's Encrypt. One certificate covers `layered.work`, `dashboard.layered.work` and `new.layered.work`, and on 7 October 2026 it was valid to 20 December 2026. HTTP answers 301 to HTTPS on all three.
+
+**The API has no public name, because nothing outside the project addresses it by one.** The site's server asks it at `http://backend:3000` inside the project. The dashboard's nginx passes `/api/` on to `http://backend.zerops:3000`, so a browser only ever talks to the host whose page it shows. A name for the API costs a DNS record and a certificate, and it is attached once a client outside the project needs one.
 
 `new.layered.work` carries the same two records and answers on the `website` service. It is one of the preview hosts in `apps/website/src/site.ts`, so it shows the finished site whilst `layered.work` still shows the countdown, and the smoke test checks the site there.
 
@@ -328,4 +330,4 @@ Zerops does not back up [object storage](https://docs.zerops.io/guides/object-st
 
 ## What the smoke test asks
 
-What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, which has no name of its own yet. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
+What the smoke test checks is written in the deploy workflow, so it is visible in a diff and versioned. It asks the real hosts, `layered.work` and `dashboard.layered.work`, and the backend's Zerops subdomain, because the API has no public name. The pages, the feeds and the sitemap of the finished site are checked on `new.layered.work`, which shows them before the launch as well.
