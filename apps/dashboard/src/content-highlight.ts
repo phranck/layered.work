@@ -24,6 +24,8 @@ export const CONTENT_TAGS = {
   argumentName: Tag.define(),
   /** Brackets, braces, commas and colons: the language's own punctuation. */
   syntax: Tag.define(),
+  /** The name inside a reference to a named value. */
+  valueName: Tag.define(),
 } as const;
 
 /**
@@ -49,6 +51,10 @@ export const componentHighlighting: MarkdownConfig = {
       [NODE.ArgumentUnknown]: tags.invalid,
       [NODE.ComponentError]: tags.invalid,
       [NODE.ComponentEscape]: CONTENT_TAGS.syntax,
+      // The braces and spaces of a reference are its own characters, and the
+      // name is a child with a tag of its own.
+      [NODE.ValueReference]: CONTENT_TAGS.syntax,
+      [NODE.ValueName]: CONTENT_TAGS.valueName,
     }),
   ],
 };
@@ -78,6 +84,7 @@ export const contentHighlightStyle = HighlightStyle.define([
   { tag: CONTENT_TAGS.componentName, color: scheme("shortcode-token") },
   { tag: CONTENT_TAGS.argumentName, color: scheme("shortcode-attribute") },
   { tag: CONTENT_TAGS.syntax, color: scheme("shortcode-brace") },
+  { tag: CONTENT_TAGS.valueName, color: scheme("value") },
   { tag: tags.string, color: scheme("shortcode-string") },
   { tag: [tags.number, tags.atom], color: scheme("shortcode-target") },
   {

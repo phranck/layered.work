@@ -75,6 +75,7 @@ it("shows every submitted field as text after form edits, marks it read and conf
         projects: 0,
         tags: 0,
         media: 0,
+        values: 0,
         blocks: 0,
         mainNav: 0,
         footerNav: 0,

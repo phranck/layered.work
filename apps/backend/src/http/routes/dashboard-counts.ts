@@ -8,6 +8,7 @@ import {
   forms,
   homeBlocks,
   media,
+  namedValues,
   navigationItems,
   navigations,
   socialAccounts,
@@ -41,6 +42,7 @@ export async function readDashboardCounts(
       (select count(*)::int from ${forms}) as forms,
       (select count(*)::int from ${formSubmissions} where ${formSubmissions.status} = 'unread') as submissions,
       (select count(*)::int from ${media}) as media,
+      (select count(*)::int from ${namedValues}) as "values",
       (select count(*)::int from ${homeBlocks}) as blocks,
       (
         select count(*)::int

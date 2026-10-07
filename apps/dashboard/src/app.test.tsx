@@ -9,6 +9,7 @@ import { DashboardApiProvider } from "./dashboard-context.js";
 import { EDITOR_TEXT_SIZE_KEY } from "./editor-text-size.js";
 import { LISTING_SETTINGS_OPEN_KEY } from "./listing-settings.js";
 import { createDashboardMemoryRouter } from "./router.js";
+import { dashboardAreas } from "./routes.js";
 import { SIDEBAR_ORDER_KEY } from "./sidebar-order.js";
 
 const queryClients = new Set<QueryClient>();
@@ -33,6 +34,7 @@ const counts = {
   projects: 6,
   tags: 9,
   media: 17,
+  values: 1,
   blocks: 5,
   mainNav: 6,
   footerNav: 3,
@@ -252,7 +254,8 @@ describe("dashboard shell", () => {
 
     const navigation = await screen.findByRole("navigation", { name: "Dashboard-Bereiche" });
     const links = within(navigation).getAllByRole("link");
-    expect(links).toHaveLength(16);
+    // One link per area the dashboard declares, whichever areas those are.
+    expect(links).toHaveLength(dashboardAreas.length);
     expect(within(navigation).getByRole("link", { name: "API-Tokens" })).toBeTruthy();
     const settings = within(navigation).getByRole("link", { name: "Einstellungen" });
     fireEvent.click(settings);

@@ -16,6 +16,7 @@ export const dashboardCounts = z
     projects: storedCount,
     tags: storedCount,
     media: storedCount,
+    values: storedCount,
     blocks: storedCount,
     mainNav: storedCount,
     footerNav: storedCount,

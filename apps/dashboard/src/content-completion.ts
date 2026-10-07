@@ -431,6 +431,67 @@ export function libraryCompletions(library: MediaLibrary) {
   };
 }
 
+/** A named value, as the completion list offers it and the validator knows it. */
+export type KnownValue = { name: string; value: string };
+
+/**
+ * A reference to a named value being written at the cursor: two braces, spaces
+ * if any, and as much of a name as has been typed.
+ */
+const OPEN_REFERENCE = /\{\{[ \t]*([a-z0-9-]*)$/;
+
+/** Where Markdown keeps text as written, which a reference inside is not one. */
+const CODE_NODES = new Set(["InlineCode", "FencedCode", "CodeBlock", "CodeText"]);
+
+/**
+ * Puts a value's name into the reference being written and closes it, keeping
+ * the closing braces the bracket closing has already typed, and leaves the
+ * cursor after them.
+ */
+function insertReference(view: EditorView, name: string, from: number, to: number): void {
+  const opening = view.state.sliceDoc(from - 1, from) === "{" ? " " : "";
+  const closing = /^ ?\}\}/.exec(view.state.sliceDoc(to, to + 3))?.[0];
+  const insert = closing ? `${opening}${name}${closing.startsWith(" ") ? "" : " "}` : `${opening}${name} }}`;
+  view.dispatch({
+    changes: { from, to, insert },
+    selection: { anchor: from + insert.length + (closing?.length ?? 0) },
+    userEvent: "input.complete",
+  });
+}
+
+/**
+ * Completes the name of a named value after `{{`, showing each value's text
+ * beside its name, everywhere but in code.
+ *
+ * @param values - The values as they stand, read each time the list opens.
+ * @returns A completion source for the surface.
+ */
+export function valueCompletions(values: () => readonly KnownValue[]) {
+  return (context: CompletionContext): CompletionResult | null => {
+    const { state, pos: position } = context;
+    const open = OPEN_REFERENCE.exec(state.sliceDoc(state.doc.lineAt(position).from, position));
+    if (!open) return null;
+    for (
+      let node: SyntaxNode | null = syntaxTree(state).resolveInner(position, -1);
+      node;
+      node = node.parent
+    ) {
+      if (CODE_NODES.has(node.name)) return null;
+    }
+    const options = values().map(
+      (value): Completion => ({
+        label: value.name,
+        detail: value.value,
+        type: "variable",
+        apply: (view, _completion, from, to) => insertReference(view, value.name, from, to),
+      }),
+    );
+    if (options.length === 0) return null;
+    const typed = open[1] ?? "";
+    return { from: position - typed.length, options, validFor: /^[a-z0-9-]*$/ };
+  };
+}
+
 /** A picture's thumbnail before its name in the list, and nothing beside any other entry. */
 function thumbnailOf(completion: Completion): Node | null {
   const source = (completion as LibraryCompletion).thumbnail;
@@ -452,10 +513,16 @@ function thumbnailOf(completion: Completion): Node | null {
  *
  * @param library - The media library, which completes the quotes of a file
  *   parameter where it is given.
+ * @param values - The named values, which complete a reference after `{{`
+ *   where they are given.
  */
-export function contentAutocompletion(library?: MediaLibrary) {
+export function contentAutocompletion(library?: MediaLibrary, values?: () => readonly KnownValue[]) {
   return autocompletion({
-    override: library ? [contentCompletions, libraryCompletions(library)] : [contentCompletions],
+    override: [
+      contentCompletions,
+      ...(library ? [libraryCompletions(library)] : []),
+      ...(values ? [valueCompletions(values)] : []),
+    ],
     icons: false,
     addToOptions: [{ render: thumbnailOf, position: 20 }],
   });

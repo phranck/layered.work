@@ -82,6 +82,10 @@
   --md-shortcode-target: var(--syntax-orange);
   --md-shortcode-attribute: var(--syntax-blue);
   --md-shortcode-string: var(--syntax-green);
+  /* The name inside a reference to a named value, `{{ name }}`. A role of its
+     own, because a value is neither a component nor a string, and the one
+     color of the scheme no other role takes. */
+  --md-value: var(--syntax-sky);
 
   /* --- Sidebar ------------------------------------------------------------
      The width is a property rather than a fixed track, because the drag handle

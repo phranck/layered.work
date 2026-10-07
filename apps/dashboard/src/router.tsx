@@ -13,6 +13,7 @@ import { FormEditorScreen, FormsScreen } from "./forms.js";
 import { HomeBlocksScreen } from "./home-blocks.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { MediaScreen } from "./media-screen.js";
+import { NamedValuesScreen } from "./named-values.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { SocialAccountsScreen } from "./social-accounts.js";
@@ -21,12 +22,14 @@ import { TopicsScreen } from "./topics.js";
 
 /**
  * The areas with a screen of their own rather than an entry list: the topics,
- * the media, the home page's blocks, the navigations and accounts, and the
- * System group's areas, each of which is one group of the site's settings.
+ * the media, the named values, the home page's blocks, the navigations and
+ * accounts, and the System group's areas, each of which is one group of the
+ * site's settings.
  */
 const AREA_SCREENS: Partial<Record<string, ComponentType<{ area: DashboardArea }>>> = {
   tags: TopicsScreen,
   media: MediaScreen,
+  values: NamedValuesScreen,
   settings: SiteSettingsScreen,
   smtp: MailSettingsScreen,
   analytics: AnalyticsSettingsScreen,

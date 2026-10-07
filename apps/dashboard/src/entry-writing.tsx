@@ -20,6 +20,7 @@ import { type EditorTextSize, steppedTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaUploadProgress, useMediaLibrary } from "./media-uploads.js";
+import { useNamedValues } from "./named-values-query.js";
 
 const ContentEditor = lazy(() =>
   import("./content-editor.js").then((module) => ({ default: module.ContentEditor })),
@@ -49,6 +50,7 @@ export function WritingSurface({
 }) {
   const { text } = useDashboardLanguage();
   const { library, progress } = useMediaLibrary();
+  const values = useNamedValues();
   return (
     <Editor.Main>
       {/* The label beside its field rather than over it, so the title takes
@@ -162,6 +164,7 @@ export function WritingSurface({
           <ContentEditor
             editorRef={editor}
             library={library}
+            values={values.data}
             value={body}
             label={text("editorText")}
             onChange={(body) => onBody(body)}

@@ -1,13 +1,14 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { commonmarkLanguage, markdown } from "@codemirror/lang-markdown";
 import type { LanguageSupport } from "@codemirror/language";
+import { forceLinting } from "@codemirror/lint";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX, type Finding } from "@layered/content";
 import type { MediaKind } from "@layered/schemas";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
-import { contentAutocompletion, type MediaLibrary } from "./content-completion.js";
+import { contentAutocompletion, type KnownValue, type MediaLibrary } from "./content-completion.js";
 import { contentFileDrop } from "./content-files.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 import { contentIndentation, reindentDocument } from "./content-indent.js";
@@ -146,12 +147,17 @@ const surfaceTheme = EditorView.theme(
  *
  * @param label - What the surface is called to assistive technology.
  * @param library - The media library completion offers files from, where there is one.
+ * @param values - The named values completion offers after `{{`.
  */
-function surfaceExtensions(label: string, library?: MediaLibrary): Extension[] {
+function surfaceExtensions(
+  label: string,
+  library: MediaLibrary | undefined,
+  values: () => readonly KnownValue[],
+): Extension[] {
   return [
     contentLanguage(),
     contentHighlighting(),
-    contentAutocompletion(library),
+    contentAutocompletion(library, values),
     library ? contentFileDrop(library) : [],
     contentIndentation(),
     tableSync(),
@@ -212,6 +218,12 @@ export interface ContentEditorProps {
    * each time it is asked.
    */
   library?: MediaLibrary;
+  /**
+   * The named values, which complete a reference after `{{` and decide which
+   * names the validator accepts. Undefined while they are loading, when
+   * references are taken on trust.
+   */
+  values?: readonly KnownValue[];
 }
 
 /**
@@ -230,6 +242,7 @@ export function ContentEditor({
   editorRef,
   onValidation,
   library,
+  values,
 }: ContentEditorProps) {
   const { language } = useDashboardLanguage();
   const host = useRef<HTMLDivElement>(null);
@@ -307,6 +320,10 @@ export function ContentEditor({
       library?.uploadFiles(files, uploaded) ?? Promise.resolve(),
   );
   const libraryUploadLabel = useEffectEvent(() => library?.uploadLabel() ?? "");
+  const knownValues = useEffectEvent((): readonly KnownValue[] => values ?? []);
+  const knownValueNames = useEffectEvent(() =>
+    values ? new Set(values.map((value) => value.name)) : undefined,
+  );
   const initialValue = useRef(value);
   const initialLabel = useRef(label);
   const hasLibrary = useRef(library !== undefined);
@@ -328,10 +345,12 @@ export function ContentEditor({
                   uploadLabel: () => libraryUploadLabel(),
                 }
               : undefined,
+            () => knownValues(),
           ),
           contentValidation(
             (checked) => validated(checked),
             (finding) => message(finding),
+            () => knownValueNames(),
           ),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed(update.state.doc.toString());
@@ -345,6 +364,12 @@ export function ContentEditor({
       view.current = null;
     };
   }, []);
+
+  // The validator runs when the text changes, so a list of values that arrives
+  // or changes afterwards is checked against at once rather than at the next key.
+  useEffect(() => {
+    if (values && view.current) forceLinting(view.current);
+  }, [values]);
 
   useEffect(() => {
     const current = view.current;
