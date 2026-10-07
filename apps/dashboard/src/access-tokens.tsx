@@ -1,4 +1,4 @@
-import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope } from "@layered/schemas";
+import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
 import { Button, Card, Field, Input, Switch } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -7,6 +7,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 
 /** What each permission is called in the catalogue. */
@@ -40,11 +41,12 @@ export function AccessTokensScreen() {
       notify({ tone: "success", message: text("tokenCreated") });
     },
   });
+  const [revoking, setRevoking] = useState<TokenSummary | null>(null);
   const revoke = useMutation({
     mutationFn: (id: string) => api.revokeAccessToken(id),
-    onError: (error) => notifyError(error),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["access-tokens"] });
+      setRevoking(null);
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
   });
@@ -144,13 +146,25 @@ export function AccessTokensScreen() {
             {token.revokedAt ? (
               <p>{text("tokenRevoked")}</p>
             ) : (
-              <Button tone="danger" disabled={revoke.isPending} onClick={() => revoke.mutate(token.id)}>
+              <Button tone="danger" onClick={() => setRevoking(token)}>
                 {text("tokenRevoke")}
               </Button>
             )}
           </Card.Body>
         ))}
       </Card>
+      {revoking && (
+        <ConfirmDialog
+          title={text("tokenRevokeTitle", revoking.name)}
+          confirm={revoke.isPending ? text("tokenRevokePending") : text("tokenRevoke")}
+          busy={revoke.isPending}
+          error={revoke.error}
+          onConfirm={() => revoke.mutate(revoking.id)}
+          onClose={() => setRevoking(null)}
+        >
+          <p>{text("tokenRevokeBody")}</p>
+        </ConfirmDialog>
+      )}
     </>
   );
 }
