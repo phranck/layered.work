@@ -140,6 +140,8 @@ const de = {
   accountRole: "Rolle",
   accountLanguage: "Dashboard-Sprache",
   accountLanguageHint: "Gilt nur für diese Oberfläche, nicht für die Website.",
+  accountScale: "Größe der Oberfläche",
+  accountScaleHint: "Gilt für diesen Browser. M ist die Grundgröße.",
   signOut: "Abmelden",
   signOutPending: "Abmeldung läuft…",
 
@@ -589,6 +591,8 @@ const en: Catalogue = {
   accountRole: "Role",
   accountLanguage: "Dashboard language",
   accountLanguageHint: "Applies to this interface only, not to the website.",
+  accountScale: "Interface size",
+  accountScaleHint: "Applies to this browser. M is the standard size.",
   signOut: "Sign out",
   signOutPending: "Signing out…",
 

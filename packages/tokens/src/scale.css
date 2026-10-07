@@ -131,6 +131,15 @@
   --page-gutter: clamp(20px, 4.5vw, 44px);
   --reading-measure: 68ch;
 
+  /* --- Viewport -----------------------------------------------------------
+     The window's height in the document's own pixels. `zoom` multiplies every
+     length, viewport units included, so under a zoom of 1.25 an element
+     100dvh tall is a quarter taller than the window. The dashboard's interface
+     scale zooms its document and sets --interface-zoom to the same factor; the
+     site never zooms, so here both are the plain values. */
+  --interface-zoom: 1;
+  --viewport-height: calc(100dvh / var(--interface-zoom));
+
   /* --- Card geometry ------------------------------------------------------
      Two numbers are chosen. Everything derived from them is in semantic.css,
      beside the values that reference it, because a custom property containing

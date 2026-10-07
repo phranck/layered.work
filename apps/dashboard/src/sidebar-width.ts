@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { zoomOf } from "./interface-scale.js";
 
 /**
  * The sidebar's width, which the reader sets by dragging its edge.
@@ -114,7 +115,7 @@ export interface SidebarHandleProps {
 export function useSidebarWidth(workbench: RefObject<HTMLElement | null>): SidebarHandleProps {
   const [bounds, setBounds] = useState<SidebarBounds>();
   const [width, setWidth] = useState<number>();
-  const drag = useRef<{ startX: number; startWidth: number } | undefined>(undefined);
+  const drag = useRef<{ startX: number; startWidth: number; zoom: number } | undefined>(undefined);
 
   const apply = useCallback(
     (next: number) => {
@@ -152,12 +153,15 @@ export function useSidebarWidth(workbench: RefObject<HTMLElement | null>): Sideb
       if (!bounds || width === undefined || event.button !== 0) return;
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
-      drag.current = { startX: event.clientX, startWidth: width };
+      drag.current = { startX: event.clientX, startWidth: width, zoom: zoomOf(event.currentTarget) };
       workbench.current?.setAttribute("data-resizing", "");
     },
     onPointerMove(event) {
       if (!drag.current || !bounds) return;
-      apply(clampWidth(drag.current.startWidth + event.clientX - drag.current.startX, bounds));
+      // The pointer travels in the window's pixels and the width is written in
+      // the document's, which the interface scale zooms.
+      const travel = (event.clientX - drag.current.startX) / drag.current.zoom;
+      apply(clampWidth(drag.current.startWidth + travel, bounds));
     },
     onPointerUp: finish,
     onPointerCancel: finish,

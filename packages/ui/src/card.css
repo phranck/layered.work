@@ -311,7 +311,7 @@
 
 .card-overlay > .card {
   width: min(520px, 100%);
-  max-height: calc(100dvh - 2 * var(--page-gutter));
+  max-height: calc(var(--viewport-height) - 2 * var(--page-gutter));
   overflow: auto;
   --card-surface: var(--surface-floating);
   border-color: var(--edge-strong);

@@ -33,7 +33,7 @@ h6 {
 }
 
 body {
-  min-height: 100dvh;
+  min-height: var(--viewport-height);
   font-family: var(--font-sans);
   font-size: var(--text-body);
   line-height: var(--leading-normal);

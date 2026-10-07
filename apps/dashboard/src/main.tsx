@@ -5,8 +5,11 @@ import { RouterProvider } from "react-router";
 import { createDashboardApi } from "./api.js";
 import { expirationLoginLocation } from "./auth-routing.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
+import { applyStoredInterfaceScale } from "./interface-scale.js";
 import { createDashboardBrowserRouter } from "./router.js";
 import "./app.css";
+
+applyStoredInterfaceScale();
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 let router: ReturnType<typeof createDashboardBrowserRouter>;
