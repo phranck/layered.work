@@ -182,6 +182,7 @@ runs("the entry list", () => {
           showInOtherLanguage: false,
           slug: "a-draft",
           topicIds: [],
+          specs: [],
           ...value,
         }),
       });
@@ -243,6 +244,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds,
+        specs: [],
         slug: "published-in-english",
       }),
     });
@@ -282,6 +284,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: true,
         topicIds: [],
+        specs: [],
         slug: "a-page",
       }),
     });
@@ -299,6 +302,62 @@ runs("the entry list", () => {
     expect(logged.map((row) => row.detail)).toEqual([{ changedKeys: ["showInOtherLanguage"] }]);
   });
 
+  it("stores a specification in its order, refuses an incomplete one, and hands it to the site and a translation", async () => {
+    const cookie = await signedInCookie();
+    const page = (await list("page", cookie))[0];
+    const save = (specs: unknown) =>
+      app.request(`/entries/${page?.id}`, {
+        method: "PUT",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({
+          title: "A page",
+          summary: null,
+          body: "",
+          state: "public",
+          readingWidth: "normal",
+          showInOtherLanguage: false,
+          topicIds: [],
+          specs,
+          slug: "a-page",
+        }),
+      });
+    const specs = [
+      { label: "Status", value: "In progress" },
+      { label: "Electronics", value: "USB-C, ESD protection" },
+    ];
+
+    const saved = await save(specs);
+    expect(saved.status).toBe(200);
+    expect(entryDetail.parse(((await saved.json()) as { data: unknown }).data).specs).toEqual(specs);
+    // The same pairs again change nothing, so nothing more is logged.
+    expect((await save(specs)).status).toBe(200);
+    for (const wrong of [
+      [{ label: "", value: "In progress" }],
+      [{ label: "Status", value: "   " }],
+      [{ label: "x".repeat(41), value: "In progress" }],
+      Array.from({ length: 9 }, () => specs[0]),
+      [{ label: "Status", value: "In progress", note: "extra" }],
+    ]) {
+      expect((await save(wrong)).status, JSON.stringify(wrong)).toBe(400);
+    }
+
+    const database = await testDatabase();
+    expect(
+      (await readPublicSnapshot(database)).entries.find((entry) => entry.title === "A page")?.specs,
+    ).toEqual(specs);
+    const logged = await database
+      .select({ detail: auditLog.detail })
+      .from(auditLog)
+      .where(eq(auditLog.subjectId, page?.id ?? ""));
+    expect(logged.map((row) => row.detail)).toEqual([{ changedKeys: ["specs"] }]);
+
+    const translated = await app.request(`/entries/${page?.id}/translation`, {
+      method: "POST",
+      headers: { cookie },
+    });
+    expect(entryDetail.parse(((await translated.json()) as { data: unknown }).data).specs).toEqual(specs);
+  });
+
   describe("changing an address", () => {
     /** Saves the English post of the pair under a slug, everything else as the library has it. */
     const saveSlug = async (cookie: string, id: string, slug: string) =>
@@ -313,6 +372,7 @@ runs("the entry list", () => {
           readingWidth: "normal",
           showInOtherLanguage: false,
           topicIds: [],
+          specs: [],
           slug,
         }),
       });
@@ -423,6 +483,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug: "t",
         path: "/x/",
       },
@@ -434,6 +495,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug: "t",
       },
       {
@@ -444,6 +506,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug: "t",
       },
       {
@@ -463,6 +526,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: ["0199f064-43b7-79a8-917f-eefc8c852400"],
+        specs: [],
         slug: "t",
       },
       {
@@ -473,6 +537,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug: "Not a slug",
       },
     ]) {
@@ -592,6 +657,7 @@ runs("the entry list", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug: "published-in-english",
       }),
     });

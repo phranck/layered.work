@@ -1,6 +1,7 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
   DEFAULT_LISTING,
+  entrySpecs,
   focalPoint,
   type HomeBlock,
   type HomeBlockType,
@@ -56,20 +57,10 @@ const entrySchema = z.object({
   showInOtherLanguage: z.boolean().default(false),
   /**
    * What an entry states about itself beside its prose, as the author's own
-   * pairs rather than as fixed fields.
-   *
-   * A board project names its manufacturing and its electronics; a woodworking
-   * one names its timber and its finish. Fixed columns would fit one of those
-   * and be empty for the other, so the entry carries what it has and the band
-   * shows exactly that.
-   *
-   * Bounded because the band lays the pairs out in one row per screen width. A
-   * ninth pair is a paragraph rather than a specification.
+   * pairs, which the project page shows as the band under its hero. The bounds
+   * are the ones a save is held to, from `@layered/schemas`.
    */
-  specs: z
-    .array(z.object({ label: z.string().min(1).max(40), value: z.string().min(1).max(80) }))
-    .max(8)
-    .default([]),
+  specs: entrySpecs.default([]),
 });
 const mediaSchema = z.object({
   slug,

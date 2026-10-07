@@ -77,6 +77,7 @@ runs("publishing model descriptions through the API", () => {
         readingWidth: "normal",
         showInOtherLanguage: false,
         topicIds: [],
+        specs: [],
         slug,
       } satisfies SaveEntryBody),
     });

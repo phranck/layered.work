@@ -38,6 +38,7 @@ it.skipIf(!hasTestDatabase)(
       readingWidth: "normal",
       showInOtherLanguage: false,
       topicIds: [],
+      specs: [],
       slug: `gate-${id}`,
     };
     try {

@@ -3,6 +3,7 @@ import { basename, extname, resolve } from "node:path";
 import { mediaReferences } from "@layered/content";
 import {
   DEFAULT_LISTING,
+  type EntrySpec,
   LISTED_KINDS,
   LISTING_GROUP,
   LISTING_PATHS,
@@ -71,6 +72,8 @@ export interface SnapshotEntry {
   showInOtherLanguage?: boolean;
   /** The picture a shared link shows, by slug. Absent from the migration output. */
   socialImage?: string | null;
+  /** The specification pairs of a project. Absent from the migration output. */
+  specs?: EntrySpec[];
 }
 
 /** One asset as the snapshot holds it. */
@@ -608,6 +611,7 @@ async function importEntry(
       state: entry.visibility as "public" | "draft" | "hidden",
       readingWidth: entry.readingWidth,
       showInOtherLanguage: entry.showInOtherLanguage ?? false,
+      specs: entry.specs ?? [],
       publishedAt: entry.publishedAt ? new Date(entry.publishedAt) : null,
       featuredMediaId: mediaIdOf(entry.featuredImage),
       socialCardMediaId: mediaIdOf(entry.socialImage),

@@ -86,6 +86,7 @@ async function fixture() {
     readingWidth: "normal",
     showInOtherLanguage: false,
     topicIds: [],
+    specs: [],
     slug: `owned-${translation}`,
   };
   return { db, id, other, actor, translation, value };

@@ -205,6 +205,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
       state: entryTranslations.state,
       readingWidth: entryTranslations.readingWidth,
       showInOtherLanguage: entryTranslations.showInOtherLanguage,
+      specs: entryTranslations.specs,
       publishedAt: entryTranslations.publishedAt,
       modifiedAt: entries.modifiedAt,
       pictureId: media.id,
@@ -270,6 +271,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
       : null,
     counterpartTrashed: other !== undefined && other.trashedAt !== null,
     trashed: row.trashedAt !== null,
+    specs: row.specs,
   };
 }
 
@@ -425,6 +427,7 @@ export async function saveEntry(
           state: entryTranslations.state,
           readingWidth: entryTranslations.readingWidth,
           showInOtherLanguage: entryTranslations.showInOtherLanguage,
+          specs: entryTranslations.specs,
           publishedAt: entryTranslations.publishedAt,
           trashedAt: entryTranslations.trashedAt,
           language: entryTranslations.language,
@@ -457,8 +460,10 @@ export async function saveEntry(
       await tx.update(entries).set({ modifiedAt: now }).where(eq(entries.id, current.entryId));
       const topicsChanged = await setEntryTopics(tx, current.entryId, topicIds);
 
+      // Compared as JSON, because the specification is a list and two equal
+      // lists are never the same object.
       const changedKeys: string[] = (Object.keys(fields) as (keyof typeof fields)[]).filter(
-        (key) => current[key] !== fields[key],
+        (key) => JSON.stringify(current[key]) !== JSON.stringify(fields[key]),
       );
       if (topicsChanged) changedKeys.push("topicIds");
       if (await setAddress(tx, id, current.language, slug)) changedKeys.push("slug");
@@ -529,6 +534,7 @@ export async function createTranslation(
         body: entryTranslations.body,
         readingWidth: entryTranslations.readingWidth,
         featuredMediaId: entryTranslations.featuredMediaId,
+        specs: entryTranslations.specs,
       })
       .from(entryTranslations)
       .where(eq(entryTranslations.id, id))
@@ -572,6 +578,7 @@ export async function createTranslation(
         body: source.body,
         readingWidth: source.readingWidth,
         featuredMediaId: source.featuredMediaId,
+        specs: source.specs,
         state: "draft",
       })
       .returning({ id: entryTranslations.id });

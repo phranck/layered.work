@@ -1,0 +1,1 @@
+ALTER TABLE "entry_translations" ADD COLUMN "specs" jsonb DEFAULT '[]'::jsonb NOT NULL;

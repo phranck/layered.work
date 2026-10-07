@@ -38,6 +38,7 @@ it.skipIf(!hasTestDatabase)(
       readingWidth: "normal" as const,
       showInOtherLanguage: false,
       topicIds: [],
+      specs: [],
       slug: `card-${suffix}`,
     };
     try {
