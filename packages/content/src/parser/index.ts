@@ -42,3 +42,4 @@ export * from "./dedent.js";
 export * from "./nodes.js";
 export * from "./read.js";
 export * from "./scan.js";
+export * from "./value.js";

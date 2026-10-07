@@ -1,3 +1,4 @@
+import { writeValueReference } from "@layered/content";
 import {
   type CreateNamedValueBody,
   createNamedValueBody,
@@ -41,9 +42,6 @@ import { useSession } from "./session-queries.js";
 
 type Dialog = { editing: NamedValue | null } | { deleting: NamedValue } | null;
 
-/** A reference as content writes it, which is how a value is recognized in the list. */
-const written = (name: string) => `{{ ${name} }}`;
-
 /**
  * The list of values for the dashboard's Values area.
  *
@@ -84,7 +82,7 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
                 <Row.Lead>
                   <BracketsCurlyIcon />
                 </Row.Lead>
-                <Row.Text title={written(value.name)} note={value.value} />
+                <Row.Text title={writeValueReference(value.name)} note={value.value} />
                 <Row.Meta>
                   {value.usedBy.length ? text("valueUsedIn", value.usedBy.length) : text("valueUnused")}
                 </Row.Meta>
@@ -164,7 +162,7 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
     <CardDialog labelId="value-edit-title" onClose={onClose}>
       <Card.Header
         id="value-edit-title"
-        title={value ? text("navigationEdit", written(value.name)) : text("valuesNew")}
+        title={value ? text("navigationEdit", writeValueReference(value.name)) : text("valuesNew")}
       />
       <Card.Body>
         <form id="value-edit" className="settings-form" onSubmit={submit} noValidate>
@@ -242,7 +240,7 @@ function ValueDelete({ value, onClose }: { value: NamedValue; onClose: () => voi
     use.kind === "entry" ? use.title : text("valueUseListing", use.listing);
   return (
     <ConfirmDialog
-      title={text("navigationDelete", written(value.name))}
+      title={text("navigationDelete", writeValueReference(value.name))}
       busy={remove.isPending}
       blocked={inUse}
       error={remove.error}

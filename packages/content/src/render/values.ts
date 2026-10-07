@@ -29,6 +29,37 @@ function asMarkdownText(value: string): string {
   return value.replace(MARKDOWN_PUNCTUATION, (character) => `\\${character}`);
 }
 
+/** One reference the parser found: where it stands in the body, and the name it holds. */
+interface FoundReference {
+  from: number;
+  to: number;
+  name: string;
+}
+
+/**
+ * Every reference the parser finds in a body, in the order they stand.
+ *
+ * The one reading that resolving and counting share, so a reference that is
+ * replaced is exactly a reference that keeps its value from being deleted.
+ *
+ * @param source - The body as written.
+ */
+function valueReferencesIn(source: string): FoundReference[] {
+  const found: FoundReference[] = [];
+  if (!source.includes("{{")) return found;
+  parseContent(source).iterate({
+    enter(node) {
+      if (node.name !== NODE.ValueReference) return true;
+      const nameNode = node.node.getChild(NODE.ValueName);
+      if (nameNode)
+        found.push({ from: node.from, to: node.to, name: source.slice(nameNode.from, nameNode.to) });
+      // A reference holds only its name, so there is nothing further down to find.
+      return false;
+    },
+  });
+  return found;
+}
+
 /**
  * A body with every reference to a known value replaced by that value.
  *
@@ -39,24 +70,13 @@ function asMarkdownText(value: string): string {
  *   already refused for anything published.
  */
 export function resolveValues(source: string, values: ReadonlyMap<string, string>): string {
-  if (values.size === 0 || !source.includes("{{")) return source;
-
-  const references: { from: number; to: number; text: string }[] = [];
-  parseContent(source).iterate({
-    enter(node) {
-      if (node.name !== NODE.ValueReference) return true;
-      const nameNode = node.node.getChild(NODE.ValueName);
-      const value = nameNode ? values.get(source.slice(nameNode.from, nameNode.to)) : undefined;
-      if (value !== undefined) references.push({ from: node.from, to: node.to, text: asMarkdownText(value) });
-      // A reference holds only its name, so there is nothing further down to find.
-      return false;
-    },
-  });
-
+  if (values.size === 0) return source;
   let resolved = "";
   let at = 0;
-  for (const reference of references) {
-    resolved += source.slice(at, reference.from) + reference.text;
+  for (const reference of valueReferencesIn(source)) {
+    const value = values.get(reference.name);
+    if (value === undefined) continue;
+    resolved += source.slice(at, reference.from) + asMarkdownText(value);
     at = reference.to;
   }
   return resolved + source.slice(at);
@@ -72,14 +92,5 @@ export function resolveValues(source: string, values: ReadonlyMap<string, string
  * @returns Each name once.
  */
 export function referencedValueNames(source: string): Set<string> {
-  const names = new Set<string>();
-  if (!source.includes("{{")) return names;
-  parseContent(source).iterate({
-    enter(node) {
-      if (node.name !== NODE.ValueName) return true;
-      names.add(source.slice(node.from, node.to));
-      return false;
-    },
-  });
-  return names;
+  return new Set(valueReferencesIn(source).map((reference) => reference.name));
 }
