@@ -88,3 +88,21 @@ export const settings = pgTable("settings", {
   key: text().primaryKey(),
   value: jsonb().notNull(),
 });
+
+/**
+ * A line of text defined once and referred to from bodies as `{{ name }}`.
+ *
+ * The name is what a body writes, so it is unique and never changes once the
+ * value exists; `@layered/schemas` says what a name may look like. The text is
+ * the same in both languages, because what a value is for is a product name or
+ * a version number, and a phrase that translates gets a name per language.
+ *
+ * Like the settings, a value carries no time of its last change, because
+ * `audit_log` records who changed it and when.
+ */
+export const namedValues = pgTable("named_values", {
+  id: identifier(),
+  name: text().notNull().unique(),
+  value: text().notNull(),
+  createdAt: instant("created_at"),
+});

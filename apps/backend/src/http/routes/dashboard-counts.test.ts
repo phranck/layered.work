@@ -13,6 +13,7 @@ describe("readDashboardCounts", () => {
         forms: 10,
         submissions: 4,
         media: 4,
+        values: 11,
         blocks: 5,
         mainNav: 6,
         footerNav: 7,
@@ -26,6 +27,7 @@ describe("readDashboardCounts", () => {
       projects: 9,
       tags: 3,
       media: 4,
+      values: 11,
       blocks: 5,
       mainNav: 6,
       footerNav: 7,
@@ -51,5 +53,7 @@ describe("readDashboardCounts", () => {
     expect(statement).toContain('"entry_translations"."trashed_at" is null');
     expect(statement).not.toContain("enabled");
     expect(statement).toContain('from "form_submissions" where "form_submissions"."status" = \'unread\'');
+    // `values` is a reserved word, so the column is named in quotes.
+    expect(statement).toContain('from "named_values") as "values"');
   });
 });

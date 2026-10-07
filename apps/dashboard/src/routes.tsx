@@ -1,6 +1,7 @@
 import type { DashboardCounts, EntryKind } from "@layered/schemas";
 import {
   ArticleIcon,
+  BracketsCurlyIcon,
   ChartLineIcon,
   CodeIcon,
   EnvelopeSimpleIcon,
@@ -70,6 +71,7 @@ export const dashboardGroups: DashboardGroup[] = [
       },
       { id: "tags", path: "tags", labelKey: "tags", countKey: "tags", icon: TagIcon },
       { id: "media", path: "media", labelKey: "media", countKey: "media", icon: ImagesIcon },
+      { id: "values", path: "values", labelKey: "values", countKey: "values", icon: BracketsCurlyIcon },
     ],
   },
   {

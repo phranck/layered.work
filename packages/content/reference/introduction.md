@@ -2,7 +2,7 @@ Markdown covers prose: headings, paragraphs, lists, links, tables and code. It h
 
 ## The four rules
 
-**A line that begins with a capitalised name followed by `(` or `{` is a component.** Everything else on the page is Markdown. A line that genuinely starts that way and is meant as prose is escaped with a backslash, as in `\Grid(3) lines were enough.` The backslash keeps the line a sentence and does not appear on the page, which reads `Grid(3) lines were enough.` A backslash anywhere else is Markdown's, which only escapes punctuation.
+**A line that begins with a capitalized name followed by `(` or `{` is a component.** Everything else on the page is Markdown. A line that genuinely starts that way and is meant as prose is escaped with a backslash, as in `\Grid(3) lines were enough.` The backslash keeps the line a sentence and does not appear on the page, which reads `Grid(3) lines were enough.` A backslash anywhere else is Markdown's, which only escapes punctuation.
 
 **Arguments read as they do in Swift.** The first value may be written without a name, for the principal thing, and everything after it is written as `name: value`. Text goes in quotes, numbers and keywords go bare.
 
@@ -30,8 +30,18 @@ A component may hold another component, to any depth, because a body is Markdown
 
 A component has its line to itself. Text after its closing bracket or brace on the same line, or between its arguments and its brace, is refused, and the error points at the first character that does not belong. Put that text on a line of its own.
 
+## Named values
+
+A value defined once in the dashboard is written into running text as `{{ name }}`, where the name is lower case and hyphenated, such as `{{ product-name }}`. The page shows the value's text in its place, so changing the value changes every page that refers to it.
+
+A value is a line of text and nothing more. Whatever it holds reaches the page as written, never as a link, an emphasis or a component.
+
+A reference inside code, or inside a quoted argument such as a caption, stays as written. A reference meant as text is escaped as `\{{ name }}`. A reference to a name no value has is refused before publishing.
+
+A line that begins with a capitalized word followed by a reference, such as `Hello {{ name }}`, is a sentence, because two braces open a reference rather than a body.
+
 ## What the Markdown is
 
-GitHub's flavour of it: tables, task lists, struck-out text and bare addresses all work as they do in a repository.
+GitHub's flavor of it: tables, task lists, struck-out text and bare addresses all work as they do in a repository.
 
 HTML is not. A tag written in a document reaches the page as the characters that were typed, so `<script>alert(1)</script>` appears on the page as that text and runs nothing.

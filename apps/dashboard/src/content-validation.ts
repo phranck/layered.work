@@ -14,6 +14,7 @@ const germanReasons: Record<FindingCode, string> = {
   "missing-parameter": "braucht einen fehlenden Parameter",
   "value-not-permitted": "hat einen ungültigen Parameterwert",
   "unknown-media": "verweist auf eine unbekannte Mediendatei",
+  "unknown-value": "verweist auf einen unbekannten Wert",
   "body-not-accepted": "akzeptiert keinen Inhalt",
   "missing-body": "braucht Inhalt",
   "misplaced-component": "steht an einer nicht erlaubten Stelle",

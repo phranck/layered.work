@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { referencedFormNames, renderContent } from "@layered/content";
+import { referencedFormNames, renderContent, resolveValues } from "@layered/content";
 import {
   type EntrySpec,
   homeBlockSettings,
@@ -33,6 +33,7 @@ import { HOME_PICTURE_KEYS, pictureIdsOf } from "../home/blocks.js";
 import { referencedMediaIds } from "../media/references.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
+import { readValueMap, resolveListingIntroductions } from "../values/repository.js";
 
 /**
  * The public content of the site, read out of the database in the shape the
@@ -397,7 +398,10 @@ async function goneAddresses(database: Database, taken: ReadonlySet<string>): Pr
  * @returns Everything the site may show, and nothing else.
  */
 export async function readPublicSnapshot(database: Database): Promise<PublicSnapshot> {
-  const translations = await database
+  // Every reference to a named value is replaced here, before anything reads a
+  // body, so the forms, the files and every reader on the site see the text.
+  const values = await readValueMap(database);
+  const stored = await database
     .select({
       translationId: entryTranslations.id,
       entryId: entryTranslations.entryId,
@@ -421,6 +425,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
     .where(and(inArray(entryTranslations.state, [...READABLE]), isNull(entryTranslations.trashedAt)));
+  const translations = stored.map((row) => ({ ...row, body: resolveValues(row.body, values) }));
 
   const translationIds = translations.map((row) => row.translationId);
   const currentPaths = new Map<string, string>();
@@ -462,7 +467,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     topicsByEntry.set(row.entryId, [...(topicsByEntry.get(row.entryId) ?? []), row.topicId]);
   }
 
-  const listings = await readListingSettings(database);
+  const listings = resolveListingIntroductions(await readListingSettings(database), values);
   const blocks = await database
     .select({
       type: homeBlocks.type,

@@ -1,4 +1,5 @@
 import { createHmac, hkdfSync } from "node:crypto";
+import { resolveValues } from "@layered/content";
 import { type EntryPreview, ErrorCode, type PreviewEntryBody } from "@layered/schemas";
 import { and, eq, isNull, lt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -18,6 +19,7 @@ import {
 import { HttpError } from "../http/response.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
+import { readValueMap, resolveListingIntroductions } from "../values/repository.js";
 
 /**
  * Previews: an entry as a reader would see it, from what the editor holds.
@@ -158,7 +160,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
   const previewId = readPreviewToken(token, now);
   if (!previewId) throw gone();
 
-  const [row] = await db
+  const [stored] = await db
     .select({
       translationId: entryTranslations.id,
       entryId: entries.id,
@@ -182,7 +184,11 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
     .where(eq(entryPreviews.id, previewId))
     .limit(1);
-  if (!row || row.expiresAt.getTime() <= now) throw gone();
+  if (!stored || stored.expiresAt.getTime() <= now) throw gone();
+  // References to named values are replaced as the snapshot replaces them, so
+  // the preview shows the page a reader will see.
+  const values = await readValueMap(db);
+  const row = { ...stored, body: resolveValues(stored.body, values) };
 
   const [current] = await db
     .select({ path: paths.path })
@@ -248,7 +254,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     media,
     redirects: [],
     gone: [],
-    listings: await readListingSettings(db),
+    listings: resolveListingIntroductions(await readListingSettings(db), values),
     homeBlocks: [],
   };
 }

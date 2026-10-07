@@ -31,6 +31,7 @@ const counts = {
   projects: 7,
   tags: 13,
   media: 21,
+  values: 2,
   blocks: 3,
   mainNav: 7,
   footerNav: 4,

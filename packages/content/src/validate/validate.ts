@@ -23,8 +23,8 @@ import { placesIn } from "./position.js";
  * document is fine and the API refusing it.
  *
  * **What a document cannot be checked for on its own** is whether the media it
- * names exists. That answer lives in the library rather than in the text, so it
- * is passed in. The API passes what the database holds; the editor passes what
+ * names exists, and whether the named values it refers to do. Those answers
+ * live in the database rather than in the text, so they are passed in. The API passes what the database holds; the editor passes what
  * it has loaded for its own picker (#44). Without one, every other check still
  * runs and media names are taken on trust.
  *
@@ -41,6 +41,13 @@ export type ValidateOptions = {
    * mistake in a media name and suggesting the right one needs the names.
    */
   media?: ReadonlySet<string>;
+  /**
+   * Every name a named value is stored under.
+   *
+   * Passed in for the same reason as the media names: the values live in the
+   * database, not in the text. Without them, references are taken on trust.
+   */
+  values?: ReadonlySet<string>;
   /** Which register to check against. The real one unless a test says otherwise. */
   register?: Register;
 };
@@ -52,6 +59,7 @@ type Report = (finding: Omit<Finding, "line" | "column">) => void;
 type Context = {
   text: string;
   media?: ReadonlySet<string>;
+  values?: ReadonlySet<string>;
   register?: Register;
   report: Report;
 };
@@ -93,6 +101,7 @@ export function validateTree(tree: Tree, text: string, options: ValidateOptions 
   const context: Context = {
     text,
     media: options.media,
+    values: options.values,
     register: options.register,
     report: (finding) => findings.push({ ...finding, ...place(finding.from) }),
   };
@@ -108,6 +117,7 @@ export function validateTree(tree: Tree, text: string, options: ValidateOptions 
       }
 
       if (node.name === NODE.Component) checkComponent(node.node, context);
+      if (node.name === NODE.ValueReference) checkValueReference(node.node, context);
       return true;
     },
   });
@@ -645,6 +655,34 @@ function checkSlug(
     component: subject.name,
     parameter: bound.name,
     value: slug,
+    suggestion,
+  });
+}
+
+/**
+ * Checks that a named value answers to a reference's name.
+ *
+ * @param node - The reference node.
+ * @param context - The document, the names of the values, and where to report.
+ */
+function checkValueReference(node: SyntaxNode, context: Context): void {
+  const names = context.values;
+  const nameNode = childOf(node, NODE.ValueName);
+  if (!names || !nameNode) return;
+
+  const name = context.text.slice(nameNode.from, nameNode.to);
+  if (names.has(name)) return;
+
+  const suggestion = nearestName(name, names);
+  context.report({
+    code: FINDING.UnknownValue,
+    severity: "error",
+    message: suggestion
+      ? `No value is called ${name}. Did you mean ${suggestion}?`
+      : `No value is called ${name}.`,
+    from: node.from,
+    to: node.to,
+    value: name,
     suggestion,
   });
 }

@@ -1,12 +1,33 @@
 import { type PublicSearchQuery, type PublicSearchResults, publicSearchResults } from "@layered/schemas";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { database } from "../db/connect.js";
+import { readValueMap } from "../values/repository.js";
+
+/**
+ * A body as SQL with every reference to a named value replaced by the value's
+ * text, one `regexp_replace` per value, so a post is found by what it shows.
+ *
+ * The name and the text are bound as parameters. A name is letters, digits and
+ * hyphens, none of which a regular expression reads as syntax outside a
+ * bracket, and the backslashes of the text are doubled because the replacement
+ * string reads a backslash as the start of a back reference.
+ *
+ * @param values - Every value, by its name.
+ */
+function resolvedBody(values: ReadonlyMap<string, string>): SQL {
+  let body = sql`t.body`;
+  for (const [name, value] of values) {
+    body = sql`regexp_replace(${body}, ${`\\{\\{[ \\t]*${name}[ \\t]*\\}\\}`}, ${value.replaceAll("\\", "\\\\")}, 'g')`;
+  }
+  return body;
+}
 
 /** PostgreSQL stemming and ranking over reachable public translations only. */
 export async function searchPublicEntries(
   db: ReturnType<typeof database>,
   { q, language, page, limit }: PublicSearchQuery,
 ): Promise<PublicSearchResults> {
+  const body = resolvedBody(await readValueMap(db));
   const result = await db.execute(sql`
     with documents as (
       select p.path, t.title, e.kind, t.language, t.published_at,
@@ -20,7 +41,7 @@ export async function searchPublicEntries(
           left join topic_translations de on de.topic_id = assigned.topic_id and de.language = 'de'
           where assigned.entry_id = e.id
         ), '')), 'B') ||
-        setweight(to_tsvector(cfg.name, t.body), 'D') as document,
+        setweight(to_tsvector(cfg.name, ${body}), 'D') as document,
         websearch_to_tsquery(cfg.name, ${q}) as query
       from entry_translations t
       join entries e on e.id = t.entry_id

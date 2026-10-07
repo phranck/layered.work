@@ -6,9 +6,11 @@ import {
   addHomeBlockBody,
   type CreateEntryBody,
   type CreateFormBody,
+  type CreateNamedValueBody,
   type CreateTopicBody,
   createEntryBody,
   createFormBody,
+  createNamedValueBody,
   createTopicBody,
   createUploadBody,
   type DashboardCounts,
@@ -57,6 +59,9 @@ import {
   mediaDetail,
   mediaLibraryPage,
   mergeTopicBody,
+  type NamedValue,
+  namedValue,
+  namedValueList,
   type PreviewEntryBody,
   previewEntryBody,
   type RenderedMail,
@@ -102,8 +107,10 @@ import {
   topicList,
   topicListItem,
   type UpdateAccountBody,
+  type UpdateNamedValueBody,
   type UploadedMedia,
   updateAccountBody,
+  updateNamedValueBody,
   uploadedMedia,
   uploadTicket,
 } from "@layered/schemas";
@@ -215,6 +222,14 @@ export interface DashboardApi {
   saveSocialAccount(id: string | null, value: SaveSocialAccountBody): Promise<SocialAccount>;
   deleteSocialAccount(id: string): Promise<void>;
   reorderSocialAccounts(positions: { id: string; sortOrder: number }[]): Promise<SocialAccount[]>;
+  /** Every named value, by name, with every place that refers to it. */
+  fetchNamedValues(): Promise<NamedValue[]>;
+  /** Adds a value under a name that never changes afterwards. */
+  createNamedValue(value: CreateNamedValueBody): Promise<NamedValue>;
+  /** Changes a value's text, which every page that refers to it then shows. */
+  updateNamedValue(id: string, value: UpdateNamedValueBody): Promise<NamedValue>;
+  /** Deletes a value nothing refers to. */
+  deleteNamedValue(id: string): Promise<void>;
   fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
   createFooterNavigation(
     value: SaveFooterNavigationBody,
@@ -486,6 +501,28 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
         ),
         socialAccountList,
       );
+    },
+    async fetchNamedValues() {
+      return dataOf(await request("/values", undefined, true), namedValueList);
+    },
+    async createNamedValue(value) {
+      return dataOf(
+        await request("/values", jsonBody("POST", createNamedValueBody.parse(value)), true),
+        namedValue,
+      );
+    },
+    async updateNamedValue(id, value) {
+      return dataOf(
+        await request(
+          `/values/${encodeURIComponent(id)}`,
+          jsonBody("PUT", updateNamedValueBody.parse(value)),
+          true,
+        ),
+        namedValue,
+      );
+    },
+    async deleteNamedValue(id) {
+      await request(`/values/${encodeURIComponent(id)}`, { method: "DELETE" }, true);
     },
     async fetchFooterNavigations(placement = "footer") {
       return dataOf(await request(`/${placement}-navigation`, undefined, true), footerNavigationList);

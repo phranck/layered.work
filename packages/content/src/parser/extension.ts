@@ -10,6 +10,7 @@ import type {
 import { dedent } from "./dedent.js";
 import { NODE, VALUE_NODE } from "./nodes.js";
 import { OPEN_ERRORS, type ScannedComponent, scanComponent, startsComponent } from "./scan.js";
+import { readValueReference } from "./value.js";
 
 /**
  * The block parser, which is the thin part.
@@ -135,6 +136,7 @@ function copyNode(
 
 /** The character codes the escape below looks at, as an inline parser is handed them. */
 const BACKSLASH = 92;
+const OPEN_BRACE = 123;
 const NEWLINE = 10;
 const SPACE = 32;
 const TAB = 9;
@@ -232,6 +234,24 @@ export const componentSyntax: MarkdownConfig = {
         if (next !== BACKSLASH || !startsLine(cx, at)) return -1;
         if (!startsComponent(cx.slice(at + 1, cx.end), 0)) return -1;
         return cx.addElement(cx.elt(NODE.ComponentEscape, at, at + 1));
+      },
+    },
+    // A reference to a named value is its own node, so everything that walks the
+    // tree finds it, and Markdown's code spans keep it as text because an inline
+    // parser never runs inside one.
+    {
+      name: "ValueReference",
+
+      parse(cx: InlineContext, next: number, at: number) {
+        if (next !== OPEN_BRACE || cx.char(at + 1) !== OPEN_BRACE) return -1;
+        const reference = readValueReference(cx.slice(at, cx.end));
+        if (!reference) return -1;
+        const nameFrom = at + reference.nameFrom;
+        return cx.addElement(
+          cx.elt(NODE.ValueReference, at, at + reference.length, [
+            cx.elt(NODE.ValueName, nameFrom, nameFrom + reference.name.length),
+          ]),
+        );
       },
     },
   ],

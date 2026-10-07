@@ -1,5 +1,6 @@
 import { type EntryList, entryList, entryPreview } from "@layered/schemas";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { namedValues } from "../../db/schema/index.js";
 import {
   issuePreviewToken,
   PREVIEW_LIFETIME_MS,
@@ -111,6 +112,27 @@ runs("a preview", () => {
       visibility: "hidden",
       readingWidth: "wide",
     });
+  });
+
+  it("shows a named value's text where the editor's text refers to it", async () => {
+    await (await testDatabase()).insert(namedValues).values({ name: "product", value: "Velvet" });
+    const cookie = await signedInCookie();
+    const response = await app.request(`/entries/${await draftId(cookie)}/previews`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Unsaved title",
+        summary: null,
+        body: "Made with {{ product }}.",
+        readingWidth: "normal",
+      }),
+    });
+    const { url } = entryPreview.parse(((await response.json()) as { data: unknown }).data);
+    const token = new URL(url).pathname.split("/")[2] ?? "";
+    const snapshot = (await (await app.request(`/previews/${token}`)).json()) as {
+      entries: { body: string }[];
+    };
+    expect(snapshot.entries[0]?.body).toBe("Made with Velvet.");
   });
 
   it("is gone once its time is up", async () => {

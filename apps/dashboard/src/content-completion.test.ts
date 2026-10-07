@@ -7,9 +7,11 @@ import type { MediaKind } from "@layered/schemas";
 import { describe, expect, it, vi } from "vitest";
 import {
   contentCompletions,
+  type KnownValue,
   type LibraryFile,
   libraryCompletions,
   type MediaLibrary,
+  valueCompletions,
 } from "./content-completion.js";
 import { contentLanguage } from "./content-editor.js";
 
@@ -211,5 +213,63 @@ describe("files from the media library", () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('Image("fresh-upload")'));
     expect(uploads).toEqual(["image"]);
     view.destroy();
+  });
+});
+
+describe("named values", () => {
+  const VALUES: KnownValue[] = [
+    { name: "product", value: "Velvet" },
+    { name: "version", value: "2.1" },
+  ];
+
+  /** What the value source offers with the cursor where the bar stands. */
+  function offeredValues(textWithCursor: string) {
+    const position = textWithCursor.indexOf("|");
+    const doc = textWithCursor.replace("|", "");
+    const state = EditorState.create({ doc, extensions: [contentLanguage()] });
+    ensureSyntaxTree(state, doc.length, 5000);
+    return valueCompletions(() => VALUES)(new CompletionContext(state, position, false));
+  }
+
+  /** The document after the first value is taken, and where the cursor ends up. */
+  function taking(textWithCursor: string) {
+    const position = textWithCursor.indexOf("|");
+    const view = new EditorView({
+      parent: document.body,
+      state: EditorState.create({
+        doc: textWithCursor.replace("|", ""),
+        selection: { anchor: position },
+        extensions: [contentLanguage()],
+      }),
+    });
+    const result = valueCompletions(() => VALUES)(new CompletionContext(view.state, position, false));
+    const option = result?.options[0];
+    if (!result || typeof option?.apply !== "function") throw new Error("Missing entry");
+    option.apply(view, option, result.from, position);
+    const taken = { doc: view.state.doc.toString(), head: view.state.selection.main.head };
+    view.destroy();
+    return taken;
+  }
+
+  it("are offered after two braces, with each value's text beside its name", () => {
+    const result = offeredValues("Made with {{ |");
+    expect(result?.options.map((option) => [option.label, option.detail])).toEqual([
+      ["product", "Velvet"],
+      ["version", "2.1"],
+    ]);
+    expect(offeredValues("Made with {{pro|")?.from).toBe("Made with {{".length);
+  });
+
+  it("are not offered outside a reference or inside code", () => {
+    expect(offeredValues("Made with |")).toBeNull();
+    expect(offeredValues("Made with { |")).toBeNull();
+    expect(offeredValues("Write `{{ |` like this.")).toBeNull();
+    expect(offeredValues("```\n{{ |\n```")).toBeNull();
+  });
+
+  it("close the reference, keeping the braces the bracket closing typed, and put the cursor after it", () => {
+    expect(taking("Made with {{ |}}")).toEqual({ doc: "Made with {{ product }}", head: 23 });
+    expect(taking("Made with {{|}}")).toEqual({ doc: "Made with {{ product }}", head: 23 });
+    expect(taking("Made with {{ |")).toEqual({ doc: "Made with {{ product }}", head: 23 });
   });
 });

@@ -40,6 +40,7 @@ it("issues a scoped token, shows its value once and revokes it", async () => {
         projects: 0,
         tags: 0,
         media: 0,
+        values: 0,
         blocks: 0,
         mainNav: 0,
         footerNav: 0,

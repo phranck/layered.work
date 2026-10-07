@@ -244,6 +244,11 @@ function renderNode(node: SyntaxNode, context: Context): RenderNode[] {
   if (name === "HTMLBlock" || name === "HTMLTag") return [text(source(node, context))];
 
   if (name === "Escape") return [text(source(node, context).slice(1))];
+
+  // The backend replaces every reference before a body leaves it, so one that
+  // arrives here was never resolved. It shows as written, which a reader can
+  // report, rather than as nothing.
+  if (name === NODE.ValueReference) return [text(source(node, context))];
   if (name === "Entity") return [text(decodeEntity(source(node, context)))];
 
   const prose = PROSE[name];

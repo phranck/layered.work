@@ -1,4 +1,4 @@
-import { parseContent } from "@layered/content";
+import { NODE, parseContent } from "@layered/content";
 import {
   type MailTemplate,
   type MailTemplateKind,
@@ -92,6 +92,10 @@ function renderInline(
   let text = "";
   let cursor = node.from;
   for (const child of children(node)) {
+    // The content language reads a lower-case placeholder such as `{{fields}}`
+    // as a reference to a named value. In a mail it is this template's own
+    // placeholder, so it stays in the text and `substitute` fills it in.
+    if (child.name === NODE.ValueReference) continue;
     const before = substitute(source.slice(cursor, child.from), allowed, values);
     html += escapeHtml(before).replace(/\n/g, "<br>");
     text += before;

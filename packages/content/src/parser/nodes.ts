@@ -35,6 +35,10 @@ export const NODE = {
    * the language's syntax, so it never reaches the page.
    */
   ComponentEscape: "ComponentEscape",
+  /** `{{ name }}` in running text: a reference to a named value, braces included. */
+  ValueReference: "ValueReference",
+  /** The name inside a value reference, without the braces or the spaces. */
+  ValueName: "ValueName",
 } as const;
 
 /** One of the node names above. */

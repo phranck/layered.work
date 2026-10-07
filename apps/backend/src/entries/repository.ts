@@ -33,6 +33,7 @@ import { HttpError } from "../http/response.js";
 import { replaceMediaReferences } from "../media/references.js";
 import { readSettings } from "../settings/repository.js";
 import { hasRasterPicture, storeSocialCard, withCardObjects } from "../social/store.js";
+import { readValueMap } from "../values/repository.js";
 
 type Database = ReturnType<typeof database>;
 
@@ -278,9 +279,16 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** Drafts may be incomplete; every translation readers can reach must be valid. */
-function requirePublishableContent(body: string, state: SaveEntryBody["state"]): void {
+async function requirePublishableContent(
+  tx: Transaction,
+  body: string,
+  state: SaveEntryBody["state"],
+): Promise<void> {
   if (state === "draft") return;
-  const failure = validateContent(body).findings.find((finding) => finding.severity === "error");
+  // The names of the stored values, so a reference to one that does not exist
+  // stops the publication rather than reaching a reader as `{{ name }}`.
+  const values = new Set((await readValueMap(tx)).keys());
+  const failure = validateContent(body, { values }).findings.find((finding) => finding.severity === "error");
   if (failure) {
     throw new HttpError(
       ErrorCode.InvalidRequest,
@@ -442,7 +450,7 @@ export async function saveEntry(
       // A translation in the trash is restored before it is written to, so a save
       // can never publish something the reader believes is deleted.
       if (current.trashedAt) throw new HttpError(ErrorCode.Conflict, "This entry is in the trash.");
-      requirePublishableContent(value.body, value.state);
+      await requirePublishableContent(tx, value.body, value.state);
       await replaceMediaReferences(tx, id, value.body);
 
       const now = new Date();
@@ -663,7 +671,7 @@ export async function setTrashed(
       .limit(1);
     if (!current) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
     if ((current.trashedAt !== null) === trashed) return;
-    if (!trashed) requirePublishableContent(current.body, current.state);
+    if (!trashed) await requirePublishableContent(tx, current.body, current.state);
 
     const now = new Date();
     await tx
