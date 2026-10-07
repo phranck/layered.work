@@ -496,6 +496,20 @@ const de = {
   submissionDeleteConfirm: "Endgültig löschen",
   formsEmpty: "Noch keine Formulare.",
 
+  // Email templates
+  mailTemplatesEmpty: "Keine Vorlagen verfügbar.",
+  mailTemplateName: "Name",
+  mailTemplateSubject: "Betreff",
+  mailTemplateBody: "Inhalt",
+  mailTemplateValues: "Verfügbare Werte",
+  mailTemplateInvalid: "Vorlage prüfen:",
+  mailTemplateHtml: "HTML",
+  mailTemplatePlain: "Klartext",
+  mailTemplateRecipient: "Testempfänger",
+  mailTemplateTest: "Test senden",
+  mailTemplateAccepted: "SMTP2GO hat die Testnachricht angenommen.",
+  mailTemplateRefused: "SMTP2GO hat die Testnachricht abgewiesen.",
+
   // Actions
   save: "Speichern",
   savePending: "Speichern…",
@@ -988,6 +1002,19 @@ const en: Catalogue = {
   submissionDeleteBody: "This permanently deletes the submission and cannot be undone.",
   submissionDeleteConfirm: "Delete permanently",
   formsEmpty: "No forms yet.",
+
+  mailTemplatesEmpty: "No templates available.",
+  mailTemplateName: "Name",
+  mailTemplateSubject: "Subject",
+  mailTemplateBody: "Body",
+  mailTemplateValues: "Available values",
+  mailTemplateInvalid: "Check the template:",
+  mailTemplateHtml: "HTML",
+  mailTemplatePlain: "Plain text",
+  mailTemplateRecipient: "Test recipient",
+  mailTemplateTest: "Send test",
+  mailTemplateAccepted: "SMTP2GO accepted the test message.",
+  mailTemplateRefused: "SMTP2GO refused the test message.",
 
   save: "Save",
   savePending: "Saving…",

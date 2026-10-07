@@ -18,49 +18,6 @@ import { useNotify } from "./notifications.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
-const labels = {
-  en: {
-    title: "Email templates",
-    back: "Email templates",
-    save: "Save",
-    saving: "Saving…",
-    saved: "Template saved",
-    name: "Name",
-    subject: "Subject",
-    body: "Body",
-    values: "Available values",
-    preview: "Preview",
-    test: "Send test",
-    recipient: "Test recipient",
-    html: "HTML",
-    plain: "Plain text",
-    invalid: "Check the template:",
-    accepted: "SMTP2GO accepted the test message.",
-    refused: "SMTP2GO refused the test message.",
-    empty: "No templates available.",
-  },
-  de: {
-    title: "E-Mail-Vorlagen",
-    back: "E-Mail-Vorlagen",
-    save: "Speichern",
-    saving: "Speichert…",
-    saved: "Vorlage gespeichert",
-    name: "Name",
-    subject: "Betreff",
-    body: "Inhalt",
-    values: "Verfügbare Werte",
-    preview: "Vorschau",
-    test: "Test senden",
-    recipient: "Testempfänger",
-    html: "HTML",
-    plain: "Klartext",
-    invalid: "Vorlage prüfen:",
-    accepted: "SMTP2GO hat die Testnachricht angenommen.",
-    refused: "SMTP2GO hat die Testnachricht abgewiesen.",
-    empty: "Keine Vorlagen verfügbar.",
-  },
-} as const;
-
 const MAIL_TAGS = new Set(["div", "p", "strong", "em", "ul", "ol", "li", "a", "br"]);
 
 /** Rebuild the API's preview with email-safe tags rather than injecting HTML. */
@@ -90,14 +47,13 @@ function SafeMailPreview({ html }: { html: string }) {
 export function MailTemplatesScreen() {
   const api = useDashboardApi();
   const navigate = useNavigate();
-  const { language } = useDashboardLanguage();
-  const words = labels[language];
+  const { language, text } = useDashboardLanguage();
   const list = useQuery({ queryKey: ["mail-templates"], queryFn: api.fetchMailTemplates });
   return (
     <>
-      <ScreenTitle title={words.title} />
+      <ScreenTitle title={text("emailTemplates")} />
       <Card>
-        <Card.Header title={words.title} meta={list.data?.length} />
+        <Card.Header title={text("emailTemplates")} meta={list.data?.length} />
         {list.isError && (
           <Card.Body>
             <ErrorNotice error={list.error} />
@@ -105,7 +61,7 @@ export function MailTemplatesScreen() {
         )}
         {list.isSuccess && list.data.length === 0 && (
           <Card.Body>
-            <p>{words.empty}</p>
+            <p>{text("mailTemplatesEmpty")}</p>
           </Card.Body>
         )}
         {list.isSuccess && list.data.length > 0 && (
@@ -131,9 +87,8 @@ export function MailTemplateEditorScreen() {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { language: interfaceLanguage } = useDashboardLanguage();
+  const { language: interfaceLanguage, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
-  const words = labels[interfaceLanguage];
   const loaded = useQuery({
     queryKey: ["mail-template", templateKind],
     queryFn: async () => (await api.fetchMailTemplates()).find((item) => item.kind === templateKind),
@@ -153,7 +108,7 @@ export function MailTemplateEditorScreen() {
     onSuccess: (saved) => {
       queryClient.setQueryData(["mail-template", templateKind], saved);
       void queryClient.invalidateQueries({ queryKey: ["mail-templates"] });
-      notify({ tone: "success", message: words.saved });
+      notify({ tone: "success", message: text("saved") });
     },
   });
 
@@ -161,7 +116,7 @@ export function MailTemplateEditorScreen() {
     const parsed = saveMailTemplateBody.safeParse(draft);
     if (!parsed.success) {
       setProblem(
-        `${words.invalid} ${parsed.error.issues[0]?.path.join(".")}: ${parsed.error.issues[0]?.message}`,
+        `${text("mailTemplateInvalid")} ${parsed.error.issues[0]?.path.join(".")}: ${parsed.error.issues[0]?.message}`,
       );
       return null;
     }
@@ -175,11 +130,12 @@ export function MailTemplateEditorScreen() {
     setProblem("");
   };
 
+  const title = loaded.data?.name[interfaceLanguage] ?? text("emailTemplates");
   return (
     <>
-      <ScreenTitle title={loaded.data?.name[interfaceLanguage] ?? words.title} />
+      <ScreenTitle title={title} />
       <HeaderEnd>
-        <Button onClick={() => navigate("/mail-templates")}>{words.back}</Button>
+        <Button onClick={() => navigate("/mail-templates")}>{text("emailTemplates")}</Button>
         <Button
           tone="primary"
           icon={<FloppyDiskIcon />}
@@ -189,7 +145,7 @@ export function MailTemplateEditorScreen() {
             if (value) save.mutate(value);
           }}
         >
-          {save.isPending ? words.saving : words.save}
+          {save.isPending ? text("savePending") : text("save")}
         </Button>
       </HeaderEnd>
       {loaded.isError && <ErrorNotice error={loaded.error} />}
@@ -202,7 +158,7 @@ export function MailTemplateEditorScreen() {
         <Translated>
           <MailTemplateCards
             kind={templateKind}
-            title={loaded.data?.name[interfaceLanguage] ?? words.title}
+            title={title}
             allowedVariables={loaded.data?.allowedVariables ?? []}
             draft={draft}
             onChange={change}
@@ -243,9 +199,8 @@ function MailTemplateCards({
   checked: () => SaveMailTemplateBody | null;
 }) {
   const api = useDashboardApi();
-  const { language: interfaceLanguage } = useDashboardLanguage();
+  const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
-  const words = labels[interfaceLanguage];
   const language = useTextLanguage();
   const [recipient, setRecipient] = useState("");
   const preview = useMutation({
@@ -267,26 +222,26 @@ function MailTemplateCards({
         <Card.Body>
           <Translated.Field
             id="mail-name"
-            label={words.name}
+            label={text("mailTemplateName")}
             value={draft.name}
             onChange={(value) => onChange("name", value)}
           />
           <Translated.Field
             id="mail-subject"
-            label={words.subject}
+            label={text("mailTemplateSubject")}
             value={draft.subject}
             onChange={(value) => onChange("subject", value)}
           />
           <Translated.Field
             id="mail-body"
-            label={words.body}
+            label={text("mailTemplateBody")}
             value={draft.body}
             multiline
             rows={8}
             onChange={(value) => onChange("body", value)}
           />
           <p>
-            {words.values}:{" "}
+            {text("mailTemplateValues")}:{" "}
             {allowedVariables.map((name) => (
               <code key={name}>{`{{${name}}}`} </code>
             ))}
@@ -294,7 +249,7 @@ function MailTemplateCards({
         </Card.Body>
       </Card>
       <Card>
-        <Card.Header title={words.preview} />
+        <Card.Header title={text("preview")} />
         <Card.Body>
           <Button
             onClick={() => {
@@ -302,20 +257,20 @@ function MailTemplateCards({
               if (value) preview.mutate({ value, language });
             }}
           >
-            {words.preview}
+            {text("preview")}
           </Button>
           {rendered && (
             <>
               <p>
-                {words.subject}: {rendered.subject}
+                {text("mailTemplateSubject")}: {rendered.subject}
               </p>
-              <h3>{words.html}</h3>
+              <h3>{text("mailTemplateHtml")}</h3>
               <SafeMailPreview html={rendered.html} />
-              <h3>{words.plain}</h3>
+              <h3>{text("mailTemplatePlain")}</h3>
               <pre>{rendered.text}</pre>
             </>
           )}
-          <Field label={words.recipient} htmlFor="mail-test-recipient">
+          <Field label={text("mailTemplateRecipient")} htmlFor="mail-test-recipient">
             <Input
               id="mail-test-recipient"
               type="email"
@@ -330,11 +285,12 @@ function MailTemplateCards({
               if (value) test.mutate(value);
             }}
           >
-            {words.test}
+            {text("mailTemplateTest")}
           </Button>
           {test.data && (
             <p role="status">
-              {test.data.accepted ? words.accepted : words.refused} {test.data.answer}
+              {test.data.accepted ? text("mailTemplateAccepted") : text("mailTemplateRefused")}{" "}
+              {test.data.answer}
             </p>
           )}
         </Card.Body>
