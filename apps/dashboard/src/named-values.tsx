@@ -1,11 +1,9 @@
 import { writeValueReference } from "@layered/content";
 import {
   type CreateNamedValueBody,
-  createNamedValueBody,
   MaxLength,
   type NamedValue,
   type NamedValueUse,
-  updateNamedValueBody,
   VALUE_NAME_MAX_LENGTH,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, Row, RowList } from "@layered/ui";
@@ -17,15 +15,17 @@ import {
   TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
-import { NAMED_VALUES_KEY, useNamedValues } from "./named-values-query.js";
-import { useNotify } from "./notifications.js";
+import {
+  checkedValueDraft,
+  useDeleteNamedValue,
+  useNamedValues,
+  useSaveNamedValue,
+} from "./named-values-query.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 
@@ -115,15 +115,6 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
   );
 }
 
-/** Refreshes the list and the sidebar's count after a change. */
-function useRefresh() {
-  const client = useQueryClient();
-  return () => {
-    void client.invalidateQueries({ queryKey: NAMED_VALUES_KEY });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
-  };
-}
-
 /**
  * Adds a value, or changes the text of one. A value's name is written once and
  * shown, not offered, afterwards, because content refers to it by that name.
@@ -132,31 +123,18 @@ function useRefresh() {
  * @param onClose - Called when the dialog is done, saved or not.
  */
 function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: () => void }) {
-  const api = useDashboardApi();
-  const refresh = useRefresh();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const [draft, setDraft] = useState<CreateNamedValueBody>({
     name: value?.name ?? "",
     value: value?.value ?? "",
   });
   const [invalid, setInvalid] = useState(false);
-  const save = useMutation({
-    mutationFn: (next: CreateNamedValueBody) =>
-      value ? api.updateNamedValue(value.id, { value: next.value }) : api.createNamedValue(next),
-    onSuccess: () => {
-      refresh();
-      onClose();
-    },
-    onError: (error) => notifyError(error),
-  });
+  const save = useSaveNamedValue(value, onClose);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const parsed = value
-      ? updateNamedValueBody.safeParse({ value: draft.value })
-      : createNamedValueBody.safeParse(draft);
-    setInvalid(!parsed.success);
-    if (parsed.success) save.mutate({ name: draft.name, value: parsed.data.value });
+    const checked = checkedValueDraft(value, draft);
+    setInvalid(checked === null);
+    if (checked) save.mutate(checked);
   };
   return (
     <CardDialog labelId="value-edit-title" onClose={onClose}>
@@ -225,16 +203,8 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
  * @param onClose - Called when the dialog is done, deleted or not.
  */
 function ValueDelete({ value, onClose }: { value: NamedValue; onClose: () => void }) {
-  const api = useDashboardApi();
-  const refresh = useRefresh();
   const { text } = useDashboardLanguage();
-  const remove = useMutation({
-    mutationFn: () => api.deleteNamedValue(value.id),
-    onSuccess: () => {
-      refresh();
-      onClose();
-    },
-  });
+  const remove = useDeleteNamedValue(value, onClose);
   const inUse = value.usedBy.length > 0;
   const place = (use: NamedValueUse) =>
     use.kind === "entry" ? use.title : text("valueUseListing", use.listing);
