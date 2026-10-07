@@ -18,6 +18,7 @@ import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -194,7 +195,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["entries"] });
     void queryClient.invalidateQueries({ queryKey: ["entry"] });
-    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(queryClient);
   };
   const create = useMutation({
     mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),

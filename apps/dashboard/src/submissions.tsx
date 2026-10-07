@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
@@ -104,7 +105,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: submissionsKey }),
-      queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] }),
+      refreshCounts(queryClient),
     ]);
   };
   const changeStatus = useMutation({

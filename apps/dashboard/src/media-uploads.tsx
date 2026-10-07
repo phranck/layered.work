@@ -13,6 +13,7 @@ import type { DashboardApi } from "./api.js";
 import type { MediaLibrary } from "./content-completion.js";
 import "./media-uploads.css";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
@@ -63,7 +64,7 @@ export async function uploadInOrder(
 export async function refreshMediaQueries(client: QueryClient): Promise<void> {
   await client.invalidateQueries({ queryKey: ["media"] });
   await client.invalidateQueries({ queryKey: ["account-media"] });
-  await client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  await refreshCounts(client);
 }
 
 /**

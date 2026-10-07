@@ -23,6 +23,7 @@ import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import type { ContentEditorHandle } from "./content-editor.js";
 import { type CheckedContent, contentIsPublishable } from "./content-validation.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { useEditorTextSize } from "./editor-text-size.js";
 import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { EntryProperties } from "./entry-properties.js";
@@ -257,7 +258,7 @@ function EntryEditor({
   const [askingToTrash, setAskingToTrash] = useState(false);
   const refreshLists = () => {
     void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
-    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(queryClient);
   };
   const trash = useMutation({
     mutationFn: () => api.setTrashed(entry.id, true),

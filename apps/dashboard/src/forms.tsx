@@ -6,6 +6,7 @@ import { type PointerEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -364,7 +365,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     onSuccess: (saved) => {
       queryClient.setQueryData(["form", saved.id], saved);
       void queryClient.invalidateQueries({ queryKey: formsKey });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+      void refreshCounts(queryClient);
       notify({ tone: "success", message: w.saved });
       if (isNew) navigate(`/${area.path}/${saved.id}`, { replace: true });
     },

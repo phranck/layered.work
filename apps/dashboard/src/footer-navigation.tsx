@@ -18,6 +18,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tansta
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
@@ -35,7 +36,7 @@ type Placement = "main" | "footer";
 const listKey = (placement: Placement) => [`${placement}-navigation`] as const;
 function refresh(client: QueryClient, placement: Placement) {
   void client.invalidateQueries({ queryKey: listKey(placement) });
-  void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  void refreshCounts(client);
 }
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 

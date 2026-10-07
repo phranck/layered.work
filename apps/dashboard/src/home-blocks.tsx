@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentType, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { blockSummary, blockTypeKey, settingKey } from "./home-block-labels.js";
 import { HomeBlockSettingsFields } from "./home-block-settings.js";
@@ -90,7 +91,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
 
   const refresh = () => {
     void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(client);
   };
   const toggle = useMutation({
     mutationFn: (block: StoredHomeBlock) =>
@@ -303,7 +304,7 @@ function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (rem
     mutationFn: () => api.deleteHomeBlock(block.id),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-      void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+      void refreshCounts(client);
       onClose(true);
     },
   });

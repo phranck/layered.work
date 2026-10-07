@@ -6,6 +6,7 @@ import {
 } from "@layered/schemas";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 
 /**
  * The named values as the dashboard holds them, in one cache entry, and every
@@ -53,7 +54,7 @@ function useRefreshAfterChange() {
   const client = useQueryClient();
   return () => {
     void client.invalidateQueries({ queryKey: NAMED_VALUES_KEY });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(client);
   };
 }
 

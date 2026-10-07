@@ -1,6 +1,7 @@
 import type { MediaDetail } from "@layered/schemas";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
@@ -63,7 +64,7 @@ export function MediaDeleteDialog({
       await Promise.all([
         client.invalidateQueries({ queryKey: ["media"] }),
         client.invalidateQueries({ queryKey: ["account-media"] }),
-        client.invalidateQueries({ queryKey: ["dashboard-counts"] }),
+        refreshCounts(client),
       ]);
       notify({
         tone: result.cleanupState === "ready" ? "success" : "warning",

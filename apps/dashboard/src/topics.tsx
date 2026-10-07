@@ -20,6 +20,7 @@ import { type FormEvent, type KeyboardEvent, useMemo, useState } from "react";
 import { DashboardApiError } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -83,7 +84,7 @@ function refreshAfterTopicChange(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: topicListKey });
   void queryClient.invalidateQueries({ queryKey: ["entries"] });
   void queryClient.invalidateQueries({ queryKey: ["entry"] });
-  void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  void refreshCounts(queryClient);
 }
 
 /** Which dialog is open, and for which topic. */
