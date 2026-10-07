@@ -64,6 +64,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'tsconfig.base.json'
               - 'biome.json'
+              - 'prettier.config.mjs'
               - '.nvmrc'
               - 'zerops.yml'
               - '.github/workflows/deploy.yml'

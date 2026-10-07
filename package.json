@@ -16,15 +16,19 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test && pnpm test:publii",
     "test:publii": "pnpm --filter @layered/content... build && python3 -m unittest discover -s scripts/publii -p 'test_*.py' && node --test scripts/publii/*.test.mjs",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
+    "lint": "biome check . && pnpm lint:astro",
+    "lint:astro": "prettier --check \"{apps,packages}/**/*.astro\"",
+    "lint:fix": "biome check --write . && pnpm format:astro",
+    "format": "biome format --write . && pnpm format:astro",
+    "format:astro": "prettier --write \"{apps,packages}/**/*.astro\"",
     "db:reset": "pnpm --filter @layered/backend db:reset"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
     "@biomejs/biome": "2.4.8",
     "@types/node": "^22.10.0",
+    "prettier": "3.9.9",
+    "prettier-plugin-astro": "1.1.0",
     "typescript": "^5.9.3"
   }
 }

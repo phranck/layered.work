@@ -9,8 +9,17 @@ interface Props {
 
 const { topic, language, count } = Astro.props;
 ---
-<a class="chip" href={topicPath(language, topic.slug)} lang={topic.untranslated ? topic.sourceLanguage : undefined}>
+
+<a
+  class="chip"
+  href={topicPath(language, topic.slug)}
+  lang={topic.untranslated ? topic.sourceLanguage : undefined}
+>
   {topic.name}
-  {topic.untranslated && <span class="lang-tag" title={topic.sourceLanguage === "en" ? "English" : "Deutsch"}>{topic.sourceLanguage.toUpperCase()}</span>}
+  {topic.untranslated && (
+    <span class="lang-tag" title={topic.sourceLanguage === "en" ? "English" : "Deutsch"}>
+      {topic.sourceLanguage.toUpperCase()}
+    </span>
+  )}
   {count !== undefined && <span class="chip__count">{count}</span>}
 </a>

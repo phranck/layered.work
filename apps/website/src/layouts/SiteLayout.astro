@@ -74,22 +74,54 @@ const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage.url} />
     <meta name="twitter:image:alt" content={socialImage.alt} />
-    {article && <script is:inline type="application/ld+json" nonce={Astro.locals.nonce} set:html={JSON.stringify(article).replace(/</g, "\\u003c")} />}
+    {article && (
+      <script
+        is:inline
+        type="application/ld+json"
+        nonce={Astro.locals.nonce}
+        set:html={JSON.stringify(article).replace(/</g, "\\u003c")}
+      />
+    )}
     <link rel="canonical" href={canonical} />
-    {alternates.map(link => <link rel="alternate" hreflang={link.language} href={new URL(link.path, canonical)} />)}
-    <link rel="alternate" type="application/rss+xml" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)} />
-    <link rel="alternate" type="application/feed+json" title={siteName} href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)} />
+    {alternates.map((link) => (
+      <link rel="alternate" hreflang={link.language} href={new URL(link.path, canonical)} />
+    ))}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteName}
+      href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)}
+    />
+    <link
+      rel="alternate"
+      type="application/feed+json"
+      title={siteName}
+      href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)}
+    />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-    {leadImage && <link rel="preload" as="image" href={leadImage.src} imagesrcset={leadImage.srcSet} imagesizes={leadImage.sizes} fetchpriority="high" />}
+    {leadImage && (
+      <link
+        rel="preload"
+        as="image"
+        href={leadImage.src}
+        imagesrcset={leadImage.srcSet}
+        imagesizes={leadImage.sizes}
+        fetchpriority="high"
+      />
+    )}
     <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css" />
     <slot name="head" />
   </head>
   <body>
-    <a class="skip-link" href="#main-content">{language === "de" ? "Zum Inhalt springen" : "Skip to content"}</a>
+    <a class="skip-link" href="#main-content">
+      {language === "de" ? "Zum Inhalt springen" : "Skip to content"}
+    </a>
     <SiteHeader {language} {siteName} {navigation} {translationPath} />
-    <main class="page" id="main-content" tabindex="-1"><slot /></main>
+    <main class="page" id="main-content" tabindex="-1">
+      <slot />
+    </main>
     <SiteFooter {language} {siteName} {footer} />
   </body>
 </html>

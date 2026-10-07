@@ -17,113 +17,289 @@ import { loadContent } from "../content/load.js";
 import { languageLinks } from "../content/language-links.js";
 import { pageMetadata } from "../content/metadata.js";
 import { formsForPage, submitPageForm } from "../content/forms.js";
-import { languageRoot, parseListingQuery, topicPath, type ContentRepository, type Language } from "../content/repository.js";
+import {
+  languageRoot,
+  parseListingQuery,
+  topicPath,
+  type ContentRepository,
+  type Language,
+} from "../content/repository.js";
 import "../styles/pages.css";
 
-const language:Language=Astro.url.pathname.startsWith("/de/")?"de":"en";
-const root=languageRoot(language);
-const de=language==="de";
-const rawPath=Astro.url.pathname;
-const path=rawPath.endsWith("/")?rawPath:`${rawPath}/`;
-let repository:ContentRepository|undefined;
-let errorId:string|undefined;
-try{repository=await loadContent();}catch(error){
-  errorId=randomUUID();
-  console.error(JSON.stringify({code:"WEBSITE_CONTENT_UNAVAILABLE",errorId,operation:"load_content",status:503,result:"unavailable",cause:error instanceof Error?error.name:"UnknownError"}));
-  Astro.response.status=503;
-  Astro.response.headers.set("Cache-Control","no-store");
+const language: Language = Astro.url.pathname.startsWith("/de/") ? "de" : "en";
+const root = languageRoot(language);
+const de = language === "de";
+const rawPath = Astro.url.pathname;
+const path = rawPath.endsWith("/") ? rawPath : `${rawPath}/`;
+let repository: ContentRepository | undefined;
+let errorId: string | undefined;
+try {
+  repository = await loadContent();
+} catch (error) {
+  errorId = randomUUID();
+  console.error(
+    JSON.stringify({
+      code: "WEBSITE_CONTENT_UNAVAILABLE",
+      errorId,
+      operation: "load_content",
+      status: 503,
+      result: "unavailable",
+      cause: error instanceof Error ? error.name : "UnknownError",
+    }),
+  );
+  Astro.response.status = 503;
+  Astro.response.headers.set("Cache-Control", "no-store");
 }
-if(repository?.redirect(path)) return Astro.redirect(repository.redirect(path)!,308);
+if (repository?.redirect(path)) return Astro.redirect(repository.redirect(path)!, 308);
 // Addresses the old site dropped before its final export, so the snapshot has
 // no record of them and only the archive does. They answer without a snapshot
 // because their targets are fixed.
-const legacy=LEGACY_REDIRECT_TARGETS.get(path);
-if(legacy)return Astro.redirect(legacy,308);
-if(path==="/en/")return Astro.redirect("/",308);
-if(repository&&path==="/tags/")return Astro.redirect("/topics/",308);
-const legacyTopic=/^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
+const legacy = LEGACY_REDIRECT_TARGETS.get(path);
+if (legacy) return Astro.redirect(legacy, 308);
+if (path === "/en/") return Astro.redirect("/", 308);
+if (repository && path === "/tags/") return Astro.redirect("/topics/", 308);
+const legacyTopic = /^\/tags\/([a-zA-Z0-9_-]{1,200})\/$/.exec(path)?.[1];
 // A topic merged or renamed since then answers at its new address in one step.
-const legacyTopicPath=legacyTopic?topicPath("en",legacyTopic):undefined;
-const legacyTopicTarget=legacyTopicPath&&(repository?.redirect(legacyTopicPath)??(repository?.topicBySlug("en",legacyTopic??"")?legacyTopicPath:undefined));
-if(legacyTopicTarget)return Astro.redirect(legacyTopicTarget,308);
-if(repository&&path==="/authors/frank-gregor/")return Astro.redirect("/",308);
-if(repository&&rawPath==="/media/files/claude-fonts-preview.html"){
-  const media=repository.media("claude-fonts-preview");
-  if(media)return Astro.redirect(media.src,308);
+const legacyTopicPath = legacyTopic ? topicPath("en", legacyTopic) : undefined;
+const legacyTopicTarget =
+  legacyTopicPath &&
+  (repository?.redirect(legacyTopicPath) ??
+    (repository?.topicBySlug("en", legacyTopic ?? "") ? legacyTopicPath : undefined));
+if (legacyTopicTarget) return Astro.redirect(legacyTopicTarget, 308);
+if (repository && path === "/authors/frank-gregor/") return Astro.redirect("/", 308);
+if (repository && rawPath === "/media/files/claude-fonts-preview.html") {
+  const media = repository.media("claude-fonts-preview");
+  if (media) return Astro.redirect(media.src, 308);
 }
-const relative=path.slice(root.length);
-const home=relative==="";
-const kind=LISTED_KINDS.find(listed=>LISTING_PATHS[listed][language]===path);
-const topicSlug=/^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
-const topic=repository?.topicBySlug(language,topicSlug??"");
-const topics=relative==="topics/";
-const search=relative==="search/";
+const relative = path.slice(root.length);
+const home = relative === "";
+const kind = LISTED_KINDS.find((listed) => LISTING_PATHS[listed][language] === path);
+const topicSlug = /^topics\/([a-zA-Z0-9_-]{1,200})\/$/.exec(relative)?.[1];
+const topic = repository?.topicBySlug(language, topicSlug ?? "");
+const topics = relative === "topics/";
+const search = relative === "search/";
 // Publii paginated the home page's post list at /page/<n>/, so the posts listing
 // is where those addresses belong. The query is where the page number lives now,
 // and it is the page holding the same posts rather than the same number.
-const legacyPage=/^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
-if(repository&&legacyPage){
-  const target=new URL(`${root}posts/`,Astro.site);
-  const listingPage=legacyPostsPage(Number(legacyPage),repository.listing("post").pageSize);
-  if(listingPage>1)target.searchParams.set("page",String(listingPage));
-  return Astro.redirect(target.pathname+target.search,308);
+const legacyPage = /^page\/([1-9]\d{0,3})\/$/.exec(relative)?.[1];
+if (repository && legacyPage) {
+  const target = new URL(`${root}posts/`, Astro.site);
+  const listingPage = legacyPostsPage(Number(legacyPage), repository.listing("post").pageSize);
+  if (listingPage > 1) target.searchParams.set("page", String(listingPage));
+  return Astro.redirect(target.pathname + target.search, 308);
 }
-const listing=!!kind||!!topic||search;
-const entry=!home&&!listing&&!topics?repository?.entry(path):undefined;
-let page=1,query="",invalidQuery=false;
-if(listing){try{({page,query}=parseListingQuery(Astro.url.searchParams));}catch{invalidQuery=true;Astro.response.status=400;}}
-const found=home||listing||topics||!!entry;
-// An address whose entry was deleted answers 410, which tells a search engine
-// it was here and is gone, so it drops the address rather than retrying it.
-const gone=!found&&!!repository?.gone(path);
-if(repository&&!found)Astro.response.status=gone?410:404;
-// An overview's own headline where the dashboard sets one, and its name otherwise.
-const frame=repository?.siteFrame();
-const siteName=frame?.title[language]??"LAYERED.work";
-const headline=kind&&repository&&!invalidQuery?repository.listing(kind).headline[language].trim():"";
-let searchResult:ReturnType<ContentRepository['list']>|undefined;
-if(search&&query.trim()&&repository&&!invalidQuery){
-  try{
-    const limit=repository.listing("post").pageSize;
-    const hits=await loadSearch({q:query,language,page,limit},repository);
-    searchResult={entries:hits.entries.flatMap(hit=>{const entry=repository?.entry(hit.path);return entry?.visibility==="public"?[entry]:[];}),total:hits.total,pages:Math.ceil(hits.total/limit),page};
-  }catch(error){const failure=searchFailure(error);errorId=failure.errorId;Astro.response.status=failure.status;Astro.response.headers.set("Cache-Control","no-store");}
-}
-const title=headline||(errorId?(search?(de?"Suche nicht verfügbar":"Search unavailable"):(de?"Inhalte nicht verfügbar":"Content unavailable")):invalidQuery?(de?"Ungültige Suche":"Invalid search"):entry?.title??(home?siteName:topic?(topic.untranslated?`${topic.name} (${topic.sourceLanguage.toUpperCase()})`:topic.name):(kind==="post"?(de?"Beiträge":"Posts"):kind==="project"?(de?"Projekte":"Projects"):topics?(de?"Themen":"Topics"):search?(de?"Suche":"Search"):gone?(de?"Nicht mehr da":"No longer here"):(de?"Seite nicht gefunden":"Page not found"))));
-const otherLanguage=de?"en":"de";
-const otherTopic=topic?repository?.topic(topic.id,otherLanguage):undefined;
-const translationPath=entry?entry.translationPath:topic&&otherTopic?topicPath(otherLanguage,otherTopic.slug):found?(de?path.replace(/^\/de\//,"/"):`/de${path}`):null;
-const navigation=siteNavigation(language,repository?.mainNavigation(language));
-const footer=siteFooter(language,repository?.footerNavigation(language),frame);
-const nodes=entry?renderContent(entry.body,{language:entry.language}):[];
-let formSubmission;
-if(Astro.request.method==="POST"){
-  if(!entry||!repository||Number(Astro.request.headers.get("content-length")??0)>100_000){
-    Astro.response.status=400;
-  }else{
-    formSubmission=await submitPageForm(Astro.request,repository,nodes,entry);
-    if(!formSubmission)Astro.response.status=400;
-    else Astro.response.status=formSubmission.httpStatus;
+const listing = !!kind || !!topic || search;
+const entry = !home && !listing && !topics ? repository?.entry(path) : undefined;
+let page = 1,
+  query = "",
+  invalidQuery = false;
+if (listing) {
+  try {
+    ({ page, query } = parseListingQuery(Astro.url.searchParams));
+  } catch {
+    invalidQuery = true;
+    Astro.response.status = 400;
   }
 }
-const forms=entry&&repository?await formsForPage(repository,nodes,entry.language,formSubmission):{};
-if(Object.keys(forms).length>0)Astro.response.headers.set("Cache-Control","no-store");
+const found = home || listing || topics || !!entry;
+// An address whose entry was deleted answers 410, which tells a search engine
+// it was here and is gone, so it drops the address rather than retrying it.
+const gone = !found && !!repository?.gone(path);
+if (repository && !found) Astro.response.status = gone ? 410 : 404;
+// An overview's own headline where the dashboard sets one, and its name otherwise.
+const frame = repository?.siteFrame();
+const siteName = frame?.title[language] ?? "LAYERED.work";
+const headline =
+  kind && repository && !invalidQuery ? repository.listing(kind).headline[language].trim() : "";
+let searchResult: ReturnType<ContentRepository["list"]> | undefined;
+if (search && query.trim() && repository && !invalidQuery) {
+  try {
+    const limit = repository.listing("post").pageSize;
+    const hits = await loadSearch({ q: query, language, page, limit }, repository);
+    searchResult = {
+      entries: hits.entries.flatMap((hit) => {
+        const entry = repository?.entry(hit.path);
+        return entry?.visibility === "public" ? [entry] : [];
+      }),
+      total: hits.total,
+      pages: Math.ceil(hits.total / limit),
+      page,
+    };
+  } catch (error) {
+    const failure = searchFailure(error);
+    errorId = failure.errorId;
+    Astro.response.status = failure.status;
+    Astro.response.headers.set("Cache-Control", "no-store");
+  }
+}
+const title =
+  headline ||
+  (errorId
+    ? search
+      ? de
+        ? "Suche nicht verfügbar"
+        : "Search unavailable"
+      : de
+        ? "Inhalte nicht verfügbar"
+        : "Content unavailable"
+    : invalidQuery
+      ? de
+        ? "Ungültige Suche"
+        : "Invalid search"
+      : (entry?.title ??
+        (home
+          ? siteName
+          : topic
+            ? topic.untranslated
+              ? `${topic.name} (${topic.sourceLanguage.toUpperCase()})`
+              : topic.name
+            : kind === "post"
+              ? de
+                ? "Beiträge"
+                : "Posts"
+              : kind === "project"
+                ? de
+                  ? "Projekte"
+                  : "Projects"
+                : topics
+                  ? de
+                    ? "Themen"
+                    : "Topics"
+                  : search
+                    ? de
+                      ? "Suche"
+                      : "Search"
+                    : gone
+                      ? de
+                        ? "Nicht mehr da"
+                        : "No longer here"
+                      : de
+                        ? "Seite nicht gefunden"
+                        : "Page not found")));
+const otherLanguage = de ? "en" : "de";
+const otherTopic = topic ? repository?.topic(topic.id, otherLanguage) : undefined;
+const translationPath = entry
+  ? entry.translationPath
+  : topic && otherTopic
+    ? topicPath(otherLanguage, otherTopic.slug)
+    : found
+      ? de
+        ? path.replace(/^\/de\//, "/")
+        : `/de${path}`
+      : null;
+const navigation = siteNavigation(language, repository?.mainNavigation(language));
+const footer = siteFooter(language, repository?.footerNavigation(language), frame);
+const nodes = entry ? renderContent(entry.body, { language: entry.language }) : [];
+let formSubmission;
+if (Astro.request.method === "POST") {
+  if (!entry || !repository || Number(Astro.request.headers.get("content-length") ?? 0) > 100_000) {
+    Astro.response.status = 400;
+  } else {
+    formSubmission = await submitPageForm(Astro.request, repository, nodes, entry);
+    if (!formSubmission) Astro.response.status = 400;
+    else Astro.response.status = formSubmission.httpStatus;
+  }
+}
+const forms =
+  entry && repository ? await formsForPage(repository, nodes, entry.language, formSubmission) : {};
+if (Object.keys(forms).length > 0) Astro.response.headers.set("Cache-Control", "no-store");
 // Read by the middleware once this response exists. A model needs a permission
 // in the content policy that no other page is given, and this is the only place
 // that knows whether there is one, because the answer is in the body.
-Astro.locals.rendersModel=rendersComponent(nodes,"Model");
-Astro.locals.rendersYouTube=rendersComponent(nodes,"YouTube");
-if(entry?.visibility==="hidden")Astro.response.headers.set("X-Robots-Tag","noindex, nofollow");
+Astro.locals.rendersModel = rendersComponent(nodes, "Model");
+Astro.locals.rendersYouTube = rendersComponent(nodes, "YouTube");
+if (entry?.visibility === "hidden") Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 const metadata = pageMetadata(repository, entry, footer.description);
 // The picture a reader sees first: an entry's own, or the home page's hero where the hero opens the page.
-const leadImage=entry&&repository?repository.featuredImage(entry):home&&repository?.blocks()[0]?.type==="hero"?repository.homeHero(language).image:undefined;
+const leadImage =
+  entry && repository
+    ? repository.featuredImage(entry)
+    : home && repository?.blocks()[0]?.type === "hero"
+      ? repository.homeHero(language).image
+      : undefined;
 ---
-<SiteLayout {siteName} {title} {language} {navigation} {footer} {translationPath} alternates={repository && !errorId && !invalidQuery && found ? languageLinks(repository, path) : []} canonicalPath={entry?.path??path} description={metadata.description} socialImage={metadata.image} article={metadata.article} readingWidth={entry?.readingWidth} leadImage={leadImage}>
-  {entry?.visibility==="hidden"&&<meta slot="head" name="robots" content="noindex, nofollow" />}
-  {errorId||invalidQuery||!found ? <Section.Page><Section.Lead title={title}/><p class="empty-state">{errorId?(search?(de?"Die Suche ist gerade nicht verfügbar.":"Search is unavailable right now."):(de?"Die Inhalte konnten nicht geladen werden.":"The content could not be loaded.")):invalidQuery?(de?"Bitte prüfe Suchbegriff und Seitenzahl.":"Please check the search text and page number."):gone?(de?"Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen.":"What was here has been deleted. The home page and the search lead to everything else."):(de?"Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden.":"This address is unavailable. Search for an article or explore the navigation.")}</p>{errorId&&<p class="meta">{errorId}</p>}<div class="actions">{gone&&<Button.Link href={root} icon={createElement(HouseIcon,{weight:"duotone"})}>{de?"Zur Startseite":"Home page"}</Button.Link>}<Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon,{weight:"duotone"})}>{de?"Zur Suche":"Search the site"}</Button.Link></div></Section.Page> : repository && <>
-    {home&&<HomeContent {repository} {language} />}
-    {listing&&<ListingContent {repository} {language} {title} {kind} topic={topic?.id} {page} {query} {search} {searchResult} />}
-    {topics&&<Section.Page><Section.Lead title={title}/><div class="tag-rail">{repository.topics(language).map(topic=><TopicChip {topic} {language} count={topic.count} />)}</div></Section.Page>}
-    {entry&&<EntryArticle {repository} {entry} {nodes} {forms} />}
-  </>}
+
+<SiteLayout
+  {siteName}
+  {title}
+  {language}
+  {navigation}
+  {footer}
+  {translationPath}
+  alternates={repository && !errorId && !invalidQuery && found ? languageLinks(repository, path) : []}
+  canonicalPath={entry?.path ?? path}
+  description={metadata.description}
+  socialImage={metadata.image}
+  article={metadata.article}
+  readingWidth={entry?.readingWidth}
+  leadImage={leadImage}
+>
+  {entry?.visibility === "hidden" && <meta slot="head" name="robots" content="noindex, nofollow" />}
+  {errorId || invalidQuery || !found ? (
+    <Section.Page>
+      <Section.Lead title={title} />
+      <p class="empty-state">
+        {errorId
+          ? search
+            ? de
+              ? "Die Suche ist gerade nicht verfügbar."
+              : "Search is unavailable right now."
+            : de
+              ? "Die Inhalte konnten nicht geladen werden."
+              : "The content could not be loaded."
+          : invalidQuery
+            ? de
+              ? "Bitte prüfe Suchbegriff und Seitenzahl."
+              : "Please check the search text and page number."
+            : gone
+              ? de
+                ? "Was hier stand, wurde gelöscht. Die Startseite und die Suche führen zu allem anderen."
+                : "What was here has been deleted. The home page and the search lead to everything else."
+              : de
+                ? "Diese Adresse ist nicht verfügbar. Die Suche hilft dir beim Finden."
+                : "This address is unavailable. Search for an article or explore the navigation."}
+      </p>
+      {errorId && <p class="meta">{errorId}</p>}
+      <div class="actions">
+        {gone && (
+          <Button.Link href={root} icon={createElement(HouseIcon, { weight: "duotone" })}>
+            {de ? "Zur Startseite" : "Home page"}
+          </Button.Link>
+        )}
+        <Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon, { weight: "duotone" })}>
+          {de ? "Zur Suche" : "Search the site"}
+        </Button.Link>
+      </div>
+    </Section.Page>
+  ) : (
+    repository && (
+      <>
+        {home && <HomeContent {repository} {language} />}
+        {listing && (
+          <ListingContent
+            {repository}
+            {language}
+            {title}
+            {kind}
+            topic={topic?.id}
+            {page}
+            {query}
+            {search}
+            {searchResult}
+          />
+        )}
+        {topics && (
+          <Section.Page>
+            <Section.Lead title={title} />
+            <div class="tag-rail">
+              {repository.topics(language).map((topic) => (
+                <TopicChip {topic} {language} count={topic.count} />
+              ))}
+            </div>
+          </Section.Page>
+        )}
+        {entry && <EntryArticle {repository} {entry} {nodes} {forms} />}
+      </>
+    )
+  )}
 </SiteLayout>
