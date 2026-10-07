@@ -113,8 +113,7 @@ const snapshotSchema = z.object({
   gone: z.array(path).default([]),
   /**
    * How the overviews of posts and projects are set up in the dashboard. A
-   * snapshot without them, such as the one committed from the export, uses
-   * the defaults.
+   * snapshot without them, such as the migration output, uses the defaults.
    */
   listings: z
     .object({ post: listingSettings, project: listingSettings })
@@ -241,9 +240,9 @@ export interface SearchIndexEntry {
  *
  * The database's snapshot records every asset by its storage key, as `/<key>`,
  * and the bucket answers each object at its key below `MEDIA_ORIGIN`, so the
- * address is the two put together. The snapshot committed from the export,
- * which the site falls back to, records `/media/<file>` instead, and that file
- * lies below `migration/` in the bucket.
+ * address is the two put together. A snapshot written by the migration
+ * pipeline records `/media/<file>` instead, and that file lies below
+ * `migration/` in the bucket.
  *
  * Unset means the path is already the address, which is the local case: the
  * development server answers a key from the directory the backend reads, and

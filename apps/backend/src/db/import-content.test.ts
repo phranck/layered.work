@@ -28,6 +28,7 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  forms,
   gonePaths,
   media,
   mediaTranslations,
@@ -304,6 +305,7 @@ runs("importing a snapshot", () => {
   });
 
   it("holds a file once however many slugs name it", async () => {
+    await emptyTestDatabase();
     const database = await testDatabase();
     const report = await importContent(database, snapshot);
 
@@ -403,6 +405,22 @@ runs("importing a snapshot", () => {
           project: { ...DEFAULT_LISTING, introduction: { en: "Built here.", de: "Hier gebaut." } },
         },
         gone: ["/removed-entry/"],
+        forms: [
+          {
+            slug: "stored-form",
+            name: "Stored form",
+            successMessage: { en: "Thanks.", de: "Danke." },
+            fields: [
+              {
+                key: "agree",
+                label: { en: "Agree", de: "Zustimmen" },
+                hint: { en: "", de: "" },
+                required: false,
+                type: "checkbox",
+              },
+            ],
+          },
+        ],
       };
       const database = await testDatabase();
 
@@ -444,6 +462,8 @@ runs("importing a snapshot", () => {
       expect(await database.select({ path: gonePaths.path }).from(gonePaths)).toEqual([
         { path: "/removed-entry/" },
       ]);
+      const [form] = await database.select().from(forms).where(eq(forms.slug, "stored-form"));
+      expect(form?.declaration).toMatchObject({ notificationEmail: null, storeSubmissions: true });
     } finally {
       await rm(store, { recursive: true, force: true });
     }

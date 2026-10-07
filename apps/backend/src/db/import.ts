@@ -14,8 +14,9 @@ import { mediaRoots } from "./media-roots.js";
  * writes from a database, so an import rebuilds what that database published.
  * That file holds no drafts, so `--drafts-from` names the migration output, and
  * the drafts are taken from there and nothing else is. Navigations, home page
- * blocks, the site's frame and forms are set in the dashboard and are not
- * imported.
+ * blocks and the site's frame are set in the dashboard and are not imported.
+ * A form is imported as a reader sees it, keeping its submissions in the
+ * dashboard and sending no mail until an address is named there.
  *
  * A database that already holds entries is refused. It is what the site
  * publishes, and the snapshot would overwrite every text written in the

@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { mediaReferences } from "@layered/content";
 import {
+  createFormBody,
   DEFAULT_LISTING,
   type EntrySpec,
   LISTED_KINDS,
@@ -10,6 +11,7 @@ import {
   type ListedKind,
   type ListingSettings,
   listingSettings,
+  type PublicForm,
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -19,6 +21,7 @@ import {
   entries,
   entryTopics,
   entryTranslations,
+  forms,
   gonePaths,
   media,
   mediaTranslations,
@@ -114,6 +117,8 @@ export interface Snapshot {
   listings?: Partial<Record<ListedKind, ListingSettings>>;
   /** Addresses that answer 410. Absent from the migration output. */
   gone?: string[];
+  /** The forms the entries embed, as a reader sees them. */
+  forms?: PublicForm[];
 }
 
 /** What the import wrote, so the caller can say it rather than guess. */
@@ -764,6 +769,29 @@ async function importListings(database: Database, snapshot: Snapshot): Promise<v
   }
 }
 
+/**
+ * Writes the forms a snapshot carries, where the database has none of that
+ * slug, so a page embedding one still shows it.
+ *
+ * A snapshot holds what a reader sees of a form and nothing of where its
+ * submissions go. A form written here keeps its submissions in the dashboard
+ * and sends no mail until somebody names an address there.
+ */
+async function importForms(database: Database, snapshot: Snapshot): Promise<void> {
+  for (const form of snapshot.forms ?? []) {
+    const declaration = createFormBody.parse({
+      ...form,
+      notificationEmail: null,
+      confirmationEmailField: null,
+      storeSubmissions: true,
+    });
+    await database
+      .insert(forms)
+      .values({ slug: declaration.slug, name: declaration.name, declaration })
+      .onConflictDoNothing();
+  }
+}
+
 /** Writes the addresses that answer 410, so a rebuilt site still says they are gone. */
 async function importGone(database: Database, snapshot: Snapshot): Promise<void> {
   for (const path of snapshot.gone ?? []) {
@@ -802,6 +830,7 @@ export async function importContent(
   const topicsByReference = await importTopics(database, snapshot, report);
   await importListings(database, snapshot);
   await importGone(database, snapshot);
+  await importForms(database, snapshot);
 
   const redirectsByTarget = new Map<string, string[]>();
   for (const redirect of snapshot.redirects) {
