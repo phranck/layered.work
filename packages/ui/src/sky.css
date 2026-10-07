@@ -1,11 +1,13 @@
 /*
- * The web behind a whole screen, and the light over it.
+ * The web behind a whole screen or behind one band of a page, and the light
+ * over it.
  *
- * A fixed layer under everything rather than a background with fixed
- * attachment, which the browser repositions on every scroll frame. The canvas
- * draws the web; the layer's own `::after` lays the two washes over it, so the
- * corner they light is not evenly lit. The geometry is the countdown page's,
- * where the same background was settled.
+ * Behind a screen it is a fixed layer under everything rather than a background
+ * with fixed attachment, which the browser repositions on every scroll frame.
+ * The canvas draws the web; the layer's own `::after` lays the two washes over
+ * it, so the corner they light is not evenly lit. The geometry is the countdown
+ * page's, where the same background was settled. The washes are sized against
+ * the layer, which for the fixed layer is the window.
  */
 
 .sky {
@@ -24,6 +26,32 @@
   inset: 0;
   content: "";
   background:
-    radial-gradient(75vw 55vh at 14% -6%, var(--sky-wash-accent), transparent 60%),
-    radial-gradient(65vw 45vh at 90% 6%, var(--sky-wash-neutral), transparent 56%);
+    radial-gradient(75% 55% at 14% -6%, var(--sky-wash-accent), transparent 60%),
+    radial-gradient(65% 45% at 90% 6%, var(--sky-wash-neutral), transparent 56%);
+}
+
+/* --- Band --------------------------------------------------------------------
+   The same web behind one band of a page, from edge to edge of the window like
+   the band's own fill, while the band's content keeps the page measure. The
+   band is the stacking context, so the web lies over the band's fill and under
+   its content. The layer paints the page surface under the web whatever the
+   band's position, because that is what the countdown's web is drawn on. */
+
+.section--sky {
+  position: relative;
+  isolation: isolate;
+}
+
+.sky--band {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(50% - 50vw);
+  background: var(--surface-page);
+}
+
+/* A window with a classic scroll bar is narrower than 100vw, and the layer
+   would widen the page by the bar's width. The band's own fill never needed
+   this, because a border image paints without taking room. */
+body:has(.sky--band) {
+  overflow-x: clip;
 }

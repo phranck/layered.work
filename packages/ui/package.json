@@ -29,6 +29,11 @@
       "development": "./src/focus-return.ts",
       "default": "./dist/focus-return.js"
     },
+    "./sky": {
+      "types": "./src/sky.ts",
+      "development": "./src/sky.ts",
+      "default": "./dist/sky.js"
+    },
     "./icons": {
       "types": "./src/icons.ts",
       "development": "./src/icons.ts",

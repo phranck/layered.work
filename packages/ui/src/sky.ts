@@ -78,9 +78,11 @@ function unit(value: number): number {
 /**
  * Draws the web on a canvas and keeps it moving until stopped.
  *
- * The canvas is sized to the window, so it belongs in a fixed layer that covers
- * it. Under `prefers-reduced-motion: reduce` one frame is drawn and nothing
- * moves; in a hidden tab nothing is drawn at all.
+ * The canvas fills the element that holds it: a fixed layer over the window
+ * behind a whole screen, or one band of a page. Under
+ * `prefers-reduced-motion: reduce` one frame is drawn and nothing moves; in a
+ * hidden tab, or while the canvas is scrolled out of view, nothing is drawn at
+ * all.
  *
  * @param canvas - The canvas to draw on.
  * @returns A function that stops the animation and removes every listener.
@@ -144,10 +146,13 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
     }
   }
 
+  // What the canvas fills. A fixed layer makes it the window, a band makes it the band.
+  const host = canvas.parentElement ?? canvas;
+
   function resize() {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
+    width = host.clientWidth;
+    height = host.clientHeight;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     canvas.style.width = `${width}px`;
@@ -197,6 +202,13 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
 
     context.clearRect(0, 0, width, height);
 
+    // The pointer arrives in the window's coordinates and the web is drawn in
+    // the canvas's, which differ wherever the canvas does not start at the
+    // window's corner. Read once a frame, so a scroll between frames is followed.
+    const origin = pointing ? canvas.getBoundingClientRect() : undefined;
+    const localX = origin ? pointerX - origin.left : 0;
+    const localY = origin ? pointerY - origin.top : 0;
+
     for (let index = 0; index < nodes.length; index += 1) {
       const node = nodes[index] as SkyNode;
       // Home plus the node's own slow wander.
@@ -223,8 +235,8 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
 
       // The pointer pulls what is near it, and a weak, damped spring brings it back.
       if (pointing) {
-        const towardsX = pointerX - ((projectedX[index] as number) + node.offsetX);
-        const towardsY = pointerY - ((projectedY[index] as number) + node.offsetY);
+        const towardsX = localX - ((projectedX[index] as number) + node.offsetX);
+        const towardsY = localY - ((projectedY[index] as number) + node.offsetY);
         const distance = Math.sqrt(towardsX * towardsX + towardsY * towardsY);
         if (distance < MAGNET && distance > 0.5) {
           const closeness = 1 - distance / MAGNET;
@@ -318,25 +330,35 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
     running = 0;
   }
 
-  // A hidden tab draws nothing, so the animation does not keep a core warm
-  // behind whatever the reader went off to look at.
-  const onVisibility = () => (document.hidden ? stop() : start());
+  // A hidden tab draws nothing, and nor does a canvas scrolled out of view, so
+  // the animation does not keep a core warm behind whatever the reader is
+  // looking at instead.
+  let inView = true;
+  const follow = () => (document.hidden || !inView ? stop() : start());
+  const visibility = new IntersectionObserver(([entry]) => {
+    inView = entry?.isIntersecting ?? true;
+    follow();
+  });
 
   let pending: ReturnType<typeof setTimeout> | undefined;
-  const onResize = () => {
+  // The observer reports the size it starts with as well, which would scatter
+  // the cloud a second time a moment after it was built, so only a change counts.
+  const sizing = new ResizeObserver(() => {
+    if (host.clientWidth === width && host.clientHeight === height) return;
     clearTimeout(pending);
     pending = setTimeout(() => {
       resize();
       if (still) frame(performance.now());
     }, RESIZE_SETTLE_MS);
-  };
+  });
 
   if (!still) {
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerleave", onPointerLeave, { passive: true });
   }
-  document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("resize", onResize, { passive: true });
+  document.addEventListener("visibilitychange", follow);
+  visibility.observe(canvas);
+  sizing.observe(host);
 
   resize();
   if (still) frame(performance.now());
@@ -345,9 +367,10 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
   return () => {
     stop();
     clearTimeout(pending);
+    visibility.disconnect();
+    sizing.disconnect();
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerleave", onPointerLeave);
-    document.removeEventListener("visibilitychange", onVisibility);
-    window.removeEventListener("resize", onResize);
+    document.removeEventListener("visibilitychange", follow);
   };
 }
