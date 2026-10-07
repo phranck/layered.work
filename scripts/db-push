@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Replace the Zerops database with a snapshot of the local database.
+
+Reads DATABASE_URL and ZEROPS_DB_URL from the gitignored root .env.local.
+Requires an already active Zerops VPN. Credentials never appear in arguments or
+output. Run with --check to validate both ends without writing to production.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+
+ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = ROOT / ".env.local"
+
+
+class PushError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class Database:
+    host: str
+    port: int
+    user: str
+    name: str
+    password: str
+
+    def arguments(self) -> list[str]:
+        return ["-h", self.host, "-p", str(self.port), "-U", self.user, "-d", self.name]
+
+    def environment(self) -> dict[str, str]:
+        return {
+            **os.environ,
+            "PGPASSWORD": self.password,
+            "PGCONNECT_TIMEOUT": "10",
+            "PGOPTIONS": "-c TimeZone=UTC -c lock_timeout=5s",
+        }
+
+
+def read_environment() -> dict[str, str]:
+    if not ENV_FILE.is_file():
+        raise PushError(f"Missing {ENV_FILE}")
+    values: dict[str, str] = {}
+    for line in ENV_FILE.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
+            value = value[1:-1]
+        values[key.strip()] = value
+    return values
+
+
+def database(value: str, *, local: bool) -> Database:
+    try:
+        url = urlsplit(value)
+        result = Database(
+            host=url.hostname or "",
+            port=url.port or 5432,
+            user=unquote(url.username or ""),
+            name=unquote(url.path.lstrip("/")),
+            password=unquote(url.password or ""),
+        )
+    except ValueError as error:
+        raise PushError("Invalid database URL") from error
+    if url.scheme not in ("postgres", "postgresql") or url.query or url.fragment:
+        raise PushError("Database URLs must be plain PostgreSQL URLs without query or fragment")
+    expected = ("127.0.0.1", 5434, "layered_app", "layered") if local else None
+    actual = (result.host, result.port, result.user, result.name)
+    if local and actual != expected:
+        raise PushError("DATABASE_URL must target layered_app@127.0.0.1:5434/layered")
+    if not local and actual not in {
+        ("postgres", 5432, "db", "db"),
+        ("postgres.zerops", 5432, "db", "db"),
+    }:
+        raise PushError("ZEROPS_DB_URL must target db@postgres.zerops:5432/db")
+    if not result.password or result.password.upper() in {"REDACTED", "CHANGEME"}:
+        raise PushError("A database password is missing or still a placeholder")
+    return result
+
+
+def binary(name: str) -> str:
+    found = shutil.which(name)
+    fallback = Path("/opt/homebrew/opt/libpq/bin") / name
+    if found:
+        return found
+    if fallback.is_file():
+        return str(fallback)
+    raise PushError(f"Missing {name}; install libpq first")
+
+
+def run(command: list[str], connection: Database | None = None) -> str:
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=connection.environment() if connection else None,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as error:
+        raise PushError(f"Could not run {Path(command[0]).name}: {error}") from error
+    if completed.returncode:
+        detail = completed.stderr.strip()
+        if connection:
+            detail = detail.replace(connection.password, "[REDACTED]")
+        raise PushError(f"{Path(command[0]).name} failed: {detail}")
+    return completed.stdout.strip()
+
+
+def query(psql: str, connection: Database, statement: str) -> str:
+    return run(
+        [psql, "-w", "-X", "-A", "-t", "-F", "|", *connection.arguments(), "-c", statement],
+        connection,
+    )
+
+
+def check_identity(psql: str, connection: Database, *, local: bool) -> None:
+    role, name, superuser = query(
+        psql,
+        connection,
+        "select current_user,current_database(),(select rolsuper from pg_roles where rolname=current_user)",
+    ).split("|")
+    expected = ("layered_app", "layered", "f") if local else ("db", "db", "f")
+    if (role, name, superuser) != expected:
+        raise PushError(f"Unexpected {'local' if local else 'production'} database identity")
+    print(f"{'Local' if local else 'Zerops'} connection: {role}@{name}, non-superuser")
+
+
+def tables(psql: str, connection: Database) -> list[str]:
+    result = query(
+        psql,
+        connection,
+        "select schemaname||'.'||tablename from pg_tables "
+        "where schemaname in ('public','drizzle') order by schemaname,tablename",
+    )
+    return result.splitlines() if result else []
+
+
+def fingerprints(psql: str, connection: Database, names: list[str]) -> dict[str, str]:
+    result = {}
+    for name in names:
+        schema, table = name.split(".", 1)
+        quoted = ".".join('"' + part.replace('"', '""') + '"' for part in (schema, table))
+        result[name] = query(
+            psql,
+            connection,
+            "select count(*),md5(coalesce(string_agg(md5(to_jsonb(t)::text),'' "
+            f"order by md5(to_jsonb(t)::text)),'')) from {quoted} as t",
+        )
+    return result
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="validate and dump locally; do not import")
+    arguments = parser.parse_args()
+    values = read_environment()
+    local = database(values.get("DATABASE_URL", ""), local=True)
+    production = database(values.get("ZEROPS_DB_URL", ""), local=False)
+    psql, pg_dump, pg_restore = (binary(name) for name in ("psql", "pg_dump", "pg_restore"))
+
+    check_identity(psql, local, local=True)
+    check_identity(psql, production, local=False)
+    source_tables = tables(psql, local)
+    destination_tables = tables(psql, production)
+    if not source_tables or "drizzle.__drizzle_migrations" not in source_tables:
+        raise PushError("Local schema or Drizzle migration table is missing")
+    extras = sorted(set(destination_tables) - set(source_tables))
+    if extras:
+        raise PushError(f"Production contains tables absent locally: {', '.join(extras)}")
+    nonowned = query(
+        psql,
+        production,
+        "select schemaname||'.'||tablename from pg_tables "
+        "where schemaname in ('public','drizzle') and tableowner<>current_user",
+    )
+    if nonowned:
+        raise PushError(f"Production role does not own these tables: {nonowned}")
+
+    expected = fingerprints(psql, local, source_tables)
+    with tempfile.TemporaryDirectory(prefix="layered-db-push-") as directory:
+        archive = Path(directory) / "local.dump"
+        run([pg_dump, "--format=custom", "--file", str(archive), *local.arguments()], local)
+        contents = run([pg_restore, "--list", str(archive)])
+        if "TABLE DATA" not in contents or "__drizzle_migrations" not in contents:
+            raise PushError("The local dump does not contain the expected table data")
+        if fingerprints(psql, local, source_tables) != expected:
+            raise PushError("Local data changed while the dump was being made; retry")
+        print(f"Local snapshot: {len(source_tables)} tables, {archive.stat().st_size} bytes")
+        if arguments.check:
+            print("Check passed; production data was not changed")
+            return
+
+        destination = (
+            f"host={production.host} port={production.port} "
+            f"user={production.user} dbname={production.name} connect_timeout=10"
+        )
+        run(
+            [
+                pg_restore,
+                "--dbname", destination,
+                "--clean", "--if-exists", "--no-owner", "--no-privileges",
+                "--single-transaction", "--exit-on-error", str(archive),
+            ],
+            production,
+        )
+
+    restored_tables = tables(psql, production)
+    if restored_tables != source_tables or fingerprints(psql, production, source_tables) != expected:
+        raise PushError("Import finished, but production data does not match the local snapshot")
+    print(f"Verified: Zerops now matches the local snapshot across {len(source_tables)} tables")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except PushError as error:
+        print(f"db-push: {error}", file=sys.stderr)
+        sys.exit(1)

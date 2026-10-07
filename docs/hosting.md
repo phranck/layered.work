@@ -234,22 +234,24 @@ Before a batch release, put the four bucket values in the ignored `.env.local` a
 
 An upload has three steps. The dashboard asks the API for one, sends the bytes to the address in the answer, and then says it is done. With a bucket that address is a presigned bucket URL, so the bytes never pass through the API. Locally it is the API's own `PUT /media/uploads/:token/content`, a route that only exists when no bucket is configured outside production. The API then decodes what arrived and keeps it only if it is the picture it was declared as.
 
-## The schema is one file, and the database is thrown away
+## Schema changes
 
-`apps/backend/drizzle/` holds `0000_initial_schema.sql` and every change made since. A schema change is one command, and it is never written by hand:
+`apps/backend/drizzle/` holds `0000_initial_schema.sql` and every change made since. A schema change is generated and applied to the local database, never written by hand, and reaches production with the next push:
 
 ```sh
 pnpm --filter @layered/backend db:generate --name=<what_changed>
-pnpm db:reset
+pnpm --filter @layered/backend db:migrate
 ```
 
-`db:generate` writes a new file describing the difference, and `db:reset` removes the container together with its volume, brings it back, applies every file in order and seeds the account. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
+`db:generate` writes a new file describing the difference, and `db:migrate` applies it to the database `DATABASE_URL` names, which keeps its content.
+
+`pnpm db:reset` is for a database that is to start over: it removes the container together with its volume, brings it back, applies every file in order and seeds the account, and the content is then `db:import` from the committed snapshot. The reset refuses to touch anything except the container `compose.yml` declares, on the port it declares, because a reset pointed at the wrong database is not a mistake anybody gets to undo.
 
 **A file that has been applied anywhere is never edited again.** The deployment runs `node apps/backend/dist/db/migrate.js` before the service starts, and the runner records a hash of each file it applies. Rewriting `0000_initial_schema.sql` therefore produces a file the deployed database has no record of, whose statements describe a schema it already has, and the deployment fails at the first `CREATE TYPE`.
 
 That happened on 23 September 2026. `entry_kind` gained a third value, the one file was regenerated as the note here used to instruct, and `deploy-backend` failed whilst the site went on serving its previous build. The answer was to put `0000_initial_schema.sql` back exactly as the deployed database had applied it and let `db:generate` write `0001_add_project_kind.sql` beside it, which is one line: `ALTER TYPE "public"."entry_kind" ADD VALUE 'project';`.
 
-So the history starts here, earlier than #180 expected, and for a plainer reason than the one it named. Rewriting the first file only works whilst every database that has applied it can be thrown away, and the deployed one cannot: it is reachable only from inside the project network, because `zcli vpn up` needs a password only phranck can give. Emptying it means deleting the `postgres` service and importing it again, which was done on 21 September 2026 and is not a step to put in front of every schema change.
+So the history starts here, earlier than #180 expected, and for a plainer reason than the one it named. Rewriting the first file only works whilst every database that has applied it can be thrown away at once, and the deployed one cannot: it is reachable only from inside the project network, because `zcli vpn up` needs a password only phranck can give. Replacing it is a push from the local database, which is not a step to put in front of every schema change.
 
 ## How another service reaches the database and the bucket
 
@@ -267,11 +269,58 @@ Zerops exposes a service's own variables to its siblings, prefixed by the hostna
 
 **The role Zerops connects as is `db`**, read off the first migration that ran there rather than guessed, from the line `migrations applied as db`. It is not a superuser, which that same run proved by not being refused. Locally the equivalent is `layered_app`, created by `scripts/local-database/`.
 
+## The local database is the master
+
+Until the site is finished, production holds what the local database holds. Content and schema change locally, `db:migrate` runs locally, and the local state then replaces the Zerops database. A difference between the two is a fault on production, and the next push removes it.
+
+`scripts/db-push` makes the replacement. It checks that both connections are the expected roles and neither is a superuser, refuses when production holds a table the local database lacks, restores a dump of the local database into production in one transaction, and compares the rows of every table afterwards. `--check` does everything up to the restore and writes nothing to production. It reads `ZEROPS_DB_URL` from `.env.local` and needs the Zerops VPN, which `zcli vpn up` opens and which asks for phranck's password.
+
+```bash
+zcli vpn up
+scripts/db-push --check
+scripts/db-push
+```
+
+A migration applied locally reaches production with the push, because the dump carries Drizzle's record of it.
+
 ## Backups
 
-Zerops backs the database up daily between 00:00 and 01:00 UTC, keeping at least seven daily, four weekly and three monthly copies. Zerops makes and stores the backup; restoring is ours to carry out with the service's own tools over the Zerops VPN. The procedure goes here once it has been followed once, per its issue.
+Zerops backs `postgres` up every day at 00:08 UTC: its `backupPeriod` reads `8 0 * * *`, asked of the Zerops API on 7 October 2026. No retention policy is set, so the [default](https://docs.zerops.io/features/backup) applies: at least seven daily, four weekly and three monthly copies, and at most 50. A backup is the way back when a push goes wrong or this machine is lost, not a source of content.
 
-The object storage is not covered by that backup.
+A backup is a ZIP holding one `pg_dump` file in the custom format per database. `db.dump` is the site, beside `postgres.dump` and `template1.dump`. Zerops decrypts it when it is downloaded. Two things differ from the Zerops documentation: it describes one dump per schema, and it shows a `zcli backup create` command that zcli 1.1.2 does not have.
+
+### Getting a backup back
+
+Followed on 7 October 2026 with the backup of that night, into a throwaway database on this machine.
+
+1. Download it from the Zerops interface, under the `postgres` service's backups, or through the API: `POST /project/<project>/backup/download-url/<service>/<backup date>` answers with a link to the decrypted ZIP, and `GET /service-stack/<service>/backup` lists the backups with their dates.
+2. Unzip it and keep `db.dump`.
+3. Start an empty PostgreSQL 18 and create the role `db` with a login, and the database `db` owned by it. The dump assigns every object to that role.
+
+   ```bash
+   docker run -d --name layered-restore -e POSTGRES_PASSWORD=<password> -p 127.0.0.1:55432:5432 postgres:18-alpine
+   psql "host=127.0.0.1 port=55432 user=postgres" -c "create role db login password '<password>'" -c "create database db owner db"
+   ```
+
+4. Restore it with the PostgreSQL 18 tools, which Homebrew's `libpq` supplies.
+
+   ```bash
+   pg_restore -h 127.0.0.1 -p 55432 -U postgres -d db --exit-on-error db.dump
+   ```
+
+5. Bring its schema to the current code as the role `db`.
+
+   ```bash
+   DATABASE_URL=postgres://db:<password>@127.0.0.1:55432/db DB_MIGRATION_ROLE=db pnpm --filter @layered/backend db:migrate
+   ```
+
+The container answered after 3 seconds, the restore of the 135,672 byte dump took 1 second, and the migration 1 second. `db:snapshot` written from the restored database matched what production served at `/content/snapshot` in every entry, topic, file, redirect and form. The container and the downloaded files were removed afterwards.
+
+To put a backup back into production, restore it into the local container in place of the local database and push that with `scripts/db-push`, so production is still written from local.
+
+### The bucket
+
+Zerops does not back up [object storage](https://docs.zerops.io/guides/object-storage-integration). This machine holds every object the bucket serves: the migrated files and their sizes in `apps/website/public/media/`, which the migration pipeline staged and git ignores, and every upload in `media-local/uploads/`. A lost bucket is filled again from here: `scripts/publii/upload.mjs` uploads the migrated files and their sizes, `db:sync-media` every original in the library, and `db:verify-bucket` names whatever is still missing. The sizes the backend generated for an upload are uploaded by neither yet, which #292 covers.
 
 ## Secrets and environment
 
