@@ -10,6 +10,7 @@ import { SettingControl } from "./home-block-settings.js";
 import { HomeBlocksScreen } from "./home-blocks.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { dashboardAreas } from "./routes.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 afterEach(() => {
   cleanup();
@@ -114,7 +115,13 @@ describe("the blocks screen", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Beitrags-Raster\s*6 Einträge/ }));
     // The panel shows one block's settings at a time, so its fields are unique on the screen.
     const panel = document.body;
-    expect(await within(panel).findByLabelText("Überschrift auf Englisch")).toHaveProperty(
+    // The placeholder is the declaration's fallback, in the language the switch shows.
+    expect(await within(panel).findByLabelText("Überschrift")).toHaveProperty(
+      "placeholder",
+      "Notizen aus der Werkstatt",
+    );
+    chooseTextLanguage("en");
+    expect(within(panel).getByLabelText("Überschrift")).toHaveProperty(
       "placeholder",
       "Notes from the workshop",
     );

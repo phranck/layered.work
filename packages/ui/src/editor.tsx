@@ -16,7 +16,10 @@ export interface EditorPanelProps extends Omit<DivProps, "title"> {
   eyebrow?: ReactNode;
   title: ReactNode;
   note?: ReactNode;
+  /** In the footer, such as the panel's save. */
   actions?: ReactNode;
+  /** Beside the title, for a control that changes what the whole panel shows. */
+  headerActions?: ReactNode;
 }
 /** The editor layout container. */
 const EditorRoot = forwardRef<HTMLElement, ComponentPropsWithoutRef<"section">>(
@@ -62,10 +65,10 @@ const EditorSurface = forwardRef<HTMLDivElement, DivProps>(({ className, ...prop
 ));
 /** The editor properties panel. */
 const EditorPanel = forwardRef<HTMLDivElement, EditorPanelProps>(
-  ({ actions, children, className, eyebrow, note, title, ...props }, ref) => (
+  ({ actions, children, className, eyebrow, headerActions, note, title, ...props }, ref) => (
     <div ref={ref} className={join("editor__panel", className)} {...props}>
       <Card>
-        <Card.Header eyebrow={eyebrow} title={title} />
+        <Card.Header eyebrow={eyebrow} title={title} actions={headerActions} />
         <Card.Stack>{children}</Card.Stack>
         {(note || actions) && <Card.Footer note={note} actions={actions} />}
       </Card>

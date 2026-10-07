@@ -11,6 +11,7 @@ import { LISTING_SETTINGS_OPEN_KEY } from "./listing-settings.js";
 import { createDashboardMemoryRouter } from "./router.js";
 import { dashboardAreas } from "./routes.js";
 import { SIDEBAR_ORDER_KEY } from "./sidebar-order.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 const queryClients = new Set<QueryClient>();
 
@@ -326,7 +327,8 @@ describe("dashboard shell", () => {
 
     fireEvent.change(screen.getByLabelText("Einträge pro Seite"), { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: "2" }));
-    fireEvent.change(screen.getByLabelText("Überschrift auf Englisch"), { target: { value: "Work" } });
+    chooseTextLanguage("en");
+    fireEvent.change(screen.getByLabelText("Überschrift"), { target: { value: "Work" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
@@ -550,7 +552,7 @@ describe("dashboard shell", () => {
 
     const save = await screen.findByRole("button", { name: "Speichern" });
     expect((save as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Titel auf Deutsch"), { target: { value: "LAYERED.werk" } });
+    fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "LAYERED.werk" } });
     expect((save as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(save);
 
@@ -874,10 +876,12 @@ describe("dashboard shell", () => {
     vi.stubGlobal("fetch", request);
     renderDashboard("/tags");
 
+    // The table starts on German, the interface's language, where Soldering has no name.
     const table = await screen.findByRole("table");
-    const soldering = within(table).getByText("Soldering").closest("tr") as HTMLElement;
-    expect(within(soldering).getByText("Fehlt")).toBeTruthy();
+    const soldering = within(table).getByText("Fehlt").closest("tr") as HTMLElement;
     expect(within(soldering).getByText("3")).toBeTruthy();
+    chooseTextLanguage("en");
+    expect(within(soldering).getByText("Soldering")).toBeTruthy();
 
     fireEvent.click(within(soldering).getByRole("button", { name: "Löschen" }));
     const dialog = await screen.findByRole("dialog", { name: "„Soldering“ löschen" });
@@ -1245,9 +1249,7 @@ describe("dashboard shell", () => {
     vi.stubGlobal("fetch", request);
     renderDashboard("/settings");
 
-    fireEvent.change(await screen.findByLabelText("Titel auf Deutsch"), {
-      target: { value: "LAYERED.werk" },
-    });
+    fireEvent.change(await screen.findByLabelText("Titel"), { target: { value: "LAYERED.werk" } });
     fireEvent.keyDown(document.body, { key: "s", ctrlKey: true });
 
     await waitFor(() =>

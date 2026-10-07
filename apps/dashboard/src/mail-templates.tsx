@@ -1,5 +1,11 @@
-import { type MailTemplateKind, type SaveMailTemplateBody, saveMailTemplateBody } from "@layered/schemas";
-import { Button, Card, Field, Input, Select, Textarea } from "@layered/ui";
+import {
+  type BilingualText,
+  type ContentLanguage,
+  type MailTemplateKind,
+  type SaveMailTemplateBody,
+  saveMailTemplateBody,
+} from "@layered/schemas";
+import { Button, Card, Field, Input } from "@layered/ui";
 import { FloppyDiskIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createElement, type ReactNode, useEffect, useState } from "react";
@@ -9,6 +15,8 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { useTextLanguage } from "./text-language.js";
+import { Translated } from "./translated.js";
 
 const labels = {
   en: {
@@ -132,8 +140,6 @@ export function MailTemplateEditorScreen() {
     enabled: Boolean(kind),
   });
   const [draft, setDraft] = useState<SaveMailTemplateBody | null>(null);
-  const [language, setLanguage] = useState<"en" | "de">(interfaceLanguage);
-  const [recipient, setRecipient] = useState("");
   const [problem, setProblem] = useState("");
 
   useEffect(() => {
@@ -150,15 +156,6 @@ export function MailTemplateEditorScreen() {
       notify({ tone: "success", message: words.saved });
     },
   });
-  const preview = useMutation({
-    mutationFn: (value: SaveMailTemplateBody) => api.previewMailTemplate(templateKind, value, language),
-    onError: (error) => notifyError(error),
-  });
-  const test = useMutation({
-    mutationFn: (value: SaveMailTemplateBody) =>
-      api.testMailTemplate(templateKind, value, language, recipient),
-    onError: (error) => notifyError(error),
-  });
 
   const checked = () => {
     const parsed = saveMailTemplateBody.safeParse(draft);
@@ -172,9 +169,9 @@ export function MailTemplateEditorScreen() {
     return parsed.data;
   };
 
-  const change = (field: keyof SaveMailTemplateBody, lang: "en" | "de", value: string) => {
+  const change = (field: keyof SaveMailTemplateBody, value: BilingualText) => {
     if (!draft) return;
-    setDraft({ ...draft, [field]: { ...draft[field], [lang]: value } });
+    setDraft({ ...draft, [field]: value });
     setProblem("");
   };
 
@@ -202,104 +199,146 @@ export function MailTemplateEditorScreen() {
         </p>
       )}
       {draft && (
-        <>
-          <Card>
-            <Card.Header title={loaded.data?.name[interfaceLanguage] ?? words.title} />
-            <Card.Body>
-              {(["en", "de"] as const).map((lang) => (
-                <div key={lang} lang={lang}>
-                  <h3>{lang.toUpperCase()}</h3>
-                  <Field label={`${words.name} (${lang.toUpperCase()})`} htmlFor={`mail-name-${lang}`}>
-                    <Input
-                      id={`mail-name-${lang}`}
-                      value={draft.name[lang]}
-                      onChange={(event) => change("name", lang, event.target.value)}
-                    />
-                  </Field>
-                  <Field label={`${words.subject} (${lang.toUpperCase()})`} htmlFor={`mail-subject-${lang}`}>
-                    <Input
-                      id={`mail-subject-${lang}`}
-                      value={draft.subject[lang]}
-                      onChange={(event) => change("subject", lang, event.target.value)}
-                    />
-                  </Field>
-                  <Field label={`${words.body} (${lang.toUpperCase()})`} htmlFor={`mail-body-${lang}`}>
-                    <Textarea
-                      id={`mail-body-${lang}`}
-                      value={draft.body[lang]}
-                      onChange={(event) => change("body", lang, event.target.value)}
-                      rows={8}
-                    />
-                  </Field>
-                </div>
-              ))}
-              <p>
-                {words.values}:{" "}
-                {loaded.data?.allowedVariables.map((name) => (
-                  <code key={name}>{`{{${name}}}`} </code>
-                ))}
-              </p>
-            </Card.Body>
-          </Card>
-          <Card>
-            <Card.Header title={words.preview} />
-            <Card.Body>
-              <Field label="Language / Sprache" htmlFor="mail-preview-language">
-                <Select
-                  id="mail-preview-language"
-                  value={language}
-                  options={[
-                    { value: "en", label: "English" },
-                    { value: "de", label: "Deutsch" },
-                  ]}
-                  onChange={(event) => setLanguage(event.target.value as "en" | "de")}
-                />
-              </Field>
-              <Button
-                onClick={() => {
-                  const value = checked();
-                  if (value) preview.mutate(value);
-                }}
-              >
-                {words.preview}
-              </Button>
-              {preview.data && (
-                <>
-                  <p>
-                    {words.subject}: {preview.data.subject}
-                  </p>
-                  <h3>{words.html}</h3>
-                  <SafeMailPreview html={preview.data.html} />
-                  <h3>{words.plain}</h3>
-                  <pre>{preview.data.text}</pre>
-                </>
-              )}
-              <Field label={words.recipient} htmlFor="mail-test-recipient">
-                <Input
-                  id="mail-test-recipient"
-                  type="email"
-                  value={recipient}
-                  onChange={(event) => setRecipient(event.target.value)}
-                />
-              </Field>
-              <Button
-                disabled={!recipient || test.isPending}
-                onClick={() => {
-                  const value = checked();
-                  if (value) test.mutate(value);
-                }}
-              >
-                {words.test}
-              </Button>
-              {test.data && (
-                <p role="status">
-                  {test.data.accepted ? words.accepted : words.refused} {test.data.answer}
-                </p>
-              )}
-            </Card.Body>
-          </Card>
-        </>
+        <Translated>
+          <MailTemplateCards
+            kind={templateKind}
+            title={loaded.data?.name[interfaceLanguage] ?? words.title}
+            allowedVariables={loaded.data?.allowedVariables ?? []}
+            draft={draft}
+            onChange={change}
+            checked={checked}
+          />
+        </Translated>
       )}
+    </>
+  );
+}
+
+/**
+ * The template's texts and its preview, in the language the switch has chosen.
+ *
+ * The preview and the test message go out in that language too, so what is
+ * edited is what is tried.
+ *
+ * @param kind - Which template.
+ * @param title - The template's name, for the card.
+ * @param allowedVariables - The placeholders the template may hold.
+ * @param draft - The template as edited.
+ * @param onChange - Replaces one of its bilingual texts.
+ * @param checked - The draft if it is valid, after saying why where it is not.
+ */
+function MailTemplateCards({
+  kind,
+  title,
+  allowedVariables,
+  draft,
+  onChange,
+  checked,
+}: {
+  kind: MailTemplateKind;
+  title: string;
+  allowedVariables: readonly string[];
+  draft: SaveMailTemplateBody;
+  onChange: (field: keyof SaveMailTemplateBody, value: BilingualText) => void;
+  checked: () => SaveMailTemplateBody | null;
+}) {
+  const api = useDashboardApi();
+  const { language: interfaceLanguage } = useDashboardLanguage();
+  const { notifyError } = useNotify();
+  const words = labels[interfaceLanguage];
+  const language = useTextLanguage();
+  const [recipient, setRecipient] = useState("");
+  const preview = useMutation({
+    mutationFn: (request: { value: SaveMailTemplateBody; language: ContentLanguage }) =>
+      api.previewMailTemplate(kind, request.value, request.language),
+    onError: (error) => notifyError(error),
+  });
+  // A preview rendered in the other language is not shown, so what stands under
+  // the fields is always the language they are in.
+  const rendered = preview.variables?.language === language ? preview.data : undefined;
+  const test = useMutation({
+    mutationFn: (value: SaveMailTemplateBody) => api.testMailTemplate(kind, value, language, recipient),
+    onError: (error) => notifyError(error),
+  });
+  return (
+    <>
+      <Card>
+        <Card.Header title={title} actions={<Translated.Switch />} />
+        <Card.Body>
+          <Translated.Field
+            id="mail-name"
+            label={words.name}
+            value={draft.name}
+            onChange={(value) => onChange("name", value)}
+          />
+          <Translated.Field
+            id="mail-subject"
+            label={words.subject}
+            value={draft.subject}
+            onChange={(value) => onChange("subject", value)}
+          />
+          <Translated.Field
+            id="mail-body"
+            label={words.body}
+            value={draft.body}
+            multiline
+            rows={8}
+            onChange={(value) => onChange("body", value)}
+          />
+          <p>
+            {words.values}:{" "}
+            {allowedVariables.map((name) => (
+              <code key={name}>{`{{${name}}}`} </code>
+            ))}
+          </p>
+        </Card.Body>
+      </Card>
+      <Card>
+        <Card.Header title={words.preview} />
+        <Card.Body>
+          <Button
+            onClick={() => {
+              const value = checked();
+              if (value) preview.mutate({ value, language });
+            }}
+          >
+            {words.preview}
+          </Button>
+          {rendered && (
+            <>
+              <p>
+                {words.subject}: {rendered.subject}
+              </p>
+              <h3>{words.html}</h3>
+              <SafeMailPreview html={rendered.html} />
+              <h3>{words.plain}</h3>
+              <pre>{rendered.text}</pre>
+            </>
+          )}
+          <Field label={words.recipient} htmlFor="mail-test-recipient">
+            <Input
+              id="mail-test-recipient"
+              type="email"
+              value={recipient}
+              onChange={(event) => setRecipient(event.target.value)}
+            />
+          </Field>
+          <Button
+            disabled={!recipient || test.isPending}
+            onClick={() => {
+              const value = checked();
+              if (value) test.mutate(value);
+            }}
+          >
+            {words.test}
+          </Button>
+          {test.data && (
+            <p role="status">
+              {test.data.accepted ? words.accepted : words.refused} {test.data.answer}
+            </p>
+          )}
+        </Card.Body>
+      </Card>
     </>
   );
 }

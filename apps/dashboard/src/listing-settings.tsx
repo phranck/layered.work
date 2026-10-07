@@ -1,21 +1,13 @@
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  LISTING_BOUNDS,
-  LISTING_GROUP,
-  type ListedKind,
-  listingSettings,
-  MaxLength,
-} from "@layered/schemas";
-import { Field, Input, Segmented, Textarea } from "@layered/ui";
+import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLength } from "@layered/schemas";
+import { Field, Input, Segmented } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { type DashboardStringKey, dashboardText } from "./dashboard-i18n.js";
-import { LANGUAGE_TEXT } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { SETTINGS_KEY, SettingsCard } from "./settings.js";
+import { Translated } from "./translated.js";
 
 /**
  * How the site's overview of posts or of projects is set up, in a card on the
@@ -66,121 +58,107 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
   const [open, setOpen] = useRememberedOpen();
   const group = LISTING_GROUP[kind];
-  const languageName = (language: ContentLanguage) => text(LANGUAGE_TEXT[language]);
 
   if (settings.isError) return <ErrorNotice error={settings.error} />;
   if (!settings.data) return null;
   const saved = settings.data[group];
   return (
-    <SettingsCard
-      key={JSON.stringify(saved)}
-      group={group}
-      title={text("listingSettings")}
-      saved={saved}
-      schema={listingSettings}
-      reasons={{
-        pageSize: "invalidPageSize",
-        previewLength: "invalidPreviewLength",
-        headline: "invalidListingText",
-        introduction: "invalidListingText",
-      }}
-      collapse={{ open, onOpenChange: setOpen }}
-    >
-      {(draft, update, editable) => (
-        <>
-          <div className="settings-form__pair">
-            {CONTENT_LANGUAGES.map((language) => (
+    <Translated>
+      <SettingsCard
+        key={JSON.stringify(saved)}
+        group={group}
+        title={text("listingSettings")}
+        saved={saved}
+        schema={listingSettings}
+        reasons={{
+          pageSize: "invalidPageSize",
+          previewLength: "invalidPreviewLength",
+          headline: "invalidListingText",
+          introduction: "invalidListingText",
+        }}
+        collapse={{ open, onOpenChange: setOpen }}
+        headerActions={<Translated.Switch />}
+      >
+        {(draft, update, editable) => (
+          <>
+            <Translated.Field
+              id={`${group}-headline`}
+              label={text("listingHeadline")}
+              hint={text("listingHeadlineHint")}
+              value={draft.headline}
+              placeholder={{
+                en: dashboardText("en", DEFAULT_HEADLINE[kind]),
+                de: dashboardText("de", DEFAULT_HEADLINE[kind]),
+              }}
+              maxLength={MaxLength.Line}
+              disabled={!editable}
+              onChange={(headline) => update({ headline })}
+            />
+            <Translated.Field
+              id={`${group}-introduction`}
+              label={text("listingIntroduction")}
+              hint={text("listingIntroductionHint")}
+              value={draft.introduction}
+              multiline
+              maxLength={MaxLength.Paragraph}
+              disabled={!editable}
+              onChange={(introduction) => update({ introduction })}
+            />
+            <div className="settings-form__trio">
               <Field
-                key={language}
-                label={text("listingHeadline", languageName(language))}
-                htmlFor={`${group}-headline-${language}`}
-                hint={language === "en" ? text("listingHeadlineHint") : undefined}
+                label={text("listingPageSize")}
+                htmlFor={`${group}-page-size`}
+                hint={text("listingRange", LISTING_BOUNDS.pageSize.min, LISTING_BOUNDS.pageSize.max)}
               >
                 <Input
-                  id={`${group}-headline-${language}`}
-                  lang={language}
-                  value={draft.headline[language]}
-                  placeholder={dashboardText(language, DEFAULT_HEADLINE[kind])}
-                  maxLength={MaxLength.Line}
+                  id={`${group}-page-size`}
+                  type="number"
+                  inputMode="numeric"
+                  min={LISTING_BOUNDS.pageSize.min}
+                  max={LISTING_BOUNDS.pageSize.max}
+                  value={Number.isNaN(draft.pageSize) ? "" : draft.pageSize}
                   disabled={!editable}
-                  onChange={(event) =>
-                    update({ headline: { ...draft.headline, [language]: event.target.value } })
-                  }
+                  onChange={(event) => update({ pageSize: typedNumber(event.target.value) })}
                 />
               </Field>
-            ))}
-          </div>
-          <div className="settings-form__pair">
-            {CONTENT_LANGUAGES.map((language) => (
+              <Field label={text("listingColumns")} hint={text("listingColumnsHint")}>
+                <Segmented
+                  aria-label={text("listingColumns")}
+                  value={String(draft.columns)}
+                  options={Array.from(
+                    { length: LISTING_BOUNDS.columns.max - LISTING_BOUNDS.columns.min + 1 },
+                    (_, index) => {
+                      const columns = String(LISTING_BOUNDS.columns.min + index);
+                      return { value: columns, label: columns, disabled: !editable };
+                    },
+                  )}
+                  onValueChange={(value) => update({ columns: Number(value) })}
+                />
+              </Field>
               <Field
-                key={language}
-                label={text("listingIntroduction", languageName(language))}
-                htmlFor={`${group}-introduction-${language}`}
-                hint={language === "en" ? text("listingIntroductionHint") : undefined}
+                label={text("listingPreviewLength")}
+                htmlFor={`${group}-preview-length`}
+                hint={text(
+                  "listingRange",
+                  LISTING_BOUNDS.previewLength.min,
+                  LISTING_BOUNDS.previewLength.max,
+                )}
               >
-                <Textarea
-                  id={`${group}-introduction-${language}`}
-                  lang={language}
-                  value={draft.introduction[language]}
-                  maxLength={MaxLength.Paragraph}
+                <Input
+                  id={`${group}-preview-length`}
+                  type="number"
+                  inputMode="numeric"
+                  min={LISTING_BOUNDS.previewLength.min}
+                  max={LISTING_BOUNDS.previewLength.max}
+                  value={Number.isNaN(draft.previewLength) ? "" : draft.previewLength}
                   disabled={!editable}
-                  onChange={(event) =>
-                    update({ introduction: { ...draft.introduction, [language]: event.target.value } })
-                  }
+                  onChange={(event) => update({ previewLength: typedNumber(event.target.value) })}
                 />
               </Field>
-            ))}
-          </div>
-          <div className="settings-form__trio">
-            <Field
-              label={text("listingPageSize")}
-              htmlFor={`${group}-page-size`}
-              hint={text("listingRange", LISTING_BOUNDS.pageSize.min, LISTING_BOUNDS.pageSize.max)}
-            >
-              <Input
-                id={`${group}-page-size`}
-                type="number"
-                inputMode="numeric"
-                min={LISTING_BOUNDS.pageSize.min}
-                max={LISTING_BOUNDS.pageSize.max}
-                value={Number.isNaN(draft.pageSize) ? "" : draft.pageSize}
-                disabled={!editable}
-                onChange={(event) => update({ pageSize: typedNumber(event.target.value) })}
-              />
-            </Field>
-            <Field label={text("listingColumns")} hint={text("listingColumnsHint")}>
-              <Segmented
-                aria-label={text("listingColumns")}
-                value={String(draft.columns)}
-                options={Array.from(
-                  { length: LISTING_BOUNDS.columns.max - LISTING_BOUNDS.columns.min + 1 },
-                  (_, index) => {
-                    const columns = String(LISTING_BOUNDS.columns.min + index);
-                    return { value: columns, label: columns, disabled: !editable };
-                  },
-                )}
-                onValueChange={(value) => update({ columns: Number(value) })}
-              />
-            </Field>
-            <Field
-              label={text("listingPreviewLength")}
-              htmlFor={`${group}-preview-length`}
-              hint={text("listingRange", LISTING_BOUNDS.previewLength.min, LISTING_BOUNDS.previewLength.max)}
-            >
-              <Input
-                id={`${group}-preview-length`}
-                type="number"
-                inputMode="numeric"
-                min={LISTING_BOUNDS.previewLength.min}
-                max={LISTING_BOUNDS.previewLength.max}
-                value={Number.isNaN(draft.previewLength) ? "" : draft.previewLength}
-                disabled={!editable}
-                onChange={(event) => update({ previewLength: typedNumber(event.target.value) })}
-              />
-            </Field>
-          </div>
-        </>
-      )}
-    </SettingsCard>
+            </div>
+          </>
+        )}
+      </SettingsCard>
+    </Translated>
   );
 }

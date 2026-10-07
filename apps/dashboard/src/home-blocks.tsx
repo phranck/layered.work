@@ -34,6 +34,7 @@ import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { Translated } from "./translated.js";
 import "./footer-navigation.css";
 import "./home-blocks.css";
 
@@ -261,32 +262,35 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
   // No form element around the fields: each field has to be a direct child of
   // the panel's stack, where `editor.css` gives it the band across the card.
   return (
-    <Editor.Panel
-      eyebrow={text("landing")}
-      title={text(blockTypeKey(block.type))}
-      note={editable ? undefined : text("ownerOnly")}
-      actions={
-        <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
-          {save.isPending ? text("savePending") : text("save")}
-        </Button>
-      }
-    >
-      <HomeBlockSettingsFields
-        type={block.type}
-        draft={draft}
-        editable={editable}
-        pictureUrls={block.pictureUrls}
-        onChange={(key, value) => {
-          setDraft((current) => ({ ...current, [key]: value }));
-          setProblem(null);
-        }}
-      />
-      {problem && (
-        <p role="alert" className="dashboard-error">
-          {problem}
-        </p>
-      )}
-    </Editor.Panel>
+    <Translated>
+      <Editor.Panel
+        eyebrow={text("landing")}
+        title={text(blockTypeKey(block.type))}
+        headerActions={<Translated.Switch />}
+        note={editable ? undefined : text("ownerOnly")}
+        actions={
+          <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
+            {save.isPending ? text("savePending") : text("save")}
+          </Button>
+        }
+      >
+        <HomeBlockSettingsFields
+          type={block.type}
+          draft={draft}
+          editable={editable}
+          pictureUrls={block.pictureUrls}
+          onChange={(key, value) => {
+            setDraft((current) => ({ ...current, [key]: value }));
+            setProblem(null);
+          }}
+        />
+        {problem && (
+          <p role="alert" className="dashboard-error">
+            {problem}
+          </p>
+        )}
+      </Editor.Panel>
+    </Translated>
   );
 }
 

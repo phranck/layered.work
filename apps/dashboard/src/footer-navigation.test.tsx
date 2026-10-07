@@ -7,6 +7,7 @@ import { DashboardApiProvider } from "./dashboard-context.js";
 import { FooterNavigationScreen } from "./footer-navigation.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { dashboardAreas } from "./routes.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 const groups: FooterNavigation[] = [
   {
@@ -73,7 +74,7 @@ it("edits main navigation with language visibility, a parent and keyboard reorde
   fireEvent.click(await screen.findByRole("button", { name: "Entdecken bearbeiten" }));
   const parents = screen.getAllByLabelText("Übergeordneter Link");
   fireEvent.change(parents[1] as HTMLElement, { target: { value: groups[0]?.items[0]?.id } });
-  fireEvent.click(screen.getAllByRole("switch", { name: "Sichtbar auf Deutsch" })[1] as HTMLElement);
+  fireEvent.click(screen.getAllByRole("switch", { name: "Sichtbar" })[1] as HTMLElement);
   fireEvent.keyDown(screen.getByRole("button", { name: /„Beiträge“ verschieben/ }), { key: "ArrowUp" });
   sent.mockImplementation(async (_path: string, init?: RequestInit) => {
     if (init?.method === "PUT")
@@ -103,20 +104,24 @@ it("asks before deleting and states exactly how many links go with the group", a
 it("requires both titles and both link labels before saving the editor", async () => {
   show();
   fireEvent.click(await screen.findByRole("button", { name: "Neue Navigation" }));
-  fireEvent.change(screen.getByLabelText("Titel auf Englisch"), { target: { value: "Links" } });
+  chooseTextLanguage("en");
+  fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "Links" } });
   fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     "Titel und Linktexte brauchen beide Sprachen; Links brauchen eine gültige Adresse.",
   );
   expect(sent.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(0);
-  fireEvent.change(screen.getByLabelText("Titel auf Deutsch"), { target: { value: "Links" } });
+  chooseTextLanguage("de");
+  fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "Links" } });
   fireEvent.click(screen.getByRole("button", { name: "Link hinzufügen" }));
-  fireEvent.change(screen.getByLabelText("Linktext auf Englisch"), { target: { value: "Read" } });
+  chooseTextLanguage("en");
+  fireEvent.change(screen.getByLabelText("Linktext"), { target: { value: "Read" } });
   fireEvent.change(screen.getByLabelText("Linkadresse"), { target: { value: "/posts/" } });
   fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
   expect(sent.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(0);
-  fireEvent.change(screen.getByLabelText("Linktext auf Deutsch"), { target: { value: "Lesen" } });
+  chooseTextLanguage("de");
+  fireEvent.change(screen.getByLabelText("Linktext"), { target: { value: "Lesen" } });
   sent.mockImplementation(async (_path: string, init?: RequestInit) => {
     if (init?.method === "POST")
       return Response.json({

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { createDashboardMemoryRouter } from "./router.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 const account = {
   id: "65f4582c-c983-4bd0-977c-d358d382fc83",
@@ -77,8 +78,9 @@ describe("form builder", () => {
     fireEvent.change(await screen.findByLabelText("Form name"), { target: { value: "Demo" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Field" }), { target: { value: "email" } });
     fireEvent.click(screen.getByRole("button", { name: "Add field" }));
-    fireEvent.change(screen.getByLabelText("Label (EN)"), { target: { value: "Email address" } });
-    fireEvent.change(screen.getByLabelText("Label (DE)"), { target: { value: "E-Mail-Adresse" } });
+    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "Email address" } });
+    chooseTextLanguage("de");
+    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "E-Mail-Adresse" } });
     fireEvent.keyDown(screen.getByRole("button", { name: /Drag to reorder.*Email address/ }), {
       key: "ArrowUp",
     });
@@ -105,7 +107,8 @@ describe("form builder", () => {
     mount(fetcher as typeof fetch);
 
     fireEvent.click(await screen.findByRole("button", { name: /Short text · name/ }));
-    fireEvent.change(screen.getByLabelText("Label (DE)"), { target: { value: "" } });
+    chooseTextLanguage("de");
+    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(
