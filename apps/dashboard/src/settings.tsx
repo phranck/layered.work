@@ -1,7 +1,6 @@
 import { ANALYTICS_ORIGIN } from "@layered/policy";
 import {
   analyticsSettings,
-  CONTENT_LANGUAGES,
   MaxLength,
   mailSettings,
   type SettingsView,
@@ -23,6 +22,7 @@ import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
+import { contentLanguageOptions, Translated } from "./translated.js";
 
 /**
  * The settings of the site as a whole, one screen per group.
@@ -70,6 +70,8 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
    * a group of settings stands on a screen that is about something else.
    */
   collapse?: { open: boolean; onOpenChange: (open: boolean) => void };
+  /** Controls at the end of the header, such as the language switch of a card holding bilingual texts. */
+  headerActions?: ReactNode;
 }
 
 /**
@@ -91,6 +93,7 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
   actions,
   note,
   collapse,
+  headerActions,
 }: SettingsCardProps<Group>) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
@@ -170,12 +173,17 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
     </>
   );
   return collapse ? (
-    <Card.Collapsible title={title} open={collapse.open} onOpenChange={collapse.onOpenChange}>
+    <Card.Collapsible
+      title={title}
+      actions={headerActions}
+      open={collapse.open}
+      onOpenChange={collapse.onOpenChange}
+    >
       {content}
     </Card.Collapsible>
   ) : (
     <Card>
-      <Card.Header title={title} />
+      <Card.Header title={title} actions={headerActions} />
       {content}
     </Card>
   );
@@ -210,116 +218,86 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
       render={(view) => {
         const { socialImageUrl, ...saved } = view.site;
         return (
-          <SettingsCard<"site">
-            key={JSON.stringify(saved)}
-            group="site"
-            title={text("settingsSite")}
-            saved={saved}
-            schema={siteSettings}
-            reasons={{ title: "invalidTitle", footerLine: "invalidFooterLine" }}
-          >
-            {(draft, update, editable) => (
-              <>
-                <div className="settings-form__pair">
-                  <Field label={text("siteTitleEn")} htmlFor="site-title-en">
-                    <Input
-                      id="site-title-en"
-                      value={draft.title.en}
-                      maxLength={MaxLength.Line}
-                      disabled={!editable}
-                      onChange={(event) => update({ title: { ...draft.title, en: event.target.value } })}
-                    />
-                  </Field>
-                  <Field label={text("siteTitleDe")} htmlFor="site-title-de">
-                    <Input
-                      id="site-title-de"
-                      lang="de"
-                      value={draft.title.de}
-                      maxLength={MaxLength.Line}
-                      disabled={!editable}
-                      onChange={(event) => update({ title: { ...draft.title, de: event.target.value } })}
-                    />
-                  </Field>
-                </div>
-                <div className="settings-form__pair">
-                  <Field label={text("footerLineEn")} htmlFor="footer-line-en" hint={text("footerLineHint")}>
-                    <Input
-                      id="footer-line-en"
-                      value={draft.footerLine.en}
-                      maxLength={MaxLength.Paragraph}
-                      disabled={!editable}
-                      onChange={(event) =>
-                        update({ footerLine: { ...draft.footerLine, en: event.target.value } })
-                      }
-                    />
-                  </Field>
-                  <Field label={text("footerLineDe")} htmlFor="footer-line-de">
-                    <Input
-                      id="footer-line-de"
-                      lang="de"
-                      value={draft.footerLine.de}
-                      maxLength={MaxLength.Paragraph}
-                      disabled={!editable}
-                      onChange={(event) =>
-                        update({ footerLine: { ...draft.footerLine, de: event.target.value } })
-                      }
-                    />
-                  </Field>
-                </div>
-                <Field label={text("defaultLanguage")} hint={text("defaultLanguageHint")}>
-                  <Segmented
-                    aria-label={text("defaultLanguage")}
-                    value={draft.defaultLanguage}
-                    options={CONTENT_LANGUAGES.map((language) => ({
-                      value: language,
-                      label: language.toUpperCase(),
-                      disabled: !editable,
-                    }))}
-                    onValueChange={(value) =>
-                      update({ defaultLanguage: value as SiteSettings["defaultLanguage"] })
-                    }
+          <Translated>
+            <SettingsCard<"site">
+              key={JSON.stringify(saved)}
+              group="site"
+              title={text("settingsSite")}
+              saved={saved}
+              schema={siteSettings}
+              reasons={{ title: "invalidTitle", footerLine: "invalidFooterLine" }}
+              headerActions={<Translated.Switch />}
+            >
+              {(draft, update, editable) => (
+                <>
+                  <Translated.Field
+                    id="site-title"
+                    label={text("siteTitle")}
+                    value={draft.title}
+                    maxLength={MaxLength.Line}
+                    disabled={!editable}
+                    onChange={(title) => update({ title })}
                   />
-                </Field>
-                <Field label={text("socialImage")} hint={text("socialImageHint")}>
-                  <div className="media-field">
-                    {draft.socialImageMediaId ? (
-                      <img src={pictureUrl ?? socialImageUrl ?? ""} alt="" />
-                    ) : (
-                      <span className="media-field__name">{text("socialImageNone")}</span>
-                    )}
-                    <span className="actions media-field__actions">
-                      {draft.socialImageMediaId && (
+                  <Translated.Field
+                    id="footer-line"
+                    label={text("footerLine")}
+                    hint={text("footerLineHint")}
+                    value={draft.footerLine}
+                    maxLength={MaxLength.Paragraph}
+                    disabled={!editable}
+                    onChange={(footerLine) => update({ footerLine })}
+                  />
+                  <Field label={text("defaultLanguage")} hint={text("defaultLanguageHint")}>
+                    <Segmented
+                      aria-label={text("defaultLanguage")}
+                      value={draft.defaultLanguage}
+                      options={contentLanguageOptions(!editable)}
+                      onValueChange={(value) =>
+                        update({ defaultLanguage: value as SiteSettings["defaultLanguage"] })
+                      }
+                    />
+                  </Field>
+                  <Field label={text("socialImage")} hint={text("socialImageHint")}>
+                    <div className="media-field">
+                      {draft.socialImageMediaId ? (
+                        <img src={pictureUrl ?? socialImageUrl ?? ""} alt="" />
+                      ) : (
+                        <span className="media-field__name">{text("socialImageNone")}</span>
+                      )}
+                      <span className="actions media-field__actions">
+                        {draft.socialImageMediaId && (
+                          <Button
+                            disabled={!editable}
+                            icon={<XIcon weight="duotone" />}
+                            onClick={() => update({ socialImageMediaId: null })}
+                          >
+                            {text("remove")}
+                          </Button>
+                        )}
                         <Button
                           disabled={!editable}
-                          icon={<XIcon weight="duotone" />}
-                          onClick={() => update({ socialImageMediaId: null })}
+                          icon={<ImagesIcon weight="duotone" />}
+                          onClick={() => setPicking(true)}
                         >
-                          {text("remove")}
+                          {text("mediaPicker")}
                         </Button>
-                      )}
-                      <Button
-                        disabled={!editable}
-                        icon={<ImagesIcon weight="duotone" />}
-                        onClick={() => setPicking(true)}
-                      >
-                        {text("mediaPicker")}
-                      </Button>
-                    </span>
-                  </div>
-                  {picking && (
-                    <MediaPicker
-                      onCancel={() => setPicking(false)}
-                      onChoose={(item) => {
-                        update({ socialImageMediaId: item.id });
-                        setPictureUrl(item.url);
-                        setPicking(false);
-                      }}
-                    />
-                  )}
-                </Field>
-              </>
-            )}
-          </SettingsCard>
+                      </span>
+                    </div>
+                    {picking && (
+                      <MediaPicker
+                        onCancel={() => setPicking(false)}
+                        onChoose={(item) => {
+                          update({ socialImageMediaId: item.id });
+                          setPictureUrl(item.url);
+                          setPicking(false);
+                        }}
+                      />
+                    )}
+                  </Field>
+                </>
+              )}
+            </SettingsCard>
+          </Translated>
         );
       }}
     />

@@ -137,6 +137,21 @@ describe("static compounds", () => {
     expect(ref.current?.disabled).toBe(true);
     expect(ref.current?.getAttribute("name")).toBe("save");
   });
+
+  it("shows a collapsible card's header actions only while it is open", () => {
+    const { rerender } = render(
+      <Card.Collapsible title="Overview" open={false} onOpenChange={() => undefined} actions={<b>Switch</b>}>
+        <Card.Body>Content</Card.Body>
+      </Card.Collapsible>,
+    );
+    expect(screen.queryByText("Switch")).toBeNull();
+    rerender(
+      <Card.Collapsible title="Overview" open onOpenChange={() => undefined} actions={<b>Switch</b>}>
+        <Card.Body>Content</Card.Body>
+      </Card.Collapsible>,
+    );
+    expect(screen.getByText("Switch").closest(".card__header")).toBeTruthy();
+  });
 });
 
 describe("controlled form components", () => {

@@ -12,7 +12,6 @@ import {
   ArrowLeftIcon,
   FloppyDiskIcon,
   GlobeIcon,
-  TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +23,7 @@ import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
 import type { ContentEditorHandle } from "./content-editor.js";
 import { type CheckedContent, contentIsPublishable } from "./content-validation.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { useEditorTextSize } from "./editor-text-size.js";
 import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { EntryProperties } from "./entry-properties.js";
@@ -31,7 +31,7 @@ import { entryKey } from "./entry-query.js";
 import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
@@ -258,11 +258,10 @@ function EntryEditor({
   const [askingToTrash, setAskingToTrash] = useState(false);
   const refreshLists = () => {
     void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
-    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(queryClient);
   };
   const trash = useMutation({
     mutationFn: () => api.setTrashed(entry.id, true),
-    onError: (error) => notifyError(error),
     onSuccess: () => {
       trashedHere.current = true;
       refreshLists();
@@ -424,6 +423,7 @@ function EntryEditor({
           entry={entry}
           title={draft.title.trim() || text("editorTitleMissing")}
           pending={trash.isPending}
+          error={trash.error}
           onConfirm={() => trash.mutate()}
           onClose={() => setAskingToTrash(false)}
         />
@@ -469,12 +469,15 @@ function TrashDialog({
   entry,
   title,
   pending,
+  error,
   onConfirm,
   onClose,
 }: {
   entry: EntryDetail;
   title: string;
   pending: boolean;
+  /** Why the last attempt to move it failed, or null. */
+  error: unknown;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -485,31 +488,24 @@ function TrashDialog({
     queryFn: () => api.fetchTrashImpact(entry.id),
   });
   return (
-    <CardDialog labelId="trash-entry-title" onClose={onClose}>
-      <Card.Header id="trash-entry-title" title={text("trashTitle", title)} />
-      <Card.Body className="settings-form">
-        <p>{text("trashBody")}</p>
-        {entry.counterpart && (
-          <p>{text("trashOtherLanguage", text(LANGUAGE_TEXT[entry.counterpart.language]))}</p>
-        )}
-        {impact.isError && <ErrorNotice error={impact.error} />}
-        {impact.data && <p>{text("trashMedia", impact.data.mediaReferences)}</p>}
-        {impact.data && impact.data.navigationItems > 0 && (
-          <p>{text("trashNavigation", impact.data.navigationItems)}</p>
-        )}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button tone="danger" icon={<TrashIcon />} disabled={pending || !impact.data} onClick={onConfirm}>
-              {pending ? text("trashPending") : text("trash")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("trashTitle", title)}
+      confirm={pending ? text("trashPending") : text("trash")}
+      busy={pending}
+      blocked={!impact.data}
+      error={error}
+      onConfirm={onConfirm}
+      onClose={onClose}
+    >
+      <p>{text("trashBody")}</p>
+      {entry.counterpart && (
+        <p>{text("trashOtherLanguage", text(LANGUAGE_TEXT[entry.counterpart.language]))}</p>
+      )}
+      {impact.isError && <ErrorNotice error={impact.error} />}
+      {impact.data && <p>{text("trashMedia", impact.data.mediaReferences)}</p>}
+      {impact.data && impact.data.navigationItems > 0 && (
+        <p>{text("trashNavigation", impact.data.navigationItems)}</p>
+      )}
+    </ConfirmDialog>
   );
 }

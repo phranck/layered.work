@@ -92,6 +92,12 @@ export interface CardCollapsibleProps extends Omit<ComponentPropsWithoutRef<"sec
   title: ReactNode;
   /** Beside the title, as `Card.Header` places it. */
   meta?: ReactNode;
+  /**
+   * At the end of the header, as `Card.Header` places them, outside the button
+   * that opens the card. They show only while the card is open, because they act
+   * on what it holds.
+   */
+  actions?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -105,7 +111,7 @@ export interface CardCollapsibleProps extends Omit<ComponentPropsWithoutRef<"sec
  * such as `Card.Body` and `Card.Footer`.
  */
 const CardCollapsible = forwardRef<HTMLElement, CardCollapsibleProps>(
-  ({ children, className, meta, onOpenChange, open, title, ...props }, ref) => {
+  ({ actions, children, className, meta, onOpenChange, open, title, ...props }, ref) => {
     const regionId = useId();
     return (
       <section
@@ -128,6 +134,7 @@ const CardCollapsible = forwardRef<HTMLElement, CardCollapsibleProps>(
             </button>
             {meta && <span className="card__meta">{meta}</span>}
           </h2>
+          {open && actions && <div className="actions">{actions}</div>}
         </header>
         <div id={regionId} className="card__collapse" inert={!open}>
           <div className="card__collapse-content">{children}</div>

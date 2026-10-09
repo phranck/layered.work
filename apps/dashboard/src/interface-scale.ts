@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { readStored } from "@layered/ui/stored";
+import { restoredStep, useStoredChoice } from "./stored-choice.js";
 
 /**
  * The size of the whole dashboard, which the author chooses in the account
@@ -30,16 +31,7 @@ const DEFAULT_SCALE: InterfaceScale = "m";
  * @param stored - What storage holds, if anything.
  */
 export function restoredScale(stored: string | null): InterfaceScale {
-  return INTERFACE_SCALES.find((scale) => scale === stored) ?? DEFAULT_SCALE;
-}
-
-/** Storage, where the browser allows it. A private window may refuse. */
-function readStored(): string | null {
-  try {
-    return window.localStorage.getItem(INTERFACE_SCALE_KEY);
-  } catch {
-    return null;
-  }
+  return restoredStep(INTERFACE_SCALES, stored, DEFAULT_SCALE);
 }
 
 /**
@@ -62,7 +54,7 @@ export function applyInterfaceScale(
  * than jumping to it once React has mounted.
  */
 export function applyStoredInterfaceScale(): void {
-  applyInterfaceScale(restoredScale(readStored()));
+  applyInterfaceScale(restoredScale(readStored(INTERFACE_SCALE_KEY)));
 }
 
 /**
@@ -85,15 +77,5 @@ export function zoomOf(element: Element): number {
  * kept for the next visit.
  */
 export function useInterfaceScale(): [InterfaceScale, (scale: InterfaceScale) => void] {
-  const [scale, setScale] = useState(() => restoredScale(readStored()));
-  const choose = useCallback((next: InterfaceScale) => {
-    setScale(next);
-    applyInterfaceScale(next);
-    try {
-      window.localStorage.setItem(INTERFACE_SCALE_KEY, next);
-    } catch {
-      // A size that cannot be kept is still the size for this visit.
-    }
-  }, []);
-  return [scale, choose];
+  return useStoredChoice(INTERFACE_SCALE_KEY, restoredScale, applyInterfaceScale);
 }

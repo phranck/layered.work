@@ -23,18 +23,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentType, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { blockSummary, blockTypeKey, settingKey } from "./home-block-labels.js";
 import { HomeBlockSettingsFields } from "./home-block-settings.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
-import "./footer-navigation.css";
+import { Translated } from "./translated.js";
 import "./home-blocks.css";
 
 /**
@@ -89,7 +90,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
 
   const refresh = () => {
     void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(client);
   };
   const toggle = useMutation({
     mutationFn: (block: StoredHomeBlock) =>
@@ -261,32 +262,35 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
   // No form element around the fields: each field has to be a direct child of
   // the panel's stack, where `editor.css` gives it the band across the card.
   return (
-    <Editor.Panel
-      eyebrow={text("landing")}
-      title={text(blockTypeKey(block.type))}
-      note={editable ? undefined : text("ownerOnly")}
-      actions={
-        <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
-          {save.isPending ? text("savePending") : text("save")}
-        </Button>
-      }
-    >
-      <HomeBlockSettingsFields
-        type={block.type}
-        draft={draft}
-        editable={editable}
-        pictureUrls={block.pictureUrls}
-        onChange={(key, value) => {
-          setDraft((current) => ({ ...current, [key]: value }));
-          setProblem(null);
-        }}
-      />
-      {problem && (
-        <p role="alert" className="dashboard-error">
-          {problem}
-        </p>
-      )}
-    </Editor.Panel>
+    <Translated>
+      <Editor.Panel
+        eyebrow={text("landing")}
+        title={text(blockTypeKey(block.type))}
+        headerActions={<Translated.Switch />}
+        note={editable ? undefined : text("ownerOnly")}
+        actions={
+          <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
+            {save.isPending ? text("savePending") : text("save")}
+          </Button>
+        }
+      >
+        <HomeBlockSettingsFields
+          type={block.type}
+          draft={draft}
+          editable={editable}
+          pictureUrls={block.pictureUrls}
+          onChange={(key, value) => {
+            setDraft((current) => ({ ...current, [key]: value }));
+            setProblem(null);
+          }}
+        />
+        {problem && (
+          <p role="alert" className="dashboard-error">
+            {problem}
+          </p>
+        )}
+      </Editor.Panel>
+    </Translated>
   );
 }
 
@@ -295,41 +299,23 @@ function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (rem
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
-  const name = text(blockTypeKey(block.type));
   const remove = useMutation({
     mutationFn: () => api.deleteHomeBlock(block.id),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-      void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+      void refreshCounts(client);
       onClose(true);
     },
-    onError: (error) => notifyError(error),
   });
   return (
-    <CardDialog labelId="home-block-remove-title" onClose={() => onClose(false)}>
-      <Card.Header id="home-block-remove-title" title={text("homeBlockRemove", name)} />
-      <Card.Body>
-        <p>{text("homeBlockRemoveBody")}</p>
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={() => onClose(false)} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {text("homeBlockRemove", name)}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("homeBlockRemove", text(blockTypeKey(block.type)))}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={() => onClose(false)}
+    >
+      <p>{text("homeBlockRemoveBody")}</p>
+    </ConfirmDialog>
   );
 }

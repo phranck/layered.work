@@ -1,11 +1,10 @@
 import { Button, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
 import { DotsSixVerticalIcon, SignOutIcon, UserCircleIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
 import { AppBarSlotsProvider, ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
+import { useDashboardCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { NotificationProvider } from "./notifications.js";
@@ -55,18 +54,12 @@ function DashboardSidebar({
   onOpenAccount: () => void;
   handle: SidebarHandleProps;
 }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const handleLogoClick = useLinkClickHandler("/posts");
   const session = useSession();
   const account = useAccount();
   const signOut = useSignOut();
-  const counts = useQuery({
-    queryKey: ["dashboard-counts", session.data?.id],
-    queryFn: api.fetchDashboardCounts,
-    enabled: Boolean(session.data),
-    retry: false,
-  });
+  const counts = useDashboardCounts();
   const visibleCounts = session.isSuccess && session.data ? counts.data : undefined;
   const sidebar = useRef<HTMLElement>(null);
   const slot = useRef<HTMLDivElement>(null);

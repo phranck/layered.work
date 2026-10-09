@@ -18,6 +18,7 @@ import {
   childOf,
   components,
   NODE,
+  OPEN_VALUE_REFERENCE,
   type Parameter,
   SPACE_STEPS,
   writtenKindOf,
@@ -434,12 +435,6 @@ export function libraryCompletions(library: MediaLibrary) {
 /** A named value, as the completion list offers it and the validator knows it. */
 export type KnownValue = { name: string; value: string };
 
-/**
- * A reference to a named value being written at the cursor: two braces, spaces
- * if any, and as much of a name as has been typed.
- */
-const OPEN_REFERENCE = /\{\{[ \t]*([a-z0-9-]*)$/;
-
 /** Where Markdown keeps text as written, which a reference inside is not one. */
 const CODE_NODES = new Set(["InlineCode", "FencedCode", "CodeBlock", "CodeText"]);
 
@@ -469,7 +464,7 @@ function insertReference(view: EditorView, name: string, from: number, to: numbe
 export function valueCompletions(values: () => readonly KnownValue[]) {
   return (context: CompletionContext): CompletionResult | null => {
     const { state, pos: position } = context;
-    const open = OPEN_REFERENCE.exec(state.sliceDoc(state.doc.lineAt(position).from, position));
+    const open = OPEN_VALUE_REFERENCE.exec(state.sliceDoc(state.doc.lineAt(position).from, position));
     if (!open) return null;
     for (
       let node: SyntaxNode | null = syntaxTree(state).resolveInner(position, -1);

@@ -7,10 +7,48 @@ import { VALUE_NAME_MAX_LENGTH, VALUE_NAME_SOURCE } from "@layered/schemas";
  * tabs, two closing braces. Anything else between the braces is text, which is
  * what leaves the mail templates' `{{formName}}` placeholders to the code that
  * fills them.
+ *
+ * The shape is stated here and nowhere else. The parser reads a reference by
+ * it, the backend's search replaces references inside the database by it, and
+ * the dashboard's completion recognizes one being typed by it.
  */
 
+/** The blanks a reference allows on either side of the name. */
+const BLANKS = "[ \\t]*";
+
+/**
+ * A reference as the source of a regular expression, around a source for the
+ * name.
+ *
+ * Written in the syntax that JavaScript and PostgreSQL's regular expressions
+ * read alike, because the search replaces references inside the database.
+ *
+ * @param name - What matches the name: one value's name, which needs no
+ *   escaping because a name is letters, digits and hyphens, or a group that
+ *   matches any name.
+ */
+export function valueReferenceSource(name: string): string {
+  return `\\{\\{${BLANKS}${name}${BLANKS}\\}\\}`;
+}
+
 /** A reference at the very start of the text it is tested against. */
-const VALUE_REFERENCE = new RegExp(`^\\{\\{[ \\t]*(${VALUE_NAME_SOURCE})[ \\t]*\\}\\}`);
+const VALUE_REFERENCE = new RegExp(`^${valueReferenceSource(`(${VALUE_NAME_SOURCE})`)}`);
+
+/**
+ * A reference still being typed, at the very end of a text: the opening
+ * braces, blanks, and as much of a name as is there, which is the group.
+ */
+export const OPEN_VALUE_REFERENCE = new RegExp(`\\{\\{${BLANKS}([a-z0-9-]*)$`);
+
+/**
+ * A reference to a value as the dashboard writes one, with a space inside each
+ * pair of braces.
+ *
+ * @param name - The value's name.
+ */
+export function writeValueReference(name: string): string {
+  return `{{ ${name} }}`;
+}
 
 /** One reference as it was written. */
 export interface WrittenValueReference {

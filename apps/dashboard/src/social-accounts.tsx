@@ -11,15 +11,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
-import "./footer-navigation.css";
+
 const listKey = ["social-accounts"] as const;
 type Dialog = { editing: SocialAccount | null } | { deleting: SocialAccount } | null;
 const platformOptions = SOCIAL_PLATFORMS.map((value) => ({ value, label: SOCIAL_PLATFORM_NAMES[value] }));
@@ -33,7 +34,7 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const refresh = () => {
     void client.invalidateQueries({ queryKey: listKey });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(client);
   };
   const save = useMutation({
     mutationFn: (account: SocialAccount) => {
@@ -161,7 +162,7 @@ function SocialEditor({
     mutationFn: (value: SaveSocialAccountBody) => api.saveSocialAccount(account?.id ?? null, value),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+      void refreshCounts(client);
       onClose();
     },
     onError: (error) => notifyError(error),
@@ -250,35 +251,23 @@ function SocialDelete({ account, onClose }: { account: SocialAccount; onClose: (
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const remove = useMutation({
     mutationFn: () => api.deleteSocialAccount(account.id),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+      void refreshCounts(client);
       onClose();
     },
-    onError: (error) => notifyError(error),
   });
   return (
-    <CardDialog labelId="social-delete-title" onClose={onClose}>
-      <Card.Header id="social-delete-title" title={text("navigationDelete", account.handle)} />
-      <Card.Body>
-        <p>{text("socialDeleteBody")}</p>
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button tone="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
-              {text("navigationDelete", account.handle)}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("navigationDelete", account.handle)}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      <p>{text("socialDeleteBody")}</p>
+    </ConfirmDialog>
   );
 }

@@ -4,65 +4,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
+import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import "./submissions.css";
 
-const words = {
-  en: {
-    title: "Submissions",
-    form: "Form",
-    search: "Search submissions",
-    emptyForms: "No forms yet.",
-    empty: "No submissions for this form.",
-    noMatches: "No submissions match your search.",
-    export: "Export CSV",
-    detail: "Submission",
-    origin: "Origin fingerprint",
-    submitted: "Submitted",
-    consent: "Consent",
-    unread: "Unread",
-    read: "Read",
-    spam: "Spam",
-    markRead: "Mark read",
-    markUnread: "Mark unread",
-    markSpam: "Mark spam",
-    delete: "Delete submission",
-    deleteTitle: "Delete submission?",
-    deleteWarning: "This permanently deletes the submission and cannot be undone.",
-    deleteConfirm: "Delete permanently",
-    cancel: "Cancel",
-    unknown: "Unknown",
-  },
-  de: {
-    title: "Einsendungen",
-    form: "Formular",
-    search: "Einsendungen suchen",
-    emptyForms: "Noch keine Formulare.",
-    empty: "Für dieses Formular gibt es noch keine Einsendungen.",
-    noMatches: "Keine Einsendung passt zur Suche.",
-    export: "CSV exportieren",
-    detail: "Einsendung",
-    origin: "Herkunftsfingerabdruck",
-    submitted: "Eingegangen",
-    consent: "Einwilligung",
-    unread: "Ungelesen",
-    read: "Gelesen",
-    spam: "Spam",
-    markRead: "Als gelesen markieren",
-    markUnread: "Als ungelesen markieren",
-    markSpam: "Als Spam markieren",
-    delete: "Einsendung löschen",
-    deleteTitle: "Einsendung löschen?",
-    deleteWarning: "Diese Einsendung wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.",
-    deleteConfirm: "Endgültig löschen",
-    cancel: "Abbrechen",
-    unknown: "Unbekannt",
-  },
-} as const;
+/** What each status of a submission is called in the catalogue. */
+const STATUS_TEXT: Record<FormSubmissionStatus, DashboardStringKey> = {
+  unread: "submissionUnread",
+  read: "submissionRead",
+  spam: "submissionSpam",
+};
 
 const preview = (submission: FormSubmission): string =>
   Object.values(submission.values)
@@ -77,9 +33,8 @@ const displayValue = (value: string | string[] | undefined): string =>
 export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const queryClient = useQueryClient();
-  const { language } = useDashboardLanguage();
+  const { language, text } = useDashboardLanguage();
   const { notifyError } = useNotify();
-  const w = words[language];
   const [selectedFormId, setSelectedFormId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -106,7 +61,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: submissionsKey }),
-      queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] }),
+      refreshCounts(queryClient),
     ]);
   };
   const changeStatus = useMutation({
@@ -122,21 +77,20 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
       setConfirmDelete(false);
       await refresh();
     },
-    onError: (error) => notifyError(error),
   });
 
   return (
     <>
-      <ScreenTitle title={w.title} />
+      <ScreenTitle title={text("formSubmissions")} />
       <div className="submissions-layout">
         <Card>
           <Card.Header
-            title={w.title}
+            title={text("formSubmissions")}
             meta={submissions.data?.length}
             actions={
               form && (
                 <Button.Link href={`${__API_BASE__}/forms/${formId}/submissions/export`} download>
-                  {w.export}
+                  {text("submissionsExport")}
                 </Button.Link>
               )
             }
@@ -144,10 +98,10 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
           <Card.Body className="submissions-controls">
             {forms.isError && <ErrorNotice error={forms.error} />}
             {submissions.isError && <ErrorNotice error={submissions.error} />}
-            {forms.data?.length === 0 && <p>{w.emptyForms}</p>}
+            {forms.data?.length === 0 && <p>{text("formsEmpty")}</p>}
             {forms.data && forms.data.length > 0 && (
               <>
-                <Field label={w.form} htmlFor="submissions-form">
+                <Field label={text("submissionForm")} htmlFor="submissions-form">
                   <Select
                     id="submissions-form"
                     options={forms.data.map((item) => ({ value: item.id, label: item.name }))}
@@ -159,7 +113,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     }}
                   />
                 </Field>
-                <Field label={w.search} htmlFor="submissions-search">
+                <Field label={text("submissionsSearch")} htmlFor="submissions-search">
                   <Input
                     id="submissions-search"
                     value={search}
@@ -171,7 +125,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
           </Card.Body>
           {matches && matches.length === 0 && (
             <Card.Body>
-              <p>{search ? w.noMatches : w.empty}</p>
+              <p>{search ? text("submissionsNoMatch") : text("submissionsEmpty")}</p>
             </Card.Body>
           )}
           {matches && matches.length > 0 && (
@@ -190,7 +144,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                       language === "de" ? "de-AT" : "en-GB",
                     )}
                   />
-                  <Row.Meta>{w[submission.status]}</Row.Meta>
+                  <Row.Meta>{text(STATUS_TEXT[submission.status])}</Row.Meta>
                 </Row.Button>
               ))}
             </RowList.Divided>
@@ -198,14 +152,14 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
         </Card>
         {selected && form && (
           <Card>
-            <Card.Header title={w.detail} meta={w[selected.status]} />
+            <Card.Header title={text("submission")} meta={text(STATUS_TEXT[selected.status])} />
             <Card.Body>
               <dl className="submissions-detail">
-                <dt>{w.submitted}</dt>
+                <dt>{text("submissionSubmitted")}</dt>
                 <dd>{new Date(selected.createdAt).toLocaleString(language === "de" ? "de-AT" : "en-GB")}</dd>
-                <dt>{w.origin}</dt>
+                <dt>{text("submissionOrigin")}</dt>
                 <dd>
-                  <code>{selected.sourceHash ?? w.unknown}</code>
+                  <code>{selected.sourceHash ?? text("submissionOriginUnknown")}</code>
                 </dd>
                 {Object.entries(selected.values).map(([key, value]) => (
                   <div key={key} className="submissions-detail__field">
@@ -216,7 +170,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 {selected.consents.map((consent) => (
                   <div key={consent.key} className="submissions-detail__field">
                     <dt>
-                      {w.consent} · {consent.revision}
+                      {text("submissionConsent")} · {consent.revision}
                     </dt>
                     <dd>{consent.notice}</dd>
                   </div>
@@ -228,20 +182,20 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 <>
                   {selected.status === "unread" ? (
                     <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("read")}>
-                      {w.markRead}
+                      {text("submissionMarkRead")}
                     </Button>
                   ) : (
                     <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("unread")}>
-                      {w.markUnread}
+                      {text("submissionMarkUnread")}
                     </Button>
                   )}
                   {selected.status !== "spam" && (
                     <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("spam")}>
-                      {w.markSpam}
+                      {text("submissionMarkSpam")}
                     </Button>
                   )}
                   <Button tone="danger" onClick={() => setConfirmDelete(true)}>
-                    {w.delete}
+                    {text("submissionDelete")}
                   </Button>
                 </>
               }
@@ -250,24 +204,16 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
         )}
       </div>
       {confirmDelete && selected && (
-        <CardDialog labelId="delete-submission-title" onClose={() => setConfirmDelete(false)}>
-          <Card.Header id="delete-submission-title" title={w.deleteTitle} />
-          <Card.Body>
-            <p>{w.deleteWarning}</p>
-          </Card.Body>
-          <Card.Footer
-            actions={
-              <>
-                <Button onClick={() => setConfirmDelete(false)} autoFocus>
-                  {w.cancel}
-                </Button>
-                <Button tone="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
-                  {w.deleteConfirm}
-                </Button>
-              </>
-            }
-          />
-        </CardDialog>
+        <ConfirmDialog
+          title={text("submissionDeleteTitle")}
+          confirm={text("submissionDeleteConfirm")}
+          busy={remove.isPending}
+          error={remove.error}
+          onConfirm={() => remove.mutate()}
+          onClose={() => setConfirmDelete(false)}
+        >
+          <p>{text("submissionDeleteBody")}</p>
+        </ConfirmDialog>
       )}
     </>
   );

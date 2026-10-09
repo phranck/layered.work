@@ -1,3 +1,4 @@
+import { valueReferenceSource } from "@layered/content";
 import { type PublicSearchQuery, type PublicSearchResults, publicSearchResults } from "@layered/schemas";
 import { type SQL, sql } from "drizzle-orm";
 import type { database } from "../db/connect.js";
@@ -7,17 +8,18 @@ import { readValueMap } from "../values/repository.js";
  * A body as SQL with every reference to a named value replaced by the value's
  * text, one `regexp_replace` per value, so a post is found by what it shows.
  *
- * The name and the text are bound as parameters. A name is letters, digits and
- * hyphens, none of which a regular expression reads as syntax outside a
- * bracket, and the backslashes of the text are doubled because the replacement
- * string reads a backslash as the start of a back reference.
+ * The pattern is the content language's own (`valueReferenceSource`), bound as
+ * a parameter with the text. A name is letters, digits and hyphens, none of
+ * which a regular expression reads as syntax outside a bracket, and the
+ * backslashes of the text are doubled because the replacement string reads a
+ * backslash as the start of a back reference.
  *
  * @param values - Every value, by its name.
  */
 function resolvedBody(values: ReadonlyMap<string, string>): SQL {
   let body = sql`t.body`;
   for (const [name, value] of values) {
-    body = sql`regexp_replace(${body}, ${`\\{\\{[ \\t]*${name}[ \\t]*\\}\\}`}, ${value.replaceAll("\\", "\\\\")}, 'g')`;
+    body = sql`regexp_replace(${body}, ${valueReferenceSource(name)}, ${value.replaceAll("\\", "\\\\")}, 'g')`;
   }
   return body;
 }

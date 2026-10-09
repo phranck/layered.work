@@ -1,10 +1,9 @@
+import { writeValueReference } from "@layered/content";
 import {
   type CreateNamedValueBody,
-  createNamedValueBody,
   MaxLength,
   type NamedValue,
   type NamedValueUse,
-  updateNamedValueBody,
   VALUE_NAME_MAX_LENGTH,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, Row, RowList } from "@layered/ui";
@@ -16,15 +15,17 @@ import {
   TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
-import { NAMED_VALUES_KEY, useNamedValues } from "./named-values-query.js";
-import { useNotify } from "./notifications.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
+import {
+  checkedValueDraft,
+  useDeleteNamedValue,
+  useNamedValues,
+  useSaveNamedValue,
+} from "./named-values-query.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 
@@ -40,9 +41,6 @@ import { useSession } from "./session-queries.js";
  */
 
 type Dialog = { editing: NamedValue | null } | { deleting: NamedValue } | null;
-
-/** A reference as content writes it, which is how a value is recognized in the list. */
-const written = (name: string) => `{{ ${name} }}`;
 
 /**
  * The list of values for the dashboard's Values area.
@@ -84,7 +82,7 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
                 <Row.Lead>
                   <BracketsCurlyIcon />
                 </Row.Lead>
-                <Row.Text title={written(value.name)} note={value.value} />
+                <Row.Text title={writeValueReference(value.name)} note={value.value} />
                 <Row.Meta>
                   {value.usedBy.length ? text("valueUsedIn", value.usedBy.length) : text("valueUnused")}
                 </Row.Meta>
@@ -117,15 +115,6 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
   );
 }
 
-/** Refreshes the list and the sidebar's count after a change. */
-function useRefresh() {
-  const client = useQueryClient();
-  return () => {
-    void client.invalidateQueries({ queryKey: NAMED_VALUES_KEY });
-    void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
-  };
-}
-
 /**
  * Adds a value, or changes the text of one. A value's name is written once and
  * shown, not offered, afterwards, because content refers to it by that name.
@@ -134,37 +123,24 @@ function useRefresh() {
  * @param onClose - Called when the dialog is done, saved or not.
  */
 function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: () => void }) {
-  const api = useDashboardApi();
-  const refresh = useRefresh();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const [draft, setDraft] = useState<CreateNamedValueBody>({
     name: value?.name ?? "",
     value: value?.value ?? "",
   });
   const [invalid, setInvalid] = useState(false);
-  const save = useMutation({
-    mutationFn: (next: CreateNamedValueBody) =>
-      value ? api.updateNamedValue(value.id, { value: next.value }) : api.createNamedValue(next),
-    onSuccess: () => {
-      refresh();
-      onClose();
-    },
-    onError: (error) => notifyError(error),
-  });
+  const save = useSaveNamedValue(value, onClose);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const parsed = value
-      ? updateNamedValueBody.safeParse({ value: draft.value })
-      : createNamedValueBody.safeParse(draft);
-    setInvalid(!parsed.success);
-    if (parsed.success) save.mutate({ name: draft.name, value: parsed.data.value });
+    const checked = checkedValueDraft(value, draft);
+    setInvalid(checked === null);
+    if (checked) save.mutate(checked);
   };
   return (
     <CardDialog labelId="value-edit-title" onClose={onClose}>
       <Card.Header
         id="value-edit-title"
-        title={value ? text("navigationEdit", written(value.name)) : text("valuesNew")}
+        title={value ? text("navigationEdit", writeValueReference(value.name)) : text("valuesNew")}
       />
       <Card.Body>
         <form id="value-edit" className="settings-form" onSubmit={submit} noValidate>
@@ -227,51 +203,32 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
  * @param onClose - Called when the dialog is done, deleted or not.
  */
 function ValueDelete({ value, onClose }: { value: NamedValue; onClose: () => void }) {
-  const api = useDashboardApi();
-  const refresh = useRefresh();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
-  const remove = useMutation({
-    mutationFn: () => api.deleteNamedValue(value.id),
-    onSuccess: () => {
-      refresh();
-      onClose();
-    },
-    onError: (error) => notifyError(error),
-  });
+  const remove = useDeleteNamedValue(value, onClose);
   const inUse = value.usedBy.length > 0;
   const place = (use: NamedValueUse) =>
     use.kind === "entry" ? use.title : text("valueUseListing", use.listing);
   return (
-    <CardDialog labelId="value-delete-title" onClose={onClose}>
-      <Card.Header id="value-delete-title" title={text("navigationDelete", written(value.name))} />
-      <Card.Body>
-        {inUse ? (
-          <>
-            <p>{text("valueInUse")}</p>
-            <ul>
-              {value.usedBy.map((use) => (
-                <li key={use.kind === "entry" ? use.entryId : use.listing}>{place(use)}</li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p>{text("valueDeleteBody")}</p>
-        )}
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button tone="danger" disabled={inUse || remove.isPending} onClick={() => remove.mutate()}>
-              {text("navigationDelete", written(value.name))}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("navigationDelete", writeValueReference(value.name))}
+      busy={remove.isPending}
+      blocked={inUse}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      {inUse ? (
+        <>
+          <p>{text("valueInUse")}</p>
+          <ul>
+            {value.usedBy.map((use) => (
+              <li key={use.kind === "entry" ? use.entryId : use.listing}>{place(use)}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>{text("valueDeleteBody")}</p>
+      )}
+    </ConfirmDialog>
   );
 }

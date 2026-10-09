@@ -17,8 +17,3 @@
   margin-inline-start: var(--space-6);
   list-style: none;
 }
-
-.reorder-handle {
-  cursor: grab;
-  touch-action: none;
-}

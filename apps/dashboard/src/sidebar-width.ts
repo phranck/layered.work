@@ -1,3 +1,4 @@
+import { readStored, writeStored } from "@layered/ui/stored";
 import {
   type KeyboardEvent,
   type PointerEvent,
@@ -72,21 +73,9 @@ function readBounds(element: HTMLElement): SidebarBounds | undefined {
   return Object.values(bounds).every(Number.isFinite) ? bounds : undefined;
 }
 
-/** Storage, where the browser allows it. A private window may refuse. */
-function readStored(): string | null {
-  try {
-    return window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(width: number): void {
-  try {
-    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
-  } catch {
-    // A width that cannot be kept is still the width for this visit.
-  }
+/** Keeps a width for the next visit. */
+function keepWidth(width: number): void {
+  writeStored(SIDEBAR_WIDTH_KEY, String(width));
 }
 
 /** What the drag handle needs to be a working, focusable separator. */
@@ -131,7 +120,7 @@ export function useSidebarWidth(workbench: RefObject<HTMLElement | null>): Sideb
     const declared = readBounds(element);
     if (!declared) return;
     setBounds(declared);
-    apply(restoredWidth(readStored(), declared));
+    apply(restoredWidth(readStored(SIDEBAR_WIDTH_KEY), declared));
   }, [workbench, apply]);
 
   const finish = (event: PointerEvent<HTMLDivElement>) => {
@@ -141,7 +130,7 @@ export function useSidebarWidth(workbench: RefObject<HTMLElement | null>): Sideb
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    if (width !== undefined) writeStored(width);
+    if (width !== undefined) keepWidth(width);
   };
 
   return {
@@ -181,7 +170,7 @@ export function useSidebarWidth(workbench: RefObject<HTMLElement | null>): Sideb
       event.preventDefault();
       const clamped = clampWidth(next, bounds);
       apply(clamped);
-      writeStored(clamped);
+      keepWidth(clamped);
     },
   };
 }

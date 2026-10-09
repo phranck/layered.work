@@ -1,111 +1,40 @@
 import { type CreateFormBody, createFormBody, type FormField, type FormFieldType } from "@layered/schemas";
-import { Button, Card, Editor, Field, FormControls, Input, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Card, Editor, Field, FormControls, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type PointerEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
+import { useTextLanguage } from "./text-language.js";
+import { Translated } from "./translated.js";
 import "./forms.css";
 
-const words = {
-  en: {
-    add: "Add field",
-    back: "Forms",
-    create: "New form",
-    empty: "No forms yet.",
-    field: "Field",
-    fields: "Fields",
-    hint: "Hint",
-    key: "Field name",
-    label: "Label",
-    name: "Form name",
-    options: "Options",
-    preview: "Preview",
-    required: "Required",
-    remove: "Remove field",
-    save: "Save",
-    saving: "Saving…",
-    saved: "Form saved",
-    settings: "Form settings",
-    slug: "Shortcode name",
-    notification: "Notification email",
-    confirmation: "Confirmation email field",
-    noConfirmation: "Do not send confirmations",
-    success: "Success message",
-    store: "Store submissions",
-    pattern: "Pattern",
-    minLength: "Minimum length",
-    maxLength: "Maximum length",
-    min: "Minimum",
-    max: "Maximum",
-    notice: "Consent notice",
-    revision: "Consent revision",
-    validation: "Check the highlighted form declaration:",
-    move: "Drag to reorder. Arrow keys also move this field.",
-  },
-  de: {
-    add: "Feld hinzufügen",
-    back: "Formulare",
-    create: "Neues Formular",
-    empty: "Noch keine Formulare.",
-    field: "Feld",
-    fields: "Felder",
-    hint: "Hinweis",
-    key: "Feldname",
-    label: "Beschriftung",
-    name: "Formularname",
-    options: "Optionen",
-    preview: "Vorschau",
-    required: "Erforderlich",
-    remove: "Feld entfernen",
-    save: "Speichern",
-    saving: "Speichert…",
-    saved: "Formular gespeichert",
-    settings: "Formulareinstellungen",
-    slug: "Shortcode-Name",
-    notification: "Benachrichtigungs-E-Mail",
-    confirmation: "E-Mail-Feld für Bestätigung",
-    noConfirmation: "Keine Bestätigung senden",
-    success: "Erfolgsmeldung",
-    store: "Einsendungen speichern",
-    pattern: "Muster",
-    minLength: "Mindestlänge",
-    maxLength: "Maximallänge",
-    min: "Minimum",
-    max: "Maximum",
-    notice: "Einwilligungstext",
-    revision: "Einwilligungsversion",
-    validation: "Bitte Formulardeklaration prüfen:",
-    move: "Zum Sortieren ziehen. Pfeiltasten verschieben das Feld ebenfalls.",
-  },
-} as const;
-
-type Word = keyof typeof words.en;
 const formsKey = ["forms"] as const;
 
 /** The list follows the same card and app-bar pattern as the entry lists. */
 export function FormsScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const navigate = useNavigate();
-  const { language } = useDashboardLanguage();
-  const w = words[language];
+  const { text } = useDashboardLanguage();
   const list = useQuery({ queryKey: formsKey, queryFn: api.fetchForms });
   return (
     <>
-      <ScreenTitle title={w.back} />
+      <ScreenTitle title={text("forms")} />
       <HeaderEnd>
         <Button tone="primary" icon={<PlusIcon />} onClick={() => navigate(`/${area.path}/new`)}>
-          {w.create}
+          {text("formNew")}
         </Button>
       </HeaderEnd>
       <Card>
-        <Card.Header title={w.back} meta={list.data?.length} />
+        <Card.Header title={text("forms")} meta={list.data?.length} />
         {list.isError && (
           <Card.Body>
             <ErrorNotice error={list.error} />
@@ -113,7 +42,7 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
         )}
         {list.isSuccess && list.data.length === 0 && (
           <Card.Body>
-            <p className="unfinished">{w.empty}</p>
+            <p className="unfinished">{text("formsEmpty")}</p>
           </Card.Body>
         )}
         {list.isSuccess && list.data.length > 0 && (
@@ -127,52 +56,13 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
               >
                 <span>{form.name}</span>
                 <code>{form.slug}</code>
-                <span>
-                  {form.fields.length} {w.fields.toLowerCase()}
-                </span>
+                <span>{text("formFieldCount", form.fields.length)}</span>
               </button>
             ))}
           </div>
         )}
       </Card>
     </>
-  );
-}
-
-/** A settings field with one control for each language. */
-function TranslatedInputs({
-  title,
-  value,
-  onChange,
-  multiline = false,
-}: {
-  title: string;
-  value: { en: string; de: string };
-  onChange: (value: { en: string; de: string }) => void;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="forms-translations">
-      {(["en", "de"] as const).map((language) => (
-        <Field key={language} label={`${title} (${language.toUpperCase()})`} htmlFor={`${title}-${language}`}>
-          {multiline ? (
-            <Textarea
-              id={`${title}-${language}`}
-              lang={language}
-              value={value[language]}
-              onChange={(event) => onChange({ ...value, [language]: event.target.value })}
-            />
-          ) : (
-            <Input
-              id={`${title}-${language}`}
-              lang={language}
-              value={value[language]}
-              onChange={(event) => onChange({ ...value, [language]: event.target.value })}
-            />
-          )}
-        </Field>
-      ))}
-    </div>
   );
 }
 
@@ -198,29 +88,22 @@ function NumberSetting({
 }
 
 /** Type-specific validation and choices, beside the shared field properties. */
-function FieldRules({
-  field,
-  update,
-  w,
-}: {
-  field: FormField;
-  update: (field: FormField) => void;
-  w: Record<Word, string>;
-}) {
+function FieldRules({ field, update }: { field: FormField; update: (field: FormField) => void }) {
+  const { text } = useDashboardLanguage();
   if (field.type === "shortText" || field.type === "longText" || field.type === "email") {
     return (
       <>
         <NumberSetting
-          label={w.minLength}
+          label={text("formMinLength")}
           value={field.minLength}
           onChange={(value) => update({ ...field, minLength: value ?? 0 })}
         />
         <NumberSetting
-          label={w.maxLength}
+          label={text("formMaxLength")}
           value={field.maxLength}
           onChange={(value) => update({ ...field, maxLength: value ?? 1 })}
         />
-        <Field label={w.pattern} htmlFor="form-pattern">
+        <Field label={text("formPattern")} htmlFor="form-pattern">
           <Input
             id="form-pattern"
             value={field.pattern ?? ""}
@@ -234,12 +117,12 @@ function FieldRules({
     return (
       <>
         <NumberSetting
-          label={w.min}
+          label={text("formMin")}
           value={field.min}
           onChange={(value) => update({ ...field, min: value })}
         />
         <NumberSetting
-          label={w.max}
+          label={text("formMax")}
           value={field.max}
           onChange={(value) => update({ ...field, max: value })}
         />
@@ -249,7 +132,7 @@ function FieldRules({
   if (field.type === "date") {
     return (
       <>
-        <Field label={w.min} htmlFor="form-date-min">
+        <Field label={text("formMin")} htmlFor="form-date-min">
           <Input
             id="form-date-min"
             type="date"
@@ -257,7 +140,7 @@ function FieldRules({
             onChange={(event) => update({ ...field, min: event.target.value || null })}
           />
         </Field>
-        <Field label={w.max} htmlFor="form-date-max">
+        <Field label={text("formMax")} htmlFor="form-date-max">
           <Input
             id="form-date-max"
             type="date"
@@ -271,11 +154,11 @@ function FieldRules({
   if (field.type === "singleChoice" || field.type === "multipleChoice") {
     return (
       <div className="forms-options">
-        <strong>{w.options}</strong>
+        <strong>{text("formOptions")}</strong>
         {field.options.map((option, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Option order is fixed and inputs are controlled; values are editable.
           <div key={index} className="forms-option">
-            <Field label={`${w.key} ${index + 1}`} htmlFor={`option-value-${index}`}>
+            <Field label={text("formOptionValue", index + 1)} htmlFor={`option-value-${index}`}>
               <Input
                 id={`option-value-${index}`}
                 value={option.value}
@@ -289,8 +172,9 @@ function FieldRules({
                 }
               />
             </Field>
-            <TranslatedInputs
-              title={`${w.label} ${index + 1}`}
+            <Translated.Field
+              id={`form-option-label-${index}`}
+              label={text("formOptionLabel", index + 1)}
               value={option.label}
               onChange={(label) =>
                 update({
@@ -303,7 +187,7 @@ function FieldRules({
               disabled={field.options.length <= 2}
               onClick={() => update({ ...field, options: field.options.filter((_, i) => i !== index) })}
             >
-              {w.remove}
+              {text("formOptionRemove", index + 1)}
             </Button>
           </div>
         ))}
@@ -320,7 +204,7 @@ function FieldRules({
             });
           }}
         >
-          {w.add}
+          {text("formOptionAdd")}
         </Button>
       </div>
     );
@@ -328,13 +212,14 @@ function FieldRules({
   if (field.type === "consent") {
     return (
       <>
-        <TranslatedInputs
-          title={w.notice}
+        <Translated.Field
+          id="form-notice"
+          label={text("formConsentNotice")}
           value={field.notice}
           onChange={(notice) => update({ ...field, notice })}
           multiline
         />
-        <Field label={w.revision} htmlFor="form-revision">
+        <Field label={text("formConsentRevision")} htmlFor="form-revision">
           <Input
             id="form-revision"
             value={field.revision}
@@ -354,9 +239,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { language } = useDashboardLanguage();
+  const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
-  const w = words[language];
   const loaded = useQuery({
     queryKey: ["form", id],
     queryFn: () => api.fetchForm(id ?? ""),
@@ -366,7 +250,6 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [addType, setAddType] = useState<FormFieldType>("shortText");
   const [problem, setProblem] = useState("");
-  const [dragged, setDragged] = useState<number | null>(null);
 
   useEffect(() => {
     if (loaded.data) {
@@ -397,8 +280,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     onSuccess: (saved) => {
       queryClient.setQueryData(["form", saved.id], saved);
       void queryClient.invalidateQueries({ queryKey: formsKey });
-      void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
-      notify({ tone: "success", message: w.saved });
+      void refreshCounts(queryClient);
+      notify({ tone: "success", message: text("saved") });
       if (isNew) navigate(`/${area.path}/${saved.id}`, { replace: true });
     },
   });
@@ -408,7 +291,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     const checked = createFormBody.safeParse(draft);
     if (!checked.success) {
       const issue = checked.error.issues[0];
-      setProblem(`${w.validation} ${issue?.path.join(".")}: ${issue?.message}`);
+      setProblem(`${text("formInvalid")} ${issue?.path.join(".")}: ${issue?.message}`);
       return;
     }
     setProblem("");
@@ -424,26 +307,13 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   };
   const selectedField = selected === null ? null : draft?.fields[selected];
 
-  const onPointerUp = (event: PointerEvent<HTMLButtonElement>) => {
-    if (dragged === null || !draft) return;
-    const row = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>("[data-field-index]");
-    const to = Number(row?.dataset.fieldIndex);
-    if (row && Number.isInteger(to)) {
-      change(reorderFields(draft, dragged, to));
-      setSelected(to);
-    }
-    setDragged(null);
-  };
-
   return (
     <>
-      <ScreenTitle title={draft?.name || w.create} />
+      <ScreenTitle title={draft?.name || text("formNew")} />
       <HeaderEnd>
-        <Button onClick={() => navigate(`/${area.path}`)}>{w.back}</Button>
+        <Button onClick={() => navigate(`/${area.path}`)}>{text("forms")}</Button>
         <Button tone="primary" icon={<FloppyDiskIcon />} disabled={!draft || save.isPending} onClick={submit}>
-          {save.isPending ? w.saving : w.save}
+          {save.isPending ? text("savePending") : text("save")}
         </Button>
       </HeaderEnd>
       {loaded.isError && <ErrorNotice error={loaded.error} />}
@@ -453,207 +323,218 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
         </p>
       )}
       {draft && (
-        <Editor className="forms-editor">
-          <Editor.Main>
-            <Card>
-              <Card.Header
-                title={draft.name || w.create}
-                meta={draft.fields.length}
-                actions={<Button onClick={() => setSelected(null)}>{w.settings}</Button>}
-              />
-              <Card.Body>
-                <div className="forms-fields">
-                  {draft.fields.map((field, index) => (
-                    <div
-                      key={field.key}
-                      className="forms-fields__row"
-                      data-field-index={index}
-                      data-selected={selected === index || undefined}
-                    >
-                      <button
-                        type="button"
-                        className="forms-fields__grip"
-                        aria-label={`${w.move} ${field.label[language]}`}
-                        title={w.move}
-                        onPointerDown={(event) => {
-                          event.currentTarget.setPointerCapture(event.pointerId);
-                          setDragged(index);
-                        }}
-                        onPointerUp={onPointerUp}
-                        onPointerCancel={() => setDragged(null)}
-                        onKeyDown={(event) => {
-                          if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
-                          event.preventDefault();
-                          const to = Math.max(
-                            0,
-                            Math.min(draft.fields.length - 1, index + (event.key === "ArrowUp" ? -1 : 1)),
-                          );
-                          change(reorderFields(draft, index, to));
-                          setSelected(to);
+        <Translated>
+          <Editor className="forms-editor">
+            <Editor.Main>
+              <Card>
+                <Card.Header
+                  title={draft.name || text("formNew")}
+                  meta={draft.fields.length}
+                  actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
+                />
+                <Card.Body>
+                  <Reorder.List
+                    className="forms-fields"
+                    count={draft.fields.length}
+                    onMove={(from, to) => {
+                      change(reorderFields(draft, from, to));
+                      setSelected(to);
+                    }}
+                  >
+                    {draft.fields.map((field, index) => (
+                      <Reorder.Item key={field.key} index={index}>
+                        <div className="forms-fields__row" data-selected={selected === index || undefined}>
+                          <Reorder.Handle
+                            index={index}
+                            label={text("moveGroup", field.label[language] || field.key)}
+                          />
+                          <button
+                            type="button"
+                            className="forms-fields__select"
+                            onClick={() => setSelected(index)}
+                          >
+                            <span>{field.label[language] || field.key}</span>
+                            <small>
+                              {FIELD_NAMES[field.type][language]} · {field.key}
+                            </small>
+                          </button>
+                        </div>
+                      </Reorder.Item>
+                    ))}
+                  </Reorder.List>
+                </Card.Body>
+                <Card.Footer
+                  actions={
+                    <div className="forms-add">
+                      <Select
+                        aria-label={text("formField")}
+                        value={addType}
+                        options={FIELD_TYPES.map((type) => ({
+                          value: type,
+                          label: FIELD_NAMES[type][language],
+                        }))}
+                        onChange={(event) => setAddType(event.target.value as FormFieldType)}
+                      />
+                      <Button
+                        icon={<PlusIcon />}
+                        onClick={() => {
+                          const next = addField(draft, addType);
+                          change(next);
+                          setSelected(next.fields.length - 1);
                         }}
                       >
-                        ⋮⋮
-                      </button>
-                      <button
-                        type="button"
-                        className="forms-fields__select"
-                        onClick={() => setSelected(index)}
-                      >
-                        <span>{field.label[language] || field.key}</span>
-                        <small>
-                          {FIELD_NAMES[field.type][language]} · {field.key}
-                        </small>
-                      </button>
+                        {text("formFieldAdd")}
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              </Card.Body>
-              <Card.Footer
-                actions={
-                  <div className="forms-add">
+                  }
+                />
+              </Card>
+              <Card>
+                <Card.Header title={text("preview")} />
+                <Card.Body>
+                  <FormPreview fields={draft.fields} />
+                </Card.Body>
+              </Card>
+            </Editor.Main>
+            <Editor.Panel
+              title={
+                selectedField ? selectedField.label[language] || text("formField") : text("formSettings")
+              }
+              headerActions={<Translated.Switch />}
+            >
+              {selectedField && selected !== null ? (
+                <>
+                  <Field label={text("formField")} htmlFor="form-type">
                     <Select
-                      aria-label={w.field}
-                      value={addType}
+                      id="form-type"
+                      value={selectedField.type}
                       options={FIELD_TYPES.map((type) => ({
                         value: type,
                         label: FIELD_NAMES[type][language],
                       }))}
-                      onChange={(event) => setAddType(event.target.value as FormFieldType)}
-                    />
-                    <Button
-                      icon={<PlusIcon />}
-                      onClick={() => {
-                        const next = addField(draft, addType);
-                        change(next);
-                        setSelected(next.fields.length - 1);
+                      onChange={(event) => {
+                        const replacement = newField(event.target.value as FormFieldType, selectedField.key);
+                        updateField(selected, {
+                          ...replacement,
+                          label: selectedField.label,
+                          hint: selectedField.hint,
+                          required: selectedField.required,
+                        });
                       }}
-                    >
-                      {w.add}
-                    </Button>
-                  </div>
-                }
-              />
-            </Card>
-            <Card>
-              <Card.Header title={w.preview} />
-              <Card.Body>
-                <FormControls fields={draft.fields} language={language} />
-              </Card.Body>
-            </Card>
-          </Editor.Main>
-          <Editor.Panel title={selectedField ? selectedField.label[language] || w.field : w.settings}>
-            {selectedField && selected !== null ? (
-              <>
-                <Field label={w.field} htmlFor="form-type">
-                  <Select
-                    id="form-type"
-                    value={selectedField.type}
-                    options={FIELD_TYPES.map((type) => ({ value: type, label: FIELD_NAMES[type][language] }))}
-                    onChange={(event) => {
-                      const replacement = newField(event.target.value as FormFieldType, selectedField.key);
-                      updateField(selected, {
-                        ...replacement,
-                        label: selectedField.label,
-                        hint: selectedField.hint,
-                        required: selectedField.required,
-                      });
+                    />
+                  </Field>
+                  <Field label={text("formFieldKey")} htmlFor="form-key">
+                    <Input
+                      id="form-key"
+                      value={selectedField.key}
+                      onChange={(event) =>
+                        updateField(selected, { ...selectedField, key: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Translated.Field
+                    id="form-field-label"
+                    label={text("formFieldLabel")}
+                    value={selectedField.label}
+                    onChange={(label) => updateField(selected, { ...selectedField, label })}
+                  />
+                  <Translated.Field
+                    id="form-field-hint"
+                    label={text("formFieldHint")}
+                    value={selectedField.hint}
+                    onChange={(hint) => updateField(selected, { ...selectedField, hint })}
+                  />
+                  <Field.Inline label={text("formRequired")} htmlFor="form-required">
+                    <Switch
+                      id="form-required"
+                      aria-label={text("formRequired")}
+                      checked={selectedField.required}
+                      onCheckedChange={(required) => updateField(selected, { ...selectedField, required })}
+                    />
+                  </Field.Inline>
+                  <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
+                  <Button
+                    disabled={draft.fields.length <= 1}
+                    onClick={() => {
+                      change({ ...draft, fields: draft.fields.filter((_, index) => index !== selected) });
+                      setSelected(null);
                     }}
+                  >
+                    {text("formFieldRemove")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Field label={text("formName")} htmlFor="form-name">
+                    <Input
+                      id="form-name"
+                      value={draft.name}
+                      onChange={(event) => change({ ...draft, name: event.target.value })}
+                    />
+                  </Field>
+                  <Field label={text("formSlug")} htmlFor="form-slug">
+                    <Input
+                      id="form-slug"
+                      value={draft.slug}
+                      onChange={(event) => change({ ...draft, slug: event.target.value })}
+                    />
+                  </Field>
+                  <Field label={text("formNotification")} htmlFor="form-notification">
+                    <Input
+                      id="form-notification"
+                      type="email"
+                      value={draft.notificationEmail ?? ""}
+                      onChange={(event) =>
+                        change({ ...draft, notificationEmail: event.target.value || null })
+                      }
+                    />
+                  </Field>
+                  <Field label={text("formConfirmation")} htmlFor="form-confirmation">
+                    <Select
+                      id="form-confirmation"
+                      value={draft.confirmationEmailField ?? ""}
+                      options={[
+                        { value: "", label: text("formNoConfirmation") },
+                        ...draft.fields
+                          .filter((field) => field.type === "email")
+                          .map((field) => ({ value: field.key, label: field.label[language] || field.key })),
+                      ]}
+                      onChange={(event) =>
+                        change({ ...draft, confirmationEmailField: event.target.value || null })
+                      }
+                    />
+                  </Field>
+                  <Translated.Field
+                    id="form-success"
+                    label={text("formSuccess")}
+                    value={draft.successMessage}
+                    onChange={(successMessage) => change({ ...draft, successMessage })}
+                    multiline
                   />
-                </Field>
-                <Field label={w.key} htmlFor="form-key">
-                  <Input
-                    id="form-key"
-                    value={selectedField.key}
-                    onChange={(event) => updateField(selected, { ...selectedField, key: event.target.value })}
-                  />
-                </Field>
-                <TranslatedInputs
-                  title={w.label}
-                  value={selectedField.label}
-                  onChange={(label) => updateField(selected, { ...selectedField, label })}
-                />
-                <TranslatedInputs
-                  title={w.hint}
-                  value={selectedField.hint}
-                  onChange={(hint) => updateField(selected, { ...selectedField, hint })}
-                />
-                <Field.Inline label={w.required} htmlFor="form-required">
-                  <Switch
-                    id="form-required"
-                    aria-label={w.required}
-                    checked={selectedField.required}
-                    onCheckedChange={(required) => updateField(selected, { ...selectedField, required })}
-                  />
-                </Field.Inline>
-                <FieldRules field={selectedField} update={(field) => updateField(selected, field)} w={w} />
-                <Button
-                  disabled={draft.fields.length <= 1}
-                  onClick={() => {
-                    change({ ...draft, fields: draft.fields.filter((_, index) => index !== selected) });
-                    setSelected(null);
-                  }}
-                >
-                  {w.remove}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Field label={w.name} htmlFor="form-name">
-                  <Input
-                    id="form-name"
-                    value={draft.name}
-                    onChange={(event) => change({ ...draft, name: event.target.value })}
-                  />
-                </Field>
-                <Field label={w.slug} htmlFor="form-slug">
-                  <Input
-                    id="form-slug"
-                    value={draft.slug}
-                    onChange={(event) => change({ ...draft, slug: event.target.value })}
-                  />
-                </Field>
-                <Field label={w.notification} htmlFor="form-notification">
-                  <Input
-                    id="form-notification"
-                    type="email"
-                    value={draft.notificationEmail ?? ""}
-                    onChange={(event) => change({ ...draft, notificationEmail: event.target.value || null })}
-                  />
-                </Field>
-                <Field label={w.confirmation} htmlFor="form-confirmation">
-                  <Select
-                    id="form-confirmation"
-                    value={draft.confirmationEmailField ?? ""}
-                    options={[
-                      { value: "", label: w.noConfirmation },
-                      ...draft.fields
-                        .filter((field) => field.type === "email")
-                        .map((field) => ({ value: field.key, label: field.label[language] || field.key })),
-                    ]}
-                    onChange={(event) =>
-                      change({ ...draft, confirmationEmailField: event.target.value || null })
-                    }
-                  />
-                </Field>
-                <TranslatedInputs
-                  title={w.success}
-                  value={draft.successMessage}
-                  onChange={(successMessage) => change({ ...draft, successMessage })}
-                  multiline
-                />
-                <Field.Inline label={w.store} htmlFor="form-store">
-                  <Switch
-                    id="form-store"
-                    aria-label={w.store}
-                    checked={draft.storeSubmissions}
-                    onCheckedChange={(storeSubmissions) => change({ ...draft, storeSubmissions })}
-                  />
-                </Field.Inline>
-              </>
-            )}
-          </Editor.Panel>
-        </Editor>
+                  <Field.Inline label={text("formStore")} htmlFor="form-store">
+                    <Switch
+                      id="form-store"
+                      aria-label={text("formStore")}
+                      checked={draft.storeSubmissions}
+                      onCheckedChange={(storeSubmissions) => change({ ...draft, storeSubmissions })}
+                    />
+                  </Field.Inline>
+                </>
+              )}
+            </Editor.Panel>
+          </Editor>
+        </Translated>
       )}
     </>
   );
+}
+
+/**
+ * The form as a reader would see it, in the language the panel's switch has
+ * chosen, so the texts being edited show where they will appear.
+ *
+ * @param fields - The form's fields as drafted.
+ */
+function FormPreview({ fields }: { fields: CreateFormBody["fields"] }) {
+  return <FormControls fields={fields} language={useTextLanguage()} />;
 }

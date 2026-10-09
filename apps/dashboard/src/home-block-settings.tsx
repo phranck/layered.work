@@ -6,12 +6,13 @@ import {
   type HomeBlockType,
   MaxLength,
 } from "@layered/schemas";
-import { Button, Field, Input, Segmented, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Field, Input, Segmented, Select, Switch } from "@layered/ui";
 import { ImagesIcon, XIcon } from "@layered/ui/icons";
 import { useState } from "react";
 import { optionKey, segmentsFit, settingKey } from "./home-block-labels.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
+import { Translated } from "./translated.js";
 
 /**
  * Every setting a block declares, as a control, drawn from the declaration.
@@ -20,7 +21,8 @@ import { MediaPicker } from "./media-picker.js";
  * `@layered/schemas` appears here because its kind says which control it gets:
  * a switch for a flag, a segmented control for a choice whose options are each
  * one short word and a dropdown for any other choice, a number field, a text
- * field and a text area in both languages, and the media picker for a picture.
+ * field and a text area in the language the panel's switch shows, and the
+ * media picker for a picture. The panel holds `Translated` around them.
  */
 
 /** What every control needs to read and change its value. */
@@ -97,43 +99,23 @@ export function SettingControl(props: ControlProps) {
 
 /**
  * A text in each of the site's languages, with the fallback offered as the
- * placeholder. One field per language, one under the other, because the panel
- * is too narrow for two inputs side by side and each field opens with a band
- * of its own there.
+ * placeholder, showing the language the panel's switch has chosen.
  */
 function TextControl({ setting, value, onChange, editable, idPrefix }: ControlProps) {
   const { text } = useDashboardLanguage();
   if (setting.kind !== "line" && setting.kind !== "paragraph") return null;
-  const written = (value ?? { en: "", de: "" }) as BilingualText;
-  const Control = setting.kind === "paragraph" ? Textarea : Input;
   return (
-    <>
-      {(["en", "de"] as const).map((language) => {
-        const id = `${idPrefix}-${setting.key}-${language}`;
-        return (
-          <Field
-            key={language}
-            htmlFor={id}
-            label={text(
-              "homeSettingIn",
-              text(settingKey(setting.key)),
-              text(language === "en" ? "languageEn" : "languageDe"),
-            )}
-            hint={text("homeSettingFallback")}
-          >
-            <Control
-              id={id}
-              lang={language}
-              value={written[language]}
-              placeholder={setting.fallback[language]}
-              maxLength={setting.kind === "paragraph" ? MaxLength.Paragraph : MaxLength.Line}
-              disabled={!editable}
-              onChange={(event) => onChange({ ...written, [language]: event.target.value })}
-            />
-          </Field>
-        );
-      })}
-    </>
+    <Translated.Field
+      id={`${idPrefix}-${setting.key}`}
+      label={text(settingKey(setting.key))}
+      hint={text("homeSettingFallback")}
+      value={(value ?? { en: "", de: "" }) as BilingualText}
+      onChange={onChange}
+      placeholder={setting.fallback}
+      multiline={setting.kind === "paragraph"}
+      maxLength={setting.kind === "paragraph" ? MaxLength.Paragraph : MaxLength.Line}
+      disabled={!editable}
+    />
   );
 }
 

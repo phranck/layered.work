@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { createDashboardMemoryRouter } from "./router.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 const account = {
   id: "65f4582c-c983-4bd0-977c-d358d382fc83",
@@ -78,12 +79,16 @@ it("edits both languages and previews and test-sends the current draft", async (
     </QueryClientProvider>,
   );
 
-  fireEvent.change(await screen.findByLabelText("Body (EN)"), {
-    target: { value: "Hello **{{formName}}**" },
-  });
-  fireEvent.change(screen.getByLabelText("Body (DE)"), { target: { value: "Hallo **{{formName}}**" } });
+  fireEvent.change(await screen.findByLabelText("Body"), { target: { value: "Hello **{{formName}}**" } });
+  chooseTextLanguage("de");
+  fireEvent.change(screen.getByLabelText("Body"), { target: { value: "Hallo **{{formName}}**" } });
   fireEvent.click(screen.getByRole("button", { name: "Preview" }));
   expect(await screen.findByText("Hello Contact", { selector: "pre" })).toBeTruthy();
+  // The German preview does not stand under the English fields.
+  chooseTextLanguage("en");
+  expect(screen.queryByText("Hello Contact", { selector: "pre" })).toBeNull();
+  chooseTextLanguage("de");
+  expect(screen.getByText("Hello Contact", { selector: "pre" })).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Test recipient"), { target: { value: "reader@example.test" } });
   fireEvent.click(screen.getByRole("button", { name: "Send test" }));
   await screen.findByText(/SMTP2GO accepted the test message/);
@@ -94,8 +99,12 @@ it("edits both languages and previews and test-sends the current draft", async (
       requests.some(({ url, init }) => url.endsWith("/submission_confirmation") && init?.method === "PUT"),
     ).toBe(true),
   );
+  // The preview and the test go out in the language the switch shows.
+  const previewRequest = requests.find(({ url }) => url.endsWith("/preview"));
+  expect(JSON.parse(String(previewRequest?.init?.body))).toMatchObject({ language: "de" });
   const testRequest = requests.find(({ url }) => url.endsWith("/test"));
   expect(JSON.parse(String(testRequest?.init?.body))).toMatchObject({
+    language: "de",
     recipient: "reader@example.test",
     template: { body: { en: "Hello **{{formName}}**", de: "Hallo **{{formName}}**" } },
   });

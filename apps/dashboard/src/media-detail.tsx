@@ -8,6 +8,8 @@ import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
 import { CardDialog } from "./modal.js";
+import { useTextLanguage } from "./text-language.js";
+import { Translated } from "./translated.js";
 
 function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose: () => void }) {
   const api = useDashboardApi();
@@ -20,6 +22,10 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   const formId = useId();
   const prefix = useId();
   const [deleting, setDeleting] = useState(false);
+  // The fields show the language the dialog's switch has chosen. The other
+  // language's alt text and caption stay in the draft and are saved with it.
+  const language = useTextLanguage();
+  const translation = value.translations.find((candidate) => candidate.language === language);
   const save = useMutation({
     mutationFn: () =>
       api.saveMediaMetadata(detail.id, {
@@ -67,51 +73,37 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
               {text("mediaDimensions")}: {detail.width} × {detail.height}
             </p>
           )}
-          {value.translations.map((translation) => {
-            const language = text(translation.language === "de" ? "languageDe" : "languageEn");
-            return (
-              <fieldset key={translation.language} className="settings-form media-detail__language">
-                <legend>{language}</legend>
-                <Field label={text("mediaAlt", language)} htmlFor={`${prefix}-${translation.language}-alt`}>
-                  <Input
-                    id={`${prefix}-${translation.language}-alt`}
-                    value={translation.altText ?? ""}
-                    disabled={translation.altText === ""}
-                    maxLength={MaxLength.Paragraph}
-                    onChange={(event) =>
-                      description(translation.language, "altText", event.target.value || null)
-                    }
-                  />
-                </Field>
-                <Field.Inline
-                  label={text("mediaDecorative", language)}
-                  htmlFor={`${prefix}-${translation.language}-decorative`}
-                >
-                  <Switch
-                    id={`${prefix}-${translation.language}-decorative`}
-                    aria-label={text("mediaDecorative", language)}
-                    checked={translation.altText === ""}
-                    onCheckedChange={(decorative) =>
-                      description(translation.language, "altText", decorative ? "" : null)
-                    }
-                  />
-                </Field.Inline>
-                <Field
-                  label={text("mediaCaption", language)}
-                  htmlFor={`${prefix}-${translation.language}-caption`}
-                >
-                  <Textarea
-                    id={`${prefix}-${translation.language}-caption`}
-                    value={translation.caption ?? ""}
-                    maxLength={MaxLength.Paragraph}
-                    onChange={(event) =>
-                      description(translation.language, "caption", event.target.value || null)
-                    }
-                  />
-                </Field>
-              </fieldset>
-            );
-          })}
+          {translation && (
+            <>
+              <Field label={text("mediaAlt")} htmlFor={`${prefix}-${language}-alt`}>
+                <Input
+                  id={`${prefix}-${language}-alt`}
+                  lang={language}
+                  value={translation.altText ?? ""}
+                  disabled={translation.altText === ""}
+                  maxLength={MaxLength.Paragraph}
+                  onChange={(event) => description(language, "altText", event.target.value || null)}
+                />
+              </Field>
+              <Field.Inline label={text("mediaDecorative")} htmlFor={`${prefix}-${language}-decorative`}>
+                <Switch
+                  id={`${prefix}-${language}-decorative`}
+                  aria-label={text("mediaDecorative")}
+                  checked={translation.altText === ""}
+                  onCheckedChange={(decorative) => description(language, "altText", decorative ? "" : null)}
+                />
+              </Field.Inline>
+              <Field label={text("mediaCaption")} htmlFor={`${prefix}-${language}-caption`}>
+                <Textarea
+                  id={`${prefix}-${language}-caption`}
+                  lang={language}
+                  value={translation.caption ?? ""}
+                  maxLength={MaxLength.Paragraph}
+                  onChange={(event) => description(language, "caption", event.target.value || null)}
+                />
+              </Field>
+            </>
+          )}
           {detail.kind === "image" && detail.url && (
             <FocalPointEditor
               src={detail.url}
@@ -186,23 +178,26 @@ export function MediaDetailDialog({ id, onClose }: { id: string; onClose: () => 
         : false,
   });
   return (
-    <CardDialog labelId={titleId} onClose={onClose}>
-      <Card.Header
-        className="media-detail__header"
-        id={titleId}
-        title={detail.data?.slug ?? text("mediaDetails")}
-      />
-      {detail.isPending && (
-        <Card.Body>
-          <p>{text("loading")}</p>
-        </Card.Body>
-      )}
-      {detail.isError && (
-        <Card.Body>
-          <ErrorNotice error={detail.error} />
-        </Card.Body>
-      )}
-      {detail.data && <MediaMetadataEditor key={id} detail={detail.data} onClose={onClose} />}
-    </CardDialog>
+    <Translated>
+      <CardDialog labelId={titleId} onClose={onClose}>
+        <Card.Header
+          className="media-detail__header"
+          id={titleId}
+          title={detail.data?.slug ?? text("mediaDetails")}
+          actions={<Translated.Switch />}
+        />
+        {detail.isPending && (
+          <Card.Body>
+            <p>{text("loading")}</p>
+          </Card.Body>
+        )}
+        {detail.isError && (
+          <Card.Body>
+            <ErrorNotice error={detail.error} />
+          </Card.Body>
+        )}
+        {detail.data && <MediaMetadataEditor key={id} detail={detail.data} onClose={onClose} />}
+      </CardDialog>
+    </Translated>
   );
 }

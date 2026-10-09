@@ -1,3 +1,4 @@
+import { readStored, writeStored } from "@layered/ui/stored";
 import {
   type KeyboardEvent,
   type PointerEvent,
@@ -111,23 +112,6 @@ export function dropIndex(boxes: readonly GroupBox[], from: number, offset: numb
   return index;
 }
 
-/** Storage, where the browser allows it. A private window may refuse. */
-function readStored(): string | null {
-  try {
-    return window.localStorage.getItem(SIDEBAR_ORDER_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(ids: readonly string[]): void {
-  try {
-    window.localStorage.setItem(SIDEBAR_ORDER_KEY, JSON.stringify(ids));
-  } catch {
-    // An order that cannot be kept is still the order for this visit.
-  }
-}
-
 /**
  * What a drag knows from its first moment, so nothing is read back off the page while it runs.
  *
@@ -182,7 +166,7 @@ export function useSidebarOrder<Group extends { id: string }>(
   slot: RefObject<HTMLElement | null>,
 ) {
   const [order, setOrder] = useState<string[]>(() =>
-    orderGroups(groups, readOrder(readStored())).map((group) => group.id),
+    orderGroups(groups, readOrder(readStored(SIDEBAR_ORDER_KEY))).map((group) => group.id),
   );
   const ordered = useMemo(() => orderGroups(groups, order), [groups, order]);
 
@@ -195,7 +179,7 @@ export function useSidebarOrder<Group extends { id: string }>(
     before.current = new Map(
       [...elements.current].map(([id, element]) => [id, element.getBoundingClientRect().top]),
     );
-    writeStored(ids);
+    writeStored(SIDEBAR_ORDER_KEY, JSON.stringify(ids));
     setOrder(ids);
   }, []);
 

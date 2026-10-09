@@ -6,6 +6,7 @@ import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
+import { chooseTextLanguage } from "./test-support.js";
 
 let client: QueryClient;
 afterEach(() => {
@@ -47,13 +48,10 @@ it("saves localized descriptions and an explicit decorative choice with the foca
       </DashboardApiProvider>
     </QueryClientProvider>,
   );
-  fireEvent.change(await screen.findByLabelText("Alternativtext auf Deutsch"), {
-    target: { value: " Berge " },
-  });
-  fireEvent.change(screen.getByLabelText("Bildunterschrift auf Deutsch"), {
-    target: { value: " Sonnenuntergang " },
-  });
-  fireEvent.click(screen.getByRole("switch", { name: "Dekorativ auf Englisch" }));
+  fireEvent.change(await screen.findByLabelText("Alternativtext"), { target: { value: " Berge " } });
+  fireEvent.change(screen.getByLabelText("Bildunterschrift"), { target: { value: " Sonnenuntergang " } });
+  chooseTextLanguage("en");
+  fireEvent.click(screen.getByRole("switch", { name: "Dekorativ" }));
   fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
   await vi.waitFor(() =>
     expect(save).toHaveBeenCalledWith(detail.id, {

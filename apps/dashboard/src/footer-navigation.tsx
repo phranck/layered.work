@@ -1,11 +1,10 @@
 import {
-  CONTENT_LANGUAGES,
   type FooterNavigation,
   MaxLength,
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Row, Select, Switch } from "@layered/ui";
+import { Button, Card, Field, Row, Select, Switch } from "@layered/ui";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -19,23 +18,25 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tansta
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
-import { LANGUAGE_TEXT } from "./entry-list.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog } from "./modal.js";
+import { CardDialog, ConfirmDialog } from "./modal.js";
 import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { useTextLanguage } from "./text-language.js";
+import { Translated } from "./translated.js";
 import "./footer-navigation.css";
 
 type Placement = "main" | "footer";
 const listKey = (placement: Placement) => [`${placement}-navigation`] as const;
 function refresh(client: QueryClient, placement: Placement) {
   void client.invalidateQueries({ queryKey: listKey(placement) });
-  void client.invalidateQueries({ queryKey: ["dashboard-counts"] });
+  void refreshCounts(client);
 }
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 
@@ -201,106 +202,99 @@ function NavigationEditor({
   const updateItem = (key: string, change: Partial<DraftItem>) =>
     setItems((current) => current.map((item) => (item.key === key ? { ...item, ...change } : item)));
   return (
-    <CardDialog labelId="navigation-edit-title" onClose={onClose}>
-      <Card.Header
-        id="navigation-edit-title"
-        title={group ? text("navigationEdit", group.title[language]) : text("navigationNew")}
-      />
-      <Card.Body>
-        <form id="navigation-edit" className="settings-form" onSubmit={submit} noValidate>
-          <div className="settings-form__pair">
-            {CONTENT_LANGUAGES.map((code) => (
-              <Field
-                key={code}
-                label={text("navigationTitle", text(LANGUAGE_TEXT[code]))}
-                htmlFor={`navigation-title-${code}`}
-              >
-                <Input
-                  id={`navigation-title-${code}`}
-                  lang={code}
-                  value={title[code]}
-                  maxLength={MaxLength.Line}
-                  onChange={(event) => setTitle((current) => ({ ...current, [code]: event.target.value }))}
-                />
-              </Field>
-            ))}
-          </div>
-          <Reorder.List
-            count={items.length}
-            onMove={(from, to) => setItems((current) => moveItem(current, from, to))}
-          >
-            {items.map((item, index) => (
-              <Reorder.Item key={item.key} index={index}>
-                <NavigationItemFields
-                  key={item.key}
-                  item={item}
-                  parents={items.filter((candidate) => candidate.key !== item.key && !candidate.parentId)}
-                  hasChildren={items.some((candidate) => candidate.parentId === item.id)}
-                  index={index}
-                  length={items.length}
-                  onChange={(change) => updateItem(item.key, change)}
-                  onMove={(to) => setItems((current) => moveItem(current, index, to))}
-                  onRemove={() =>
-                    setItems((current) =>
-                      current
-                        .filter((candidate) => candidate.key !== item.key)
-                        .map((candidate) =>
-                          candidate.parentId === item.id ? { ...candidate, parentId: null } : candidate,
-                        ),
-                    )
-                  }
-                />
-              </Reorder.Item>
-            ))}
-          </Reorder.List>
-          <Button
-            icon={<PlusIcon />}
-            disabled={items.length >= 100}
-            onClick={() =>
-              setItems((current) => [
-                ...current,
-                {
-                  key: crypto.randomUUID(),
-                  id: crypto.randomUUID(),
-                  label: { en: "", de: "" },
-                  visible: { en: true, de: true },
-                  href: null,
-                  entryId: null,
-                  topicId: null,
-                  parentId: null,
-                },
-              ])
-            }
-          >
-            {text("navigationAddLink")}
-          </Button>
-          {invalid && (
-            <p className="dashboard-error" role="alert">
-              {text("navigationInvalid")}
-            </p>
-          )}
-          {save.isError && <ErrorNotice error={save.error} />}
-        </form>
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose}>
-              {text("cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="navigation-edit"
-              tone="primary"
-              icon={<FloppyDiskIcon />}
-              disabled={save.isPending}
+    <Translated>
+      <CardDialog labelId="navigation-edit-title" onClose={onClose}>
+        <Card.Header
+          id="navigation-edit-title"
+          title={group ? text("navigationEdit", group.title[language]) : text("navigationNew")}
+          actions={<Translated.Switch />}
+        />
+        <Card.Body>
+          <form id="navigation-edit" className="settings-form" onSubmit={submit} noValidate>
+            <Translated.Field
+              id="navigation-title"
+              label={text("navigationTitle")}
+              value={title}
+              maxLength={MaxLength.Line}
+              onChange={setTitle}
+            />
+            <Reorder.List
+              count={items.length}
+              onMove={(from, to) => setItems((current) => moveItem(current, from, to))}
             >
-              {text("save")}
+              {items.map((item, index) => (
+                <Reorder.Item key={item.key} index={index}>
+                  <NavigationItemFields
+                    key={item.key}
+                    item={item}
+                    parents={items.filter((candidate) => candidate.key !== item.key && !candidate.parentId)}
+                    hasChildren={items.some((candidate) => candidate.parentId === item.id)}
+                    index={index}
+                    length={items.length}
+                    onChange={(change) => updateItem(item.key, change)}
+                    onMove={(to) => setItems((current) => moveItem(current, index, to))}
+                    onRemove={() =>
+                      setItems((current) =>
+                        current
+                          .filter((candidate) => candidate.key !== item.key)
+                          .map((candidate) =>
+                            candidate.parentId === item.id ? { ...candidate, parentId: null } : candidate,
+                          ),
+                      )
+                    }
+                  />
+                </Reorder.Item>
+              ))}
+            </Reorder.List>
+            <Button
+              icon={<PlusIcon />}
+              disabled={items.length >= 100}
+              onClick={() =>
+                setItems((current) => [
+                  ...current,
+                  {
+                    key: crypto.randomUUID(),
+                    id: crypto.randomUUID(),
+                    label: { en: "", de: "" },
+                    visible: { en: true, de: true },
+                    href: null,
+                    entryId: null,
+                    topicId: null,
+                    parentId: null,
+                  },
+                ])
+              }
+            >
+              {text("navigationAddLink")}
             </Button>
-          </>
-        }
-      />
-    </CardDialog>
+            {invalid && (
+              <p className="dashboard-error" role="alert">
+                {text("navigationInvalid")}
+              </p>
+            )}
+            {save.isError && <ErrorNotice error={save.error} />}
+          </form>
+        </Card.Body>
+        <Card.Footer
+          actions={
+            <>
+              <Button icon={<XIcon />} onClick={onClose}>
+                {text("cancel")}
+              </Button>
+              <Button
+                type="submit"
+                form="navigation-edit"
+                tone="primary"
+                icon={<FloppyDiskIcon />}
+                disabled={save.isPending}
+              >
+                {text("save")}
+              </Button>
+            </>
+          }
+        />
+      </CardDialog>
+    </Translated>
   );
 }
 
@@ -324,26 +318,17 @@ function NavigationItemFields({
   onRemove: () => void;
 }) {
   const { text, language } = useDashboardLanguage();
+  const textLanguage = useTextLanguage();
   const name = item.label[language] || String(index + 1);
   return (
     <div className="nav-manager__group settings-form">
-      <div className="settings-form__pair">
-        {CONTENT_LANGUAGES.map((code) => (
-          <Field
-            key={code}
-            label={text("navigationLabel", text(LANGUAGE_TEXT[code]))}
-            htmlFor={`navigation-${item.key}-${code}`}
-          >
-            <Input
-              id={`navigation-${item.key}-${code}`}
-              lang={code}
-              value={item.label[code]}
-              maxLength={MaxLength.Line}
-              onChange={(event) => onChange({ label: { ...item.label, [code]: event.target.value } })}
-            />
-          </Field>
-        ))}
-      </div>
+      <Translated.Field
+        id={`navigation-${item.key}`}
+        label={text("navigationLabel")}
+        value={item.label}
+        maxLength={MaxLength.Line}
+        onChange={(label) => onChange({ label })}
+      />
       <NavigationTarget item={item} itemKey={item.key} onChange={onChange} />
       <Field label={text("navigationParent")} htmlFor={`navigation-${item.key}-parent`}>
         <Select
@@ -359,22 +344,17 @@ function NavigationItemFields({
           onChange={(event) => onChange({ parentId: event.target.value || null })}
         />
       </Field>
-      <div className="settings-form__pair">
-        {CONTENT_LANGUAGES.map((code) => (
-          <Field.Inline
-            key={code}
-            label={text("navigationVisible", text(LANGUAGE_TEXT[code]))}
-            htmlFor={`navigation-${item.key}-visible-${code}`}
-          >
-            <Switch
-              id={`navigation-${item.key}-visible-${code}`}
-              aria-label={text("navigationVisible", text(LANGUAGE_TEXT[code]))}
-              checked={item.visible[code]}
-              onCheckedChange={(checked) => onChange({ visible: { ...item.visible, [code]: checked } })}
-            />
-          </Field.Inline>
-        ))}
-      </div>
+      <Field.Inline
+        label={text("navigationVisible")}
+        htmlFor={`navigation-${item.key}-visible-${textLanguage}`}
+      >
+        <Switch
+          id={`navigation-${item.key}-visible-${textLanguage}`}
+          aria-label={text("navigationVisible")}
+          checked={item.visible[textLanguage]}
+          onCheckedChange={(checked) => onChange({ visible: { ...item.visible, [textLanguage]: checked } })}
+        />
+      </Field.Inline>
       <div className="actions">
         <Reorder.Handle index={index} label={text("moveGroup", name)} />
         <Button.Icon
@@ -407,39 +387,22 @@ function NavigationDelete({
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
-  const { notifyError } = useNotify();
   const remove = useMutation({
     mutationFn: () => api.deleteFooterNavigation(group.id, placement),
     onSuccess: () => {
       refresh(client, placement);
       onClose();
     },
-    onError: (error) => notifyError(error),
   });
   return (
-    <CardDialog labelId="navigation-delete-title" onClose={onClose}>
-      <Card.Header id="navigation-delete-title" title={text("navigationDelete", group.title[language])} />
-      <Card.Body>
-        <p>{text("navigationDeleteBody", group.items.length)}</p>
-        {remove.isError && <ErrorNotice error={remove.error} />}
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose} autoFocus>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {text("navigationDelete", group.title[language])}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <ConfirmDialog
+      title={text("navigationDelete", group.title[language])}
+      busy={remove.isPending}
+      error={remove.error}
+      onConfirm={() => remove.mutate()}
+      onClose={onClose}
+    >
+      <p>{text("navigationDeleteBody", group.items.length)}</p>
+    </ConfirmDialog>
   );
 }

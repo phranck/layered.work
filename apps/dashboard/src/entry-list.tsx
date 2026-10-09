@@ -12,22 +12,23 @@ import {
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
-  XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
-import { CardDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
+import { contentLanguageOptions } from "./translated.js";
 
 /**
  * What the reader narrowed the list to. `all` leaves that dimension open, and
@@ -194,7 +195,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["entries"] });
     void queryClient.invalidateQueries({ queryKey: ["entry"] });
-    void queryClient.invalidateQueries({ queryKey: ["dashboard-counts"] });
+    void refreshCounts(queryClient);
   };
   const create = useMutation({
     mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),
@@ -216,7 +217,6 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const [emptying, setEmptying] = useState(false);
   const empty = useMutation({
     mutationFn: () => api.emptyTrash(kind),
-    onError: (error) => notifyError(error),
     onSuccess: ({ deleted }) => {
       refresh();
       setEmptying(false);
@@ -333,11 +333,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 onValueChange={(value) =>
                   setFilter((current) => ({ ...current, language: value as EntryFilter["language"] }))
                 }
-                options={[
-                  { value: "all", label: text("filterAll") },
-                  { value: "en", label: "EN" },
-                  { value: "de", label: "DE" },
-                ]}
+                options={[{ value: "all", label: text("filterAll") }, ...contentLanguageOptions()]}
               />
               {filter.state === "trash" && rows.length > 0 && (
                 <Button tone="danger" icon={<TrashIcon />} onClick={() => setEmptying(true)}>
@@ -446,29 +442,16 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
         )}
       </Card>
       {emptying && (
-        <CardDialog labelId="empty-trash-title" onClose={() => setEmptying(false)}>
-          <Card.Header id="empty-trash-title" title={text("emptyTrashTitle")} />
-          <Card.Body>
-            <p>{text("emptyTrashBody", rows.length)}</p>
-          </Card.Body>
-          <Card.Footer
-            actions={
-              <>
-                <Button icon={<XIcon />} onClick={() => setEmptying(false)} autoFocus>
-                  {text("cancel")}
-                </Button>
-                <Button
-                  tone="danger"
-                  icon={<TrashIcon />}
-                  disabled={empty.isPending}
-                  onClick={() => empty.mutate()}
-                >
-                  {empty.isPending ? text("emptyTrashPending") : text("emptyTrash")}
-                </Button>
-              </>
-            }
-          />
-        </CardDialog>
+        <ConfirmDialog
+          title={text("emptyTrashTitle")}
+          confirm={empty.isPending ? text("emptyTrashPending") : text("emptyTrash")}
+          busy={empty.isPending}
+          error={empty.error}
+          onConfirm={() => empty.mutate()}
+          onClose={() => setEmptying(false)}
+        >
+          <p>{text("emptyTrashBody", rows.length)}</p>
+        </ConfirmDialog>
       )}
     </>
   );

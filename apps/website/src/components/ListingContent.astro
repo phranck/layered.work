@@ -98,6 +98,10 @@ const introduction = introductionText ? renderContent(introductionText, { langua
   )}
 </Section.Page>
 <script>
+  import { readStored, writeStored } from "@layered/ui/stored";
+
+  /** Where the reader's choice of grid or list is kept between visits. */
+  const VIEW_KEY = "layered:listing-view";
   const list = document.querySelector<HTMLElement>("[data-entry-list]");
   const toolbar = document.querySelector<HTMLElement>("[data-view-toolbar]");
   const controls = document.querySelectorAll<HTMLButtonElement>("[data-view]");
@@ -108,20 +112,12 @@ const introduction = introductionText ? renderContent(introductionText, { langua
   };
   if (list && toolbar) {
     toolbar.hidden = false;
-    try {
-      setView(localStorage.getItem("layered:listing-view") === "list" ? "list" : "grid");
-    } catch {
-      setView("grid");
-    }
+    setView(readStored(VIEW_KEY) === "list" ? "list" : "grid");
     controls.forEach((button) =>
       button.addEventListener("click", () => {
         const view = button.dataset.view ?? "grid";
         setView(view);
-        try {
-          localStorage.setItem("layered:listing-view", view);
-        } catch {
-          /* The choice still works for this page when storage is unavailable. */
-        }
+        writeStored(VIEW_KEY, view);
       }),
     );
   }

@@ -2,6 +2,7 @@ import { Button } from "@layered/ui";
 import { DotsSixVerticalIcon } from "@layered/ui/icons";
 import { createContext, type PointerEvent, type ReactNode, useContext, useMemo, useRef } from "react";
 import { dropIndex, type GroupBox } from "./sidebar-order.js";
+import "./reorder.css";
 
 type Order = {
   move: (from: number, to: number) => void;
