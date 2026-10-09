@@ -1,11 +1,12 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { media, mediaAttempts, mediaJobs, mediaVariants } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import { processMediaAttemptCleanup, settleMediaAttempt } from "./attempts.js";
 import { deleteMediaObject, readMediaBytes, writeMediaBytes } from "./storage.js";
-import { deriveImageVariants, variantMimeType } from "./variants.js";
+import { deriveImageVariants, variantMimeType, variantStorageKey } from "./variants.js";
+import { readWatermark } from "./watermark.js";
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
 const LEASE_MS = 300_000;
@@ -42,6 +43,8 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
   const owned = and(eq(mediaJobs.mediaId, job.mediaId), eq(mediaJobs.claimToken, token));
   const keys: string[] = [];
   let published = false;
+  // The sizes a rerun replaces, removed from the bucket once the new ones are published.
+  let retired: string | undefined;
   const heartbeat = setInterval(() => {
     void db
       .update(mediaJobs)
@@ -66,14 +69,17 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
     // Only objects registered by the abandoned attempt are reclaimed.
     for (const key of job.objectKeys) await deleteMediaObject(key);
     const [original] = await db
-      .select({ storageKey: media.storageKey })
+      .select({ storageKey: media.storageKey, watermark: media.watermark })
       .from(media)
       .where(eq(media.id, job.mediaId));
     if (!original) throw new Error("media removed");
-    const result = await deriveImageVariants(await readMediaBytes(original.storageKey));
+    const result = await deriveImageVariants(
+      await readMediaBytes(original.storageKey),
+      await readWatermark(db, original.watermark),
+    );
     const variants = result.variants.map((variant) => ({
       ...variant,
-      storageKey: `variants/${job.mediaId}/${token}/${createHash("sha256").update(variant.bytes).digest("hex")}.${variant.format}`,
+      storageKey: variantStorageKey(job.mediaId, token, variant),
     }));
     keys.push(...variants.map(({ storageKey }) => storageKey));
     const reserved = await db.transaction(async (tx) => {
@@ -92,6 +98,23 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
     published = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(mediaJobs).where(owned).for("update");
       if (!current) return false;
+      // A rerun, after a watermark changed, replaces every size the picture had.
+      // Their objects go through the attempt cleanup, which retries what the
+      // bucket refuses rather than leaving it behind.
+      const previous = await tx
+        .delete(mediaVariants)
+        .where(eq(mediaVariants.mediaId, job.mediaId))
+        .returning({ storageKey: mediaVariants.storageKey });
+      if (previous.length) {
+        retired = randomUUID();
+        await tx.insert(mediaAttempts).values({
+          token: retired,
+          mediaId: job.mediaId,
+          objectKeys: previous.map(({ storageKey }) => storageKey),
+          cleanupReady: true,
+          nextAttemptAt: new Date(),
+        });
+      }
       if (variants.length)
         await tx.insert(mediaVariants).values(
           variants.map(({ bytes, ...variant }) => ({
@@ -124,5 +147,6 @@ export async function processMediaJob(db: Database, id?: string): Promise<boolea
     clearInterval(heartbeat);
     if (!published) await settleMediaAttempt(db, token);
   }
+  if (published && retired) await processMediaAttemptCleanup(db, undefined, retired);
   return true;
 }

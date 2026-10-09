@@ -37,6 +37,8 @@ vi.mock("./storage.js", () => ({
 import { listAccountMedia } from "../account/repository.js";
 import { publicMedia } from "../content/snapshot.js";
 import { getMediaProcessing } from "./processing.js";
+import { queueMediaProcessing } from "./queue.js";
+import { variantChecksum } from "./variants.js";
 
 const { processMediaJob } = await import("./jobs.js");
 const ids: string[] = [];
@@ -112,6 +114,33 @@ async function fixture() {
     await processMediaJob(db, id);
     expect(store.has(abandoned)).toBe(false);
     expect(store.has(key)).toBe(true);
+  });
+  it("replaces every size once a watermark queues the picture again, and delivers only marked ones", async () => {
+    const { db, id, key } = await fixture();
+    await processMediaJob(db, id);
+    const unmarked = await db.select().from(mediaVariants).where(eq(mediaVariants.mediaId, id));
+    await db.update(media).set({ watermark: "bottom-right" }).where(eq(media.id, id));
+    await queueMediaProcessing(db, [id]);
+    expect(await processMediaJob(db, id)).toBe(true);
+    const marked = await db.select().from(mediaVariants).where(eq(mediaVariants.mediaId, id));
+    expect(marked.map(({ format, width }) => `${format} ${width}`).sort()).toEqual([
+      "avif 348",
+      "avif 400",
+      "webp 348",
+      "webp 400",
+    ]);
+    for (const { storageKey } of unmarked) expect(store.has(storageKey)).toBe(false);
+    for (const { storageKey } of marked) expect(store.has(storageKey)).toBe(true);
+    expect(store.has(key)).toBe(true);
+    expect(await db.select().from(mediaAttempts).where(eq(mediaAttempts.mediaId, id))).toEqual([]);
+
+    const full = marked.find(({ format, width }) => format === "webp" && width === 400);
+    const [published] = (await publicMedia(db, [{ body: "", featuredMediaId: id }])).media;
+    expect(published?.src).toBe(`/${full?.storageKey}`);
+    expect(published?.source).toBe(full?.storageKey);
+    expect(published?.mime).toBe("image/webp");
+    expect(published?.sha256).toBe(variantChecksum(full?.storageKey ?? ""));
+    expect(JSON.stringify(published)).not.toContain(key);
   });
   it("allows only one worker to claim a picture", async () => {
     const { db, id } = await fixture();

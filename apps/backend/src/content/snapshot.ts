@@ -30,6 +30,7 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { HOME_PICTURE_KEYS, pictureIdsOf } from "../home/blocks.js";
+import { deliveredFile } from "../media/delivery.js";
 import { referencedMediaIds } from "../media/references.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
@@ -206,6 +207,7 @@ export async function publicMedia(
       placeholder: media.placeholder,
       focalX: media.focalX,
       focalY: media.focalY,
+      watermark: media.watermark,
     })
     .from(media);
 
@@ -233,6 +235,7 @@ export async function publicMedia(
           format: mediaVariants.format,
           width: mediaVariants.width,
           storageKey: mediaVariants.storageKey,
+          byteSize: mediaVariants.byteSize,
         })
         .from(mediaVariants)
         .where(inArray(mediaVariants.mediaId, [...named]))
@@ -257,15 +260,16 @@ export async function publicMedia(
           .sort((left, right) => left.width - right.width)
           .map((variant) => `/${variant.storageKey} ${variant.width}w`)
           .join(", ");
+        const delivered = deliveredFile(asset, sizes);
         return {
           slug: asset.slug,
           focalPoint: { x: asset.focalX, y: asset.focalY },
-          src: `/${asset.storageKey}`,
-          mime: asset.mimeType,
-          filename: asset.storageKey.split("/").at(-1) ?? asset.slug,
-          source: asset.storageKey,
-          bytes: asset.byteSize,
-          sha256: asset.checksum,
+          src: `/${delivered.storageKey}`,
+          mime: delivered.mimeType,
+          filename: delivered.storageKey.split("/").at(-1) ?? asset.slug,
+          source: delivered.storageKey,
+          bytes: delivered.byteSize,
+          sha256: delivered.checksum,
           ...(asset.width === null ? {} : { width: asset.width }),
           ...(asset.height === null ? {} : { height: asset.height }),
           translations: localized,

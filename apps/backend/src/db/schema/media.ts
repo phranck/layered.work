@@ -15,7 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { identifier, instant } from "./columns.js";
-import { imageFormat, language, mediaKind } from "./enums.js";
+import { imageFormat, language, mediaKind, watermarkAnchor } from "./enums.js";
 import { settings } from "./site.js";
 
 /**
@@ -104,6 +104,14 @@ export const media = pgTable(
      * placeholder arrive at about the same time as the thing it stands in for.
      */
     placeholder: text(),
+
+    /**
+     * Where the site's mark is laid over the derived sizes, or null for none.
+     *
+     * The original is never marked. A watermarked picture is delivered only
+     * through its derived sizes, so the original's key stays inside the API.
+     */
+    watermark: watermarkAnchor(),
 
     uploadedAt: instant("uploaded_at"),
   },

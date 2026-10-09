@@ -8,7 +8,8 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { readPublicSnapshot } from "../../content/snapshot.js";
-import { auditLog, media } from "../../db/schema/index.js";
+import { auditLog, media, mediaJobs, settings } from "../../db/schema/index.js";
+import { getMediaUses } from "../../media/library.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../../test-support/database.js";
 import { OWNER, seedEditorialLibrary, signedInCookie } from "../../test-support/editorial.js";
 import { app } from "../app.js";
@@ -103,6 +104,39 @@ runs("the site's settings", () => {
     expect((await put("site", { ...site, socialImageMediaId: document }, cookie)).status).toBe(400);
     expect((await put("site", { ...site, socialImageMediaId: picture }, cookie)).status).toBe(200);
     expect((await read(cookie)).site.socialImageUrl).toBe(`/api/account/media/${picture}/content`);
+  });
+
+  it("keeps a site group stored before the watermark setting existed, instead of falling back to the defaults", async () => {
+    const database = await testDatabase();
+    await database
+      .insert(settings)
+      .values({ key: "site", value: site })
+      .onConflictDoUpdate({ target: settings.key, set: { value: site } });
+    const view = await read(await signedInCookie());
+    expect(view.site.footerLine).toEqual(site.footerLine);
+    expect(view.site.watermarkMediaId).toBeNull();
+  });
+
+  it("takes a raster picture for the watermark, counts it as a use, and derives every marked picture again", async () => {
+    const cookie = await signedInCookie(OWNER);
+    const database = await testDatabase();
+    const files = await database.select({ id: media.id, slug: media.slug }).from(media);
+    const mark = files.find((file) => file.slug === "soldering-iron")?.id as string;
+    const document = files.find((file) => file.slug === "schematic-sheet")?.id;
+    // The library holds one raster picture, so it is both the mark and a marked picture.
+    const marked = mark;
+    await database.update(media).set({ watermark: "bottom-right" }).where(eq(media.id, marked));
+    await database
+      .insert(mediaJobs)
+      .values({ mediaId: marked, state: "ready" })
+      .onConflictDoUpdate({ target: mediaJobs.mediaId, set: { state: "ready" } });
+
+    expect((await put("site", { ...site, watermarkMediaId: document }, cookie)).status).toBe(400);
+    expect((await put("site", { ...site, watermarkMediaId: mark }, cookie)).status).toBe(200);
+    expect((await read(cookie)).site.watermarkUrl).toBe(`/api/account/media/${mark}/content`);
+    const [job] = await database.select().from(mediaJobs).where(eq(mediaJobs.mediaId, marked));
+    expect(job?.state).toBe("queued");
+    expect((await getMediaUses(database, mark)).map((use) => use.title)).toContain("Site watermark");
   });
 
   it("refuses a test message whilst no SMTP2GO key is configured, and only the owner may ask", async () => {

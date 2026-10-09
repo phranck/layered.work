@@ -1,8 +1,15 @@
-import { MaxLength, type MediaDetail, type SaveMediaMetadataBody } from "@layered/schemas";
-import { Button, Card, Field, Input, Row, Switch, Textarea } from "@layered/ui";
+import {
+  MaxLength,
+  type MediaDetail,
+  type SaveMediaMetadataBody,
+  WATERMARK_ANCHORS,
+  type WatermarkAnchor,
+} from "@layered/schemas";
+import { Button, Card, Field, Input, Row, Select, Switch, Textarea } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
+import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -11,6 +18,22 @@ import { CardDialog } from "./modal.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
+/** What each watermark position is called in the select. */
+const ANCHOR_TEXT: Record<WatermarkAnchor, DashboardStringKey> = {
+  "top-left": "watermarkTopLeft",
+  top: "watermarkTop",
+  "top-right": "watermarkTopRight",
+  left: "watermarkLeft",
+  center: "watermarkCenter",
+  right: "watermarkRight",
+  "bottom-left": "watermarkBottomLeft",
+  bottom: "watermarkBottom",
+  "bottom-right": "watermarkBottomRight",
+};
+
+/** The value the select uses for a picture without a watermark, since a select value cannot be null. */
+const NO_WATERMARK = "";
+
 function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose: () => void }) {
   const api = useDashboardApi();
   const client = useQueryClient();
@@ -18,6 +41,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   const [value, setValue] = useState<SaveMediaMetadataBody>({
     focalPoint: detail.focalPoint,
     translations: (["en", "de"] as const).map((language) => ({ language, ...detail.translations[language] })),
+    watermark: detail.watermark,
   });
   const formId = useId();
   const prefix = useId();
@@ -105,11 +129,33 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
             </>
           )}
           {detail.kind === "image" && detail.url && (
-            <FocalPointEditor
-              src={detail.url}
-              point={value.focalPoint}
-              onChange={(focalPoint) => setValue((current) => ({ ...current, focalPoint }))}
-            />
+            <>
+              <FocalPointEditor
+                src={detail.url}
+                point={value.focalPoint}
+                onChange={(focalPoint) => setValue((current) => ({ ...current, focalPoint }))}
+              />
+              <Field label={text("watermark")} htmlFor={`${prefix}-watermark`}>
+                <Select
+                  id={`${prefix}-watermark`}
+                  value={value.watermark ?? NO_WATERMARK}
+                  options={[
+                    { value: NO_WATERMARK, label: text("watermarkNone") },
+                    ...WATERMARK_ANCHORS.map((anchor) => ({
+                      value: anchor,
+                      label: text(ANCHOR_TEXT[anchor]),
+                    })),
+                  ]}
+                  onChange={(event) => {
+                    const chosen = event.target.value;
+                    setValue((current) => ({
+                      ...current,
+                      watermark: WATERMARK_ANCHORS.find((anchor) => anchor === chosen) ?? null,
+                    }));
+                  }}
+                />
+              </Field>
+            </>
           )}
           <section>
             <h3>{text("mediaVariants")}</h3>

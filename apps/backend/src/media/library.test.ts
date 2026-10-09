@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { publicMedia } from "../content/snapshot.js";
-import { media, mediaTranslations } from "../db/schema/index.js";
+import { media, mediaJobs, mediaTranslations } from "../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { getMediaDetail, listMedia, saveMediaMetadata } from "./library.js";
 
@@ -82,6 +82,49 @@ const prefix = `library-${randomUUID()}`;
     });
     const [row] = await db.select().from(media).where(eq(media.id, id));
     expect(row?.slug).toBe(`${prefix}-0`);
+  });
+  it("queues a picture again when its watermark moves, and leaves it alone when nothing about the mark changed", async () => {
+    const db = await testDatabase();
+    const id = ids[0] ?? "";
+    const translations = [
+      { language: "en" as const, altText: null, caption: null },
+      { language: "de" as const, altText: null, caption: null },
+    ];
+    const state = async () =>
+      (await db.select().from(mediaJobs).where(eq(mediaJobs.mediaId, id)))[0]?.state ?? "none";
+    await db.delete(mediaJobs).where(eq(mediaJobs.mediaId, id));
+
+    await saveMediaMetadata(db, id, { focalPoint: { x: 0.5, y: 0.5 }, translations });
+    expect(await state()).toBe("none");
+
+    const detail = await saveMediaMetadata(db, id, {
+      focalPoint: { x: 0.5, y: 0.5 },
+      translations,
+      watermark: "top-right",
+    });
+    expect(detail.watermark).toBe("top-right");
+    expect(await state()).toBe("queued");
+
+    await db.update(mediaJobs).set({ state: "ready" }).where(eq(mediaJobs.mediaId, id));
+    await saveMediaMetadata(db, id, { focalPoint: { x: 0.4, y: 0.5 }, translations });
+    expect((await getMediaDetail(db, id)).watermark).toBe("top-right");
+    expect(await state()).toBe("ready");
+
+    await saveMediaMetadata(db, id, { focalPoint: { x: 0.4, y: 0.5 }, translations, watermark: null });
+    expect(await state()).toBe("queued");
+  });
+  it("refuses a watermark on a file that is not a raster image", async () => {
+    const db = await testDatabase();
+    await expect(
+      saveMediaMetadata(db, ids[1] ?? "", {
+        focalPoint: { x: 0.5, y: 0.5 },
+        translations: [
+          { language: "en", altText: null, caption: null },
+          { language: "de", altText: null, caption: null },
+        ],
+        watermark: "center",
+      }),
+    ).rejects.toThrow(/raster image/);
   });
   it("publishes files named only by an overview introduction", async () => {
     const db = await testDatabase();

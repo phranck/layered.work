@@ -5,6 +5,7 @@ import {
   PUBLICATION_STATES,
   READING_WIDTHS,
   TOKEN_SCOPES,
+  WATERMARK_ANCHORS,
 } from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
 
@@ -97,6 +98,12 @@ export const mediaKind = pgEnum("media_kind", ["image", "video", "document", "mo
  * has transparency, so both have to exist here.
  */
 export const imageFormat = pgEnum("image_format", ["avif", "webp", "jpeg", "png"]);
+
+/**
+ * Where a picture's watermark sits: a corner, the middle of an edge, or the
+ * centre. The column holding it is nullable, and null is a picture without one.
+ */
+export const watermarkAnchor = pgEnum("watermark_anchor", WATERMARK_ANCHORS);
 
 /**
  * Where a navigation appears.

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."watermark_anchor" AS ENUM('top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right');--> statement-breakpoint
+ALTER TABLE "media" ADD COLUMN "watermark" "watermark_anchor";
