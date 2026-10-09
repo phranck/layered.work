@@ -26,12 +26,31 @@ const english: Entry = {
 describe("an entry card", () => {
   it("uses the library crop anchor", () => {
     const markup = renderToStaticMarkup(
-      <EntryCard
-        entry={english}
-        image={{ slug: "focal", src: "/uploads/focal", focalPoint: { x: 0.2, y: 0.8 } }}
-      />,
+      <EntryCard entry={english} image={{ src: "/uploads/focal", focalPoint: { x: 0.2, y: 0.8 } }} />,
     );
     expect(markup).toContain("object-position:20% 80%");
+  });
+  it("credits a picture from Unsplash over its corner, as text, because the card is already a link", () => {
+    const markup = renderToStaticMarkup(
+      <EntryCard
+        entry={english}
+        image={{
+          src: "https://images.unsplash.com/photo-1?ixid=a&w=1180",
+          credit: {
+            lead: "Photo by",
+            author: "Jane Doe",
+            authorUrl: "https://unsplash.com/@janedoe?utm_source=layered_work&utm_medium=referral",
+            joiner: "on",
+            source: "Unsplash",
+            sourceUrl: "https://unsplash.com/?utm_source=layered_work&utm_medium=referral",
+          },
+        }}
+      />,
+    );
+    expect(markup).toContain(
+      '<small class="media-credit media-credit--overlay">Photo by Jane Doe on Unsplash</small>',
+    );
+    expect(markup.match(/<a /g)).toHaveLength(1);
   });
   it("marks an entry in another language than the page's with its language", () => {
     const markup = renderToStaticMarkup(<EntryCard entry={english} language="de" />);

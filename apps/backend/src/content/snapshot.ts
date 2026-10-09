@@ -28,12 +28,15 @@ import {
   paths,
   topics,
   topicTranslations,
+  unsplashPhotos,
 } from "../db/schema/index.js";
 import { HOME_PICTURE_KEYS, pictureIdsOf } from "../home/blocks.js";
 import { deliveredFile } from "../media/delivery.js";
 import { referencedMediaIds } from "../media/references.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
+import { unsplashImageUrl, unsplashSrcSet } from "../unsplash/client.js";
+import { unsplashStorageKey } from "../unsplash/library.js";
 import { readValueMap, resolveListingIntroductions } from "../values/repository.js";
 
 /**
@@ -124,6 +127,8 @@ export interface PublicMedia {
   srcSet?: string;
   placeholder?: string;
   focalPoint?: { x: number; y: number };
+  /** Who took a picture that lives on Unsplash. */
+  credit?: { photographer: string; profileUrl: string };
 }
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -244,6 +249,15 @@ export async function publicMedia(
   for (const variant of variants) {
     variantsByMedia.set(variant.mediaId, [...(variantsByMedia.get(variant.mediaId) ?? []), variant]);
   }
+  const fromUnsplash = new Map(
+    (named.size
+      ? await database
+          .select()
+          .from(unsplashPhotos)
+          .where(inArray(unsplashPhotos.mediaId, [...named]))
+      : []
+    ).map((photo) => [photo.mediaId, photo]),
+  );
   return {
     slugById: new Map(assets.map((asset) => [asset.id, asset.slug])),
     media: assets
@@ -253,6 +267,9 @@ export async function publicMedia(
           en: { altText: null, caption: null },
           de: { altText: null, caption: null },
         };
+        const photo = fromUnsplash.get(asset.id);
+        if (photo)
+          return { ...unsplashMedia(asset, photo), translations: localized, ...described(localized) };
         const sizes = variantsByMedia.get(asset.id) ?? [];
         const format = sizes.some((variant) => variant.format === "webp") ? "webp" : sizes[0]?.format;
         const srcSet = sizes
@@ -273,14 +290,65 @@ export async function publicMedia(
           ...(asset.width === null ? {} : { width: asset.width }),
           ...(asset.height === null ? {} : { height: asset.height }),
           translations: localized,
-          ...(localized.en.altText === null ? {} : { alt: localized.en.altText }),
-          ...(localized.en.caption === null ? {} : { caption: localized.en.caption }),
+          ...described(localized),
           ...(srcSet ? { srcSet } : {}),
           ...(asset.placeholder ? { placeholder: asset.placeholder } : {}),
         };
       }),
   };
 }
+
+/** The English alt text and caption a picture is published with, beside the two languages under `translations`. */
+function described(
+  localized: NonNullable<PublicMedia["translations"]>,
+): Pick<PublicMedia, "alt" | "caption"> {
+  return {
+    ...(localized.en.altText === null ? {} : { alt: localized.en.altText }),
+    ...(localized.en.caption === null ? {} : { caption: localized.en.caption }),
+  };
+}
+
+/**
+ * A picture that lives on Unsplash, as the snapshot publishes it.
+ *
+ * Every address is Unsplash's own, at the widths the site's own pictures come
+ * in, because the guidelines require the photo to be hotlinked. The credit goes
+ * with it, so every page that shows the picture can name the photographer.
+ *
+ * @param asset - The library row.
+ * @param photo - Its Unsplash row.
+ */
+function unsplashMedia(
+  asset: {
+    slug: string;
+    mimeType: string;
+    focalX: number;
+    focalY: number;
+    width: number | null;
+    height: number | null;
+  },
+  photo: typeof unsplashPhotos.$inferSelect,
+): Omit<PublicMedia, "translations" | "alt" | "caption"> {
+  // An image always has dimensions, which a check on the table guarantees.
+  const width = asset.width ?? UNSPLASH_FALLBACK_WIDTH;
+  return {
+    slug: asset.slug,
+    focalPoint: { x: asset.focalX, y: asset.focalY },
+    src: unsplashImageUrl(photo.imageUrl, Math.min(width, UNSPLASH_FALLBACK_WIDTH)),
+    srcSet: unsplashSrcSet(photo.imageUrl, width),
+    mime: asset.mimeType,
+    filename: `${photo.photoId}.jpg`,
+    source: unsplashStorageKey(photo.photoId),
+    bytes: 0,
+    sha256: "",
+    ...(asset.width === null ? {} : { width: asset.width }),
+    ...(asset.height === null ? {} : { height: asset.height }),
+    credit: { photographer: photo.photographerName, profileUrl: photo.photographerUrl },
+  };
+}
+
+/** The width an Unsplash picture's `src` asks for, the article's declared image size. */
+const UNSPLASH_FALLBACK_WIDTH = 1180;
 
 /** Only form declarations referenced by these reachable bodies may leave the API. */
 export async function publicForms(database: Database, bodies: readonly string[]): Promise<PublicForm[]> {

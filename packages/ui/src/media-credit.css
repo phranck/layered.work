@@ -1,0 +1,34 @@
+/* --- Media credit -------------------------------------------------------------
+   The line naming who made a picture from a library elsewhere. It accompanies
+   the picture rather than competing with it, so it is small and quiet. */
+
+.media-credit {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+
+.media-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Over the top end corner of a framed picture, whose frame positions it. The
+   corner is the top one because heroes and cards keep their own copy at the
+   bottom. The scrim behind it keeps the line readable on a light photo. */
+.media-credit--overlay {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  z-index: 1;
+  max-width: calc(100% - 2 * var(--space-2));
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--scrim-soft);
+  border-radius: var(--radius-chip);
+}

@@ -1,8 +1,8 @@
 import { ErrorCode } from "@layered/schemas";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { RASTER_MIME_TYPES } from "../account/repository.js";
 import type { database } from "../db/connect.js";
-import { media } from "../db/schema/index.js";
+import { media, unsplashPhotos } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 type Database = ReturnType<typeof database>;
@@ -20,17 +20,36 @@ type Database = ReturnType<typeof database>;
  * @param db - The transaction the setting is saved in.
  * @param mediaId - The id the setting names.
  * @param refusal - What the caller is told when the id names no such picture.
+ * @param options.storedHere - Refuse a picture that lives on Unsplash, for a
+ *   setting whose bytes are read here or whose address is built from a storage
+ *   key, such as the watermark and the site's sharing picture.
  */
 export async function holdLibraryPicture(
   db: Pick<Database, "select">,
   mediaId: string,
   refusal: string,
+  options: { storedHere?: boolean } = {},
 ): Promise<void> {
   const [picture] = await db
     .select({ id: media.id })
     .from(media)
-    .where(and(eq(media.id, mediaId), eq(media.kind, "image"), inArray(media.mimeType, RASTER_MIME_TYPES)))
+    .where(
+      and(
+        eq(media.id, mediaId),
+        eq(media.kind, "image"),
+        inArray(media.mimeType, RASTER_MIME_TYPES),
+        options.storedHere ? storedInLibrary() : undefined,
+      ),
+    )
     .limit(1)
     .for("key share");
   if (!picture) throw new HttpError(ErrorCode.InvalidRequest, refusal);
+}
+
+/**
+ * Whether a library row's bytes are stored here, which is every row except a
+ * picture that lives on Unsplash.
+ */
+export function storedInLibrary(): SQL {
+  return sql`not exists (select 1 from ${unsplashPhotos} where ${unsplashPhotos.mediaId} = ${media.id})`;
 }

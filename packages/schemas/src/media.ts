@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { body, MaxLength } from "./request.js";
+import { mediaCredit } from "./unsplash.js";
 
 /**
  * Uploading a file into the media library.
@@ -220,6 +221,8 @@ export const mediaDetail = mediaLibraryItem.extend({
   processing: mediaProcessing,
   uses: z.array(mediaUse),
   watermark,
+  /** Who took the picture, for one that comes from Unsplash; null for everything uploaded here. */
+  credit: mediaCredit.nullable(),
 });
 export type MediaDetail = z.infer<typeof mediaDetail>;
 export const saveMediaMetadataBody = body({

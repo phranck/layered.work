@@ -25,6 +25,7 @@ const detail: MediaDetail = {
   processing: { state: "ready", errorId: null, variants: [] },
   uses: [],
   watermark: null,
+  credit: null,
 };
 let client: QueryClient;
 afterEach(() => {

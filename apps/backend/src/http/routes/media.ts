@@ -5,12 +5,15 @@ import {
   createUploadBody,
   ErrorCode,
   focalPoint,
+  importUnsplashBody,
   mediaDeletionResult,
   mediaDetail,
   mediaLibraryPage,
   mediaLibraryQuery,
   mediaProcessing,
   saveMediaMetadataBody,
+  unsplashSearchPage,
+  unsplashSearchQuery,
   updateMediaFocalBody,
   uploadedMedia,
   uploadReceived,
@@ -28,6 +31,7 @@ import { getMediaProcessing } from "../../media/processing.js";
 import { storageMode, writeLocalMediaObject } from "../../media/storage.js";
 import { completeUpload, createUpload } from "../../media/upload.js";
 import { readUploadToken } from "../../media/upload-token.js";
+import { importUnsplashPhoto, searchUnsplashPhotos } from "../../unsplash/library.js";
 import { acceptsRaw, responds } from "../api-metadata.js";
 import { requireScope } from "../require-scope.js";
 import { principalOf } from "../require-session.js";
@@ -50,6 +54,26 @@ media.get(
   responds(mediaLibraryPage),
   async (c) => ok(c, await listMedia(database(), c.req.valid("query"))),
 );
+
+// Registered before `/:id`, which would otherwise take `unsplash` as an id and refuse it.
+media.get(
+  "/unsplash",
+  requireScope("media:write"),
+  validate("query", unsplashSearchQuery),
+  responds(unsplashSearchPage),
+  async (c) => {
+    const { query, page } = c.req.valid("query");
+    return ok(c, await searchUnsplashPhotos(query, page));
+  },
+);
+media.post(
+  "/unsplash",
+  requireScope("media:write"),
+  validate("json", importUnsplashBody),
+  responds(uploadedMedia),
+  async (c) => ok(c, await importUnsplashPhoto(database(), c.req.valid("json").photoId, principalOf(c))),
+);
+
 media.get(
   "/:id",
   requireScope("media:write"),

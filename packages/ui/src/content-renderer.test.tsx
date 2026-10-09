@@ -216,6 +216,32 @@ describe("content renderer", () => {
     expect(unsafe).not.toContain("javascript:");
     expect(unsafe).toContain("bad");
   });
+  it("credits a picture from a library elsewhere under it, with both names linked and nothing unsafe followed", () => {
+    const credit = {
+      lead: "Photo by",
+      author: "Jane Doe",
+      authorUrl: "https://unsplash.com/@janedoe?utm_source=layered_work&utm_medium=referral",
+      joiner: "on",
+      source: "Unsplash",
+      sourceUrl: "https://unsplash.com/?utm_source=layered_work&utm_medium=referral",
+    };
+    const credited = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={renderContent('Image("workbench")')}
+        media={() => ({ src: "https://images.unsplash.com/photo-1?w=1180", credit })}
+      />,
+    );
+    expect(credited).toContain(
+      '<figcaption class="content-figure__caption"><small class="media-credit">Photo by ',
+    );
+    expect(credited).toContain(`<a href="${credit.authorUrl.replace("&", "&amp;")}">Jane Doe</a> on `);
+    expect(credited).toContain(`<a href="${credit.sourceUrl.replace("&", "&amp;")}">Unsplash</a>`);
+    const hostile = renderToStaticMarkup(
+      <ui.MediaCredit credit={{ ...credit, authorUrl: "javascript:alert(1)" }} />,
+    );
+    expect(hostile).not.toContain("javascript:");
+    expect(hostile).toContain("Jane Doe");
+  });
   it("shows a raster placeholder while keeping focal position and caller sizes", () => {
     const html = renderToStaticMarkup(
       <ui.Figure.Image

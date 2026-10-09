@@ -43,6 +43,7 @@ import {
   homeBlockList,
   type IssuedToken,
   type IssueTokenBody,
+  importUnsplashBody,
   issuedToken,
   issueTokenBody,
   type ListingSettings,
@@ -106,9 +107,11 @@ import {
   tokenSummary,
   topicList,
   topicListItem,
+  type UnsplashSearchPage,
   type UpdateAccountBody,
   type UpdateNamedValueBody,
   type UploadedMedia,
+  unsplashSearchPage,
   updateAccountBody,
   updateNamedValueBody,
   uploadedMedia,
@@ -186,6 +189,10 @@ export interface DashboardApi {
   fetchMediaDetail(id: string): Promise<MediaDetail>;
   saveMediaMetadata(id: string, value: SaveMediaMetadataBody): Promise<MediaDetail>;
   deleteMedia(id: string): Promise<MediaDeletionResult>;
+  /** One page of Unsplash photos matching a search, through the API, which holds the access key. */
+  searchUnsplash(query: string, page: number): Promise<UnsplashSearchPage>;
+  /** Takes one Unsplash photo into the library and answers with its library picture, as an upload does. */
+  importUnsplash(photoId: string): Promise<UploadedMedia>;
   /** Every translation of every entry of one kind, newest first. */
   fetchEntries(kind: EntryKind): Promise<EntryList>;
   /** Creates one draft in the site's default language. */
@@ -401,6 +408,16 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       return dataOf(
         await request(`/media/${encodeURIComponent(id)}`, { method: "DELETE" }, true),
         mediaDeletionResult,
+      );
+    },
+    async searchUnsplash(query, page) {
+      const params = new URLSearchParams({ query, page: String(page) });
+      return dataOf(await request(`/media/unsplash?${params}`, undefined, true), unsplashSearchPage);
+    },
+    async importUnsplash(photoId) {
+      return dataOf(
+        await request("/media/unsplash", jsonBody("POST", importUnsplashBody.parse({ photoId })), true),
+        uploadedMedia,
       );
     },
     async saveMediaMetadata(id, value) {

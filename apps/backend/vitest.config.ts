@@ -64,6 +64,8 @@ export default defineConfig({
       // real message through SMTP2GO. What SMTP2GO answers is tested against a
       // stand-in for its API instead.
       SMTP2GO_API_KEY: "",
+      // Empty for the same reason: no test may search Unsplash with a real key.
+      UNSPLASH_ACCESS_KEY: "",
       S3_ENDPOINT: "",
       S3_BUCKET: "",
       S3_ACCESS_KEY_ID: "",

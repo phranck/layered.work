@@ -1,6 +1,6 @@
 ---
 import { rendersComponent, type RenderNode } from "@layered/content";
-import { ContentRenderer, Section, imagePosition, type FormEmbedProps } from "@layered/ui";
+import { ContentRenderer, MediaCredit, Section, imagePosition, type FormEmbedProps } from "@layered/ui";
 import ModelViewer from "./ModelViewer.astro";
 import CodeCopy from "./CodeCopy.astro";
 import FormBehavior from "./FormBehavior.astro";
@@ -59,6 +59,7 @@ const entryTopics = repository.entryTopics(entry, language);
         fetchpriority="high"
       />
       <div class="project-hero__scrim"></div>
+      {feature.credit && <MediaCredit credit={feature.credit} overlay />}
       <div class="project-hero__copy">
         <div class="cluster">
           {entryTopics.map((topic) => (
@@ -112,6 +113,11 @@ const entryTopics = repository.entryTopics(entry, language);
           alt={feature.alt ?? ""}
           fetchpriority="high"
         />
+        {feature.credit && (
+          <figcaption class="content-figure__caption">
+            <MediaCredit credit={feature.credit} />
+          </figcaption>
+        )}
       </figure>
     )}
     <ContentRenderer {nodes} {forms} media={resolveMedia} resolveUrl={repository.contentUrl} />

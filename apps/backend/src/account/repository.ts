@@ -3,8 +3,9 @@ import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, asc, eq, ilike, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { containing } from "../db/like.js";
-import { auditLog, media, mediaJobs, users } from "../db/schema/index.js";
+import { auditLog, media, mediaJobs, unsplashPhotos, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { unsplashImageUrl } from "../unsplash/client.js";
 
 const PAGE_SIZE = 24;
 /** The pictures the dashboard can show: the raster types the library accepts. */
@@ -143,12 +144,19 @@ export async function listAccountMedia(
 export async function getAccountMediaObject(
   db: Database,
   id: string,
-): Promise<{ storageKey: string; mimeType: string }> {
+): Promise<{ storageKey: string; mimeType: string; hotlink: string | null }> {
   const [row] = await db
-    .select({ storageKey: media.storageKey, mimeType: media.mimeType })
+    .select({ storageKey: media.storageKey, mimeType: media.mimeType, imageUrl: unsplashPhotos.imageUrl })
     .from(media)
+    .leftJoin(unsplashPhotos, eq(unsplashPhotos.mediaId, media.id))
     .where(and(eq(media.id, id), eq(media.kind, "image"), inArray(media.mimeType, RASTER_MIME_TYPES)))
     .limit(1);
   if (!row) throw new HttpError(ErrorCode.NotFound, "That image is not in the media library.");
-  return row;
+  const { imageUrl, ...object } = row;
+  // A picture from Unsplash has no bytes here, and Unsplash requires it to be
+  // loaded from its own address, so the dashboard is sent there instead.
+  return { ...object, hotlink: imageUrl ? unsplashImageUrl(imageUrl, DASHBOARD_PREVIEW_WIDTH) : null };
 }
+
+/** The width the dashboard is given an Unsplash picture at: large enough for the focal point editor. */
+const DASHBOARD_PREVIEW_WIDTH = 1080;

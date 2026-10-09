@@ -74,6 +74,15 @@ export const ANALYTICS_ORIGIN = "https://umami.layered.work";
  */
 export const MEDIA_ORIGIN = "https://storage.cdn.zerops.app";
 
+/**
+ * Where pictures chosen from Unsplash are loaded from.
+ *
+ * Unsplash's API guidelines require hotlinking: the page loads the photo from
+ * the address the API gave, which is how Unsplash counts its views. So the site
+ * shows it from this origin, and the dashboard shows its previews from here too.
+ */
+export const UNSPLASH_IMAGE_ORIGIN = "https://images.unsplash.com";
+
 /** The one external frame origin a page with a YouTube embed may load. */
 export const YOUTUBE_FRAME_ORIGIN = "https://www.youtube-nocookie.com";
 
@@ -124,7 +133,7 @@ export function dashboardPolicy(apiOrigin?: string, uploadOrigin?: string): stri
     // elements. nginx serves a static document, so it cannot issue a nonce
     // shared with those elements; blocking them breaks editor indentation.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:"],
+    "img-src": ["'self'", "data:", "blob:", UNSPLASH_IMAGE_ORIGIN],
     "font-src": ["'self'"],
     "connect-src": [
       "'self'",
@@ -198,7 +207,7 @@ export function sitePolicy(nonce: string, options: SitePolicyOptions = {}): stri
     // worker and changes nothing about what the page itself may run.
     "worker-src": ["'self'", "blob:"],
     ...styleSources(nonce, styleHashes),
-    "img-src": ["'self'", "data:", "blob:", MEDIA_ORIGIN],
+    "img-src": ["'self'", "data:", "blob:", MEDIA_ORIGIN, UNSPLASH_IMAGE_ORIGIN],
     "media-src": ["'self'", MEDIA_ORIGIN],
     "font-src": ["'self'"],
     // `blob:` because a glTF file carries its textures inside it, and the

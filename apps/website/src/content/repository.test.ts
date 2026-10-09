@@ -24,6 +24,37 @@ const snapshot = {
 };
 
 describe("public content repository", () => {
+  it("keeps a picture from Unsplash on Unsplash's address and words its credit for each page", () => {
+    const repo = createRepository({
+      ...snapshot,
+      media: [
+        {
+          slug: "workbench",
+          src: "https://images.unsplash.com/photo-1?ixid=a&w=1180",
+          srcSet: "https://images.unsplash.com/photo-1?ixid=a&w=348 348w",
+          credit: { photographer: "Jane Doe", profileUrl: "https://unsplash.com/@janedoe" },
+        },
+      ],
+    });
+    const german = repo.media("workbench", "de");
+    expect(german?.src).toBe("https://images.unsplash.com/photo-1?ixid=a&w=1180");
+    expect(german?.srcSet).toBe("https://images.unsplash.com/photo-1?ixid=a&w=348 348w");
+    expect(german?.credit).toEqual({
+      lead: "Foto von",
+      author: "Jane Doe",
+      authorUrl: "https://unsplash.com/@janedoe?utm_source=layered_work&utm_medium=referral",
+      joiner: "auf",
+      source: "Unsplash",
+      sourceUrl: "https://unsplash.com/?utm_source=layered_work&utm_medium=referral",
+    });
+    expect(repo.media("workbench", "en")?.credit?.lead).toBe("Photo by");
+    expect(() =>
+      createRepository({
+        ...snapshot,
+        media: [{ slug: "elsewhere", src: "https://evil.example/photo.jpg" }],
+      }),
+    ).toThrow();
+  });
   it("keeps stored footer navigation separate for each language, including an intentionally empty footer", () => {
     const en = [
       { title: "First", items: [{ label: "One", href: "/posts/" }] },

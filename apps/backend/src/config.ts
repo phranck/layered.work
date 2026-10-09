@@ -93,6 +93,12 @@ const schema = z.object({
    * it is an address rather than a secret.
    */
   SMTP2GO_API_KEY: optional(z.string()),
+
+  /**
+   * The access key of the Unsplash application the media browser searches with.
+   * Absent means the Unsplash search is off, and the dashboard says so.
+   */
+  UNSPLASH_ACCESS_KEY: optional(z.string()),
 });
 
 /** What the environment turned out to say. */

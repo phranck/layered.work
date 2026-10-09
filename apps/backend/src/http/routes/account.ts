@@ -56,6 +56,10 @@ account.get(
   responds(binaryContent, { envelope: false, mediaType: "application/octet-stream" }),
   async (c) => {
     const object = await getAccountMediaObject(database(), c.req.valid("param").id);
+    if (object.hotlink) {
+      c.header("Cache-Control", "private, no-store");
+      return c.redirect(object.hotlink, 302);
+    }
     const source = await readMediaObject(object.storageKey);
     const requestId = c.get("requestId");
     const stream = observeMediaStream(source, (error) => {
