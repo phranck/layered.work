@@ -26,7 +26,22 @@ if [ ! -f "$module" ]; then
   echo "Cannot find $module. Has it moved?" >&2
   exit 1
 fi
-read_facts() { node --experimental-strip-types --input-type=module -e "$1" 2>/dev/null; }
+# Node's warning about stripping types is silenced and nothing else, so a module that fails to
+# load says why instead of leaving an empty value behind. src/site.ts imports the built
+# @layered/schemas, which a fresh checkout has only after `pnpm build`.
+read_facts() { NODE_NO_WARNINGS=1 node --experimental-strip-types --input-type=module -e "$1"; }
+
+# The wordmark and the fonts the page draws with are copies that tools/prepare-assets.mjs puts
+# into public/ before every dev run and build, and that are not in the repository. Without them
+# Chromium renders the card with an empty space where the mark belongs and says nothing, so the
+# same step runs here first, and the render stops if either is still missing afterwards.
+node "$here/prepare-assets.mjs"
+for asset in logo.svg fonts.css; do
+  if [ ! -f "$public/$asset" ]; then
+    echo "public/$asset is missing after tools/prepare-assets.mjs." >&2
+    exit 1
+  fi
+done
 
 # The size and the two lines of text come from the page's own module rather
 # than being stated again here. The size is published in og:image:width and
