@@ -22,6 +22,8 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `fetchMediaDetail` | GET /media/:id | media:write |
 | `saveMediaMetadata` | PUT /media/:id | media:write |
 | `deleteMedia` | DELETE /media/:id | media:write |
+| `searchUnsplash` | GET /media/unsplash?query=:query&page=:page | media:write |
+| `importUnsplash` | POST /media/unsplash | media:write |
 | `fetchEntries` | GET /entries?kind=:kind | content:read |
 | `createEntry` | POST /entries | content:write |
 | `fetchEntry` | GET /entries/:id | content:read |
@@ -71,6 +73,8 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `signOut` | POST /auth/sign-out | Clears a browser session |
 | CSV export link | GET /forms/:id/submissions/export | Browser session |
 | Portrait, media picker and settings images | GET /account/media/:id/content | Browser session |
+
+For a picture taken from Unsplash, `GET /account/media/:id/content` answers with a redirect to the photo on `images.unsplash.com`, because nothing of it is stored here and Unsplash requires its photos to be loaded from there.
 
 The upload URL is either an API route (`PUT /media/uploads/:token/content`, used locally) or a presigned object storage URL. The storage URL authorizes only the upload that the API issued. The browser sends no session cookie to object storage. Completion and verification remain API operations.
 

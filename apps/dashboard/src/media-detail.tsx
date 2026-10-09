@@ -2,10 +2,11 @@ import {
   MaxLength,
   type MediaDetail,
   type SaveMediaMetadataBody,
+  unsplashCreditLine,
   WATERMARK_ANCHORS,
   type WatermarkAnchor,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Row, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Card, Field, Input, MediaCredit, Row, Select, Switch, Textarea } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -37,7 +38,7 @@ const NO_WATERMARK = "";
 function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose: () => void }) {
   const api = useDashboardApi();
   const client = useQueryClient();
-  const { text } = useDashboardLanguage();
+  const { text, language: interfaceLanguage } = useDashboardLanguage();
   const [value, setValue] = useState<SaveMediaMetadataBody>({
     focalPoint: detail.focalPoint,
     translations: (["en", "de"] as const).map((language) => ({ language, ...detail.translations[language] })),
@@ -97,6 +98,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
               {text("mediaDimensions")}: {detail.width} × {detail.height}
             </p>
           )}
+          {detail.credit && <MediaCredit credit={unsplashCreditLine(detail.credit, interfaceLanguage)} />}
           {translation && (
             <>
               <Field label={text("mediaAlt")} htmlFor={`${prefix}-${language}-alt`}>
@@ -135,6 +137,11 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
                 point={value.focalPoint}
                 onChange={(focalPoint) => setValue((current) => ({ ...current, focalPoint }))}
               />
+            </>
+          )}
+          {/* A picture from Unsplash has no bytes here to lay a mark into. */}
+          {detail.kind === "image" && detail.url && !detail.credit && (
+            <>
               <Field label={text("watermark")} htmlFor={`${prefix}-watermark`}>
                 <Select
                   id={`${prefix}-watermark`}

@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { storedInLibrary } from "../media/pictures.js";
 import { mediaObjectExists } from "../media/storage.js";
 import { media, mediaVariants } from "./schema/index.js";
 
@@ -23,6 +24,8 @@ export async function missingOriginalObjects(
       checksum: media.checksum,
     })
     .from(media)
+    // A picture from Unsplash has no object in any store, so it is never missing from one.
+    .where(storedInLibrary())
     .orderBy(asc(media.slug));
   return absentFrom(files, (file) => file.storageKey, exists);
 }

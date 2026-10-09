@@ -1,6 +1,6 @@
 import { MEDIA_KINDS, type MediaLibraryItem } from "@layered/schemas";
 import { Button, Card, Field, Input, imagePosition, Row, Select, Switch } from "@layered/ui";
-import { FilesIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
+import { FilesIcon, GlobeIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -8,6 +8,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
 import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
+import { UnsplashSearch } from "./unsplash-search.js";
 import "./media-browser.css";
 
 const KIND_LABEL = {
@@ -88,12 +89,15 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
     if (onChoose) onChoose(item.slug, item);
     else setDetailId(item.id);
   };
-  const uploads = useMediaUploads((item) => {
+  // A new picture, uploaded or taken from Unsplash, is shown and chosen the same way.
+  const arrived = (item: MediaLibraryItem) => {
     setSearch("");
     setQuery("");
     setPage(1);
     choose(item);
-  });
+  };
+  const uploads = useMediaUploads(arrived);
+  const [searchingUnsplash, setSearchingUnsplash] = useState(false);
   const searchId = useId();
   const kindId = useId();
   const unusedId = useId();
@@ -106,7 +110,14 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
       <Card.Header
         id={labelId}
         title={text(onChoose ? "mediaPicker" : "media")}
-        actions={<MediaUploadButton pending={uploads.pending} start={uploads.start} />}
+        actions={
+          <>
+            <Button icon={<GlobeIcon />} onClick={() => setSearchingUnsplash(true)}>
+              {text("unsplash")}
+            </Button>
+            <MediaUploadButton pending={uploads.pending} start={uploads.start} />
+          </>
+        }
       />
       <Card.Body>
         <section
@@ -188,6 +199,15 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
         }
       />
       {detailId && <MediaDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
+      {searchingUnsplash && (
+        <UnsplashSearch
+          onCancel={() => setSearchingUnsplash(false)}
+          onChoose={(item) => {
+            setSearchingUnsplash(false);
+            arrived(item);
+          }}
+        />
+      )}
     </>
   );
 }

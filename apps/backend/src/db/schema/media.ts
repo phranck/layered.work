@@ -196,6 +196,33 @@ export const mediaTranslations = pgTable(
   ],
 );
 
+/**
+ * A library picture that is a photo on Unsplash rather than a file here.
+ *
+ * Unsplash's API guidelines require the photo to be hotlinked from the address
+ * the API gives, so nothing is stored in the bucket: the library row's storage
+ * key, `unsplash/<photo id>`, names no object, and the site loads the picture
+ * from `image_url`. The row exists so content can name the photo by slug like
+ * any other picture, and so the credit the guidelines require is at hand
+ * wherever it is shown.
+ */
+export const unsplashPhotos = pgTable("unsplash_photos", {
+  mediaId: uuid("media_id")
+    .primaryKey()
+    .references(() => media.id, { onDelete: "cascade" }),
+
+  /** Unsplash's id for the photo. Unique, so choosing it twice finds the same picture. */
+  photoId: text("photo_id").notNull().unique(),
+
+  /** The photo's `urls.raw`, with the `ixid` that reports views. Sizes are asked for with imgix parameters. */
+  imageUrl: text("image_url").notNull(),
+
+  photographerName: text("photographer_name").notNull(),
+
+  /** The photographer's Unsplash profile, without referral parameters. */
+  photographerUrl: text("photographer_url").notNull(),
+});
+
 /** Durable processing leases fence concurrent workers and survive service restarts. */
 export const mediaProcessingState = pgEnum("media_processing_state", [
   "queued",

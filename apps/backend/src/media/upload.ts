@@ -170,48 +170,73 @@ export async function completeUpload(
     };
   }
 
-  // The stem, then the stem with a number, until one is free. A slug that is
-  // taken is not an error, and the row actually written is what is returned.
-  for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt++) {
-    const slug = attempt === 1 ? claims.slug : `${claims.slug}-${attempt}`;
-    const row = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(media)
-        .values({
-          slug,
-          kind: "image",
-          mimeType: claims.type,
-          storageKey: claims.storageKey,
-          byteSize: bytes.length,
-          checksum,
-          width: decoded.width,
-          height: decoded.height,
-        })
-        .onConflictDoNothing({ target: media.slug })
-        .returning({ id: media.id, slug: media.slug });
-      if (created) {
-        await tx.insert(mediaJobs).values({ mediaId: created.id });
-        await tx.insert(auditLog).values({
-          ...auditActor(userId, actorTokenId),
-          action: "media.uploaded",
-          subjectType: "media",
-          subjectId: created.id,
-        });
-      }
-      return created;
-    });
-    if (row) {
-      logger.info({ storageKey: claims.storageKey, mediaId: row.id, bytes: bytes.length }, "upload stored");
-      return {
-        id: row.id,
-        slug: row.slug,
-        url: mediaContentUrl(row.id),
+  const row = await insertUnderFreeSlug(db, claims.slug, async (tx, slug) => {
+    const [created] = await tx
+      .insert(media)
+      .values({
+        slug,
+        kind: "image",
+        mimeType: claims.type,
+        storageKey: claims.storageKey,
+        byteSize: bytes.length,
+        checksum,
         width: decoded.width,
         height: decoded.height,
-        existing: false,
-      };
+      })
+      .onConflictDoNothing({ target: media.slug })
+      .returning({ id: media.id, slug: media.slug });
+    if (created) {
+      await tx.insert(mediaJobs).values({ mediaId: created.id });
+      await tx.insert(auditLog).values({
+        ...auditActor(userId, actorTokenId),
+        action: "media.uploaded",
+        subjectType: "media",
+        subjectId: created.id,
+      });
     }
+    return created;
+  });
+  if (row) {
+    logger.info({ storageKey: claims.storageKey, mediaId: row.id, bytes: bytes.length }, "upload stored");
+    return {
+      id: row.id,
+      slug: row.slug,
+      url: mediaContentUrl(row.id),
+      width: decoded.width,
+      height: decoded.height,
+      existing: false,
+    };
   }
 
   return refuse(claims.storageKey, "No free name could be found for this file.", { slug: claims.slug });
+}
+
+/**
+ * Writes a new library row under the first free slug: the stem, then the stem
+ * with a number.
+ *
+ * A slug that is taken is not an error. Each attempt is its own transaction, so
+ * a taken slug costs one rolled-back insert and the row actually written is what
+ * comes back.
+ *
+ * @param db - The database.
+ * @param stem - The slug to start from, already reduced by `slugStem`.
+ * @param write - Writes the row and whatever belongs with it under one slug,
+ *   answering nothing when that slug is taken.
+ * @returns The written row, or nothing when no free slug was found.
+ */
+export async function insertUnderFreeSlug<Row>(
+  db: Database,
+  stem: string,
+  write: (
+    tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+    slug: string,
+  ) => Promise<Row | undefined>,
+): Promise<Row | undefined> {
+  for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt++) {
+    const slug = attempt === 1 ? stem : `${stem}-${attempt}`;
+    const row = await db.transaction((tx) => write(tx, slug));
+    if (row) return row;
+  }
+  return undefined;
 }

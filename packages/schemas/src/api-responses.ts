@@ -4,6 +4,7 @@ import { publicForm } from "./forms.js";
 import { focalPoint, mediaDescriptions } from "./media.js";
 import { publicFooterNavigation, publicMainNavigation } from "./navigation.js";
 import { listingSettings, publicSiteFrame } from "./settings.js";
+import { mediaCredit } from "./unsplash.js";
 
 export const healthAlive = z.object({ service: z.literal("backend"), alive: z.literal(true) });
 const readinessCheck = z.object({ ok: z.boolean(), detail: z.string() });
@@ -17,6 +18,7 @@ export const healthReady = z.object({
     bucketCredentials: z.boolean(),
     sessionSecret: z.boolean(),
     mail: z.boolean(),
+    unsplash: z.boolean(),
   }),
 });
 export const signedOut = z.object({ signedOut: z.literal(true) });
@@ -64,6 +66,8 @@ const publicMedia = z.object({
   srcSet: z.string().optional(),
   placeholder: z.string().optional(),
   focalPoint: focalPoint.optional(),
+  /** Who took a picture that comes from Unsplash, which every page showing it credits. */
+  credit: mediaCredit.optional(),
 });
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
 export const publicSnapshot = z.object({

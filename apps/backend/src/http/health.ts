@@ -46,6 +46,7 @@ health.get("/ready", responds(healthReady, { envelope: false, additionalStatus: 
         bucketCredentials: Boolean(config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY),
         sessionSecret: Boolean(config.SESSION_SECRET),
         mail: Boolean(config.SMTP2GO_API_KEY),
+        unsplash: Boolean(config.UNSPLASH_ACCESS_KEY),
       },
     },
     readiness.ready ? 200 : 503,

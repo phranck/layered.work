@@ -75,6 +75,7 @@ it("uploads multiple dropped files with progress and selects the final successfu
     processing: { state: "ready" as const, errorId: null, variants: [] },
     uses: [],
     watermark: null,
+    credit: null,
   };
   show(choose, { uploadMedia: upload, fetchMediaDetail: async () => detail });
   const files = [

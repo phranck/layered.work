@@ -30,6 +30,7 @@ const detail: MediaDetail = {
   processing: { state: "ready", errorId: null, variants: [] },
   uses: [],
   watermark: null,
+  credit: null,
 };
 
 /** Opens the dialog for `shown` and returns what saving and closing were called with. */
@@ -54,6 +55,19 @@ function openDialog(shown: MediaDetail) {
   );
   return { save, close };
 }
+
+it("credits a picture from Unsplash and offers it no watermark", async () => {
+  openDialog({
+    ...detail,
+    credit: { photographer: "Jane Doe", profileUrl: "https://unsplash.com/@janedoe" },
+  });
+  const author = await screen.findByRole("link", { name: "Jane Doe" });
+  expect(author.getAttribute("href")).toBe(
+    "https://unsplash.com/@janedoe?utm_source=layered_work&utm_medium=referral",
+  );
+  expect(author.closest("small")?.textContent).toBe("Foto von Jane Doe auf Unsplash");
+  expect(screen.queryByLabelText("Wasserzeichen")).toBeNull();
+});
 
 it("saves a watermark position, and none as null", async () => {
   const { save } = openDialog({ ...detail, watermark: "top-left" });

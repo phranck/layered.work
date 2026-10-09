@@ -25,9 +25,11 @@ import {
   mediaTranslations,
   settingMediaReferences,
   settings,
+  unsplashPhotos,
   users,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { storedInLibrary } from "./pictures.js";
 import { getMediaProcessing } from "./processing.js";
 import { queueMediaProcessing } from "./queue.js";
 import { namesPictureInBlock, namesSitePicture, unusedMedia } from "./usage.js";
@@ -154,12 +156,18 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
 }
 export async function getMediaDetail(db: Database, id: string): Promise<MediaDetail> {
   const [found] = await db
-    .select({ ...selection, watermark: media.watermark })
+    .select({
+      ...selection,
+      watermark: media.watermark,
+      photographer: unsplashPhotos.photographerName,
+      profileUrl: unsplashPhotos.photographerUrl,
+    })
     .from(media)
     .leftJoin(mediaJobs, eq(mediaJobs.mediaId, media.id))
+    .leftJoin(unsplashPhotos, eq(unsplashPhotos.mediaId, media.id))
     .where(eq(media.id, id));
   if (!found) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
-  const { watermark, ...row } = found;
+  const { watermark, photographer, profileUrl, ...row } = found;
   const translations: MediaDetail["translations"] = {
     en: { altText: null, caption: null },
     de: { altText: null, caption: null },
@@ -175,6 +183,7 @@ export async function getMediaDetail(db: Database, id: string): Promise<MediaDet
     processing: await getMediaProcessing(db, id),
     uses: await getMediaUses(db, id),
     watermark,
+    credit: photographer && profileUrl ? { photographer, profileUrl } : null,
   };
 }
 export async function saveMediaMetadata(
@@ -186,14 +195,23 @@ export async function saveMediaMetadata(
   const value = saveMediaMetadataBody.parse(input);
   await db.transaction(async (tx) => {
     const [before] = await tx
-      .select({ kind: media.kind, mimeType: media.mimeType, watermark: media.watermark })
+      .select({
+        kind: media.kind,
+        mimeType: media.mimeType,
+        watermark: media.watermark,
+        stored: sql<boolean>`${storedInLibrary()}`,
+      })
       .from(media)
       .where(eq(media.id, id))
       .for("update");
     if (!before) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
     const watermark = value.watermark === undefined ? before.watermark : value.watermark;
-    if (watermark && !(before.kind === "image" && rasterTypes.has(before.mimeType)))
-      throw new HttpError(ErrorCode.InvalidRequest, "Only a raster image can carry a watermark.");
+    // The mark is laid into sizes derived from the stored bytes, which a picture from Unsplash does not have.
+    if (watermark && !(before.kind === "image" && rasterTypes.has(before.mimeType) && before.stored))
+      throw new HttpError(
+        ErrorCode.InvalidRequest,
+        "Only a raster image uploaded here can carry a watermark.",
+      );
     await tx
       .update(media)
       .set({ focalX: value.focalPoint.x, focalY: value.focalPoint.y, watermark })

@@ -2,6 +2,7 @@ import type { PropsOf } from "@layered/content";
 import type { ComponentPropsWithoutRef } from "react";
 import { ContentPlaceholder } from "./content-placeholder.js";
 import { contentUrl, imagePosition, type MediaAsset, type MediaProps } from "./content-shared.js";
+import { MediaCredit } from "./media-credit.js";
 /** A library image and the author overrides declared in the register. */
 export type FigureProps = PropsOf<"Image"> & MediaProps;
 /** The shared semantic media frame. */
@@ -50,7 +51,12 @@ function FigureContent({ slug, caption, alt, media }: FigureProps) {
   return (
     <FigureRoot>
       <FigureImage asset={asset} alt={alt} />
-      {text && <FigureCaption>{text}</FigureCaption>}
+      {(text || asset.credit) && (
+        <FigureCaption>
+          {text}
+          {asset.credit && <MediaCredit credit={asset.credit} />}
+        </FigureCaption>
+      )}
     </FigureRoot>
   );
 }

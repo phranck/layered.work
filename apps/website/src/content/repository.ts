@@ -11,6 +11,7 @@ import {
   isKnownHomeBlock,
   type ListedKind,
   listingSettings,
+  mediaCredit,
   mediaDescriptions,
   publicFooterNavigation,
   publicForm,
@@ -18,6 +19,7 @@ import {
   publicSiteFrame,
   READING_WIDTHS,
   unknownHomeBlocks,
+  unsplashCreditLine,
 } from "@layered/schemas";
 import { z } from "zod";
 
@@ -68,9 +70,16 @@ const mediaSchema = z.object({
    * The file's storage key with a slash in front, such as `/migration/cover.webp`
    * or `/uploads/tl_WnGQ4duhWJVeRjRqMmQ`, which is where it answers below the
    * media origin. A snapshot written from the export says `/media/…`, which is
-   * where the same files lie in `public/`.
+   * where the same files lie in `public/`. A picture from Unsplash is the one
+   * exception: its address is Unsplash's own, because Unsplash requires it to be
+   * loaded from there.
    */
-  src: z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
+  src: z.union([
+    z.string().regex(/^\/[a-z]+\/(?!.*\.\.)[a-zA-Z0-9_./-]+$/),
+    z.url({ protocol: /^https$/, hostname: /^images\.unsplash\.com$/ }),
+  ]),
+  /** Who took a picture from Unsplash, which every surface showing it credits. */
+  credit: mediaCredit.optional(),
   focalPoint: focalPoint.optional(),
   alt: z.string().optional(),
   caption: z.string().optional(),
@@ -255,6 +264,8 @@ export interface SearchIndexEntry {
  * @returns The address a browser should ask for.
  */
 function mediaUrl(path: string): string {
+  // A picture from Unsplash already carries Unsplash's own address.
+  if (path.startsWith("https://")) return path;
   const origin = process.env.MEDIA_ORIGIN?.replace(/\/+$/, "");
   if (!origin) return path;
   // A path from the export names the file where the export left it. In the
@@ -412,6 +423,7 @@ export function createRepository(input: unknown) {
       src: mediaUrl(asset.src),
       ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
       sizes: ARTICLE_IMAGE_SIZES,
+      credit: asset.credit ? unsplashCreditLine(asset.credit, locale) : undefined,
     };
   };
   /** The entries the home page may show, newest first. */

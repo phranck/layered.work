@@ -207,20 +207,22 @@ export async function saveSettings<Group extends SettingsGroup>(
   return readSettings(db);
 }
 
-/** What the site is told when one of its picture settings names no raster image. */
+/** What the site is told when one of its picture settings names no raster image stored here. */
 const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
-  socialImageMediaId: "Choose an existing raster image for the sharing picture.",
-  watermarkMediaId: "Choose an existing raster image for the watermark.",
+  socialImageMediaId: "Choose a raster image uploaded to the library for the sharing picture.",
+  watermarkMediaId: "Choose a raster image uploaded to the library for the watermark.",
 };
 
 /**
- * Refuses a site picture that is not a raster image in the library, because a
- * social card and a watermark can use nothing else, and holds each one until the
- * settings are saved.
+ * Refuses a site picture that is not a raster image stored in the library, and
+ * holds each one until the settings are saved.
+ *
+ * Stored, because the watermark's bytes are read here and the sharing picture's
+ * address is built from its storage key, and a picture from Unsplash has neither.
  */
 async function requireSitePictures(site: SiteSettings, db: Pick<Database, "select">): Promise<void> {
   for (const key of SITE_PICTURE_SETTINGS) {
     const mediaId = site[key];
-    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURE_REFUSAL[key]);
+    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURE_REFUSAL[key], { storedHere: true });
   }
 }

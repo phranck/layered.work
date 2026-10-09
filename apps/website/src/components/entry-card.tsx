@@ -1,10 +1,9 @@
-import { Card, imagePosition } from "@layered/ui";
+import { Card, imagePosition, type MediaAsset, MediaCredit } from "@layered/ui";
 import { ArticleIcon } from "@layered/ui/icons";
 import {
   dateLabel,
   type Entry,
   type Language,
-  type Media,
   readingTime,
   summaryOf,
   type TopicView,
@@ -31,7 +30,8 @@ export function EntryCard({
   topics = [],
 }: {
   entry: Entry;
-  image?: Media;
+  /** The entry's picture as the page's language resolves it, credit included. */
+  image?: MediaAsset;
   language?: Language;
   topics?: TopicView[];
   /** How long the preview text may be, where the overview's settings say. */
@@ -53,6 +53,8 @@ export function EntryCard({
             loading="lazy"
             decoding="async"
           />
+          {/* The card is a link, which cannot hold another, so the entry's own page links the names. */}
+          {image.credit && <MediaCredit credit={image.credit} overlay linked={false} />}
         </div>
       )}
       <Card.Body>

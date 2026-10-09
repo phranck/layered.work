@@ -1,6 +1,6 @@
 ---
 import { homeBlockSettings, homeBlockText, isKnownHomeBlock, type HomeBlock } from "@layered/schemas";
-import { Button, Card, Section, SkyBand, imagePosition } from "@layered/ui";
+import { Button, Card, MediaCredit, Section, SkyBand, imagePosition } from "@layered/ui";
 import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
 import { createElement, Fragment as ReactFragment } from "react";
 import SkyBands from "./SkyBands.astro";
@@ -99,6 +99,7 @@ if (unknown.length)
                   alt={heroImage.alt ?? ""}
                   fetchpriority="high"
                 />
+                {heroImage.credit && <MediaCredit credit={heroImage.credit} overlay linked={false} />}
                 <div class="plate__caption">
                   <strong>{hero.title}</strong>
                 </div>
@@ -134,6 +135,7 @@ if (unknown.length)
                 alt={featureImage.alt ?? ""}
                 loading="lazy"
               />
+              {featureImage.credit && <MediaCredit credit={featureImage.credit} overlay linked={false} />}
             </div>
           )}
           <div class="feature__body">
