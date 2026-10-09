@@ -13,6 +13,15 @@ name: Gate
 # fixed command over fixed values.
 on:
   workflow_call:
+    # Which apps the change reaches, so the deploy rolls out exactly those and
+    # never one this run tested without its database.
+    outputs:
+      backend:
+        value: ${{ jobs.gate.outputs.backend }}
+      website:
+        value: ${{ jobs.gate.outputs.website }}
+      dashboard:
+        value: ${{ jobs.gate.outputs.dashboard }}
 
 permissions:
   contents: read
@@ -20,29 +29,10 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
-
-    # The tests that matter are the ones a mock cannot have: a session whose row
-    # was deleted, an expiry that has passed, a constraint refusing a row. They
-    # need a database, and without one here they would skip, which is a suite
-    # that quietly shrinks as more of it becomes worth running.
-    #
-    # The same version production runs. The roles and the test database are
-    # created below by the same scripts `docker compose up -d` uses locally, so
-    # there is one description of that shape rather than two.
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: layered
-          POSTGRES_PASSWORD: layered_local
-          POSTGRES_DB: layered
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U layered -d layered"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 30
+    outputs:
+      backend: ${{ steps.affected.outputs.backend }}
+      website: ${{ steps.affected.outputs.website }}
+      dashboard: ${{ steps.affected.outputs.dashboard }}
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -52,10 +42,42 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Create the roles and the test database
+      # Against the base of the pull request, or against what `main` was before
+      # the push. A manual run has neither, and reaches every app.
+      - name: Say which apps the change reaches
+        id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/affected-apps.mjs "$BASE" | tee -a "$GITHUB_OUTPUT"
+
+      # The tests that matter are the ones a mock cannot have: a session whose
+      # row was deleted, an expiry that has passed, a constraint refusing a row.
+      # They need a database. Only the backend's suite has them, so a change that
+      # cannot reach the backend starts none, and those tests skip.
+      #
+      # A step rather than a service container, because a service starts before
+      # the first step and so before anything knows what changed. The same
+      # version production runs, from Docker's own copy on Amazon ECR Public:
+      # Docker Hub wants a token from auth.docker.io before every pull, and when
+      # that does not answer, nothing merges and nothing deploys.
+      #
+      # The roles and the test database come from the same scripts
+      # `docker compose up -d` uses locally, so there is one description of that
+      # shape rather than two.
+      - name: Start the test database
+        if: steps.affected.outputs.backend == 'true'
         env:
           ADMIN_URL: postgres://layered:layered_local@127.0.0.1:5432/postgres
         run: |
+          docker run --detach --publish 5432:5432 \
+            --env POSTGRES_USER=layered \
+            --env POSTGRES_PASSWORD=layered_local \
+            --env POSTGRES_DB=layered \
+            public.ecr.aws/docker/library/postgres:18-alpine
+          until psql "$ADMIN_URL" --quiet --command "select 1" >/dev/null 2>&1; do
+            [ "$SECONDS" -lt 120 ] || { echo "The test database did not answer within two minutes." >&2; exit 1; }
+            sleep 1
+          done
           for script in scripts/local-database/*.sql; do
             psql "$ADMIN_URL" --quiet --set ON_ERROR_STOP=1 --file "$script"
           done
@@ -65,9 +87,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
         env:
-          # Named here rather than left to a file, so a run that cannot reach a
+          # Named here rather than left to a file, so a run that started a
           # database fails on the connection instead of skipping twenty tests.
-          DATABASE_URL_TEST: postgres://layered_app:layered_local@127.0.0.1:5432/layered_test
+          DATABASE_URL_TEST: ${{ steps.affected.outputs.backend == 'true' && 'postgres://layered_app:layered_local@127.0.0.1:5432/layered_test' || '' }}
       - run: pnpm build
       - run: pnpm --filter @layered/website test:production
 
