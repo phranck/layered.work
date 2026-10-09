@@ -1,14 +1,11 @@
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
+import { WORDMARK } from "../assets.js";
 
 export const CARD_SIZE = { width: 1200, height: 630 } as const;
 const BACKGROUND = { r: 17, g: 21, b: 26, alpha: 1 };
 const WORDMARK_TOP = 80;
 const WORDMARK_HEIGHT = 230;
-const logo = new URL(
-  import.meta.url.includes("/dist/") ? "../assets/logo.svg" : "../../../../packages/ui/assets/logo.svg",
-  import.meta.url,
-);
 const escapeXml = (value: string) =>
   value.replace(
     /[<>&"']/g,
@@ -34,7 +31,7 @@ function titleLines(title: string): string[] {
 
 /** Title only: summaries and bodies never enter the image, including for private content. */
 export async function renderSocialCard(title: string) {
-  const mark = await sharp(await readFile(logo))
+  const mark = await sharp(await readFile(WORDMARK))
     .resize(900, 450)
     .trim()
     .resize({ width: 480, height: WORDMARK_HEIGHT, fit: "inside" })

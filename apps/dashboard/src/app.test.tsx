@@ -98,6 +98,8 @@ const settings = {
     defaultLanguage: "en",
     socialImageMediaId: null,
     socialImageUrl: null,
+    watermarkMediaId: null,
+    watermarkUrl: null,
   },
   mail: { senderAddress: "hello@layered.work", senderName: "LAYERED.work", apiKeyConfigured: true },
   analytics: { umamiWebsiteId: "3e266ac6-8103-4bef-bedb-7d127ed75cc4" },
@@ -552,6 +554,8 @@ describe("dashboard shell", () => {
 
     const save = await screen.findByRole("button", { name: "Speichern" });
     expect((save as HTMLButtonElement).disabled).toBe(true);
+    // Without a picture of its own, the watermark is the wordmark, and the field says so.
+    expect(screen.getByText("Wortmarke der Website.")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "LAYERED.werk" } });
     expect((save as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(save);
@@ -571,6 +575,7 @@ describe("dashboard shell", () => {
       footerLine: { en: "", de: "" },
       defaultLanguage: "en",
       socialImageMediaId: null,
+      watermarkMediaId: null,
     });
     await waitFor(() =>
       expect((screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement).disabled).toBe(true),

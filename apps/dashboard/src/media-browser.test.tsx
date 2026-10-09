@@ -74,6 +74,7 @@ it("uploads multiple dropped files with progress and selects the final successfu
     translations: { en: { altText: null, caption: null }, de: { altText: null, caption: null } },
     processing: { state: "ready" as const, errorId: null, variants: [] },
     uses: [],
+    watermark: null,
   };
   show(choose, { uploadMedia: upload, fetchMediaDetail: async () => detail });
   const files = [

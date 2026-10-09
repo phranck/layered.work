@@ -19,7 +19,10 @@ import { body, MaxLength, text } from "./request.js";
 /** A value written in both languages of the site. */
 const inBothLanguages = <Schema extends z.ZodType>(value: Schema) => z.strictObject({ en: value, de: value });
 
-/** The site's own values: its name, its footer line, its language and its fallback sharing picture. */
+/**
+ * The site's own values: its name, its footer line, its language, its fallback
+ * sharing picture and the mark its watermarked pictures carry.
+ */
 export const siteSettings = body({
   title: inBothLanguages(text(MaxLength.Line)),
   /** The line in the footer. Empty leaves the footer without one. */
@@ -28,8 +31,19 @@ export const siteSettings = body({
   defaultLanguage: z.enum(CONTENT_LANGUAGES),
   /** The picture a social card shows for an entry that has none of its own. */
   socialImageMediaId: z.uuid().nullable(),
+  /**
+   * The picture laid over every watermarked picture. Null is the site's wordmark.
+   *
+   * Defaulted rather than required, because a stored row written before the field
+   * existed would otherwise fail to parse and the whole group would fall back to
+   * its defaults.
+   */
+  watermarkMediaId: z.uuid().nullable().default(null),
 });
 export type SiteSettings = z.infer<typeof siteSettings>;
+
+/** The site settings that name a library picture, which therefore count as uses of it. */
+export const SITE_PICTURE_SETTINGS = ["socialImageMediaId", "watermarkMediaId"] as const;
 /** Only settings and enabled account links that visitors may see. */
 export const publicSiteFrame = siteSettings.pick({ title: true, footerLine: true }).extend({
   social: z.array(z.object({ platform: z.string(), handle: z.string(), href: navigationHref })),
@@ -145,6 +159,7 @@ export const DEFAULT_SETTINGS = {
     footerLine: { en: "", de: "" },
     defaultLanguage: "en",
     socialImageMediaId: null,
+    watermarkMediaId: null,
   },
   mail: { senderAddress: null, senderName: "LAYERED.work" },
   analytics: { umamiWebsiteId: DEFAULT_UMAMI_WEBSITE_ID },
@@ -163,6 +178,8 @@ export const settingsView = z.object({
   site: siteSettings.extend({
     /** Where the sharing picture can be shown from, when one is chosen. */
     socialImageUrl: z.string().nullable(),
+    /** Where the watermark picture can be shown from, when one is chosen. */
+    watermarkUrl: z.string().nullable(),
   }),
   mail: mailSettings.extend({
     /** Whether an SMTP2GO key reached the API. The key itself is never sent. */

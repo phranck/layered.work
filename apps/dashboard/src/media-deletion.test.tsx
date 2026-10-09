@@ -24,6 +24,7 @@ const detail: MediaDetail = {
   translations: { en: { altText: null, caption: null }, de: { altText: null, caption: null } },
   processing: { state: "ready", errorId: null, variants: [] },
   uses: [],
+  watermark: null,
 };
 let client: QueryClient;
 afterEach(() => {

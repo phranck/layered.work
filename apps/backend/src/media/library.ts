@@ -6,6 +6,7 @@ import {
   type MediaLibraryPage,
   type MediaLibraryQuery,
   type SaveMediaMetadataBody,
+  SITE_PICTURE_SETTINGS,
   saveMediaMetadataBody,
 } from "@layered/schemas";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
@@ -28,10 +29,17 @@ import {
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { getMediaProcessing } from "./processing.js";
-import { namesPictureInBlock, unusedMedia } from "./usage.js";
+import { queueMediaProcessing } from "./queue.js";
+import { namesPictureInBlock, namesSitePicture, unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
 const PAGE_SIZE = 24;
+
+/** How a use through a site setting is named in the list of a file's uses. */
+const SITE_PICTURE_TITLE: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
+  socialImageMediaId: "Site sharing image",
+  watermarkMediaId: "Site watermark",
+};
 /**
  * What each order sorts by. The id comes last in both, so two files with the same
  * slug or the same upload time fall on the same side of a page boundary on every
@@ -114,11 +122,14 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
     .from(users)
     .where(eq(users.avatarMediaId, id));
   uses.push(...portraits.map((portrait) => ({ ...portrait, kind: "account" as const })));
-  const sharing = await db
-    .select({ key: settings.key })
+  const [site] = await db
+    .select({ value: settings.value })
     .from(settings)
-    .where(and(eq(settings.key, "site"), sql`${settings.value}->>'socialImageMediaId' = ${id}`));
-  if (sharing.length) uses.push({ id, title: "Site sharing image", language: "en", kind: "settings" });
+    .where(and(eq(settings.key, "site"), namesSitePicture(id)));
+  const named = (site?.value ?? {}) as Record<string, unknown>;
+  for (const key of SITE_PICTURE_SETTINGS)
+    if (named[key] === id)
+      uses.push({ id, title: SITE_PICTURE_TITLE[key], language: "en", kind: "settings" });
   const blocks = await db
     .select({ id: homeBlocks.id, type: homeBlocks.type })
     .from(homeBlocks)
@@ -142,12 +153,13 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
   return uses;
 }
 export async function getMediaDetail(db: Database, id: string): Promise<MediaDetail> {
-  const [row] = await db
-    .select(selection)
+  const [found] = await db
+    .select({ ...selection, watermark: media.watermark })
     .from(media)
     .leftJoin(mediaJobs, eq(mediaJobs.mediaId, media.id))
     .where(eq(media.id, id));
-  if (!row) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
+  if (!found) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
+  const { watermark, ...row } = found;
   const translations: MediaDetail["translations"] = {
     en: { altText: null, caption: null },
     de: { altText: null, caption: null },
@@ -162,6 +174,7 @@ export async function getMediaDetail(db: Database, id: string): Promise<MediaDet
     translations,
     processing: await getMediaProcessing(db, id),
     uses: await getMediaUses(db, id),
+    watermark,
   };
 }
 export async function saveMediaMetadata(
@@ -172,12 +185,21 @@ export async function saveMediaMetadata(
 ): Promise<MediaDetail> {
   const value = saveMediaMetadataBody.parse(input);
   await db.transaction(async (tx) => {
-    const [saved] = await tx
-      .update(media)
-      .set({ focalX: value.focalPoint.x, focalY: value.focalPoint.y })
+    const [before] = await tx
+      .select({ kind: media.kind, mimeType: media.mimeType, watermark: media.watermark })
+      .from(media)
       .where(eq(media.id, id))
-      .returning({ id: media.id });
-    if (!saved) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
+      .for("update");
+    if (!before) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
+    const watermark = value.watermark === undefined ? before.watermark : value.watermark;
+    if (watermark && !(before.kind === "image" && rasterTypes.has(before.mimeType)))
+      throw new HttpError(ErrorCode.InvalidRequest, "Only a raster image can carry a watermark.");
+    await tx
+      .update(media)
+      .set({ focalX: value.focalPoint.x, focalY: value.focalPoint.y, watermark })
+      .where(eq(media.id, id));
+    // The mark lives in the derived sizes, so a moved or removed mark means new sizes.
+    if (watermark !== before.watermark) await queueMediaProcessing(tx, [id]);
     for (const translation of value.translations) {
       if (translation.altText === null && translation.caption === null) {
         await tx

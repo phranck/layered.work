@@ -109,6 +109,30 @@ export const mediaProcessing = z.object({
 });
 export type MediaProcessing = z.infer<typeof mediaProcessing>;
 
+/**
+ * Where a watermark sits on a picture: a corner, the middle of an edge, or the centre.
+ *
+ * The database enum, the API and the dashboard's select all read this list, so a
+ * position offered in one is accepted by the others.
+ */
+export const WATERMARK_ANCHORS = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "center",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const;
+
+/** One position a watermark can take. */
+export type WatermarkAnchor = (typeof WATERMARK_ANCHORS)[number];
+
+/** A watermark position, or null for a picture that is delivered without one. */
+export const watermark = z.enum(WATERMARK_ANCHORS).nullable();
+
 /** The author's crop anchor, independent of any display ratio. */
 export const focalPoint = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 export type FocalPoint = z.infer<typeof focalPoint>;
@@ -195,10 +219,13 @@ export const mediaDetail = mediaLibraryItem.extend({
   translations: mediaDescriptions,
   processing: mediaProcessing,
   uses: z.array(mediaUse),
+  watermark,
 });
 export type MediaDetail = z.infer<typeof mediaDetail>;
 export const saveMediaMetadataBody = body({
   focalPoint,
+  /** Absent leaves the picture's watermark as it is, so a client that does not know it changes nothing. */
+  watermark: watermark.optional(),
   translations: z
     .array(
       body({

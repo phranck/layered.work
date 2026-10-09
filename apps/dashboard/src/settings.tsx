@@ -207,16 +207,76 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
   );
 }
 
-/** The site's name, its footer line, its language and its fallback sharing picture. */
-export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
+/** Props for a setting that names one picture from the library. */
+interface PictureSettingProps {
+  label: string;
+  hint: string;
+  /** What the field says whilst no picture is chosen. */
+  none: string;
+  mediaId: string | null;
+  /** Where the stored picture can be shown from, as the API answered. */
+  savedUrl: string | null;
+  editable: boolean;
+  onChange: (mediaId: string | null) => void;
+}
+
+/**
+ * A setting that names one library picture: the picture, or what stands in for
+ * none, with a button that removes it and one that opens the picker.
+ *
+ * The address of a picture chosen here is held here, because the API only knows
+ * the address of the one already saved. Saving re-keys the card, which starts
+ * this again from the saved address.
+ */
+function PictureSetting({ label, hint, none, mediaId, savedUrl, editable, onChange }: PictureSettingProps) {
   const { text } = useDashboardLanguage();
   const [picking, setPicking] = useState(false);
-  const [pictureUrl, setPictureUrl] = useState<string | null>(null);
+  const [chosenUrl, setChosenUrl] = useState<string | null>(null);
+  return (
+    <Field label={label} hint={hint}>
+      <div className="media-field">
+        {mediaId ? (
+          <img src={chosenUrl ?? savedUrl ?? ""} alt="" />
+        ) : (
+          <span className="media-field__name">{none}</span>
+        )}
+        <span className="actions media-field__actions">
+          {mediaId && (
+            <Button disabled={!editable} icon={<XIcon weight="duotone" />} onClick={() => onChange(null)}>
+              {text("remove")}
+            </Button>
+          )}
+          <Button
+            disabled={!editable}
+            icon={<ImagesIcon weight="duotone" />}
+            onClick={() => setPicking(true)}
+          >
+            {text("mediaPicker")}
+          </Button>
+        </span>
+      </div>
+      {picking && (
+        <MediaPicker
+          onCancel={() => setPicking(false)}
+          onChoose={(item) => {
+            onChange(item.id);
+            setChosenUrl(item.url);
+            setPicking(false);
+          }}
+        />
+      )}
+    </Field>
+  );
+}
+
+/** The site's name, its footer line, its language, its fallback sharing picture and its watermark. */
+export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
+  const { text } = useDashboardLanguage();
   return (
     <WithSettings
       area={area}
       render={(view) => {
-        const { socialImageUrl, ...saved } = view.site;
+        const { socialImageUrl, watermarkUrl, ...saved } = view.site;
         return (
           <Translated>
             <SettingsCard<"site">
@@ -257,43 +317,24 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                       }
                     />
                   </Field>
-                  <Field label={text("socialImage")} hint={text("socialImageHint")}>
-                    <div className="media-field">
-                      {draft.socialImageMediaId ? (
-                        <img src={pictureUrl ?? socialImageUrl ?? ""} alt="" />
-                      ) : (
-                        <span className="media-field__name">{text("socialImageNone")}</span>
-                      )}
-                      <span className="actions media-field__actions">
-                        {draft.socialImageMediaId && (
-                          <Button
-                            disabled={!editable}
-                            icon={<XIcon weight="duotone" />}
-                            onClick={() => update({ socialImageMediaId: null })}
-                          >
-                            {text("remove")}
-                          </Button>
-                        )}
-                        <Button
-                          disabled={!editable}
-                          icon={<ImagesIcon weight="duotone" />}
-                          onClick={() => setPicking(true)}
-                        >
-                          {text("mediaPicker")}
-                        </Button>
-                      </span>
-                    </div>
-                    {picking && (
-                      <MediaPicker
-                        onCancel={() => setPicking(false)}
-                        onChoose={(item) => {
-                          update({ socialImageMediaId: item.id });
-                          setPictureUrl(item.url);
-                          setPicking(false);
-                        }}
-                      />
-                    )}
-                  </Field>
+                  <PictureSetting
+                    label={text("socialImage")}
+                    hint={text("socialImageHint")}
+                    none={text("socialImageNone")}
+                    mediaId={draft.socialImageMediaId}
+                    savedUrl={socialImageUrl}
+                    editable={editable}
+                    onChange={(socialImageMediaId) => update({ socialImageMediaId })}
+                  />
+                  <PictureSetting
+                    label={text("watermark")}
+                    hint={text("watermarkHint")}
+                    none={text("watermarkWordmark")}
+                    mediaId={draft.watermarkMediaId}
+                    savedUrl={watermarkUrl}
+                    editable={editable}
+                    onChange={(watermarkMediaId) => update({ watermarkMediaId })}
+                  />
                 </>
               )}
             </SettingsCard>

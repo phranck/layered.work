@@ -11,6 +11,7 @@ import {
   navigationHref,
   type PublicSiteFrame,
   type SettingsView,
+  SITE_PICTURE_SETTINGS,
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
@@ -18,8 +19,10 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
 import { config } from "../config.js";
 import type { database } from "../db/connect.js";
-import { auditLog, media, settings, socialAccounts } from "../db/schema/index.js";
+import { auditLog, media, mediaVariants, settings, socialAccounts } from "../db/schema/index.js";
+import { deliveredFile } from "../media/delivery.js";
 import { holdLibraryPicture } from "../media/pictures.js";
+import { queueWatermarkedMedia } from "../media/queue.js";
 import { replaceSettingMediaReferences } from "../media/references.js";
 
 type Database = ReturnType<typeof database>;
@@ -88,6 +91,7 @@ export async function readSettings(db: Database): Promise<SettingsView> {
     site: {
       ...site,
       socialImageUrl: site.socialImageMediaId ? mediaContentUrl(site.socialImageMediaId) : null,
+      watermarkUrl: site.watermarkMediaId ? mediaContentUrl(site.watermarkMediaId) : null,
     },
     mail: { ...readGroup("mail", stored), apiKeyConfigured: Boolean(config.SMTP2GO_API_KEY) },
     analytics: readGroup("analytics", stored),
@@ -96,16 +100,24 @@ export async function readSettings(db: Database): Promise<SettingsView> {
   };
 }
 
+/**
+ * The site group on its own, as it is stored or as its default.
+ *
+ * @param db - The database.
+ */
+export async function readSiteSettings(db: Pick<Database, "select">): Promise<SiteSettings> {
+  const rows = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "site"));
+  return readGroup("site", new Map([["site", rows[0]?.value]]));
+}
+
 /** Public site values are read separately from mail and analytics settings. */
 export async function readPublicSiteFrame(db: Pick<Database, "select">): Promise<PublicSiteFrame> {
-  const rows = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "site"));
-  const site = readGroup("site", new Map([["site", rows[0]?.value]]));
+  const site = await readSiteSettings(db);
   const [picture] = site.socialImageMediaId
-    ? await db
-        .select({ storageKey: media.storageKey })
-        .from(media)
-        .where(eq(media.id, site.socialImageMediaId))
-        .limit(1)
+    ? await db.select().from(media).where(eq(media.id, site.socialImageMediaId)).limit(1)
+    : [];
+  const sizes = picture
+    ? await db.select().from(mediaVariants).where(eq(mediaVariants.mediaId, picture.id))
     : [];
   const accounts = await db
     .select({ platform: socialAccounts.platform, handle: socialAccounts.handle, href: socialAccounts.href })
@@ -115,7 +127,7 @@ export async function readPublicSiteFrame(db: Pick<Database, "select">): Promise
   return {
     title: site.title,
     footerLine: site.footerLine,
-    socialImage: picture ? `/${picture.storageKey}` : null,
+    socialImage: picture ? `/${deliveredFile(picture, sizes).storageKey}` : null,
     social: accounts.filter((account) => navigationHref.safeParse(account.href).success),
   };
 }
@@ -155,13 +167,19 @@ export async function saveSettings<Group extends SettingsGroup>(
   actorUserId: string,
 ): Promise<SettingsView> {
   await db.transaction(async (tx) => {
-    if (group === "site") await requireSharingPicture((value as SiteSettings).socialImageMediaId, tx);
+    if (group === "site") await requireSitePictures(value as SiteSettings, tx);
     const [current] = await tx
       .select({ value: settings.value })
       .from(settings)
       .where(eq(settings.key, group))
       .limit(1);
     const before = readGroup(group, new Map([[group, current?.value]]));
+    // Every watermarked picture carries the mark in its derived sizes, so a new mark means new sizes.
+    if (
+      group === "site" &&
+      (before as SiteSettings).watermarkMediaId !== (value as SiteSettings).watermarkMediaId
+    )
+      await queueWatermarkedMedia(tx);
     const changedKeys = Object.keys(value).filter(
       (key) =>
         JSON.stringify((before as Record<string, unknown>)[key]) !==
@@ -189,11 +207,20 @@ export async function saveSettings<Group extends SettingsGroup>(
   return readSettings(db);
 }
 
+/** What the site is told when one of its picture settings names no raster image. */
+const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
+  socialImageMediaId: "Choose an existing raster image for the sharing picture.",
+  watermarkMediaId: "Choose an existing raster image for the watermark.",
+};
+
 /**
- * Refuses a sharing picture that is not a raster image in the library, because
- * a social card can show nothing else.
+ * Refuses a site picture that is not a raster image in the library, because a
+ * social card and a watermark can use nothing else, and holds each one until the
+ * settings are saved.
  */
-async function requireSharingPicture(mediaId: string | null, db: Pick<Database, "select">): Promise<void> {
-  if (mediaId)
-    await holdLibraryPicture(db, mediaId, "Choose an existing raster image for the sharing picture.");
+async function requireSitePictures(site: SiteSettings, db: Pick<Database, "select">): Promise<void> {
+  for (const key of SITE_PICTURE_SETTINGS) {
+    const mediaId = site[key];
+    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURE_REFUSAL[key]);
+  }
 }
