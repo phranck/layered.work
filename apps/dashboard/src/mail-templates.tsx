@@ -6,12 +6,13 @@ import {
   saveMailTemplateBody,
 } from "@layered/schemas";
 import { Button, Card, Field, Input } from "@layered/ui";
-import { FloppyDiskIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createElement, type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
@@ -65,15 +66,31 @@ export function MailTemplatesScreen() {
           </Card.Body>
         )}
         {list.isSuccess && list.data.length > 0 && (
-          <Card.Body>
-            {list.data.map((template) => (
-              <p key={template.kind}>
-                <Button onClick={() => navigate(`/mail-templates/${template.kind}`)}>
-                  {template.name[language]}
-                </Button>
-              </p>
-            ))}
-          </Card.Body>
+          <DataTable
+            columns={[
+              { kind: "title", label: text("columnName") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {list.data.map((template) => {
+              const open = () => navigate(`/mail-templates/${template.kind}`);
+              return (
+                <DataTable.Row key={template.kind} onOpen={open}>
+                  <DataTable.Cell kind="title">
+                    <DataTable.Title title={template.name[language]} />
+                  </DataTable.Cell>
+                  <DataTable.Actions>
+                    <Button.Icon
+                      label={text("editMailTemplate")}
+                      icon={<PencilSimpleIcon />}
+                      tabIndex={-1}
+                      onClick={open}
+                    />
+                  </DataTable.Actions>
+                </DataTable.Row>
+              );
+            })}
+          </DataTable>
         )}
       </Card>
     </>

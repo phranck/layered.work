@@ -6,11 +6,12 @@ import {
   WATERMARK_ANCHORS,
   type WatermarkAnchor,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, MediaCredit, Row, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Card, Field, Input, MediaCredit, Select, Switch, Textarea } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -183,16 +184,25 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
                 {text("errorId")}: {detail.processing.errorId}
               </p>
             )}
-            <div className="media-detail__variants">
-              {detail.processing.variants.map((variant) => (
-                <Row.Bare key={`${variant.format}-${variant.width}`}>
-                  <Row.Text
-                    title={`${variant.format.toUpperCase()} · ${variant.width} × ${variant.height}`}
-                    note={`${variant.byteSize} B`}
-                  />
-                </Row.Bare>
-              ))}
-            </div>
+            {detail.processing.variants.length > 0 && (
+              <DataTable
+                columns={[
+                  { kind: "text", label: text("columnFormat") },
+                  { kind: "title", label: text("mediaDimensions") },
+                  { kind: "count", label: text("columnBytes") },
+                ]}
+              >
+                {detail.processing.variants.map((variant) => (
+                  <DataTable.Row key={`${variant.format}-${variant.width}`}>
+                    <DataTable.Cell>{variant.format.toUpperCase()}</DataTable.Cell>
+                    <DataTable.Cell kind="title">
+                      {variant.width} × {variant.height}
+                    </DataTable.Cell>
+                    <DataTable.Cell kind="count">{variant.byteSize} B</DataTable.Cell>
+                  </DataTable.Row>
+                ))}
+              </DataTable>
+            )}
           </section>
           <MediaUses uses={detail.uses} />
           {save.isError && <ErrorNotice error={save.error} />}

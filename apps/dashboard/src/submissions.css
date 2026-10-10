@@ -5,20 +5,6 @@
   gap: var(--space-4);
 }
 
-.submissions-controls {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.submissions-row {
-  width: 100%;
-  text-align: left;
-}
-
-.submissions-row[data-status="unread"] .row__title {
-  font-weight: 700;
-}
-
 .submissions-detail {
   display: grid;
   gap: var(--space-2);

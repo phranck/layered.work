@@ -1,11 +1,12 @@
 import type { FormSubmission, FormSubmissionStatus } from "@layered/schemas";
-import { Button, Card, Field, Input, Row, RowList, Select } from "@layered/ui";
+import { Button, Card, Select } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
@@ -39,6 +40,9 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const field = useTableSearch();
+  // One formatter per language rather than one per row and render, in the form the Posts list uses.
+  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
   const forms = useQuery({ queryKey: ["forms"], queryFn: api.fetchForms });
   const formId = selectedFormId || forms.data?.[0]?.id || "";
   const form = forms.data?.find((item) => item.id === formId);
@@ -88,22 +92,17 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
             title={text("formSubmissions")}
             meta={submissions.data?.length}
             actions={
-              form && (
-                <Button.Link href={`${__API_BASE__}/forms/${formId}/submissions/export`} download>
-                  {text("submissionsExport")}
-                </Button.Link>
-              )
-            }
-          />
-          <Card.Body className="submissions-controls">
-            {forms.isError && <ErrorNotice error={forms.error} />}
-            {submissions.isError && <ErrorNotice error={submissions.error} />}
-            {forms.data?.length === 0 && <p>{text("formsEmpty")}</p>}
-            {forms.data && forms.data.length > 0 && (
-              <>
-                <Field label={text("submissionForm")} htmlFor="submissions-form">
+              forms.data &&
+              forms.data.length > 0 && (
+                <>
+                  <DataTable.Search
+                    label={text("submissionsSearch")}
+                    value={search}
+                    onChange={setSearch}
+                    search={field}
+                  />
                   <Select
-                    id="submissions-form"
+                    aria-label={text("submissionForm")}
                     options={forms.data.map((item) => ({ value: item.id, label: item.name }))}
                     value={formId}
                     onChange={(event) => {
@@ -112,42 +111,55 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                       setSearch("");
                     }}
                   />
-                </Field>
-                <Field label={text("submissionsSearch")} htmlFor="submissions-search">
-                  <Input
-                    id="submissions-search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                  />
-                </Field>
-              </>
-            )}
-          </Card.Body>
+                  {form && (
+                    <Button.Link href={`${__API_BASE__}/forms/${formId}/submissions/export`} download>
+                      {text("submissionsExport")}
+                    </Button.Link>
+                  )}
+                </>
+              )
+            }
+          />
+          {(forms.isError || submissions.isError || forms.data?.length === 0) && (
+            <Card.Body>
+              {forms.isError && <ErrorNotice error={forms.error} />}
+              {submissions.isError && <ErrorNotice error={submissions.error} />}
+              {forms.data?.length === 0 && <p>{text("formsEmpty")}</p>}
+            </Card.Body>
+          )}
           {matches && matches.length === 0 && (
             <Card.Body>
               <p>{search ? text("submissionsNoMatch") : text("submissionsEmpty")}</p>
             </Card.Body>
           )}
           {matches && matches.length > 0 && (
-            <RowList.Divided>
+            <DataTable
+              bodyRef={field.bodyRef}
+              onLeaveTop={field.onLeaveTop}
+              columns={[
+                { kind: "title", label: text("submission") },
+                { kind: "state", label: text("columnState") },
+                { kind: "date", label: text("columnDate") },
+              ]}
+            >
               {matches.map((submission) => (
-                <Row.Button
+                <DataTable.Row
                   key={submission.id}
-                  className="submissions-row"
-                  data-status={submission.status}
-                  aria-current={selectedId === submission.id ? "true" : undefined}
-                  onClick={() => setSelectedId(submission.id)}
+                  active={selectedId === submission.id}
+                  onOpen={() => setSelectedId(submission.id)}
                 >
-                  <Row.Text
-                    title={preview(submission)}
-                    note={new Date(submission.createdAt).toLocaleString(
-                      language === "de" ? "de-AT" : "en-GB",
-                    )}
-                  />
-                  <Row.Meta>{text(STATUS_TEXT[submission.status])}</Row.Meta>
-                </Row.Button>
+                  <DataTable.Cell kind="title">
+                    <DataTable.Title title={preview(submission)} />
+                  </DataTable.Cell>
+                  <DataTable.Cell kind="state">{text(STATUS_TEXT[submission.status])}</DataTable.Cell>
+                  <DataTable.Cell kind="date">
+                    <time dateTime={submission.createdAt}>
+                      {dates.format(new Date(submission.createdAt))}
+                    </time>
+                  </DataTable.Cell>
+                </DataTable.Row>
               ))}
-            </RowList.Divided>
+            </DataTable>
           )}
         </Card>
         {selected && form && (

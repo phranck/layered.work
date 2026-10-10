@@ -1,12 +1,13 @@
 import { type CreateFormBody, createFormBody, type FormField, type FormFieldType } from "@layered/schemas";
 import { Button, Card, Editor, Field, FormControls, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, PlusIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -46,20 +47,33 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
           </Card.Body>
         )}
         {list.isSuccess && list.data.length > 0 && (
-          <div className="forms-list">
-            {list.data.map((form) => (
-              <button
-                key={form.id}
-                type="button"
-                className="forms-list__row"
-                onClick={() => navigate(`/${area.path}/${form.id}`)}
-              >
-                <span>{form.name}</span>
-                <code>{form.slug}</code>
-                <span>{text("formFieldCount", form.fields.length)}</span>
-              </button>
-            ))}
-          </div>
+          <DataTable
+            columns={[
+              { kind: "title", label: text("columnName") },
+              { kind: "count", label: text("columnFields") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {list.data.map((form) => {
+              const open = () => navigate(`/${area.path}/${form.id}`);
+              return (
+                <DataTable.Row key={form.id} onOpen={open}>
+                  <DataTable.Cell kind="title">
+                    <DataTable.Title title={form.name} note={form.slug} />
+                  </DataTable.Cell>
+                  <DataTable.Cell kind="count">{form.fields.length}</DataTable.Cell>
+                  <DataTable.Actions>
+                    <Button.Icon
+                      label={text("editForm")}
+                      icon={<PencilSimpleIcon />}
+                      tabIndex={-1}
+                      onClick={open}
+                    />
+                  </DataTable.Actions>
+                </DataTable.Row>
+              );
+            })}
+          </DataTable>
         )}
       </Card>
     </>
