@@ -1,10 +1,12 @@
 import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
 import { Button, Card, Field, Input, Switch } from "@layered/ui";
+import { TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
@@ -50,13 +52,10 @@ export function AccessTokensScreen() {
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
   });
-  const timestamp = (value: string | null) =>
-    value
-      ? new Intl.DateTimeFormat(language === "de" ? "de-AT" : "en-GB", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(new Date(value))
-      : text("tokenNever");
+  // One formatter per language rather than one per row and render, in the form the Posts list uses.
+  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
+  const dateOf = (value: string | null) =>
+    value ? <time dateTime={value}>{dates.format(new Date(value))}</time> : text("tokenNever");
 
   return (
     <>
@@ -135,23 +134,42 @@ export function AccessTokensScreen() {
             <p>{text("tokensEmpty")}</p>
           </Card.Body>
         )}
-        {tokens.data?.map((token) => (
-          <Card.Body key={token.id}>
-            <strong>{token.name}</strong>
-            <p>{token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}</p>
-            <p>
-              {text("tokenLastUse")}: {timestamp(token.lastUsedAt)} · {text("tokenExpires")}:{" "}
-              {timestamp(token.expiresAt)}
-            </p>
-            {token.revokedAt ? (
-              <p>{text("tokenRevoked")}</p>
-            ) : (
-              <Button tone="danger" onClick={() => setRevoking(token)}>
-                {text("tokenRevoke")}
-              </Button>
-            )}
-          </Card.Body>
-        ))}
+        {tokens.isSuccess && tokens.data.length > 0 && (
+          <DataTable
+            columns={[
+              { kind: "title", label: text("columnName") },
+              { kind: "state", label: text("columnState") },
+              { kind: "date", label: text("tokenLastUse") },
+              { kind: "date", label: text("tokenExpires") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {tokens.data.map((token) => (
+              <DataTable.Row key={token.id}>
+                <DataTable.Cell kind="title">
+                  <DataTable.Title
+                    title={token.name}
+                    note={token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}
+                  />
+                </DataTable.Cell>
+                <DataTable.Cell kind="state">
+                  {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
+                </DataTable.Cell>
+                <DataTable.Cell kind="date">{dateOf(token.lastUsedAt)}</DataTable.Cell>
+                <DataTable.Cell kind="date">{dateOf(token.expiresAt)}</DataTable.Cell>
+                <DataTable.Actions>
+                  {!token.revokedAt && (
+                    <Button.Icon
+                      label={text("tokenRevoke")}
+                      icon={<TrashIcon />}
+                      onClick={() => setRevoking(token)}
+                    />
+                  )}
+                </DataTable.Actions>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        )}
       </Card>
       {revoking && (
         <ConfirmDialog

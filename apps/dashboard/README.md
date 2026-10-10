@@ -14,6 +14,8 @@ A bar runs across the top of the content, right of the sidebar, and stays in pla
 
 Posts, pages and projects are one screen with a different kind. It reads `GET /entries?kind=…`, which returns one row per translation, newest first. The search field and the state and language filters narrow that list in the browser, and the figures above it are counted from the rows the table shows. A row opens the entry at `/<area>/<translation id>`.
 
+Every table of the dashboard is drawn by `DataTable` (`src/data-table.tsx`), which carries this list's shape: topics, forms, mail templates, submissions, access tokens, named values and a picture's sizes. A column's kind sets its width and alignment, a row that opens something is the target as a whole by pointer and by keyboard, and the search field in a card's header walks into the rows with the arrow keys.
+
 ## Entry editor
 
 An open entry is written in CodeMirror 6 (`src/content-editor.tsx`), which parses with the content language's own Lezer extension, so the editor's tree is the server's tree. The toolbar inserts Markdown, and it inserts every component of the register (`src/editor-toolbar.ts`). Every tool is an icon whose tooltip and accessible label name what it inserts, and a register component without an icon fails the type check.
