@@ -1,5 +1,6 @@
 import { validateContent } from "@layered/content";
 import {
+  addressWithSlug,
   type ContentLanguage,
   type CreateEntryBody,
   type EmptiedTrash,
@@ -8,12 +9,14 @@ import {
   type EntryList,
   type EntryTrashImpact,
   ErrorCode,
+  numberedSlug,
+  otherLanguage,
   RESERVED_PATHS,
   type SaveEntryBody,
   slugFromTitle,
 } from "@layered/schemas";
 import { and, desc, eq, inArray, isNotNull, ne, type SQLWrapper, sql } from "drizzle-orm";
-import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
+import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
 import {
@@ -30,6 +33,7 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { rasterImage } from "../media/pictures.js";
 import { replaceMediaReferences } from "../media/references.js";
 import { readSettings } from "../settings/repository.js";
 import { hasRasterPicture, storeSocialCard, withCardObjects } from "../social/store.js";
@@ -157,14 +161,7 @@ export async function listEntries(db: Database, kind: EntryKind): Promise<EntryL
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .leftJoin(
-      media,
-      and(
-        eq(media.id, entryTranslations.featuredMediaId),
-        eq(media.kind, "image"),
-        inArray(media.mimeType, RASTER_MIME_TYPES),
-      ),
-    )
+    .leftJoin(media, and(eq(media.id, entryTranslations.featuredMediaId), rasterImage()))
     .where(eq(entries.kind, kind))
     .orderBy(desc(date), desc(entryTranslations.id));
 
@@ -214,14 +211,7 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .leftJoin(
-      media,
-      and(
-        eq(media.id, entryTranslations.featuredMediaId),
-        eq(media.kind, "image"),
-        inArray(media.mimeType, RASTER_MIME_TYPES),
-      ),
-    )
+    .leftJoin(media, and(eq(media.id, entryTranslations.featuredMediaId), rasterImage()))
     .where(eq(entryTranslations.id, id))
     .limit(1);
   if (!row) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
@@ -295,23 +285,6 @@ async function requirePublishableContent(
       `Cannot publish: ${(failure.component ?? "Content").slice(0, 100)} has ${failure.code} at ${failure.line}:${failure.column}. Correct this content error first.`,
     );
   }
-}
-
-/**
- * The address a translation answers at with its last segment replaced.
- *
- * Every segment before the last stays, because it follows from what the entry
- * is: its language prefix, or the section a migrated project sits in. A
- * translation without an address gets one carrying its language, as everything
- * written after the migration does.
- *
- * @param current - Its current address, or null where it has none.
- * @param language - Its language.
- * @param slug - The new last segment.
- */
-export function addressWithSlug(current: string | null, language: ContentLanguage, slug: string): string {
-  const parents = current ? current.split("/").filter(Boolean).slice(0, -1) : [language];
-  return `/${[...parents, slug].join("/")}/`;
 }
 
 /**
@@ -549,7 +522,7 @@ export async function createTranslation(
       .limit(1);
     if (!source) throw new HttpError(ErrorCode.NotFound, "There is no entry with this id.");
 
-    const language = source.language === "en" ? "de" : "en";
+    const language = otherLanguage(source.language);
     const [existing] = await tx
       .select({ id: entryTranslations.id })
       .from(entryTranslations)
@@ -563,9 +536,8 @@ export async function createTranslation(
       .where(and(eq(paths.translationId, id), eq(paths.isCurrent, true)))
       .limit(1);
     const segment = sourcePath?.path.split("/").filter(Boolean).at(-1) ?? slugFromTitle(source.title);
-    const candidates = Array.from(
-      { length: ADDRESS_ATTEMPTS },
-      (_, attempt) => `/${language}/${attempt === 0 ? segment : `${segment}-${attempt + 1}`}/`,
+    const candidates = Array.from({ length: ADDRESS_ATTEMPTS }, (_, attempt) =>
+      addressWithSlug(null, language, numberedSlug(segment, attempt)),
     );
     const taken = new Set([
       ...RESERVED_PATHS,

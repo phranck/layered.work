@@ -1,3 +1,4 @@
+import type { ContentLanguage } from "@layered/schemas";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { parseContent } from "../parser/index.js";
 import { NODE } from "../parser/nodes.js";
@@ -32,7 +33,7 @@ export type RenderOptions = {
   /** Which register to read. The real one unless a test says otherwise. */
   register?: Register;
   /** The language whose quotation marks the finished prose uses. */
-  language?: "en" | "de";
+  language?: ContentLanguage;
 };
 
 /** The document, the register, and the link targets it defines. */
@@ -43,7 +44,7 @@ type Context = {
   references: Map<string, string>;
   /** Heading anchors already assigned in this document, including nested bodies. */
   headingIds: Set<string>;
-  language?: "en" | "de";
+  language?: ContentLanguage;
   doubleQuoteOpen: boolean;
   singleQuoteOpen: boolean;
 };

@@ -1,7 +1,7 @@
 import {
   createNamedValueBody,
+  idParam,
   namedValue,
-  namedValueIdParam,
   namedValueList,
   updateNamedValueBody,
 } from "@layered/schemas";
@@ -39,7 +39,7 @@ valueRoutes.post("/", requireOwner, validate("json", createNamedValueBody), resp
 valueRoutes.put(
   "/:id",
   requireOwner,
-  validate("param", namedValueIdParam),
+  validate("param", idParam),
   validate("json", updateNamedValueBody),
   responds(namedValue),
   async (c) =>
@@ -49,13 +49,7 @@ valueRoutes.put(
     ),
 );
 
-valueRoutes.delete(
-  "/:id",
-  requireOwner,
-  validate("param", namedValueIdParam),
-  responds(z.null()),
-  async (c) => {
-    await deleteNamedValue(database(), c.req.valid("param").id, principalOf(c).userId);
-    return ok(c, null);
-  },
-);
+valueRoutes.delete("/:id", requireOwner, validate("param", idParam), responds(z.null()), async (c) => {
+  await deleteNamedValue(database(), c.req.valid("param").id, principalOf(c).userId);
+  return ok(c, null);
+});

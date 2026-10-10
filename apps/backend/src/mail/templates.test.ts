@@ -1,3 +1,4 @@
+import { MAIL_ELEMENTS } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_MAIL_TEMPLATES, renderMailTemplate, validateMailTemplate } from "./templates.js";
 
@@ -63,5 +64,23 @@ describe("mail template rendering", () => {
         body: { ...template.body, en: "[bad](javascript:alert(1))" },
       }),
     ).toThrow("HTTP or HTTPS");
+  });
+
+  it("renders only the elements the dashboard's preview rebuilds", () => {
+    const template = {
+      ...DEFAULT_MAIL_TEMPLATES.submission_notification,
+      body: {
+        en: "Line one\nline two with *emphasis* and **strength**\n\n1. [First](https://layered.work)\n2. Second\n\n- Bullet",
+        de: "Zeile",
+      },
+    };
+    const rendered = renderMailTemplate(template, "en", {
+      formName: "Contact",
+      submittedAt: "today",
+      fields: "Name: Ada",
+      consents: "none",
+    });
+    const elements = new Set([...rendered.html.matchAll(/<([a-z]+)[\s>]/g)].map((match) => match[1]));
+    expect([...elements].sort()).toEqual([...MAIL_ELEMENTS].sort());
   });
 });

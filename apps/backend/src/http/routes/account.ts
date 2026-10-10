@@ -1,19 +1,6 @@
-import {
-  accountMediaPage,
-  accountMediaQuery,
-  accountProfile,
-  binaryContent,
-  ErrorCode,
-  updateAccountBody,
-} from "@layered/schemas";
+import { accountProfile, binaryContent, ErrorCode, idParam, updateAccountBody } from "@layered/schemas";
 import { Hono } from "hono";
-import { z } from "zod";
-import {
-  getAccountMediaObject,
-  getAccountProfile,
-  listAccountMedia,
-  updateAccountProfile,
-} from "../../account/repository.js";
+import { getAccountMediaObject, getAccountProfile, updateAccountProfile } from "../../account/repository.js";
 import { observeMediaStream } from "../../account/stream.js";
 import { database } from "../../db/connect.js";
 import { isUniqueViolation } from "../../db/unique-violation.js";
@@ -24,9 +11,7 @@ import { principalOf, requireSession } from "../require-session.js";
 import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
-const mediaIdParam = z.object({ id: z.uuid() });
-
-/** The signed-in author's profile and portrait-library endpoints. */
+/** The signed-in author's profile, and the library pictures the dashboard reads through it. */
 export const account = new Hono();
 
 account.use("*", requireSession);
@@ -46,13 +31,9 @@ account.patch("/", validate("json", updateAccountBody), responds(accountProfile)
   }
 });
 
-account.get("/media", validate("query", accountMediaQuery), responds(accountMediaPage), async (c) =>
-  ok(c, await listAccountMedia(database(), c.req.valid("query"))),
-);
-
 account.get(
   "/media/:id/content",
-  validate("param", mediaIdParam),
+  validate("param", idParam),
   responds(binaryContent, { envelope: false, mediaType: "application/octet-stream" }),
   async (c) => {
     const object = await getAccountMediaObject(database(), c.req.valid("param").id);

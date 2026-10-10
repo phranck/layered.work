@@ -1,4 +1,5 @@
 import type { ComponentName, PropsOf } from "@layered/content";
+import type { MediaCreditLine } from "@layered/schemas";
 import { SPACE_STEPS } from "@layered/tokens";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -28,24 +29,6 @@ export interface MediaAsset {
   credit?: MediaCreditLine;
 }
 
-/**
- * The credit a picture from a picture library elsewhere carries, worded in the
- * page's language by whoever resolves the asset.
- *
- * It reads as one sentence: lead, author, joiner, source, such as "Photo by Jane
- * Doe on Unsplash".
- */
-export interface MediaCreditLine {
-  /** The words before the author's name, such as "Photo by". */
-  lead: string;
-  author: string;
-  /** The author's page at that library, with whatever parameters it asks links to carry. */
-  authorUrl: string;
-  /** The words between the author and the library, such as "on". */
-  joiner: string;
-  source: string;
-  sourceUrl: string;
-}
 /** Resolve a library slug without coupling UI to storage or an API. */
 export type MediaResolver = (slug: string) => MediaAsset | undefined;
 /** The library supplied to a media component. */

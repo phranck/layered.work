@@ -1,5 +1,12 @@
 import { mediaReferences as authoredMedia, type RenderNode, renderContent } from "@layered/content";
-import { ErrorCode, listingSettings } from "@layered/schemas";
+import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  ErrorCode,
+  exportMediaPath,
+  LISTING_GROUP,
+  listingSettings,
+} from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import {
@@ -21,8 +28,8 @@ export function referencedMediaIds(body: string, assets: readonly Asset[]): stri
   const keys = new Map<string, string>();
   for (const asset of assets) {
     keys.set(`/${asset.storageKey}`, asset.id);
-    if (asset.storageKey.startsWith("migration/"))
-      keys.set(`/media/${asset.storageKey.slice("migration/".length)}`, asset.id);
+    const exported = exportMediaPath(asset.storageKey);
+    if (exported) keys.set(exported, asset.id);
   }
   const found = new Set(
     authoredMedia(body).flatMap(({ slug }) => {
@@ -82,10 +89,10 @@ export async function replaceMediaReferences(tx: Transaction, id: string, body: 
 export async function replaceSettingMediaReferences(
   tx: Transaction,
   key: string,
-  introduction: { en: string; de: string },
+  introduction: Record<ContentLanguage, string>,
 ) {
   const references = [];
-  for (const language of ["en", "de"] as const) {
+  for (const language of CONTENT_LANGUAGES) {
     for (const mediaId of await pinReferencedMedia(tx, introduction[language]))
       references.push({ settingsKey: key, language, mediaId });
   }
@@ -106,7 +113,7 @@ export async function rebuildMediaReferenceIndex(db: Database) {
     const listings = await tx
       .select()
       .from(settings)
-      .where(inArray(settings.key, ["postListing", "projectListing"]))
+      .where(inArray(settings.key, Object.values(LISTING_GROUP)))
       .orderBy(asc(settings.key))
       .for("update");
     for (const listing of listings) {

@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { CONTENT_LANGUAGES, type ContentLanguage } from "./entries.js";
+import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  inBothLanguages,
+  inEachLanguage,
+  languagePath,
+} from "./entries.js";
 import { navigationHref } from "./navigation.js";
-import { body, emailAddress, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text, withoutControlCharacters } from "./request.js";
 
 /**
  * What belongs to the site as a whole rather than to any entry.
@@ -15,9 +21,6 @@ import { body, emailAddress, MaxLength, text } from "./request.js";
  * environment variable from the platform's secret store, and the dashboard is
  * only told whether it is there.
  */
-
-/** A value written in both languages of the site. */
-const inBothLanguages = <Schema extends z.ZodType>(value: Schema) => z.strictObject({ en: value, de: value });
 
 /**
  * The site's own values: its name, its footer line, its language, its fallback
@@ -57,17 +60,16 @@ export type PublicSiteFrame = z.infer<typeof publicSiteFrame>;
 /**
  * A sender name, which becomes part of a mail header.
  *
- * Angle brackets, quotes and control characters are refused, because a name is
- * written into `Name <address>` and any of them could close that form and start
- * another header.
+ * Angle brackets, quotes, backslashes and control characters are refused,
+ * because a name is written into `Name <address>` and any of them could close
+ * that form and start another header.
  */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: Control characters are what this refuses.
-const SENDER_NAME = /^[^<>"\\\u0000-\u001f\u007f]+$/;
+const senderName = text(MaxLength.Line, { pattern: /^[^<>"\\]+$/ }).refine(withoutControlCharacters);
 
 /** Who mail comes from. The address has to be verified at SMTP2GO before anything sends from it. */
 export const mailSettings = body({
   senderAddress: emailAddress.nullable(),
-  senderName: text(MaxLength.Line, { pattern: SENDER_NAME }),
+  senderName,
 });
 export type MailSettings = z.infer<typeof mailSettings>;
 
@@ -86,8 +88,8 @@ export type ListedKind = (typeof LISTED_KINDS)[number];
  * page found at one of these into that overview's introduction.
  */
 export const LISTING_PATHS: Record<ListedKind, Record<ContentLanguage, string>> = {
-  post: { en: "/posts/", de: "/de/posts/" },
-  project: { en: "/projects/", de: "/de/projects/" },
+  post: inEachLanguage((language) => languagePath(language, "posts")),
+  project: inEachLanguage((language) => languagePath(language, "projects")),
 };
 
 /**

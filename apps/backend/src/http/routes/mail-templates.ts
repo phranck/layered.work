@@ -1,4 +1,5 @@
 import {
+  type ContentLanguage,
   ErrorCode,
   mailTemplate,
   mailTemplateKind,
@@ -17,6 +18,7 @@ import { requireMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import {
   listMailTemplates,
+  type MailTemplateValues,
   mailTemplateDraft,
   readMailTemplate,
   renderMailTemplate,
@@ -29,7 +31,8 @@ import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
 const kindParam = z.object({ kind: mailTemplateKind });
-const samples = {
+/** What a preview fills the placeholders with. The notification uses every one there is. */
+const samples: MailTemplateValues<"submission_notification"> = {
   formName: "Contact",
   submittedAt: "5 October 2026, 10:00",
   fields: "Name: Ada\nEmail: ada@example.test",
@@ -39,7 +42,7 @@ const samples = {
 function rendered(
   kind: z.infer<typeof mailTemplateKind>,
   value: z.infer<typeof saveMailTemplateBody>,
-  language: "en" | "de",
+  language: ContentLanguage,
 ) {
   try {
     return renderMailTemplate(mailTemplateDraft(kind, value), language, samples);

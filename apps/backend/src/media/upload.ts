@@ -3,7 +3,9 @@ import {
   type AcceptedImageType,
   type CreateUploadBody,
   ErrorCode,
+  numberedSlug,
   slugFromTitle,
+  UPLOAD_KEY_PREFIX,
   type UploadedMedia,
   type UploadTicket,
 } from "@layered/schemas";
@@ -15,6 +17,7 @@ import { auditActor } from "../auth/audit-actor.js";
 import { auditLog, media, mediaJobs } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
+import { DECODED_IMAGE_TYPES } from "./decoded-format.js";
 import { deleteMediaObject, readMediaBytes, uploadTarget } from "./storage.js";
 import { issueUploadToken, readUploadToken } from "./upload-token.js";
 
@@ -39,15 +42,6 @@ const KEY_BYTES = 16;
 /** How many numbered slugs are tried before an upload gives up on a name. */
 const SLUG_ATTEMPTS = 50;
 
-/** What sharp calls each accepted type. AVIF is decoded as HEIF with AV1 inside. */
-const DECODED_TYPE: Record<string, AcceptedImageType> = {
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  gif: "image/gif",
-  heif: "image/avif",
-};
-
 /**
  * A file name reduced to what a slug may hold: the extension goes, and the rest
  * is written as every slug of the project is. The name reaches nothing else:
@@ -66,7 +60,7 @@ export function slugStem(filename: string): string {
  * @param userId - Who is asking, which the token records.
  */
 export async function createUpload(request: CreateUploadBody, userId: string): Promise<UploadTicket> {
-  const storageKey = `uploads/${randomBytes(KEY_BYTES).toString("base64url")}`;
+  const storageKey = `${UPLOAD_KEY_PREFIX}${randomBytes(KEY_BYTES).toString("base64url")}`;
   const token = issueUploadToken({
     storageKey,
     slug: slugStem(request.filename),
@@ -123,7 +117,7 @@ export async function completeUpload(
   try {
     const metadata = await sharp(bytes).metadata();
     decoded = {
-      type: DECODED_TYPE[metadata.format ?? ""],
+      type: DECODED_IMAGE_TYPES[metadata.format ?? ""],
       // The dimensions a reader sees, with the photograph's rotation applied.
       width: metadata.autoOrient?.width ?? metadata.width ?? 0,
       height: metadata.autoOrient?.height ?? metadata.height ?? 0,
@@ -220,8 +214,8 @@ export async function insertUnderFreeSlug<Row>(
     slug: string,
   ) => Promise<Row | undefined>,
 ): Promise<Row | undefined> {
-  for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt++) {
-    const slug = attempt === 1 ? stem : `${stem}-${attempt}`;
+  for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt++) {
+    const slug = numberedSlug(stem, attempt);
     const row = await db.transaction((tx) => write(tx, slug));
     if (row) return row;
   }

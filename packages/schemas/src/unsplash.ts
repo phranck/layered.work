@@ -77,8 +77,25 @@ export function unsplashReferral(address: string): string {
   return url.href;
 }
 
+/**
+ * The credit a picture from a picture library elsewhere carries, worded for one
+ * page. It reads as one sentence: lead, author, joiner, source, such as "Photo
+ * by Jane Doe on Unsplash", with both names linked.
+ */
+export interface MediaCreditLine {
+  /** The words before the author's name, such as "Photo by". */
+  lead: string;
+  author: string;
+  /** The author's page at that library, with whatever parameters it asks links to carry. */
+  authorUrl: string;
+  /** The words between the author and the library, such as "on". */
+  joiner: string;
+  source: string;
+  sourceUrl: string;
+}
+
 /** The words of an Unsplash credit in each language, in the form Unsplash recommends. */
-const CREDIT_WORDS: Record<ContentLanguage, { lead: string; joiner: string }> = {
+const CREDIT_WORDS: Record<ContentLanguage, Pick<MediaCreditLine, "lead" | "joiner">> = {
   en: { lead: "Photo by", joiner: "on" },
   de: { lead: "Foto von", joiner: "auf" },
 };
@@ -93,7 +110,7 @@ const CREDIT_WORDS: Record<ContentLanguage, { lead: string; joiner: string }> = 
  * @param credit - Who took the photo.
  * @param language - The language of the page or the interface showing it.
  */
-export function unsplashCreditLine(credit: MediaCredit, language: ContentLanguage) {
+export function unsplashCreditLine(credit: MediaCredit, language: ContentLanguage): MediaCreditLine {
   return {
     ...CREDIT_WORDS[language],
     author: credit.photographer,

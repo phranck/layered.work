@@ -18,6 +18,26 @@ export type EntryKind = (typeof ENTRY_KINDS)[number];
 export const PUBLICATION_STATES = ["public", "draft", "hidden"] as const;
 export type PublicationState = (typeof PUBLICATION_STATES)[number];
 
+/**
+ * The states a reader may reach.
+ *
+ * `public` appears everywhere, and `hidden` answers at its own address whilst
+ * staying out of every listing. `draft` is neither, so every query that reads
+ * what the site may show filters by this list rather than by a condition of its
+ * own.
+ */
+export const READABLE_STATES = ["public", "hidden"] as const satisfies readonly PublicationState[];
+export type ReadableState = (typeof READABLE_STATES)[number];
+
+/**
+ * Whether a reader may reach a translation in this state.
+ *
+ * @param state - A publication state, or a wider label such as the snapshot's `trashed`.
+ */
+export function isReadable(state: string): state is ReadableState {
+  return (READABLE_STATES as readonly string[]).includes(state);
+}
+
 /** The languages the site is written in. */
 export const CONTENT_LANGUAGES = ["en", "de"] as const;
 export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
@@ -70,9 +90,6 @@ export type EntryListItem = z.infer<typeof entryListItem>;
 /** The entry list, newest first. */
 export const entryList = z.array(entryListItem);
 export type EntryList = z.infer<typeof entryList>;
-
-/** The translation an address names, as a path parameter. */
-export const entryIdParam = z.strictObject({ id: z.uuid() });
 
 /**
  * How many specification pairs one translation may carry. The project page
@@ -231,3 +248,58 @@ export type EntryPreview = z.infer<typeof entryPreview>;
 
 /** A preview token as a path parameter. */
 export const previewTokenParam = z.strictObject({ token: signedToken(512) });
+
+/**
+ * A value written in each language of the site, such as a title in English and
+ * in German.
+ *
+ * Built from `CONTENT_LANGUAGES`, so every bilingual field takes a third
+ * language the day the list does. Strict, as every request body is.
+ *
+ * @param value - What each language holds.
+ */
+export function inBothLanguages<Schema extends z.ZodType>(value: Schema) {
+  return z.strictObject(inEachLanguage(() => value));
+}
+
+/**
+ * One value for each language of the site, worked out per language.
+ *
+ * @param valueFor - What one language holds.
+ */
+export function inEachLanguage<Value>(
+  valueFor: (language: ContentLanguage) => Value,
+): Record<ContentLanguage, Value> {
+  return Object.fromEntries(CONTENT_LANGUAGES.map((language) => [language, valueFor(language)])) as Record<
+    ContentLanguage,
+    Value
+  >;
+}
+
+/**
+ * Where each language's pages begin on the site: English at the root, German
+ * below `/de/`. Every address the site, the API and the import build for a
+ * language starts here.
+ */
+export const LANGUAGE_ROOTS: Record<ContentLanguage, string> = { en: "/", de: "/de/" };
+
+/**
+ * An address below a language's root, with a slash after every segment as the
+ * site writes its addresses, such as `/de/topics/werkzeug/`.
+ *
+ * @param language - Whose root it starts from.
+ * @param segments - The segments below that root, each without slashes.
+ */
+export function languagePath(language: ContentLanguage, ...segments: readonly string[]): string {
+  return `${LANGUAGE_ROOTS[language]}${segments.map((segment) => `${segment}/`).join("")}`;
+}
+
+/**
+ * The site's other language, which a translation is made into and a page's
+ * language switch leads to.
+ *
+ * @param language - The language at hand.
+ */
+export function otherLanguage(language: ContentLanguage): ContentLanguage {
+  return language === "en" ? "de" : "en";
+}

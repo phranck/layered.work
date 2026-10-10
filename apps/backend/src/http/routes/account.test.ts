@@ -1,4 +1,4 @@
-import { accountMediaPage, accountProfile, ErrorCode, readApiError } from "@layered/schemas";
+import { accountProfile, ErrorCode, readApiError } from "@layered/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logger } from "../../logger.js";
 import { REQUEST_ID_HEADER } from "../request-id.js";
@@ -6,7 +6,6 @@ import { REQUEST_ID_HEADER } from "../request-id.js";
 const repository = vi.hoisted(() => ({
   getAccountMediaObject: vi.fn(),
   getAccountProfile: vi.fn(),
-  listAccountMedia: vi.fn(),
   updateAccountProfile: vi.fn(),
 }));
 const storage = vi.hoisted(() => ({ readMediaObject: vi.fn() }));
@@ -139,44 +138,6 @@ describe("the account API", () => {
     expect(readApiError(JSON.parse(text))?.code).toBe(ErrorCode.Conflict);
     expect(text).not.toContain("users_email_unique");
     expect(text).not.toContain("taken@example.com");
-  });
-
-  it("returns a real paginated raster-image library", async () => {
-    readSession.mockResolvedValue(principal);
-    const page = {
-      items: [
-        {
-          id: avatarMediaId,
-          slug: "portrait",
-          url: `/api/account/media/${avatarMediaId}/content`,
-          width: 800,
-          height: 800,
-        },
-      ],
-      page: 2,
-      hasMore: true,
-    };
-    repository.listAccountMedia.mockResolvedValue(page);
-
-    const response = await app.request("/account/media?search=port&page=2", {
-      headers: { cookie: "layered_session=signed" },
-    });
-    const body = (await response.json()) as { data: unknown };
-
-    expect(response.status).toBe(200);
-    expect(accountMediaPage.parse(body.data)).toEqual(page);
-    expect(repository.listAccountMedia).toHaveBeenCalledWith(expect.anything(), { search: "port", page: 2 });
-  });
-
-  it("refuses an unreasonably large media page before querying", async () => {
-    readSession.mockResolvedValue(principal);
-
-    const response = await app.request("/account/media?page=1000001", {
-      headers: { cookie: "layered_session=signed" },
-    });
-
-    expect(response.status).toBe(400);
-    expect(repository.listAccountMedia).not.toHaveBeenCalled();
   });
 
   it("streams a stored raster image through the authenticated API with private headers", async () => {

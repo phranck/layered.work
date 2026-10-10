@@ -1,6 +1,12 @@
-import { ErrorCode, type FooterNavigation, type SaveFooterNavigationBody } from "@layered/schemas";
+import {
+  CONTENT_LANGUAGES,
+  ErrorCode,
+  type FooterNavigation,
+  type SaveFooterNavigationBody,
+} from "@layered/schemas";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { database } from "../db/connect.js";
+import { type Position, writePositions } from "../db/positions.js";
 import {
   auditLog,
   entries,
@@ -156,7 +162,7 @@ export async function saveFooterNavigation(
         await tx.update(navigationItems).set({ parentId: null }).where(eq(navigationItems.id, item.id));
     }
     if (removed.length) await tx.delete(navigationItems).where(inArray(navigationItems.id, removed));
-    for (const language of ["en", "de"] as const) {
+    for (const language of CONTENT_LANGUAGES) {
       await tx
         .insert(navigationTranslations)
         .values({ navigationId, language, title: value.title[language] })
@@ -188,7 +194,7 @@ export async function saveFooterNavigation(
         if (!created) throw new Error("Navigation item insert returned no id");
         itemId = created.id;
       }
-      for (const language of ["en", "de"] as const) {
+      for (const language of CONTENT_LANGUAGES) {
         await tx
           .insert(navigationItemTranslations)
           .values({ itemId, language, label: item.label[language], visible: item.visible[language] })
@@ -244,7 +250,7 @@ export async function deleteFooterNavigation(
 /** Reordering is one transaction, so two lists cannot be left at half of a swap. */
 export async function reorderFooterNavigations(
   db: Database,
-  positions: { id: string; sortOrder: number }[],
+  positions: readonly Position[],
   actorUserId: string,
   placement: NavigationPlacement = "footer",
 ): Promise<FooterNavigation[]> {
@@ -265,16 +271,11 @@ export async function reorderFooterNavigations(
       .for("update");
     if (rows.length !== positions.length)
       throw new HttpError(ErrorCode.NotFound, "A navigation no longer exists.");
-    for (const item of positions) {
-      await tx.update(navigations).set({ sortOrder: item.sortOrder }).where(eq(navigations.id, item.id));
-      await tx.insert(auditLog).values({
-        actorUserId,
-        action: "navigation.reordered",
-        subjectType: "navigations",
-        subjectId: item.id,
-        detail: { sortOrder: item.sortOrder },
-      });
-    }
+    await writePositions(tx, navigations, positions, {
+      actorUserId,
+      action: "navigation.reordered",
+      subjectType: "navigations",
+    });
   });
   return listFooterNavigations(db, placement);
 }

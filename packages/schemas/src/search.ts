@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CONTENT_LANGUAGES, ENTRY_KINDS, PUBLICATION_STATES } from "./entries.js";
-import { MaxLength, text } from "./request.js";
+import { MaxLength, text, withoutControlCharacters } from "./request.js";
 
 /**
  * Searching the dashboard from a screen that has no list of its own.
@@ -47,8 +47,7 @@ export const SEARCH_HIT_LIMIT = 20;
 
 /** Public search never returns bodies or editorial state. */
 export const publicSearchQuery = z.strictObject({
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject controls at the public request boundary.
-  q: text(120, { pattern: /^[^\u0000-\u001f\u007f]+$/ }),
+  q: text(120).refine(withoutControlCharacters),
   language: z.enum(CONTENT_LANGUAGES),
   page: z.coerce.number().int().min(1).max(9999).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(6),

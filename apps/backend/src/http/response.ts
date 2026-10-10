@@ -84,10 +84,13 @@ export function ok<T>(c: Context, data: T, status: ContentfulStatusCode = 200) {
  * @param c - The request, which carries the id this failure is quoted by.
  * @param code - Why it failed.
  * @param message - Safe to show a person.
+ * @param beside - What else the caller needs to act on the failure, sent beside
+ *   the envelope, such as which fields of a form were refused. It cannot replace
+ *   the envelope, which is written over it.
  */
-export function fail(c: Context, code: ErrorCode, message: string) {
+export function fail(c: Context, code: ErrorCode, message: string, beside: Record<string, unknown> = {}) {
   const body: ApiError = {
     error: { code, message, id: c.get("requestId") },
   };
-  return c.json(body, STATUS[code]);
+  return c.json({ ...beside, ...body }, STATUS[code]);
 }

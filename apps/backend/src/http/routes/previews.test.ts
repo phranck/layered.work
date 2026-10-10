@@ -1,6 +1,7 @@
 import { type EntryList, entryList, entryPreview } from "@layered/schemas";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { namedValues } from "../../db/schema/index.js";
+import { entryTranslations, media, namedValues } from "../../db/schema/index.js";
 import {
   issuePreviewToken,
   PREVIEW_LIFETIME_MS,
@@ -133,6 +134,28 @@ runs("a preview", () => {
       entries: { body: string }[];
     };
     expect(snapshot.entries[0]?.body).toBe("Made with Velvet.");
+  });
+
+  it("carries the social card the published page carries", async () => {
+    const database = await testDatabase();
+    const cookie = await signedInCookie();
+    const id = await draftId(cookie);
+    const [picture] = await database
+      .select({ id: media.id })
+      .from(media)
+      .where(eq(media.slug, "soldering-iron"));
+    await database
+      .update(entryTranslations)
+      .set({ socialCardMediaId: picture?.id ?? null })
+      .where(eq(entryTranslations.id, id));
+    const { url } = entryPreview.parse(((await (await ask(id, cookie)).json()) as { data: unknown }).data);
+    const token = new URL(url).pathname.split("/")[2] ?? "";
+    const snapshot = (await (await app.request(`/previews/${token}`)).json()) as {
+      entries: { socialImage?: string | null }[];
+      media: { slug: string }[];
+    };
+    expect(snapshot.entries[0]?.socialImage).toBe("soldering-iron");
+    expect(snapshot.media.map((file) => file.slug)).toContain("soldering-iron");
   });
 
   it("is gone once its time is up", async () => {

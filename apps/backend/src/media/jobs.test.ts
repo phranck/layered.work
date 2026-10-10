@@ -34,8 +34,8 @@ vi.mock("./storage.js", () => ({
   },
 }));
 
-import { listAccountMedia } from "../account/repository.js";
 import { publicMedia } from "../content/snapshot.js";
+import { listMedia } from "./library.js";
 import { getMediaProcessing } from "./processing.js";
 import { queueMediaProcessing } from "./queue.js";
 import { variantChecksum } from "./variants.js";
@@ -93,7 +93,7 @@ async function fixture() {
     const [job] = await db.select().from(mediaJobs).where(eq(mediaJobs.mediaId, id));
     expect(job?.state).toBe("ready");
     expect((await getMediaProcessing(db, id)).variants).toHaveLength(2);
-    const listing = await listAccountMedia(db, { search: `job-${id}`, page: 1 });
+    const listing = await listMedia(db, { search: `job-${id}`, kind: "all", page: 1, order: "slug" });
     expect(listing.items[0]?.processingState).toBe("ready");
     const published = await publicMedia(db, [{ body: "", featuredMediaId: id }]);
     expect(published.media[0]?.placeholder).toBe(row?.placeholder);

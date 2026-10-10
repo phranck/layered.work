@@ -12,6 +12,7 @@ import {
 import { asc, eq, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
 import type { database } from "../db/connect.js";
+import { type Position, writePositions } from "../db/positions.js";
 import { auditLog, homeBlocks } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { holdLibraryPicture } from "../media/pictures.js";
@@ -210,7 +211,7 @@ export async function saveHomeBlock(
  */
 export async function reorderHomeBlocks(
   db: Database,
-  positions: readonly { id: string; sortOrder: number }[],
+  positions: readonly Position[],
   actorUserId: string,
 ): Promise<StoredHomeBlock[]> {
   await db.transaction(async (tx) => {
@@ -227,19 +228,11 @@ export async function reorderHomeBlocks(
         throw new HttpError(ErrorCode.Conflict, "The block that opens the page cannot be moved.");
     }
 
-    for (const position of positions) {
-      await tx
-        .update(homeBlocks)
-        .set({ sortOrder: position.sortOrder })
-        .where(eq(homeBlocks.id, position.id));
-      await tx.insert(auditLog).values({
-        actorUserId,
-        action: "home_block.reordered",
-        subjectType: "home_blocks",
-        subjectId: position.id,
-        detail: { sortOrder: position.sortOrder },
-      });
-    }
+    await writePositions(tx, homeBlocks, positions, {
+      actorUserId,
+      action: "home_block.reordered",
+      subjectType: "home_blocks",
+    });
   });
   return listHomeBlocks(db);
 }

@@ -1,8 +1,8 @@
 import {
   createTopicBody,
+  idParam,
   mergeTopicBody,
   saveTopicBody,
-  topicIdParam,
   topicList,
   topicListItem,
 } from "@layered/schemas";
@@ -41,7 +41,7 @@ topicsRoutes.post(
 topicsRoutes.put(
   "/:id",
   requireScope("content:write"),
-  validate("param", topicIdParam),
+  validate("param", idParam),
   validate("json", saveTopicBody),
   responds(topicListItem),
   async (c) =>
@@ -60,7 +60,7 @@ topicsRoutes.put(
 topicsRoutes.post(
   "/:id/merge",
   requireScope("content:write"),
-  validate("param", topicIdParam),
+  validate("param", idParam),
   validate("json", mergeTopicBody),
   responds(topicListItem),
   async (c) =>
@@ -79,7 +79,7 @@ topicsRoutes.post(
 topicsRoutes.delete(
   "/:id",
   requireScope("content:write"),
-  validate("param", topicIdParam),
+  validate("param", idParam),
   responds(z.null()),
   async (c) => {
     await deleteTopic(database(), c.req.valid("param").id, principalOf(c).userId, principalOf(c).tokenId);

@@ -71,6 +71,32 @@ export function text(max: number, options: { pattern?: RegExp } = {}) {
 }
 
 /**
+ * A record named by its id in the path, such as `/entries/:id`.
+ *
+ * One declaration for every route, so no route accepts an id another refuses.
+ */
+export const idParam = z.strictObject({ id: z.uuid() });
+
+/**
+ * One control character: the C0 range and DEL.
+ *
+ * No line a person wrote contains one, and in a header, a path or a log line one
+ * can end the line and begin another, so every field that refuses them refuses
+ * exactly these.
+ */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: Control characters are what this finds.
+export const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
+/**
+ * Whether a value is free of control characters, as a refinement.
+ *
+ * @param value - The string to check.
+ */
+export function withoutControlCharacters(value: string): boolean {
+  return !CONTROL_CHARACTER.test(value);
+}
+
+/**
  * A signed token as the API issues them, a preview link's or an upload's: a
  * base64url payload and its signature joined by one dot.
  *

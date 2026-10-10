@@ -1,6 +1,9 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
+  CONTENT_LANGUAGES,
   DEFAULT_LISTING,
+  ENTRY_KINDS,
+  EXPORT_MEDIA_PATH,
   entrySpecs,
   focalPoint,
   type HomeBlock,
@@ -9,10 +12,15 @@ import {
   homeBlockSettings,
   homeBlockTypes,
   isKnownHomeBlock,
+  isReadable,
+  LANGUAGE_ROOTS,
   type ListedKind,
+  languagePath,
   listingSettings,
+  MIGRATION_KEY_PREFIX,
   mediaCredit,
   mediaDescriptions,
+  otherLanguage,
   publicFooterNavigation,
   publicForm,
   publicMainNavigation,
@@ -20,6 +28,7 @@ import {
   READING_WIDTHS,
   unknownHomeBlocks,
   unsplashCreditLine,
+  withoutControlCharacters,
 } from "@layered/schemas";
 import { z } from "zod";
 
@@ -33,7 +42,7 @@ const slug = z
   .min(1)
   .max(200)
   .regex(/^[a-zA-Z0-9_-]+$/);
-const language = z.enum(["en", "de"]);
+const language = z.enum(CONTENT_LANGUAGES);
 const instant = z.string().refine((value) => Number.isFinite(Date.parse(value)), "Invalid date");
 const entrySchema = z.object({
   id: z.union([z.number().int(), z.string()]),
@@ -42,7 +51,7 @@ const entrySchema = z.object({
   path,
   language,
   visibility: z.enum(["public", "hidden", "draft", "trashed"]),
-  kind: z.enum(["post", "page", "project"]),
+  kind: z.enum(ENTRY_KINDS),
   createdAt: instant.optional(),
   publishedAt: instant.nullable(),
   updatedAt: instant.nullable(),
@@ -165,12 +174,7 @@ export function parseListingQuery(params: URLSearchParams) {
         .regex(/^[1-9]\d{0,3}$/)
         .transform(Number)
         .default(1),
-      query: z
-        .string()
-        .max(120)
-        // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject control characters at the request boundary.
-        .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "Control character")
-        .default(""),
+      query: z.string().max(120).refine(withoutControlCharacters, "Control character").default(""),
     })
     .parse({ page: params.get("page") ?? undefined, query: params.get("q") ?? undefined });
 }
@@ -223,10 +227,10 @@ export function dateLabel(entry: Entry): string {
     : "";
 }
 export function languageRoot(locale: Language): string {
-  return locale === "de" ? "/de/" : "/";
+  return LANGUAGE_ROOTS[locale];
 }
 export function topicPath(locale: Language, topic: string): string {
-  return `${languageRoot(locale)}topics/${topic}/`;
+  return languagePath(locale, "topics", topic);
 }
 
 /**
@@ -270,13 +274,10 @@ function mediaUrl(path: string): string {
   if (!origin) return path;
   // A path from the export names the file where the export left it. In the
   // bucket that file lies below the prefix the upload wrote it to.
-  return path.startsWith(EXPORT_MEDIA_PREFIX)
-    ? `${origin}/${BUCKET_MIGRATION_PREFIX}${path.slice(EXPORT_MEDIA_PREFIX.length)}`
+  return path.startsWith(EXPORT_MEDIA_PATH)
+    ? `${origin}/${MIGRATION_KEY_PREFIX}${path.slice(EXPORT_MEDIA_PATH.length)}`
     : `${origin}${path}`;
 }
-
-/** Where the export's snapshot says a migrated file is. */
-const EXPORT_MEDIA_PREFIX = "/media/";
 
 /**
  * The widths a picture inside an article is drawn at, as a `sizes` attribute.
@@ -297,12 +298,6 @@ const ARTICLE_IMAGE_SIZES = "(max-width: 719px) 100vw, (max-width: 1179px) 92vw,
  * the page stops growing.
  */
 const HOME_HERO_SIZES = "(max-width: 1039px) 92vw, (max-width: 1179px) calc(48vw - 73px), 492px";
-
-/**
- * Where `scripts/publii/upload.mjs` put every migrated file in the bucket, which
- * is also the start of its storage key in the database.
- */
-const BUCKET_MIGRATION_PREFIX = "migration/";
 
 /**
  * The same, for a `srcset`, which is a list of `<url> <width>w` pairs.
@@ -367,7 +362,7 @@ export function createRepository(input: unknown) {
     if (!found) return undefined;
     const translation = found.translations[locale] ?? found.translations.en ?? found.translations.de;
     if (!translation) return undefined;
-    const sourceLanguage = found.translations[locale] ? locale : locale === "en" ? "de" : "en";
+    const sourceLanguage = found.translations[locale] ? locale : otherLanguage(locale);
     return {
       id,
       ...translation,
@@ -510,7 +505,7 @@ export function createRepository(input: unknown) {
     },
     entry: (name: string) => {
       const entry = entries.get(name);
-      return entry && ["public", "hidden"].includes(entry.visibility) ? entry : undefined;
+      return entry && isReadable(entry.visibility) ? entry : undefined;
     },
     form: (name: string) => forms.get(name),
     redirect: (name: string) => redirects.get(name),

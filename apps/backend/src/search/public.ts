@@ -1,5 +1,10 @@
 import { valueReferenceSource } from "@layered/content";
-import { type PublicSearchQuery, type PublicSearchResults, publicSearchResults } from "@layered/schemas";
+import {
+  type PublicSearchQuery,
+  type PublicSearchResults,
+  publicSearchResults,
+  READABLE_STATES,
+} from "@layered/schemas";
 import { type SQL, sql } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { readValueMap } from "../values/repository.js";
@@ -23,6 +28,12 @@ function resolvedBody(values: ReadonlyMap<string, string>): SQL {
   }
   return body;
 }
+
+/** The readable states as a list of bound parameters, which PostgreSQL types from the column. */
+const readableStates = sql.join(
+  READABLE_STATES.map((state) => sql`${state}`),
+  sql`, `,
+);
 
 /** PostgreSQL stemming and ranking over reachable public translations only. */
 export async function searchPublicEntries(
@@ -54,7 +65,7 @@ export async function searchPublicEntries(
           select 1 from entry_translations counterpart
           join paths address on address.translation_id = counterpart.id and address.is_current
           where counterpart.entry_id = t.entry_id and counterpart.language = ${language}
-            and counterpart.state in ('public', 'hidden') and counterpart.trashed_at is null
+            and counterpart.state in (${readableStates}) and counterpart.trashed_at is null
         )))
     ), matches as (
       select *, ts_rank(document, query) as rank from documents where document @@ query

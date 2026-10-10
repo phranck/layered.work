@@ -17,7 +17,7 @@ import { readMailTemplate, renderMailTemplate } from "../../mail/templates.js";
 import { responds } from "../api-metadata.js";
 import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
-import { HttpError, ok } from "../response.js";
+import { fail, HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
 export const publicFormsRoutes = new Hono();
@@ -64,17 +64,7 @@ publicFormsRoutes.post(
         },
         "form submission refused",
       );
-      return c.json(
-        {
-          error: {
-            code: ErrorCode.InvalidRequest,
-            message: "Check the marked fields.",
-            id: c.get("requestId"),
-          },
-          fieldErrors: checked.errors,
-        },
-        400,
-      );
+      return fail(c, ErrorCode.InvalidRequest, "Check the marked fields.", { fieldErrors: checked.errors });
     }
     enforceRateLimit(c, {
       name: "form-submission",

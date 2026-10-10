@@ -1,7 +1,7 @@
 import {
   footerNavigation,
   footerNavigationList,
-  navigationIdParam,
+  idParam,
   reorderFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
@@ -56,7 +56,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.put(
     "/:id",
     requireOwner,
-    validate("param", navigationIdParam),
+    validate("param", idParam),
     validate("json", saveFooterNavigationBody),
     responds(footerNavigation),
     async (c) =>
@@ -74,7 +74,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.delete(
     "/:id",
     requireOwner,
-    validate("param", navigationIdParam),
+    validate("param", idParam),
     responds(z.null()),
     async (c) => {
       await deleteFooterNavigation(database(), c.req.valid("param").id, principalOf(c).userId, placement);

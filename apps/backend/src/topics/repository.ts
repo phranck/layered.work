@@ -1,7 +1,9 @@
 import {
+  CONTENT_LANGUAGES,
   type ContentLanguage,
   type CreateTopicBody,
   ErrorCode,
+  numberedSlug,
   type SaveTopicBody,
   slugFromTitle,
   type TopicList,
@@ -142,7 +144,7 @@ export async function createTopic(
     const base = slugFromTitle(value.name);
     let slug: string | undefined;
     for (let attempt = 0; attempt < SLUG_ATTEMPTS && !slug; attempt += 1) {
-      const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
+      const candidate = numberedSlug(base, attempt);
       if (await slugIsFree(tx, value.language, candidate, null)) slug = candidate;
     }
     if (!slug) throw new HttpError(ErrorCode.Conflict, "Every address for this topic is taken.");
@@ -198,7 +200,7 @@ export async function saveTopic(
       .where(eq(topicTranslations.topicId, id));
 
     const changedKeys: string[] = [];
-    for (const language of ["en", "de"] as const) {
+    for (const language of CONTENT_LANGUAGES) {
       const before = current.find((row) => row.language === language);
       const after = value[language];
       if (before?.name === after?.name && before?.slug === after?.slug) continue;

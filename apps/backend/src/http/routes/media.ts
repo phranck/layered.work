@@ -5,6 +5,7 @@ import {
   createUploadBody,
   ErrorCode,
   focalPoint,
+  idParam,
   importUnsplashBody,
   mediaDeletionResult,
   mediaDetail,
@@ -74,17 +75,13 @@ media.post(
   async (c) => ok(c, await importUnsplashPhoto(database(), c.req.valid("json").photoId, principalOf(c))),
 );
 
-media.get(
-  "/:id",
-  requireScope("media:write"),
-  validate("param", z.object({ id: z.uuid() })),
-  responds(mediaDetail),
-  async (c) => ok(c, await getMediaDetail(database(), c.req.valid("param").id)),
+media.get("/:id", requireScope("media:write"), validate("param", idParam), responds(mediaDetail), async (c) =>
+  ok(c, await getMediaDetail(database(), c.req.valid("param").id)),
 );
 media.put(
   "/:id",
   requireScope("media:write"),
-  validate("param", z.object({ id: z.uuid() })),
+  validate("param", idParam),
   validate("json", saveMediaMetadataBody),
   responds(mediaDetail),
   async (c) =>
@@ -94,7 +91,7 @@ media.put(
 media.delete(
   "/:id",
   requireScope("media:write"),
-  validate("param", z.object({ id: z.uuid() })),
+  validate("param", idParam),
   responds(mediaDeletionResult),
   async (c) => {
     const result = await deleteMedia(database(), c.req.valid("param").id, principalOf(c));
@@ -105,7 +102,7 @@ media.delete(
 media.get(
   "/:id/processing",
   requireScope("media:write"),
-  validate("param", z.object({ id: z.uuid() })),
+  validate("param", idParam),
   responds(mediaProcessing),
   async (c) => ok(c, await getMediaProcessing(database(), c.req.valid("param").id)),
 );
@@ -113,7 +110,7 @@ media.get(
 media.patch(
   "/:id/focal-point",
   requireScope("media:write"),
-  validate("param", z.object({ id: z.uuid() })),
+  validate("param", idParam),
   validate("json", updateMediaFocalBody),
   responds(focalPoint),
   async (c) =>

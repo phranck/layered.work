@@ -1,4 +1,4 @@
-import type { DashboardCounts } from "@layered/schemas";
+import { type DashboardCounts, mailTemplateKind } from "@layered/schemas";
 import { sql } from "drizzle-orm";
 import type { database } from "../../db/connect.js";
 import {
@@ -56,8 +56,6 @@ export async function readDashboardCounts(
 
   if (!stored) throw new Error("The dashboard count query returned no row.");
 
-  return {
-    ...stored,
-    mailTemplates: 2,
-  };
+  // Every kind of template always exists, on its default until somebody edits it.
+  return { ...stored, mailTemplates: mailTemplateKind.options.length };
 }

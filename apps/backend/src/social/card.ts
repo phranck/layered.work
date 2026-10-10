@@ -35,10 +35,13 @@ export async function renderSocialCard(title: string) {
   const dimensions = await sharp(mark).metadata();
   const left = Math.round((CARD_SIZE.width - (dimensions.width ?? 0)) / 2);
   const text = Buffer.from(
-    `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg"><g fill="#eef3fa" font-family="sans-serif" font-size="38" text-anchor="middle">${titleLines(
+    `<svg width="${CARD_SIZE.width}" height="${CARD_SIZE.height}" xmlns="http://www.w3.org/2000/svg"><g fill="#eef3fa" font-family="sans-serif" font-size="38" text-anchor="middle">${titleLines(
       title,
     )
-      .map((line, index) => `<text x="600" y="${390 + index * 52}">${escapeMarkup(line)}</text>`)
+      .map(
+        (line, index) =>
+          `<text x="${CARD_SIZE.width / 2}" y="${390 + index * 52}">${escapeMarkup(line)}</text>`,
+      )
       .join("")}</g></svg>`,
   );
   const bytes = await sharp({ create: { ...CARD_SIZE, channels: 4, background: BACKGROUND } })

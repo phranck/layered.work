@@ -1,5 +1,5 @@
 import {
-  navigationIdParam,
+  idParam,
   reorderSocialAccountsBody,
   saveSocialAccountBody,
   socialAccount,
@@ -41,7 +41,7 @@ socialAccountRoutes.post(
 socialAccountRoutes.put(
   "/:id",
   requireOwner,
-  validate("param", navigationIdParam),
+  validate("param", idParam),
   validate("json", saveSocialAccountBody),
   responds(socialAccount),
   async (c) =>
@@ -58,7 +58,7 @@ socialAccountRoutes.put(
 socialAccountRoutes.delete(
   "/:id",
   requireOwner,
-  validate("param", navigationIdParam),
+  validate("param", idParam),
   responds(z.null()),
   async (c) => {
     await deleteSocialAccount(database(), c.req.valid("param").id, principalOf(c).userId);

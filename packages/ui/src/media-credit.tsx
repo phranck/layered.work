@@ -1,4 +1,5 @@
-import { contentUrl, type MediaCreditLine } from "./content-shared.js";
+import type { MediaCreditLine } from "@layered/schemas";
+import { contentUrl } from "./content-shared.js";
 
 /** Props for a picture's credit line. */
 export interface MediaCreditProps {

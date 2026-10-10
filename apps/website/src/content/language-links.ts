@@ -1,15 +1,23 @@
-import { LISTED_KINDS, LISTING_PATHS } from "@layered/schemas";
-import { type ContentRepository, type Language, languageRoot, topicPath } from "./repository.js";
+import {
+  CONTENT_LANGUAGES,
+  inEachLanguage,
+  LANGUAGE_ROOTS,
+  LISTED_KINDS,
+  LISTING_PATHS,
+  languagePath,
+} from "@layered/schemas";
+import { type ContentRepository, type Language, topicPath } from "./repository.js";
 
 export interface LanguageLink {
   language: Language | "x-default";
   path: string;
 }
-const languages = ["en", "de"] as const;
+const languages = CONTENT_LANGUAGES;
+const topicsPage = inEachLanguage((language) => languagePath(language, "topics"));
 const pairedPages = [
-  { en: "/", de: "/de/" },
-  { en: "/topics/", de: "/de/topics/" },
-  { en: "/search/", de: "/de/search/" },
+  LANGUAGE_ROOTS,
+  topicsPage,
+  inEachLanguage((language) => languagePath(language, "search")),
   ...LISTED_KINDS.map((kind) => LISTING_PATHS[kind]),
 ];
 
@@ -50,7 +58,7 @@ export function languageLinks(repository: ContentRepository, path: string): Lang
 
 /** The actual overview routes, shared by both language sitemaps. Search results are not indexed. */
 export const collectionPaths = languages.flatMap((language) => [
-  languageRoot(language),
+  LANGUAGE_ROOTS[language],
   ...LISTED_KINDS.map((kind) => LISTING_PATHS[kind][language]),
-  `${languageRoot(language)}topics/`,
+  topicsPage[language],
 ]);

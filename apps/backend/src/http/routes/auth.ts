@@ -116,12 +116,7 @@ auth.post(
 
     logger.info({ requestId: c.get("requestId"), userId: account.id, route: c.req.routePath }, "signed in");
 
-    return ok(c, {
-      id: account.id,
-      email: account.email,
-      displayName: account.displayName,
-      role: account.role,
-    } satisfies SignedInAs);
+    return ok(c, asSignedIn({ ...account, userId: account.id }));
   },
 );
 

@@ -1,5 +1,4 @@
 import {
-  ACCEPTED_IMAGE_TYPES,
   ErrorCode,
   type MediaDetail,
   type MediaLibraryItem,
@@ -30,13 +29,15 @@ import {
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { SITE_PICTURES } from "../settings/site-pictures.js";
-import { storedInLibrary } from "./pictures.js";
+import { isRasterImage, storedInLibrary } from "./pictures.js";
 import { getMediaProcessing } from "./processing.js";
 import { queueMediaProcessing } from "./queue.js";
 import { namesPictureInBlock, namesSitePicture, unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
-const PAGE_SIZE = 24;
+
+/** How many files one page of the library holds. */
+const LIBRARY_PAGE_SIZE = 24;
 /**
  * What each order sorts by. The id comes last in both, so two files with the same
  * slug or the same upload time fall on the same side of a page boundary on every
@@ -46,7 +47,6 @@ const ORDERING = {
   slug: [asc(media.slug), asc(media.id)],
   newest: [desc(media.uploadedAt), asc(media.id)],
 } as const;
-const rasterTypes = new Set<string>(ACCEPTED_IMAGE_TYPES);
 const selection = {
   id: media.id,
   slug: media.slug,
@@ -73,7 +73,7 @@ function item(row: Row): MediaLibraryItem {
     uploadedAt: row.uploadedAt.toISOString(),
     focalPoint: { x: focalX, y: focalY },
     processingState: row.processingState ?? "ready",
-    url: row.kind === "image" && rasterTypes.has(row.mimeType) ? mediaContentUrl(row.id) : null,
+    url: isRasterImage(row) ? mediaContentUrl(row.id) : null,
   };
 }
 export async function listMedia(db: Database, query: MediaLibraryQuery): Promise<MediaLibraryPage> {
@@ -91,9 +91,13 @@ export async function listMedia(db: Database, query: MediaLibraryQuery): Promise
       ),
     )
     .orderBy(...ORDERING[query.order])
-    .limit(PAGE_SIZE + 1)
-    .offset((query.page - 1) * PAGE_SIZE);
-  return { items: rows.slice(0, PAGE_SIZE).map(item), page: query.page, hasMore: rows.length > PAGE_SIZE };
+    .limit(LIBRARY_PAGE_SIZE + 1)
+    .offset((query.page - 1) * LIBRARY_PAGE_SIZE);
+  return {
+    items: rows.slice(0, LIBRARY_PAGE_SIZE).map(item),
+    page: query.page,
+    hasMore: rows.length > LIBRARY_PAGE_SIZE,
+  };
 }
 /** Includes body references and both cover roles, regardless of publication or trash state. */
 export async function getMediaUses(db: Pick<Database, "select">, id: string): Promise<MediaDetail["uses"]> {
@@ -201,7 +205,7 @@ export async function saveMediaMetadata(
     if (!before) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
     const watermark = value.watermark === undefined ? before.watermark : value.watermark;
     // The mark is laid into sizes derived from the stored bytes, which a picture from Unsplash does not have.
-    if (watermark && !(before.kind === "image" && rasterTypes.has(before.mimeType) && before.stored))
+    if (watermark && !(isRasterImage(before) && before.stored))
       throw new HttpError(
         ErrorCode.InvalidRequest,
         "Only a raster image uploaded here can carry a watermark.",

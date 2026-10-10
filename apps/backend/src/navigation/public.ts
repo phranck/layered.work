@@ -1,5 +1,7 @@
 import {
   CONTENT_LANGUAGES,
+  type ContentLanguage,
+  languagePath,
   navigationHref,
   type PublicFooterNavigation,
   type PublicMainNavigation,
@@ -25,7 +27,7 @@ export function mainNavigationFromGroups(groups: PublicFooterNavigation): Public
 /** Resolve stored targets only against published addresses in the requested language. */
 export async function readPublicNavigation(
   db: PostgresJsDatabase<Record<string, unknown>>,
-  entries: readonly { entryId: string; language: "en" | "de"; path: string }[],
+  entries: readonly { entryId: string; language: ContentLanguage; path: string }[],
   topics: readonly {
     id: string;
     translations: { en: { slug: string } | null; de: { slug: string } | null };
@@ -74,9 +76,7 @@ export async function readPublicNavigation(
     const topicAddresses = new Map(
       topics.flatMap((topic) => {
         const translation = topic.translations[language];
-        return translation
-          ? [[topic.id, `${language === "de" ? "/de" : ""}/topics/${translation.slug}/`] as const]
-          : [];
+        return translation ? [[topic.id, languagePath(language, "topics", translation.slug)] as const] : [];
       }),
     );
     const resolved = new Map(

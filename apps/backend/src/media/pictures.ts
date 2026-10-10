@@ -1,11 +1,31 @@
-import { ErrorCode } from "@layered/schemas";
+import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
-import { RASTER_MIME_TYPES } from "../account/repository.js";
 import type { database } from "../db/connect.js";
 import { media, unsplashPhotos } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 type Database = ReturnType<typeof database>;
+
+const RASTER_TYPES: ReadonlySet<string> = new Set(ACCEPTED_IMAGE_TYPES);
+
+/**
+ * Whether a library file is a picture the dashboard and the site can draw: an
+ * image of a raster type the library accepts.
+ *
+ * Every reader that offers a thumbnail, a portrait, a cover or a social card
+ * asks this, in code or as `rasterImage()` in a query, so no screen shows a file
+ * another refuses.
+ *
+ * @param file - Its kind and its MIME type.
+ */
+export function isRasterImage(file: { kind: string; mimeType: string }): boolean {
+  return file.kind === "image" && RASTER_TYPES.has(file.mimeType);
+}
+
+/** The same as `isRasterImage`, as a condition on the `media` table. */
+export function rasterImage(): SQL {
+  return sql`(${eq(media.kind, "image")} and ${inArray(media.mimeType, [...ACCEPTED_IMAGE_TYPES])})`;
+}
 
 /**
  * Refuses an id that names no raster image in the library, and holds the image
@@ -33,14 +53,7 @@ export async function holdLibraryPicture(
   const [picture] = await db
     .select({ id: media.id })
     .from(media)
-    .where(
-      and(
-        eq(media.id, mediaId),
-        eq(media.kind, "image"),
-        inArray(media.mimeType, RASTER_MIME_TYPES),
-        options.storedHere ? storedInLibrary() : undefined,
-      ),
-    )
+    .where(and(eq(media.id, mediaId), rasterImage(), options.storedHere ? storedInLibrary() : undefined))
     .limit(1)
     .for("key share");
   if (!picture) throw new HttpError(ErrorCode.InvalidRequest, refusal);

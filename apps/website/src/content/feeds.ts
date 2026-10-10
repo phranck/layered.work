@@ -1,4 +1,5 @@
 import { renderContent } from "@layered/content";
+import { CONTENT_LANGUAGES } from "@layered/schemas";
 import { ContentRenderer } from "@layered/ui";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -142,7 +143,7 @@ export function sitemapPaths(repository: ContentRepository): string[] {
   return [
     ...new Set([
       ...collectionPaths,
-      ...(["en", "de"] as const).flatMap((language) => [
+      ...CONTENT_LANGUAGES.flatMap((language) => [
         ...repository.publicEntries(language).map((entry) => entry.path),
         ...repository.topics(language).map((topic) => topicPath(language, topic.slug)),
       ]),

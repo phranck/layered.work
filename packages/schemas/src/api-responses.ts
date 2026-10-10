@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ENTRY_KINDS, entrySpecs, READING_WIDTHS } from "./entries.js";
+import { CONTENT_LANGUAGES, ENTRY_KINDS, entrySpecs, READABLE_STATES, READING_WIDTHS } from "./entries.js";
 import { publicForm } from "./forms.js";
 import { focalPoint, mediaDescriptions } from "./media.js";
 import { publicFooterNavigation, publicMainNavigation } from "./navigation.js";
@@ -33,8 +33,8 @@ const publicEntry = z.object({
   title: z.string(),
   slug: z.string(),
   path: z.string(),
-  language: z.enum(["en", "de"]),
-  visibility: z.enum(["public", "hidden"]),
+  language: z.enum(CONTENT_LANGUAGES),
+  visibility: z.enum(READABLE_STATES),
   kind: z.enum(ENTRY_KINDS),
   createdAt: z.iso.datetime(),
   publishedAt: z.iso.datetime().nullable(),

@@ -1,3 +1,5 @@
+import type { ContentLanguage } from "./entries.js";
+
 /**
  * The last segment of an address: an entry's or a topic's slug.
  *
@@ -41,4 +43,35 @@ export function slugFromTitle(title: string, fallback = "entry"): string {
     .slice(0, SLUG_MAX_LENGTH)
     .replace(/-+$/, "");
   return slug || fallback;
+}
+
+/**
+ * The slug tried in place of a taken one: the slug itself first, then numbered
+ * from two, such as `bench`, `bench-2`, `bench-3`.
+ *
+ * Entries, topics and library files all number this way, so a second thing of
+ * the same name reads the same wherever it is.
+ *
+ * @param slug - The slug wanted.
+ * @param attempt - How many tries came before, zero for the first.
+ */
+export function numberedSlug(slug: string, attempt: number): string {
+  return attempt === 0 ? slug : `${slug}-${attempt + 1}`;
+}
+
+/**
+ * The address a translation answers at with its last segment replaced.
+ *
+ * Every segment before the last stays, because it follows from what the entry
+ * is: its language prefix, or the section a migrated project sits in. A
+ * translation without an address gets one carrying its language, `/en/…` or
+ * `/de/…`, as everything written after the migration does.
+ *
+ * @param current - Its current address, or null where it has none.
+ * @param language - Its language.
+ * @param slug - The new last segment.
+ */
+export function addressWithSlug(current: string | null, language: ContentLanguage, slug: string): string {
+  const parents = current ? current.split("/").filter(Boolean).slice(0, -1) : [language];
+  return `/${[...parents, slug].join("/")}/`;
 }

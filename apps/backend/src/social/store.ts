@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
-import { RASTER_MIME_TYPES } from "../account/repository.js";
+import { UPLOAD_KEY_PREFIX } from "@layered/schemas";
+import { and, eq } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { media } from "../db/schema/index.js";
 import { logger } from "../logger.js";
+import { rasterImage } from "../media/pictures.js";
 import { deleteMediaObject, writeMediaBytes } from "../media/storage.js";
 import { CARD_SIZE, renderSocialCard } from "./card.js";
 
@@ -15,7 +16,7 @@ export async function hasRasterPicture(db: Pick<Writer, "select">, mediaId: stri
   const [picture] = await db
     .select({ id: media.id })
     .from(media)
-    .where(and(eq(media.id, mediaId), inArray(media.mimeType, RASTER_MIME_TYPES)))
+    .where(and(eq(media.id, mediaId), rasterImage()))
     .limit(1);
   return Boolean(picture);
 }
@@ -55,7 +56,7 @@ export async function storeSocialCard(db: Writer, title: string, createdObjects:
     (await db.select({ id: media.id }).from(media).where(eq(media.checksum, checksum)).limit(1))[0];
   const existing = await find();
   if (existing) return existing.id;
-  const storageKey = `uploads/social-${randomUUID()}.png`;
+  const storageKey = `${UPLOAD_KEY_PREFIX}social-${randomUUID()}.png`;
   await writeMediaBytes(storageKey, card.bytes, "image/png");
   createdObjects.push(storageKey);
   const [stored] = await db

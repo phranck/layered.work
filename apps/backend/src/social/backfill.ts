@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isReadable, READABLE_STATES } from "@layered/schemas";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { closeDatabase, database } from "../db/connect.js";
 import { entryTranslations } from "../db/schema/index.js";
@@ -18,7 +19,7 @@ export async function backfillSocialCards(
       and(
         isNull(entryTranslations.socialCardMediaId),
         isNull(entryTranslations.trashedAt),
-        inArray(entryTranslations.state, ["public", "hidden"]),
+        inArray(entryTranslations.state, [...READABLE_STATES]),
         translationIds ? inArray(entryTranslations.id, [...translationIds]) : undefined,
       ),
     );
@@ -31,7 +32,7 @@ export async function backfillSocialCards(
           .from(entryTranslations)
           .where(eq(entryTranslations.id, candidate.id))
           .for("update");
-        if (!row || row.socialCardMediaId || row.trashedAt || row.state === "draft") return 0;
+        if (!row || row.socialCardMediaId || row.trashedAt || !isReadable(row.state)) return 0;
         if (await hasRasterPicture(tx, row.featuredMediaId)) return 0;
         const socialCardMediaId = await storeSocialCard(tx, row.title, createdObjects);
         await tx.update(entryTranslations).set({ socialCardMediaId }).where(eq(entryTranslations.id, row.id));

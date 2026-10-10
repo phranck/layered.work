@@ -1,14 +1,18 @@
 import { writeFile } from "node:fs/promises";
 import { referencedFormNames, renderContent, resolveValues } from "@layered/content";
 import {
+  type ContentLanguage,
   homeBlockSettings,
+  languagePath,
   type PublicEntry,
   type PublicForm,
   type PublicMedia,
   type PublicSnapshot,
   type PublicTopic,
   publicForm,
+  READABLE_STATES,
   RESERVED_PATHS,
+  type ReadableState,
 } from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -52,16 +56,6 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
 export type { PublicEntry, PublicMedia, PublicSnapshot, PublicTopic };
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
-
-/**
- * The two states a reader may reach.
- *
- * `public` appears everywhere and `hidden` answers at its own address whilst
- * staying out of every listing, which the site enforces. `draft` is neither, and
- * it is the reason this constant exists rather than a condition written out at
- * each query.
- */
-const READABLE = ["public", "hidden"] as const;
 
 /**
  * The files that published content names, by id.
@@ -339,9 +333,10 @@ async function formerTopicAddresses(
     if (existing && existing !== target) throw new Error(`Conflicting topic redirect: ${source}`);
     redirects.set(source, target);
   };
+  const topicPath = (language: ContentLanguage, slug: string) => languagePath(language, "topics", slug);
   for (const topic of current) {
     if (topic.translations.en && topic.translations.de) {
-      add(`/de/topics/${topic.translations.en.slug}/`, `/de/topics/${topic.translations.de.slug}/`);
+      add(topicPath("de", topic.translations.en.slug), topicPath("de", topic.translations.de.slug));
     }
   }
   for (const row of rows) {
@@ -350,12 +345,8 @@ async function formerTopicAddresses(
     const english = topic.translations.en?.slug ?? topic.translations.de?.slug;
     const german = topic.translations.de?.slug ?? topic.translations.en?.slug;
     if (!english || !german) continue;
-    if (row.language === "en") {
-      add(`/topics/${row.slug}/`, `/topics/${english}/`);
-      add(`/de/topics/${row.slug}/`, `/de/topics/${german}/`);
-    } else {
-      add(`/de/topics/${row.slug}/`, `/de/topics/${german}/`);
-    }
+    if (row.language === "en") add(topicPath("en", row.slug), topicPath("en", english));
+    add(topicPath("de", row.slug), topicPath("de", german));
   }
   return [...redirects].map(([source, target]) => ({ source, target }));
 }
@@ -381,6 +372,64 @@ async function goneAddresses(database: Database, taken: ReadonlySet<string>): Pr
   return [...new Set([...inTrash, ...deleted].map((row) => row.path))]
     .filter((path) => !taken.has(path) && !RESERVED_PATHS.includes(path))
     .sort();
+}
+
+/** What a translation contributes to its public entry, as both the snapshot and the preview read it. */
+type PublicEntrySource = { translationId: string } & Pick<
+  typeof entryTranslations.$inferSelect,
+  | "title"
+  | "language"
+  | "summary"
+  | "body"
+  | "publishedAt"
+  | "featuredMediaId"
+  | "socialCardMediaId"
+  | "readingWidth"
+  | "showInOtherLanguage"
+  | "specs"
+> &
+  Pick<typeof entries.$inferSelect, "kind" | "featured" | "onHomePage" | "createdAt" | "modifiedAt">;
+
+/**
+ * One translation as the site reads it.
+ *
+ * The snapshot and the preview both build their entries here, so a preview
+ * carries every field the published page carries.
+ *
+ * @param row - The translation and its entry.
+ * @param standing - Where it answers and how: its address, its state, its
+ *   topics and the address of its other language.
+ * @param slugById - Every file's slug by id, for its pictures.
+ */
+export function publicEntry(
+  row: PublicEntrySource,
+  standing: { path: string; visibility: ReadableState; topics: string[]; translationPath: string | null },
+  slugById: ReadonlyMap<string, string>,
+): PublicEntry {
+  const slugOf = (mediaId: string | null) => (mediaId ? (slugById.get(mediaId) ?? null) : null);
+  return {
+    id: row.translationId,
+    title: row.title,
+    slug: standing.path.split("/").filter(Boolean).at(-1) ?? "",
+    path: standing.path,
+    language: row.language,
+    visibility: standing.visibility,
+    kind: row.kind,
+    createdAt: row.createdAt.toISOString(),
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    updatedAt: row.modifiedAt.toISOString(),
+    summary: row.summary,
+    body: row.body,
+    topics: standing.topics,
+    featuredImage: slugOf(row.featuredMediaId),
+    socialImage: slugOf(row.socialCardMediaId),
+    translationPath: standing.translationPath,
+    featured: row.featured,
+    onHomePage: row.onHomePage,
+    readingWidth: row.readingWidth,
+    showInOtherLanguage: row.showInOtherLanguage,
+    specs: row.specs,
+  };
 }
 
 /**
@@ -416,7 +465,7 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
     })
     .from(entryTranslations)
     .innerJoin(entries, eq(entries.id, entryTranslations.entryId))
-    .where(and(inArray(entryTranslations.state, [...READABLE]), isNull(entryTranslations.trashedAt)));
+    .where(and(inArray(entryTranslations.state, [...READABLE_STATES]), isNull(entryTranslations.trashedAt)));
   const translations = stored.map((row) => ({ ...row, body: resolveValues(row.body, values) }));
 
   const translationIds = translations.map((row) => row.translationId);
@@ -481,32 +530,19 @@ export async function readPublicSnapshot(database: Database): Promise<PublicSnap
   const byEntry = new Map<string, typeof reachable>();
   for (const row of reachable) byEntry.set(row.entryId, [...(byEntry.get(row.entryId) ?? []), row]);
 
-  const publicEntries: PublicEntry[] = reachable.map((row) => {
+  const publicEntries = reachable.map((row) => {
     const counterpart = byEntry.get(row.entryId)?.find((other) => other.translationId !== row.translationId);
-    const path = currentPaths.get(row.translationId) ?? "";
-    return {
-      id: row.translationId,
-      title: row.title,
-      slug: path.split("/").filter(Boolean).at(-1) ?? "",
-      path,
-      language: row.language,
-      visibility: row.state as "public" | "hidden",
-      kind: row.kind,
-      createdAt: row.createdAt.toISOString(),
-      publishedAt: row.publishedAt?.toISOString() ?? null,
-      updatedAt: row.modifiedAt?.toISOString() ?? null,
-      summary: row.summary,
-      body: row.body,
-      topics: topicsByEntry.get(row.entryId) ?? [],
-      featuredImage: row.featuredMediaId ? (slugById.get(row.featuredMediaId) ?? null) : null,
-      socialImage: row.socialCardMediaId ? (slugById.get(row.socialCardMediaId) ?? null) : null,
-      translationPath: counterpart ? (currentPaths.get(counterpart.translationId) ?? null) : null,
-      featured: row.featured,
-      onHomePage: row.onHomePage,
-      readingWidth: row.readingWidth,
-      showInOtherLanguage: row.showInOtherLanguage,
-      specs: row.specs,
-    };
+    return publicEntry(
+      row,
+      {
+        path: currentPaths.get(row.translationId) ?? "",
+        // The query reads readable states only, which the column's type cannot say.
+        visibility: row.state as ReadableState,
+        topics: topicsByEntry.get(row.entryId) ?? [],
+        translationPath: counterpart ? (currentPaths.get(counterpart.translationId) ?? null) : null,
+      },
+      slugById,
+    );
   });
 
   const publishedTopics = await publicTopics(database);
