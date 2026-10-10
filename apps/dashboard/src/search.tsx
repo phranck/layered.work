@@ -19,6 +19,7 @@ import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
+import { queryKeys } from "./query-keys.js";
 import { dashboardAreas } from "./routes.js";
 
 /**
@@ -252,7 +253,7 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
   const settled = useSettled(query.trim(), SEARCH_DELAY_MS);
   const [active, setActive] = useState(0);
   const results = useQuery({
-    queryKey: ["search", settled],
+    queryKey: queryKeys.search(settled),
     queryFn: () => api.search(settled),
     enabled: settled.length > 0,
   });

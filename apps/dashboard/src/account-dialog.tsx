@@ -21,8 +21,10 @@ import { ErrorNotice } from "./error-notice.js";
 import { INTERFACE_SCALES, restoredScale, useInterfaceScale } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
+import { refreshMediaQueries } from "./media-uploads.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSignOut } from "./session-queries.js";
 
@@ -50,7 +52,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const signingOutRef = useRef(false);
   const save = useMutation({
     mutationFn: api.updateAccount,
-    onSuccess: (profile) => queryClient.setQueryData(["account", profile.id], profile),
+    onSuccess: (profile) => queryClient.setQueryData(queryKeys.account(profile.id), profile),
   });
   const signOut = useSignOut();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -61,7 +63,9 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
       // and is kept only when the account is saved.
       setDraft((current) => ({ ...current, avatarMediaId: picture.id }));
       setAvatarUrl(picture.url);
-      queryClient.invalidateQueries({ queryKey: ["account-media"] });
+      // The upload is a file of the library like any other, so the picker and
+      // the sidebar's count show it.
+      void refreshMediaQueries(queryClient);
     },
   });
   const accountPending = save.isPending || signOut.isPending;

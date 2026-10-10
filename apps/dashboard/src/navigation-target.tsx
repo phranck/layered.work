@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 
 type Item = SaveFooterNavigationBody["items"][number];
 export function NavigationTarget({
@@ -20,14 +21,18 @@ export function NavigationTarget({
   const { text, language } = useDashboardLanguage();
   const [kind, setKind] = useState(item.entryId ? "entry" : item.topicId ? "topic" : "external");
   const entries = useQuery({
-    queryKey: ["navigation-target-entries"],
+    queryKey: queryKeys.navigationTargetEntries,
     enabled: kind === "entry",
     queryFn: async () =>
       (await Promise.all([api.fetchEntries("post"), api.fetchEntries("page"), api.fetchEntries("project")]))
         .flat()
         .filter((row) => !row.trashed),
   });
-  const topics = useQuery({ queryKey: ["topics"], queryFn: api.fetchTopics, enabled: kind === "topic" });
+  const topics = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: api.fetchTopics,
+    enabled: kind === "topic",
+  });
   const options =
     kind === "entry"
       ? [

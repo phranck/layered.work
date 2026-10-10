@@ -16,6 +16,7 @@ import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -49,7 +50,7 @@ export function MailTemplatesScreen() {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: ["mail-templates"], queryFn: api.fetchMailTemplates });
+  const list = useQuery({ queryKey: queryKeys.mailTemplates, queryFn: api.fetchMailTemplates });
   return (
     <>
       <ScreenTitle title={text("emailTemplates")} />
@@ -107,7 +108,7 @@ export function MailTemplateEditorScreen() {
   const { language: interfaceLanguage, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const loaded = useQuery({
-    queryKey: ["mail-template", templateKind],
+    queryKey: queryKeys.mailTemplate(templateKind),
     queryFn: async () => (await api.fetchMailTemplates()).find((item) => item.kind === templateKind),
     enabled: Boolean(kind),
   });
@@ -123,8 +124,8 @@ export function MailTemplateEditorScreen() {
     mutationFn: (value: SaveMailTemplateBody) => api.saveMailTemplate(templateKind, value),
     onError: (error) => notifyError(error),
     onSuccess: (saved) => {
-      queryClient.setQueryData(["mail-template", templateKind], saved);
-      void queryClient.invalidateQueries({ queryKey: ["mail-templates"] });
+      queryClient.setQueryData(queryKeys.mailTemplate(templateKind), saved);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.mailTemplates });
       notify({ tone: "success", message: text("saved") });
     },
   });

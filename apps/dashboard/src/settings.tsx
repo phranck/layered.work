@@ -19,6 +19,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
@@ -32,9 +33,6 @@ import { contentLanguageOptions, Translated } from "./translated.js";
  * change to the mail sender cannot be lost to an unrelated mistake in the site
  * title. Every author can read them; only the owner can change them.
  */
-
-/** The query every settings card shares, so saving one refreshes the others. */
-export const SETTINGS_KEY = ["settings"] as const;
 
 /** How long an Umami website id is: a UUID, hyphens included. */
 const UUID_LENGTH = 36;
@@ -107,7 +105,7 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
     mutationFn: (value: SettingsGroups[Group]) => api.saveSettings(group, value),
     onError: (error) => notifyError(error),
     onSuccess: (view) => {
-      queryClient.setQueryData(SETTINGS_KEY, view);
+      queryClient.setQueryData(queryKeys.settings, view);
       notify({ tone: "success", message: text("saved") });
     },
   });
@@ -197,7 +195,7 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
 function WithSettings({ area, render }: { area: DashboardArea; render: (view: SettingsView) => ReactNode }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
+  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />

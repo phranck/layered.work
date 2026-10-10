@@ -7,7 +7,7 @@ import {
 } from "@layered/schemas";
 import { BrandMark, Button, Card, Field, Input, Row, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -16,26 +16,30 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
 
-const listKey = ["social-accounts"] as const;
 type Dialog = { editing: SocialAccount | null } | { deleting: SocialAccount } | null;
 const platformOptions = SOCIAL_PLATFORMS.map((value) => ({ value, label: SOCIAL_PLATFORM_NAMES[value] }));
+
+/** Fetches the accounts and the sidebar's count again after one was added, changed, moved or deleted. */
+function refreshAccounts(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.socialAccounts });
+  void refreshCounts(client);
+}
+
 export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const owner = useSession().data?.role === "owner";
-  const accounts = useQuery({ queryKey: listKey, queryFn: api.fetchSocialAccounts });
+  const accounts = useQuery({ queryKey: queryKeys.socialAccounts, queryFn: api.fetchSocialAccounts });
   const [dialog, setDialog] = useState<Dialog>(null);
-  const refresh = () => {
-    void client.invalidateQueries({ queryKey: listKey });
-    void refreshCounts(client);
-  };
+  const refresh = () => refreshAccounts(client);
   const save = useMutation({
     mutationFn: (account: SocialAccount) => {
       const { id, ...value } = account;
@@ -161,8 +165,7 @@ function SocialEditor({
   const save = useMutation({
     mutationFn: (value: SaveSocialAccountBody) => api.saveSocialAccount(account?.id ?? null, value),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: listKey });
-      void refreshCounts(client);
+      refreshAccounts(client);
       onClose();
     },
     onError: (error) => notifyError(error),
@@ -254,8 +257,7 @@ function SocialDelete({ account, onClose }: { account: SocialAccount; onClose: (
   const remove = useMutation({
     mutationFn: () => api.deleteSocialAccount(account.id),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: listKey });
-      void refreshCounts(client);
+      refreshAccounts(client);
       onClose();
     },
   });

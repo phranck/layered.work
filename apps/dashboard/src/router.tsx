@@ -14,6 +14,7 @@ import { HomeBlocksScreen } from "./home-blocks.js";
 import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.js";
 import { MediaScreen } from "./media-screen.js";
 import { NamedValuesScreen } from "./named-values.js";
+import { queryKeys } from "./query-keys.js";
 import { type DashboardArea, dashboardAreas } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { SocialAccountsScreen } from "./social-accounts.js";
@@ -69,9 +70,9 @@ export function dashboardRouteObjects({
       ErrorBoundary: RouteErrorScreen,
       shouldRevalidate: () => true,
       loader: async ({ request }) => {
-        const previousSession = queryClient.getQueryData(["session"]);
+        const previousSession = queryClient.getQueryData(queryKeys.session);
         const session = await queryClient.fetchQuery({
-          queryKey: ["session"],
+          queryKey: queryKeys.session,
           queryFn: api.fetchSession,
           staleTime: 0,
         });
@@ -80,7 +81,7 @@ export function dashboardRouteObjects({
           throw redirect(loginLocation(request.url, Boolean(previousSession)));
         }
         await queryClient.fetchQuery({
-          queryKey: ["account", session.id],
+          queryKey: queryKeys.account(session.id),
           queryFn: api.fetchAccount,
           staleTime: 0,
         });

@@ -12,20 +12,19 @@ import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./forms.css";
 
-const formsKey = ["forms"] as const;
-
 /** The list follows the same card and app-bar pattern as the entry lists. */
 export function FormsScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const { text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: formsKey, queryFn: api.fetchForms });
+  const list = useQuery({ queryKey: queryKeys.forms, queryFn: api.fetchForms });
   return (
     <>
       <ScreenTitle title={text("forms")} />
@@ -256,7 +255,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const loaded = useQuery({
-    queryKey: ["form", id],
+    queryKey: queryKeys.form(id),
     queryFn: () => api.fetchForm(id ?? ""),
     enabled: Boolean(id && !isNew),
   });
@@ -292,8 +291,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     mutationFn: (value: CreateFormBody) => (isNew ? api.createForm(value) : api.saveForm(id ?? "", value)),
     onError: (error) => notifyError(error),
     onSuccess: (saved) => {
-      queryClient.setQueryData(["form", saved.id], saved);
-      void queryClient.invalidateQueries({ queryKey: formsKey });
+      queryClient.setQueryData(queryKeys.form(saved.id), saved);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.forms });
       void refreshCounts(queryClient);
       notify({ tone: "success", message: text("saved") });
       if (isNew) navigate(`/${area.path}/${saved.id}`, { replace: true });

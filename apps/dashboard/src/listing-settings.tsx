@@ -5,7 +5,8 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { type DashboardStringKey, dashboardText } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { SETTINGS_KEY, SettingsCard } from "./settings.js";
+import { queryKeys } from "./query-keys.js";
+import { SettingsCard } from "./settings.js";
 import { useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
@@ -35,7 +36,7 @@ const typedNumber = (value: string) => Number.parseInt(value, 10);
 export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
+  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
   const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);
   const group = LISTING_GROUP[kind];
 

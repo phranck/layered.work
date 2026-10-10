@@ -15,12 +15,12 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { DataTable, useTableSearch } from "./data-table.js";
-import { entryKey } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { contentLanguageOptions } from "./translated.js";
 
@@ -121,9 +121,6 @@ export function otherLanguage(language: ContentLanguage): ContentLanguage {
   return language === "en" ? "de" : "en";
 }
 
-/** The query key every entry list is cached under, so a later screen can read or refresh it. */
-export const entryListKey = (kind: EntryKind) => ["entries", kind] as const;
-
 /**
  * One of the figures above a list: a label, the number, and what it means.
  *
@@ -170,7 +167,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const { notify, notifyError } = useNotify();
   const { language, text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
-  const list = useQuery({ queryKey: entryListKey(kind), queryFn: () => api.fetchEntries(kind) });
+  const list = useQuery({ queryKey: queryKeys.entryList(kind), queryFn: () => api.fetchEntries(kind) });
 
   // One formatter per language rather than one per row and render.
   const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
@@ -185,15 +182,15 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   // Restoring and emptying both change what every list and the sidebar's
   // counts show, so both refresh all of them.
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["entries"] });
-    void queryClient.invalidateQueries({ queryKey: ["entry"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
     void refreshCounts(queryClient);
   };
   const create = useMutation({
     mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),
     onError: (error) => notifyError(error),
     onSuccess: (created) => {
-      queryClient.setQueryData(entryKey(created.id), created);
+      queryClient.setQueryData(queryKeys.entryDetail(created.id), created);
       refresh();
       navigate(`/${area.path}/${created.id}`, { state: { focusTitle: true } });
     },

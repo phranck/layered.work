@@ -8,6 +8,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
 import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
+import { queryKeys } from "./query-keys.js";
 import { UnsplashSearch } from "./unsplash-search.js";
 import "./media-browser.css";
 
@@ -75,7 +76,7 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   const [unused, setUnused] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const media = useQuery({
-    queryKey: ["media", "list", query, imageOnly ? "image" : kind, page, unused],
+    queryKey: queryKeys.mediaPage(query, imageOnly ? "image" : kind, page, unused),
     queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page, unused),
     retry: false,
     refetchInterval: (query) =>

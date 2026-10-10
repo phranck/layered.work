@@ -11,6 +11,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import "./submissions.css";
 
@@ -43,12 +44,11 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const field = useTableSearch();
   // One formatter per language rather than one per row and render, in the form the Posts list uses.
   const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
-  const forms = useQuery({ queryKey: ["forms"], queryFn: api.fetchForms });
+  const forms = useQuery({ queryKey: queryKeys.forms, queryFn: api.fetchForms });
   const formId = selectedFormId || forms.data?.[0]?.id || "";
   const form = forms.data?.find((item) => item.id === formId);
-  const submissionsKey = ["form-submissions", formId] as const;
   const submissions = useQuery({
-    queryKey: submissionsKey,
+    queryKey: queryKeys.formSubmissions(formId),
     queryFn: () => api.fetchFormSubmissions(formId),
     enabled: Boolean(formId),
     refetchInterval: 1000,
@@ -64,7 +64,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: submissionsKey }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.formSubmissions(formId) }),
       refreshCounts(queryClient),
     ]);
   };

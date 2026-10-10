@@ -5,6 +5,7 @@ import { refreshCounts } from "./dashboard-counts.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 
 const ENTRY_AREA = { post: "posts", page: "pages", project: "projects" } as const;
 export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
@@ -59,11 +60,10 @@ export function MediaDeleteDialog({
   const processing = detail.processing.state === "queued" || detail.processing.state === "processing";
   const remove = useMutation({
     mutationFn: () => api.deleteMedia(detail.id),
-    onError: () => client.invalidateQueries({ queryKey: ["media", "detail", detail.id] }),
+    onError: () => client.invalidateQueries({ queryKey: queryKeys.mediaDetail(detail.id) }),
     onSuccess: async (result) => {
       await Promise.all([
-        client.invalidateQueries({ queryKey: ["media"] }),
-        client.invalidateQueries({ queryKey: ["account-media"] }),
+        client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery }),
         refreshCounts(client),
       ]);
       notify({

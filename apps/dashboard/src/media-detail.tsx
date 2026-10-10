@@ -17,6 +17,7 @@ import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
 import { CardDialog } from "./modal.js";
+import { queryKeys } from "./query-keys.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -66,8 +67,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
         })),
       }),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["media"] });
-      await client.invalidateQueries({ queryKey: ["account-media"] });
+      await client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery });
       onClose();
     },
   });
@@ -232,7 +232,7 @@ export function MediaDetailDialog({ id, onClose }: { id: string; onClose: () => 
   const { text } = useDashboardLanguage();
   const titleId = useId();
   const detail = useQuery({
-    queryKey: ["media", "detail", id],
+    queryKey: queryKeys.mediaDetail(id),
     queryFn: () => api.fetchMediaDetail(id),
     retry: false,
     refetchInterval: (query) =>

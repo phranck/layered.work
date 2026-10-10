@@ -16,6 +16,7 @@ import {
 } from "@layered/ui/icons";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
+import type { NavigationPlacement } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
@@ -24,6 +25,7 @@ import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
@@ -32,23 +34,21 @@ import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./footer-navigation.css";
 
-type Placement = "main" | "footer";
-const listKey = (placement: Placement) => [`${placement}-navigation`] as const;
-function refresh(client: QueryClient, placement: Placement) {
-  void client.invalidateQueries({ queryKey: listKey(placement) });
+function refresh(client: QueryClient, placement: NavigationPlacement) {
+  void client.invalidateQueries({ queryKey: queryKeys.navigation(placement) });
   void refreshCounts(client);
 }
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 
 export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
-  const placement: Placement = area.id === "main-nav" ? "main" : "footer";
+  const placement: NavigationPlacement = area.id === "main-nav" ? "main" : "footer";
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const session = useSession();
   const owner = session.data?.role === "owner";
   const list = useQuery({
-    queryKey: listKey(placement),
+    queryKey: queryKeys.navigation(placement),
     queryFn: () => api.fetchFooterNavigations(placement),
   });
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -163,7 +163,7 @@ function NavigationEditor({
   sortOrder,
   onClose,
 }: {
-  placement: Placement;
+  placement: NavigationPlacement;
   group: FooterNavigation | null;
   sortOrder: number;
   onClose: () => void;
@@ -380,7 +380,7 @@ function NavigationDelete({
   group,
   onClose,
 }: {
-  placement: Placement;
+  placement: NavigationPlacement;
   group: FooterNavigation;
   onClose: () => void;
 }) {

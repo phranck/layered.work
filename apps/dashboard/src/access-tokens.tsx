@@ -11,6 +11,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 
 /** What each permission is called in the catalogue. */
 const SCOPE_TEXT: Record<TokenScope, DashboardStringKey> = {
@@ -30,7 +31,7 @@ export function AccessTokensScreen() {
   const [scopes, setScopes] = useState<TokenScope[]>([]);
   const [expiry, setExpiry] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
-  const tokens = useQuery({ queryKey: ["access-tokens"], queryFn: api.fetchAccessTokens });
+  const tokens = useQuery({ queryKey: queryKeys.accessTokens, queryFn: api.fetchAccessTokens });
   const issue = useMutation({
     mutationFn: (value: IssueTokenBody) => api.issueAccessToken(value),
     onError: (error) => notifyError(error),
@@ -39,7 +40,7 @@ export function AccessTokensScreen() {
       setName("");
       setScopes([]);
       setExpiry("");
-      void queryClient.invalidateQueries({ queryKey: ["access-tokens"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       notify({ tone: "success", message: text("tokenCreated") });
     },
   });
@@ -47,7 +48,7 @@ export function AccessTokensScreen() {
   const revoke = useMutation({
     mutationFn: (id: string) => api.revokeAccessToken(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["access-tokens"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       setRevoking(null);
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },

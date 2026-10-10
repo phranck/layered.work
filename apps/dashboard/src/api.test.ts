@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDashboardApi, DashboardApiError } from "./api.js";
+import { queryKeys } from "./query-keys.js";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -32,7 +33,7 @@ describe("dashboard API authentication", () => {
 
   it("clears cached identity and reports concurrent protected 401 responses once", async () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(["session"], { id: "old" });
+    queryClient.setQueryData(queryKeys.session, { id: "old" });
     const expired = vi.fn();
     vi.stubGlobal(
       "fetch",
@@ -48,7 +49,7 @@ describe("dashboard API authentication", () => {
 
     expect(results.every((result) => result.status === "rejected")).toBe(true);
     expect(expired).toHaveBeenCalledTimes(1);
-    expect(queryClient.getQueryData(["session"])).toBeUndefined();
+    expect(queryClient.getQueryData(queryKeys.session)).toBeUndefined();
     expect(results[0]).toMatchObject({ reason: expect.any(DashboardApiError) });
   });
 

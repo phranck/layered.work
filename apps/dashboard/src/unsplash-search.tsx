@@ -8,6 +8,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { refreshMediaQueries } from "./media-uploads.js";
 import { CardDialog } from "./modal.js";
+import { queryKeys } from "./query-keys.js";
 
 /** Props for the Unsplash search. */
 interface UnsplashSearchProps {
@@ -36,7 +37,7 @@ export function UnsplashSearch({ onChoose, onCancel }: UnsplashSearchProps) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const results = useQuery({
-    queryKey: ["unsplash", query, page],
+    queryKey: queryKeys.unsplash(query, page),
     queryFn: () => api.searchUnsplash(query, page),
     enabled: query !== "",
     retry: false,

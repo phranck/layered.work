@@ -20,6 +20,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
@@ -32,9 +33,6 @@ import { Translated } from "./translated.js";
  * A language a topic has no name in shows as missing rather than borrowing the
  * other language's name, because this is the screen where the gap gets filled.
  */
-
-/** The query the topic list is cached under, shared with the editor's topic field. */
-export const topicListKey = ["topics"] as const;
 
 /**
  * What a topic is called in one language, or in the other where it has no name
@@ -74,9 +72,9 @@ export function filterTopics(topics: readonly TopicListItem[], search: string): 
 
 /** Refreshes everything a change to a topic shows up in. */
 function refreshAfterTopicChange(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({ queryKey: topicListKey });
-  void queryClient.invalidateQueries({ queryKey: ["entries"] });
-  void queryClient.invalidateQueries({ queryKey: ["entry"] });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
   void refreshCounts(queryClient);
 }
 
@@ -91,7 +89,7 @@ type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | 
 export function TopicsScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: topicListKey, queryFn: api.fetchTopics });
+  const list = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const rows = useMemo(() => filterTopics(list.data ?? [], search), [list.data, search]);
