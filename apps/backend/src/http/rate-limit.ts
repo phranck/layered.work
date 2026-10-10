@@ -141,10 +141,12 @@ export const byAddress = (c: Context): string => `address:${sourceAddress(c)}`;
  * The account being named, as a key.
  *
  * Read from the validated body rather than from the raw one, so the limiter
- * cannot be keyed by a megabyte of nonsense. An address that is not there at
- * all counts as one bucket, which limits more rather than less.
+ * cannot be keyed by a megabyte of nonsense, and so the address is already
+ * trimmed and lower-cased by `emailAddress`: two spellings are one bucket. An
+ * address that is not there at all counts as one bucket, which limits more
+ * rather than less.
  */
 export function byAccount(c: Context): string {
   const body = c.req.valid("json" as never) as { email?: string } | undefined;
-  return `account:${body?.email?.trim().toLowerCase() ?? "none"}`;
+  return `account:${body?.email ?? "none"}`;
 }

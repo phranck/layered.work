@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ENTRY_KINDS, READING_WIDTHS } from "./entries.js";
+import { ENTRY_KINDS, entrySpecs, READING_WIDTHS } from "./entries.js";
 import { publicForm } from "./forms.js";
 import { focalPoint, mediaDescriptions } from "./media.js";
 import { publicFooterNavigation, publicMainNavigation } from "./navigation.js";
@@ -49,6 +49,8 @@ const publicEntry = z.object({
   onHomePage: z.boolean(),
   readingWidth: z.enum(READING_WIDTHS),
   showInOtherLanguage: z.boolean(),
+  /** The specification pairs a project page shows under its hero. */
+  specs: entrySpecs,
 });
 const publicMedia = z.object({
   slug: z.string(),
@@ -70,15 +72,23 @@ const publicMedia = z.object({
   credit: mediaCredit.optional(),
 });
 const translatedTopic = z.object({ slug: z.string(), name: z.string() }).nullable();
+const publicTopic = z.object({
+  id: z.string(),
+  translations: z.object({ en: translatedTopic, de: translatedTopic }),
+});
+
+/**
+ * The public content of the site, as `GET /content/snapshot` answers it and the
+ * site parses it. The backend builds it typed by this declaration, so the two
+ * cannot describe different shapes.
+ */
 export const publicSnapshot = z.object({
   footerNavigation: publicFooterNavigation,
   mainNavigation: publicMainNavigation.optional(),
   siteFrame: publicSiteFrame,
   entries: z.array(publicEntry),
   forms: z.array(publicForm),
-  topics: z.array(
-    z.object({ id: z.string(), translations: z.object({ en: translatedTopic, de: translatedTopic }) }),
-  ),
+  topics: z.array(publicTopic),
   media: z.array(publicMedia),
   redirects: z.array(z.object({ source: z.string(), target: z.string() })),
   gone: z.array(z.string()),
@@ -92,6 +102,14 @@ export const publicSnapshot = z.object({
     }),
   ),
 });
+
+export type PublicSnapshot = z.infer<typeof publicSnapshot>;
+/** One entry, in the shape the site's repository parses. */
+export type PublicEntry = z.infer<typeof publicEntry>;
+/** One asset, in the shape the site's repository parses. */
+export type PublicMedia = z.infer<typeof publicMedia>;
+/** One subject and the names and addresses it has in each language. */
+export type PublicTopic = z.infer<typeof publicTopic>;
 
 /** The API description endpoint describes its own document as well. */
 export const openApiDocument = z.object({

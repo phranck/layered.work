@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 import { SLUG_PATTERN } from "./slug.js";
 
 /** Text shown in each of the site's two languages. */
@@ -96,9 +96,19 @@ export const formField = z.discriminatedUnion("type", [
 export type FormField = z.infer<typeof formField>;
 export type FormFieldType = FormField["type"];
 
+/**
+ * A form's slug: what content embeds it by and what its public address names.
+ * The save and the public routes read this one declaration, so a form that can
+ * be saved can always be reached.
+ */
+export const formSlug = text(MaxLength.Handle, { pattern: SLUG_PATTERN });
+
+/** A form's slug as a path parameter of the public routes. */
+export const formSlugParam = z.object({ slug: formSlug });
+
 /** What the dashboard saves, including field order and form-wide settings. */
 const publicDeclarationFields = {
-  slug: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
+  slug: formSlug,
   name: text(MaxLength.Line),
   successMessage: formText,
   fields: z.array(formField).min(1).max(40),
@@ -107,7 +117,7 @@ const uniqueFieldKeys = (form: { fields: FormField[] }) =>
   new Set(form.fields.map((field) => field.key)).size === form.fields.length;
 export const createFormBody = body({
   ...publicDeclarationFields,
-  notificationEmail: z.email().max(254).nullable(),
+  notificationEmail: emailAddress.nullable(),
   /** Send the confirmation to this validated email field, when present. */
   confirmationEmailField: z.string().max(MaxLength.Handle).nullable().optional(),
   storeSubmissions: z.boolean(),

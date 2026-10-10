@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ErrorCode, type UnsplashSearchPage, type UploadedMedia } from "@layered/schemas";
+import { ErrorCode, slugFromTitle, type UnsplashSearchPage, type UploadedMedia } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { mediaContentUrl } from "../account/repository.js";
@@ -7,7 +7,7 @@ import { auditActor } from "../auth/audit-actor.js";
 import { auditLog, media, unsplashPhotos } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
-import { insertUnderFreeSlug, slugStem } from "../media/upload.js";
+import { insertUnderFreeSlug } from "../media/upload.js";
 import { readUnsplashPhoto, searchUnsplash, trackUnsplashDownload } from "./client.js";
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
@@ -86,7 +86,7 @@ export async function importUnsplashPhoto(
     existing ??
     (await insertUnderFreeSlug(
       db,
-      slugStem(photo.alt_description || `unsplash-${photo.id}`),
+      slugFromTitle(photo.alt_description || `unsplash ${photo.id}`, "unsplash"),
       async (tx, slug) => {
         const [created] = await tx
           .insert(media)

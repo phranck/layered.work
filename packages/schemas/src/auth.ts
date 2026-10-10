@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body, MaxLength } from "./request.js";
+import { body, emailAddress } from "./request.js";
 
 /**
  * What signing in accepts, read by the endpoint and by the form.
@@ -22,7 +22,7 @@ export const MAX_PASSWORD_LENGTH = 512;
 
 /** What the sign-in form sends. */
 export const signInBody = body({
-  email: z.email().max(MaxLength.Line),
+  email: emailAddress,
   password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
 });
 

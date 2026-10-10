@@ -26,7 +26,20 @@ export const MaxLength = {
   Paragraph: 2_000,
   /** The body of an entry, which is the longest thing this API accepts. */
   Body: 500_000,
+  /** An email address: the longest path SMTP carries (RFC 5321). */
+  Email: 254,
 } as const;
+
+/**
+ * An email address as a request carries it: trimmed, lower case, and no longer
+ * than an address can be.
+ *
+ * Lower case because the accounts table stores it so, and two spellings of one
+ * address must be neither two accounts nor one miss. Every request field holding
+ * an address reads this, so the sign-in, the account, the mail settings and the
+ * forms cannot disagree about what an address is.
+ */
+export const emailAddress = z.string().trim().toLowerCase().pipe(z.email().max(MaxLength.Email));
 
 /**
  * An object that refuses what it was not asked for.

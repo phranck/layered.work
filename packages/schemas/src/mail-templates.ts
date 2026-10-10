@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 
 export const mailTemplateKind = z.enum(["submission_notification", "submission_confirmation"]);
 export type MailTemplateKind = z.infer<typeof mailTemplateKind>;
@@ -25,4 +25,4 @@ export const previewMailTemplateBody = body({
 });
 export const renderedMail = body({ subject: z.string(), text: z.string(), html: z.string() });
 export type RenderedMail = z.infer<typeof renderedMail>;
-export const testMailTemplateBody = previewMailTemplateBody.extend({ recipient: z.email().max(254) });
+export const testMailTemplateBody = previewMailTemplateBody.extend({ recipient: emailAddress });
