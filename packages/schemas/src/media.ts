@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { body, MaxLength, signedToken } from "./request.js";
+import { CONTENT_LANGUAGES, ENTRY_KINDS, inBothLanguages, inEachLanguage } from "./entries.js";
+import { body, MaxLength, signedToken, withoutControlCharacters } from "./request.js";
+import { LISTING_GROUP } from "./settings.js";
 import { mediaCredit } from "./unsplash.js";
 
 /**
@@ -46,8 +48,8 @@ export const createUploadBody = body({
     .trim()
     .min(1)
     .max(MAX_FILENAME)
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: Control characters are what this refuses.
-    .regex(/^[^/\\\u0000-\u001f\u007f]+$/),
+    .regex(/^[^/\\]+$/)
+    .refine(withoutControlCharacters),
   type: z.enum(ACCEPTED_IMAGE_TYPES),
   size: z.number().int().min(1).max(MAX_UPLOAD_BYTES),
 });
@@ -87,14 +89,49 @@ export const uploadedMedia = z.object({
 
 export type UploadedMedia = z.infer<typeof uploadedMedia>;
 
+/**
+ * The states a file's processing passes through: waiting for a worker, having
+ * its variants made, finished, or failed.
+ */
+export const MEDIA_PROCESSING_STATES = ["queued", "processing", "ready", "failed"] as const;
+
+/** One state of a file's processing. */
+export type MediaProcessingState = (typeof MEDIA_PROCESSING_STATES)[number];
+
 /** Processing state shared by the library and its detail view. */
-export const mediaProcessingState = z.enum(["queued", "processing", "ready", "failed"]);
+export const mediaProcessingState = z.enum(MEDIA_PROCESSING_STATES);
+
+/**
+ * Whether a file's processing has yet to finish, so its variants are still
+ * being made.
+ *
+ * One answer for every place that waits on it: the dashboard asks for such a
+ * file again until it is done and does not offer to delete it, and the API
+ * refuses to delete it.
+ *
+ * @param state - The state of the file's processing.
+ * @returns True while it is queued or being processed, false once it is ready or failed.
+ */
+export function isProcessing(state: MediaProcessingState): boolean {
+  return state === "queued" || state === "processing";
+}
+
+/**
+ * The formats a picture is derived into. AVIF and WebP are what a modern browser
+ * is offered, and JPEG and PNG what it falls back to, depending on whether the
+ * original has transparency.
+ */
+export const IMAGE_FORMATS = ["avif", "webp", "jpeg", "png"] as const;
+
+/** One format a picture is derived into. */
+export type ImageFormat = (typeof IMAGE_FORMATS)[number];
+
 export const mediaProcessing = z.object({
   state: mediaProcessingState,
   errorId: z.uuid().nullable(),
   variants: z.array(
     z.object({
-      format: z.enum(["avif", "webp", "jpeg", "png"]),
+      format: z.enum(IMAGE_FORMATS),
       width: z.number().int().positive(),
       height: z.number().int().positive(),
       byteSize: z.number().int().positive(),
@@ -131,6 +168,9 @@ export const watermark = z.enum(WATERMARK_ANCHORS).nullable();
 /** The author's crop anchor, independent of any display ratio. */
 export const focalPoint = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 export type FocalPoint = z.infer<typeof focalPoint>;
+
+/** Where a picture is cropped around until its author says otherwise: its middle. */
+export const DEFAULT_FOCAL_POINT: Readonly<FocalPoint> = { x: 0.5, y: 0.5 };
 export const updateMediaFocalBody = body({ x: focalPoint.shape.x, y: focalPoint.shape.y });
 
 /** Supported library kinds; upload acceptance remains a separate byte-level policy. */
@@ -168,10 +208,19 @@ export const MEDIA_ORDERS = ["slug", "newest"] as const;
 
 /** One order the library can be listed in. */
 export type MediaOrder = (typeof MEDIA_ORDERS)[number];
-export const mediaDescriptions = z.object({
-  en: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
-  de: z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
-});
+export const mediaDescriptions = inBothLanguages(
+  z.object({ altText: z.string().nullable(), caption: z.string().nullable() }),
+);
+export type MediaDescriptions = z.infer<typeof mediaDescriptions>;
+
+/**
+ * A file's descriptions where nothing is written in any language, which is
+ * what a file has until somebody describes it. A new object each time, because
+ * the callers fill it in.
+ */
+export function noMediaDescriptions(): MediaDescriptions {
+  return inEachLanguage(() => ({ altText: null, caption: null }));
+}
 export const mediaLibraryQuery = z.object({
   search: z.string().trim().max(MaxLength.Line).default(""),
   kind: z.enum(["all", ...MEDIA_KINDS]).default("all"),
@@ -206,9 +255,9 @@ export type MediaLibraryPage = z.infer<typeof mediaLibraryPage>;
 export const mediaUse = z.object({
   id: z.uuid(),
   title: z.string(),
-  language: z.enum(["en", "de"]),
-  kind: z.enum(["post", "page", "project", "account", "settings"]),
-  settingsGroup: z.enum(["site", "postListing", "projectListing"]).optional(),
+  language: z.enum(CONTENT_LANGUAGES),
+  kind: z.enum([...ENTRY_KINDS, "account", "settings"]),
+  settingsGroup: z.enum(["site", ...Object.values(LISTING_GROUP)]).optional(),
 });
 export const mediaDetail = mediaLibraryItem.extend({
   translations: mediaDescriptions,
@@ -226,15 +275,15 @@ export const saveMediaMetadataBody = body({
   translations: z
     .array(
       body({
-        language: z.enum(["en", "de"]),
+        language: z.enum(CONTENT_LANGUAGES),
         altText: z.string().max(MaxLength.Paragraph).nullable(),
         caption: z.string().max(MaxLength.Paragraph).nullable(),
       }),
     )
-    .length(2)
+    .length(CONTENT_LANGUAGES.length)
     .refine(
-      (items) => new Set(items.map((item) => item.language)).size === 2,
-      "Both languages must be supplied once.",
+      (items) => new Set(items.map((item) => item.language)).size === CONTENT_LANGUAGES.length,
+      "Every language must be supplied once.",
     ),
 });
 export type SaveMediaMetadataBody = z.infer<typeof saveMediaMetadataBody>;

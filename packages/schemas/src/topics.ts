@@ -33,9 +33,6 @@ export type TopicListItem = z.infer<typeof topicListItem>;
 export const topicList = z.array(topicListItem);
 export type TopicList = z.infer<typeof topicList>;
 
-/** A topic named in a path. */
-export const topicIdParam = z.strictObject({ id: z.uuid() });
-
 /**
  * What creating a topic while writing sends: the name typed into the field, in
  * the language of the entry being written. The address is written from it.

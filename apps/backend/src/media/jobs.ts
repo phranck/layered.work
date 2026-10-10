@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import { media, mediaAttempts, mediaJobs, mediaVariants } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import { processMediaAttemptCleanup, settleMediaAttempt } from "./attempts.js";
@@ -8,7 +8,6 @@ import { deleteMediaObject, readMediaBytes, writeMediaBytes } from "./storage.js
 import { deriveImageVariants, variantMimeType, variantStorageKey } from "./variants.js";
 import { readWatermark } from "./watermark.js";
 
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 const LEASE_MS = 300_000;
 const lease = () => new Date(Date.now() + LEASE_MS);
 

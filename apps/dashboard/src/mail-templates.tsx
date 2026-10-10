@@ -1,6 +1,9 @@
 import {
   type BilingualText,
+  CONTENT_LANGUAGES,
   type ContentLanguage,
+  MAIL_ELEMENTS,
+  MAIL_LINK,
   type MailTemplateKind,
   type SaveMailTemplateBody,
   saveMailTemplateBody,
@@ -16,10 +19,11 @@ import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
-const MAIL_TAGS = new Set(["div", "p", "strong", "em", "ul", "ol", "li", "a", "br"]);
+const MAIL_TAGS: ReadonlySet<string> = new Set(MAIL_ELEMENTS);
 
 /** Rebuild the API's preview with email-safe tags rather than injecting HTML. */
 function SafeMailPreview({ html }: { html: string }) {
@@ -32,11 +36,11 @@ function SafeMailPreview({ html }: { html: string }) {
     const props: Record<string, unknown> = { key };
     if (tag === "a") {
       const href = node.getAttribute("href") ?? "";
-      if (!/^https?:\/\//i.test(href)) return null;
+      if (!MAIL_LINK.test(href)) return null;
       props.href = href;
       props.rel = "noopener noreferrer";
     }
-    if (tag === "div" && ["en", "de"].includes(node.getAttribute("lang") ?? "")) {
+    if (tag === "div" && CONTENT_LANGUAGES.some((language) => language === node.getAttribute("lang"))) {
       props.lang = node.getAttribute("lang");
     }
     return createElement(tag, props, ...Array.from(node.childNodes).map(nodeToReact));
@@ -49,7 +53,7 @@ export function MailTemplatesScreen() {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: ["mail-templates"], queryFn: api.fetchMailTemplates });
+  const list = useQuery({ queryKey: queryKeys.mailTemplates, queryFn: api.fetchMailTemplates });
   return (
     <>
       <ScreenTitle title={text("emailTemplates")} />
@@ -107,7 +111,7 @@ export function MailTemplateEditorScreen() {
   const { language: interfaceLanguage, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const loaded = useQuery({
-    queryKey: ["mail-template", templateKind],
+    queryKey: queryKeys.mailTemplate(templateKind),
     queryFn: async () => (await api.fetchMailTemplates()).find((item) => item.kind === templateKind),
     enabled: Boolean(kind),
   });
@@ -123,8 +127,8 @@ export function MailTemplateEditorScreen() {
     mutationFn: (value: SaveMailTemplateBody) => api.saveMailTemplate(templateKind, value),
     onError: (error) => notifyError(error),
     onSuccess: (saved) => {
-      queryClient.setQueryData(["mail-template", templateKind], saved);
-      void queryClient.invalidateQueries({ queryKey: ["mail-templates"] });
+      queryClient.setQueryData(queryKeys.mailTemplate(templateKind), saved);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.mailTemplates });
       notify({ tone: "success", message: text("saved") });
     },
   });

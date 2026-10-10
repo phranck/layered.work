@@ -1,4 +1,5 @@
 import type { ComponentName, PropsOf } from "@layered/content";
+import type { MediaCreditLine } from "@layered/schemas";
 import { SPACE_STEPS } from "@layered/tokens";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -28,24 +29,6 @@ export interface MediaAsset {
   credit?: MediaCreditLine;
 }
 
-/**
- * The credit a picture from a picture library elsewhere carries, worded in the
- * page's language by whoever resolves the asset.
- *
- * It reads as one sentence: lead, author, joiner, source, such as "Photo by Jane
- * Doe on Unsplash".
- */
-export interface MediaCreditLine {
-  /** The words before the author's name, such as "Photo by". */
-  lead: string;
-  author: string;
-  /** The author's page at that library, with whatever parameters it asks links to carry. */
-  authorUrl: string;
-  /** The words between the author and the library, such as "on". */
-  joiner: string;
-  source: string;
-  sourceUrl: string;
-}
 /** Resolve a library slug without coupling UI to storage or an API. */
 export type MediaResolver = (slug: string) => MediaAsset | undefined;
 /** The library supplied to a media component. */
@@ -85,8 +68,17 @@ export function contentColumns(value: unknown): CSSProperties {
     : {};
 }
 
+/**
+ * Where a picture without a focal point is cropped around: its middle.
+ *
+ * The same value as `DEFAULT_FOCAL_POINT` in `@layered/schemas`, kept here
+ * because this module runs in the site's islands, which do not load the
+ * schemas. `content-shared.test.ts` holds the two together.
+ */
+const DEFAULT_FOCUS = { x: 0.5, y: 0.5 } as const;
+
 /** One crop calculation for React and Astro image surfaces. */
 export function imagePosition(asset: Pick<MediaAsset, "focalPoint">): string {
-  const point = asset.focalPoint ?? { x: 0.5, y: 0.5 };
+  const point = asset.focalPoint ?? DEFAULT_FOCUS;
   return `${point.x * 100}% ${point.y * 100}%`;
 }

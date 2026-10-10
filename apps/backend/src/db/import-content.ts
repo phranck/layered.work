@@ -2,21 +2,32 @@ import { stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { mediaReferences } from "@layered/content";
 import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
   createFormBody,
+  DEFAULT_FOCAL_POINT,
   DEFAULT_LISTING,
+  type EntryKind,
   type EntrySpec,
+  EXPORT_MEDIA_PATH,
   LISTED_KINDS,
   LISTING_GROUP,
   LISTING_PATHS,
   type ListedKind,
   type ListingSettings,
   listingSettings,
+  type MediaDescriptions,
+  MIGRATION_KEY_PREFIX,
+  noMediaDescriptions,
+  type PublicationState,
   type PublicForm,
+  type ReadingWidth,
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 import type { PublicTopic } from "../content/snapshot.js";
+import { decodedFormatName } from "../media/decoded-format.js";
+import type { Database } from "./connect.js";
 import {
   entries,
   entryTopics,
@@ -57,9 +68,10 @@ export interface SnapshotEntry {
   title: string;
   slug: string;
   path: string;
-  language: "en" | "de";
-  visibility: "public" | "hidden" | "draft" | "trashed";
-  kind: "post" | "page" | "project";
+  language: ContentLanguage;
+  /** A publication state, or `trashed`, which the old site had and the schema does not. */
+  visibility: PublicationState | "trashed";
+  kind: EntryKind;
   createdAt: string;
   publishedAt: string | null;
   updatedAt: string | null;
@@ -70,7 +82,7 @@ export interface SnapshotEntry {
   translationPath: string | null;
   featured: boolean;
   onHomePage: boolean;
-  readingWidth: "narrow" | "normal" | "wide" | "full";
+  readingWidth: ReadingWidth;
   /** Listed in the other language whilst that one has no version. Absent from the migration output. */
   showInOtherLanguage?: boolean;
   /** The picture a shared link shows, by slug. Absent from the migration output. */
@@ -94,7 +106,7 @@ export interface SnapshotMedia {
   alt?: string;
   caption?: string;
   /** The description in each language. Absent from the migration output, which knew English alt text only. */
-  translations?: Record<"en" | "de", { altText: string | null; caption: string | null }>;
+  translations?: MediaDescriptions;
   srcSet?: string;
   placeholder?: string;
   focalPoint?: { x: number; y: number };
@@ -140,8 +152,6 @@ export interface ImportReport {
   aliased: { slug: string; sameFileAs: string }[];
 }
 
-type Database = PostgresJsDatabase<Record<string, unknown>>;
-
 /**
  * Which kind of asset a MIME type describes.
  *
@@ -169,11 +179,8 @@ function mediaKindOf(mime: string): "image" | "video" | "document" | "model" {
  * @returns Its key, such as `migration/cover.webp`.
  */
 export function migratedStorageKey(src: string): string {
-  return `${MIGRATION_PREFIX}${basename(src)}`;
+  return `${MIGRATION_KEY_PREFIX}${basename(src)}`;
 }
-
-/** Where the old site served every file, and where the website's `public/` still holds them. */
-const EXPORT_PREFIX = "/media/";
 
 /**
  * The storage key a path in a snapshot names.
@@ -186,11 +193,8 @@ const EXPORT_PREFIX = "/media/";
  * @param path - A file's `src`, or one candidate of its `srcSet`.
  */
 export function storageKeyOf(path: string): string {
-  return path.startsWith(EXPORT_PREFIX) ? migratedStorageKey(path) : path.slice(1);
+  return path.startsWith(EXPORT_MEDIA_PATH) ? migratedStorageKey(path) : path.slice(1);
 }
-
-/** Where a picture is cropped around when nothing says otherwise: its middle, as the table's default. */
-const DEFAULT_FOCUS = 0.5;
 
 /**
  * The directories a snapshot's files are read from when their sizes are
@@ -212,13 +216,10 @@ export interface MediaRoots {
  * @throws When the path lies in the media store and no store was given.
  */
 function fileOf(path: string, roots: MediaRoots): string {
-  if (path.startsWith(EXPORT_PREFIX)) return resolve(roots.exported, `.${path}`);
+  if (path.startsWith(EXPORT_MEDIA_PATH)) return resolve(roots.exported, `.${path}`);
   if (!roots.stored) throw new Error(`${path} lies in the media store, so MEDIA_LOCAL_DIR has to name it.`);
   return resolve(roots.stored, `.${path}`);
 }
-
-/** Where `scripts/publii/upload.mjs` writes every migrated object in the bucket. */
-const MIGRATION_PREFIX = "migration/";
 
 /** One staged responsive file, measured before any database write. */
 export interface StagedVariant {
@@ -262,9 +263,8 @@ export async function stageVariants(snapshot: Snapshot, roots: MediaRoots): Prom
       if (!format) throw new Error(`Unsupported responsive format for ${asset.slug}.`);
       const [metadata, found] = await Promise.all([sharp(file).metadata(), stat(file)]);
       const width = Number(descriptor);
-      const decodedFormat = format === "avif" ? "heif" : format;
       if (
-        metadata.format !== decodedFormat ||
+        metadata.format !== decodedFormatName(format) ||
         metadata.width !== width ||
         !metadata.height ||
         found.size < 1
@@ -397,8 +397,8 @@ async function importMedia(
       byteSize: asset.bytes,
       width: asset.width ?? null,
       height: asset.height ?? null,
-      focalX: asset.focalPoint?.x ?? DEFAULT_FOCUS,
-      focalY: asset.focalPoint?.y ?? DEFAULT_FOCUS,
+      focalX: (asset.focalPoint ?? DEFAULT_FOCAL_POINT).x,
+      focalY: (asset.focalPoint ?? DEFAULT_FOCAL_POINT).y,
       placeholder: asset.placeholder ?? null,
     };
     const [row] = await database
@@ -416,10 +416,10 @@ async function importMedia(
     // snapshot read from the database carries both languages. A language saying
     // nothing gets no row, because the table refuses an empty one.
     const descriptions = asset.translations ?? {
+      ...noMediaDescriptions(),
       en: { altText: asset.alt ?? null, caption: asset.caption ?? null },
-      de: { altText: null, caption: null },
     };
-    for (const language of ["en", "de"] as const) {
+    for (const language of CONTENT_LANGUAGES) {
       const { altText, caption } = descriptions[language];
       if (altText === null && caption === null) continue;
       await database
@@ -473,7 +473,7 @@ async function importTopics(
     }
     if (!id) continue;
 
-    for (const language of ["en", "de"] as const) {
+    for (const language of CONTENT_LANGUAGES) {
       const translation = translations[language];
       if (!translation) continue;
       await database
@@ -613,7 +613,8 @@ async function importEntry(
       title: entry.title,
       summary: entry.summary,
       body: withKeptMedia(entry.body, keptMedia),
-      state: entry.visibility as "public" | "draft" | "hidden",
+      // Trashed entries are left out before this, so what remains is a publication state.
+      state: entry.visibility as PublicationState,
       readingWidth: entry.readingWidth,
       showInOtherLanguage: entry.showInOtherLanguage ?? false,
       specs: entry.specs ?? [],

@@ -5,11 +5,11 @@ import {
   socialAccountList,
 } from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
+import { type Position, writePositions } from "../db/positions.js";
 import { auditLog, socialAccounts } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-type Database = ReturnType<typeof database>;
 export async function listSocialAccounts(db: Database): Promise<SocialAccount[]> {
   return socialAccountList.parse(
     await db
@@ -70,7 +70,7 @@ export async function deleteSocialAccount(db: Database, id: string, actorUserId:
 }
 export async function reorderSocialAccounts(
   db: Database,
-  positions: { id: string; sortOrder: number }[],
+  positions: readonly Position[],
   actorUserId: string,
 ) {
   await db.transaction(async (tx) => {
@@ -87,16 +87,11 @@ export async function reorderSocialAccounts(
       .for("update");
     if (rows.length !== positions.length)
       throw new HttpError(ErrorCode.NotFound, "A social account no longer exists.");
-    for (const row of positions) {
-      await tx.update(socialAccounts).set({ sortOrder: row.sortOrder }).where(eq(socialAccounts.id, row.id));
-      await tx.insert(auditLog).values({
-        actorUserId,
-        action: "social.reordered",
-        subjectType: "social_accounts",
-        subjectId: row.id,
-        detail: { sortOrder: row.sortOrder },
-      });
-    }
+    await writePositions(tx, socialAccounts, positions, {
+      actorUserId,
+      action: "social.reordered",
+      subjectType: "social_accounts",
+    });
   });
   return listSocialAccounts(db);
 }

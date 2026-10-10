@@ -1,11 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { localMediaPath } from "../media/storage.js";
 import { variantMimeType } from "../media/variants.js";
+import type { Database } from "./connect.js";
 import { missingOriginalObjects, missingVariantObjects } from "./verify-storage.js";
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 export type SyncStore = {
   exists: (key: string) => Promise<boolean>;

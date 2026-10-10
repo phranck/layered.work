@@ -103,7 +103,9 @@ runs("the site's settings", () => {
 
     expect((await put("site", { ...site, socialImageMediaId: document }, cookie)).status).toBe(400);
     expect((await put("site", { ...site, socialImageMediaId: picture }, cookie)).status).toBe(200);
-    expect((await read(cookie)).site.socialImageUrl).toBe(`/api/account/media/${picture}/content`);
+    expect((await read(cookie)).site.pictureUrls.socialImageMediaId).toBe(
+      `/api/account/media/${picture}/content`,
+    );
   });
 
   it("keeps a site group stored before the watermark setting existed, instead of falling back to the defaults", async () => {
@@ -133,7 +135,7 @@ runs("the site's settings", () => {
 
     expect((await put("site", { ...site, watermarkMediaId: document }, cookie)).status).toBe(400);
     expect((await put("site", { ...site, watermarkMediaId: mark }, cookie)).status).toBe(200);
-    expect((await read(cookie)).site.watermarkUrl).toBe(`/api/account/media/${mark}/content`);
+    expect((await read(cookie)).site.pictureUrls.watermarkMediaId).toBe(`/api/account/media/${mark}/content`);
     const [job] = await database.select().from(mediaJobs).where(eq(mediaJobs.mediaId, marked));
     expect(job?.state).toBe("queued");
     expect((await getMediaUses(database, mark)).map((use) => use.title)).toContain("Site watermark");

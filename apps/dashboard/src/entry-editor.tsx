@@ -15,7 +15,7 @@ import {
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useLocation, useNavigate, useParams } from "react-router";
 import { isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
@@ -25,17 +25,17 @@ import { type CheckedContent, contentIsPublishable } from "./content-validation.
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { useEditorTextSize } from "./editor-text-size.js";
-import { entryListKey, LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
+import { LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { EntryProperties } from "./entry-properties.js";
-import { entryKey } from "./entry-query.js";
 import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
+import { TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
-import { topicListKey } from "./topics.js";
 
 /**
  * Where an entry is written, with everything decided about it in the panel
@@ -112,7 +112,7 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
   const location = useLocation();
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const entry = useQuery({ queryKey: entryKey(id), queryFn: () => api.fetchEntry(id) });
+  const entry = useQuery({ queryKey: queryKeys.entryDetail(id), queryFn: () => api.fetchEntry(id) });
   if (entry.isError) {
     return (
       <Section>
@@ -193,7 +193,6 @@ function EntryEditor({
   const publishable = contentIsPublishable(draft.body, checked);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
   const dirty = !sameDraft(asStored(draft), saved);
-  const times = useMemo(() => new Intl.DateTimeFormat(language, { timeStyle: "short" }), [language]);
 
   const save = useMutation({
     mutationFn: ({ value }: { value: SaveEntryBody; automatic: boolean }) => api.saveEntry(entry.id, value),
@@ -209,10 +208,10 @@ function EntryEditor({
       const now = draftOf(stored);
       setSaved(now);
       setSavedAt({ at: new Date(), automatic });
-      queryClient.setQueryData(entryKey(entry.id), stored);
-      void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+      queryClient.setQueryData(queryKeys.entryDetail(entry.id), stored);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
       // The topics screen counts the entries of each topic.
-      void queryClient.invalidateQueries({ queryKey: topicListKey });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
     },
   });
 
@@ -257,7 +256,7 @@ function EntryEditor({
 
   const [askingToTrash, setAskingToTrash] = useState(false);
   const refreshLists = () => {
-    void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
     void refreshCounts(queryClient);
   };
   const trash = useMutation({
@@ -265,7 +264,7 @@ function EntryEditor({
     onSuccess: () => {
       trashedHere.current = true;
       refreshLists();
-      void queryClient.invalidateQueries({ queryKey: ["entry"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
       notify({ tone: "success", message: text("trashedNotice") });
       navigate(`/${area.path}`);
     },
@@ -274,7 +273,7 @@ function EntryEditor({
     mutationFn: () => api.setTrashed(entry.id, false),
     onError: (error) => notifyError(error),
     onSuccess: (stored) => {
-      queryClient.setQueryData(entryKey(entry.id), stored);
+      queryClient.setQueryData(queryKeys.entryDetail(entry.id), stored);
       refreshLists();
       notify({ tone: "success", message: text("restored") });
     },
@@ -290,9 +289,9 @@ function EntryEditor({
         tone: "success",
         message: text("translationCreated", text(LANGUAGE_TEXT[otherLanguage(entry.language)])),
       });
-      queryClient.setQueryData(entryKey(created.id), created);
-      void queryClient.invalidateQueries({ queryKey: entryKey(entry.id) });
-      void queryClient.invalidateQueries({ queryKey: entryListKey(kind) });
+      queryClient.setQueryData(queryKeys.entryDetail(created.id), created);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.entryDetail(entry.id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
       navigate(`/${area.path}/${created.id}`);
     },
   });
@@ -331,7 +330,7 @@ function EntryEditor({
     : dirty
       ? text("unsavedChanges")
       : savedAt
-        ? text(savedAt.automatic ? "autosavedAt" : "savedAt", times.format(savedAt.at))
+        ? text(savedAt.automatic ? "autosavedAt" : "savedAt", TIME_FORMAT[language].format(savedAt.at))
         : "";
 
   return (
@@ -484,7 +483,7 @@ function TrashDialog({
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const impact = useQuery({
-    queryKey: ["trash-impact", entry.id],
+    queryKey: queryKeys.trashImpact(entry.id),
     queryFn: () => api.fetchTrashImpact(entry.id),
   });
   return (

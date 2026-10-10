@@ -4,7 +4,7 @@ import { join, relative, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { LISTED_KINDS, LISTING_GROUP, type ListedKind, listingSettings } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "./connect.js";
 import { isPubliiSizeCopy, listingAt } from "./import-content.js";
 import {
   entries,
@@ -235,8 +235,6 @@ export function readSource(input: string): Source {
     database.close();
   }
 }
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /**
  * Reads what this database holds, in every state.

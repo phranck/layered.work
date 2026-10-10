@@ -1,31 +1,29 @@
 import {
-  type AnalyticsSettings,
-  analyticsSettings,
   DEFAULT_SETTINGS,
   LISTING_GROUP,
   type ListedKind,
   type ListingSettings,
-  listingSettings,
-  type MailSettings,
-  mailSettings,
   navigationHref,
   type PublicSiteFrame,
+  SETTINGS_SCHEMAS,
+  type SettingsGroup,
+  type SettingsValues,
   type SettingsView,
   SITE_PICTURE_SETTINGS,
+  type SitePictureSetting,
   type SiteSettings,
-  siteSettings,
 } from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
+import type { ZodType } from "zod";
 import { mediaContentUrl } from "../account/repository.js";
 import { config } from "../config.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, media, mediaVariants, settings, socialAccounts } from "../db/schema/index.js";
 import { deliveredFile } from "../media/delivery.js";
 import { holdLibraryPicture } from "../media/pictures.js";
 import { queueWatermarkedMedia } from "../media/queue.js";
 import { replaceSettingMediaReferences } from "../media/references.js";
-
-type Database = ReturnType<typeof database>;
+import { SITE_PICTURES } from "./site-pictures.js";
 
 /**
  * The site's settings, one row per group.
@@ -37,40 +35,19 @@ type Database = ReturnType<typeof database>;
  * rather than reaching a screen in a shape nothing expects.
  */
 
-/** What a group holds, by its key. */
-type GroupValue = {
-  site: SiteSettings;
-  mail: MailSettings;
-  analytics: AnalyticsSettings;
-  postListing: ListingSettings;
-  projectListing: ListingSettings;
-};
+/** Each group's schema, typed by what the group holds, so a group read by its key has its own type. */
+const SCHEMAS: { [Group in SettingsGroup]: ZodType<SettingsValues[Group]> } = SETTINGS_SCHEMAS;
 
-/** A group of settings by its key. */
-export type SettingsGroup = keyof GroupValue;
-
-/** Each group's declaration, and what it is without a row. */
-const GROUPS: {
-  [Group in SettingsGroup]: {
-    schema: { safeParse(value: unknown): { success: true; data: GroupValue[Group] } | { success: false } };
-    fallback: GroupValue[Group];
-  };
-} = {
-  site: { schema: siteSettings, fallback: DEFAULT_SETTINGS.site },
-  mail: { schema: mailSettings, fallback: DEFAULT_SETTINGS.mail },
-  analytics: { schema: analyticsSettings, fallback: DEFAULT_SETTINGS.analytics },
-  postListing: { schema: listingSettings, fallback: DEFAULT_SETTINGS.postListing },
-  projectListing: { schema: listingSettings, fallback: DEFAULT_SETTINGS.projectListing },
-};
+/** What each group is until somebody saves it. */
+const DEFAULTS: SettingsValues = DEFAULT_SETTINGS;
 
 /** One group's stored value, or its default where it has none or one that no longer fits. */
 function readGroup<Group extends SettingsGroup>(
   group: Group,
   stored: Map<string, unknown>,
-): GroupValue[Group] {
-  const { schema, fallback } = GROUPS[group];
-  const parsed = schema.safeParse(stored.get(group));
-  return parsed.success ? parsed.data : fallback;
+): SettingsValues[Group] {
+  const parsed = SCHEMAS[group].safeParse(stored.get(group));
+  return parsed.success ? parsed.data : DEFAULTS[group];
 }
 
 /**
@@ -84,14 +61,15 @@ export async function readSettings(db: Database): Promise<SettingsView> {
   const rows = await db
     .select({ key: settings.key, value: settings.value })
     .from(settings)
-    .where(inArray(settings.key, Object.keys(GROUPS)));
+    .where(inArray(settings.key, Object.keys(SETTINGS_SCHEMAS)));
   const stored = new Map(rows.map((row) => [row.key, row.value]));
   const site = readGroup("site", stored);
   return {
     site: {
       ...site,
-      socialImageUrl: site.socialImageMediaId ? mediaContentUrl(site.socialImageMediaId) : null,
-      watermarkUrl: site.watermarkMediaId ? mediaContentUrl(site.watermarkMediaId) : null,
+      pictureUrls: Object.fromEntries(
+        SITE_PICTURE_SETTINGS.map((key) => [key, site[key] ? mediaContentUrl(site[key]) : null]),
+      ) as Record<SitePictureSetting, string | null>,
     },
     mail: { ...readGroup("mail", stored), apiKeyConfigured: Boolean(config.SMTP2GO_API_KEY) },
     analytics: readGroup("analytics", stored),
@@ -163,7 +141,7 @@ export async function readListingSettings(
 export async function saveSettings<Group extends SettingsGroup>(
   db: Database,
   group: Group,
-  value: GroupValue[Group],
+  value: SettingsValues[Group],
   actorUserId: string,
 ): Promise<SettingsView> {
   await db.transaction(async (tx) => {
@@ -207,12 +185,6 @@ export async function saveSettings<Group extends SettingsGroup>(
   return readSettings(db);
 }
 
-/** What the site is told when one of its picture settings names no raster image stored here. */
-const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
-  socialImageMediaId: "Choose a raster image uploaded to the library for the sharing picture.",
-  watermarkMediaId: "Choose a raster image uploaded to the library for the watermark.",
-};
-
 /**
  * Refuses a site picture that is not a raster image stored in the library, and
  * holds each one until the settings are saved.
@@ -223,6 +195,6 @@ const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], strin
 async function requireSitePictures(site: SiteSettings, db: Pick<Database, "select">): Promise<void> {
   for (const key of SITE_PICTURE_SETTINGS) {
     const mediaId = site[key];
-    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURE_REFUSAL[key], { storedHere: true });
+    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURES[key].refusal, { storedHere: true });
   }
 }

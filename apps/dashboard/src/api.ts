@@ -1,9 +1,9 @@
 import {
   type AccountProfile,
   type AddHomeBlockBody,
-  type AnalyticsSettings,
   accountProfile,
   addHomeBlockBody,
+  type ContentLanguage,
   type CreateEntryBody,
   type CreateFormBody,
   type CreateNamedValueBody,
@@ -46,8 +46,6 @@ import {
   importUnsplashBody,
   issuedToken,
   issueTokenBody,
-  type ListingSettings,
-  type MailSettings,
   type MailTemplate,
   type MailTemplateKind,
   type MediaDeletionResult,
@@ -61,16 +59,16 @@ import {
   mediaLibraryPage,
   mergeTopicBody,
   type NamedValue,
+  type NavigationPlacement,
   namedValue,
   namedValueList,
   type PreviewEntryBody,
   previewEntryBody,
   type RenderedMail,
+  type ReorderBody,
   readApiError,
   renderedMail,
-  reorderFooterNavigationBody,
-  reorderHomeBlocksBody,
-  reorderSocialAccountsBody,
+  reorderBody,
   type SaveEntryBody,
   type SaveFooterNavigationBody,
   type SaveFormBody,
@@ -80,10 +78,11 @@ import {
   type SaveSocialAccountBody,
   type SaveTopicBody,
   type SearchResults,
+  type SettingsGroup,
+  type SettingsValues,
   type SettingsView,
   type SignedInAs,
   type SignInBody,
-  type SiteSettings,
   type SocialAccount,
   type StoredHomeBlock,
   saveEntryBody,
@@ -143,15 +142,6 @@ export class DashboardApiError extends Error {
     super(key);
     this.name = "DashboardApiError";
   }
-}
-
-/** What each group of settings holds, by the name its route takes. */
-export interface SettingsGroups {
-  site: SiteSettings;
-  mail: MailSettings;
-  analytics: AnalyticsSettings;
-  postListing: ListingSettings;
-  projectListing: ListingSettings;
 }
 
 /** Anything that checks an unknown value and hands back a typed one, which every schema does. */
@@ -228,7 +218,7 @@ export interface DashboardApi {
   fetchSocialAccounts(): Promise<SocialAccount[]>;
   saveSocialAccount(id: string | null, value: SaveSocialAccountBody): Promise<SocialAccount>;
   deleteSocialAccount(id: string): Promise<void>;
-  reorderSocialAccounts(positions: { id: string; sortOrder: number }[]): Promise<SocialAccount[]>;
+  reorderSocialAccounts(positions: ReorderBody["positions"]): Promise<SocialAccount[]>;
   /** Every named value, by name, with every place that refers to it. */
   fetchNamedValues(): Promise<NamedValue[]>;
   /** Adds a value under a name that never changes afterwards. */
@@ -237,20 +227,20 @@ export interface DashboardApi {
   updateNamedValue(id: string, value: UpdateNamedValueBody): Promise<NamedValue>;
   /** Deletes a value nothing refers to. */
   deleteNamedValue(id: string): Promise<void>;
-  fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
+  fetchFooterNavigations(placement?: NavigationPlacement): Promise<FooterNavigation[]>;
   createFooterNavigation(
     value: SaveFooterNavigationBody,
-    placement?: "main" | "footer",
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation>;
   saveFooterNavigation(
     id: string,
     value: SaveFooterNavigationBody,
-    placement?: "main" | "footer",
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation>;
-  deleteFooterNavigation(id: string, placement?: "main" | "footer"): Promise<void>;
+  deleteFooterNavigation(id: string, placement?: NavigationPlacement): Promise<void>;
   reorderFooterNavigations(
-    positions: { id: string; sortOrder: number }[],
-    placement?: "main" | "footer",
+    positions: ReorderBody["positions"],
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation[]>;
   /** The home page's blocks in the order of the page, the declared set where nothing is arranged yet. */
   fetchHomeBlocks(): Promise<StoredHomeBlock[]>;
@@ -259,13 +249,13 @@ export interface DashboardApi {
   /** Stores whether a block is on the page and what it is set to. */
   saveHomeBlock(id: string, value: SaveHomeBlockBody): Promise<StoredHomeBlock>;
   /** Puts the blocks in a new order and returns all of them as they now stand. */
-  reorderHomeBlocks(positions: { id: string; sortOrder: number }[]): Promise<StoredHomeBlock[]>;
+  reorderHomeBlocks(positions: ReorderBody["positions"]): Promise<StoredHomeBlock[]>;
   /** Takes a block off the page for good. */
   deleteHomeBlock(id: string): Promise<void>;
   /** Stores one group of settings and returns all of them as they now stand. */
-  saveSettings<Group extends keyof SettingsGroups>(
+  saveSettings<Group extends SettingsGroup>(
     group: Group,
-    value: SettingsGroups[Group],
+    value: SettingsValues[Group],
   ): Promise<SettingsView>;
   /** Sends a test message to the signed-in owner and reports what SMTP2GO answered. */
   sendTestMail(): Promise<TestMailResult>;
@@ -277,12 +267,12 @@ export interface DashboardApi {
   previewMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
   ): Promise<RenderedMail>;
   testMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
     recipient: string,
   ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
@@ -511,11 +501,7 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async reorderSocialAccounts(positions) {
       return dataOf(
-        await request(
-          "/social-accounts/order",
-          jsonBody("PATCH", reorderSocialAccountsBody.parse({ positions })),
-          true,
-        ),
+        await request("/social-accounts/order", jsonBody("PATCH", reorderBody.parse({ positions })), true),
         socialAccountList,
       );
     },
@@ -571,7 +557,7 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
       return dataOf(
         await request(
           `/${placement}-navigation/order`,
-          jsonBody("PATCH", reorderFooterNavigationBody.parse({ positions })),
+          jsonBody("PATCH", reorderBody.parse({ positions })),
           true,
         ),
         footerNavigationList,
@@ -598,11 +584,7 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     },
     async reorderHomeBlocks(positions) {
       return dataOf(
-        await request(
-          "/home-blocks/order",
-          jsonBody("PATCH", reorderHomeBlocksBody.parse({ positions })),
-          true,
-        ),
+        await request("/home-blocks/order", jsonBody("PATCH", reorderBody.parse({ positions })), true),
         homeBlockList,
       );
     },

@@ -1,12 +1,12 @@
 import {
   ErrorCode,
   formChallenge,
+  formSlugParam,
   formSubmitted,
   submitFormBody,
   validateFormValues,
 } from "@layered/schemas";
 import { Hono } from "hono";
-import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { formSubmissions, mailJobs } from "../../db/schema/index.js";
 import { issueFormChallenge, verifyFormChallenge } from "../../forms/challenge.js";
@@ -17,20 +17,14 @@ import { readMailTemplate, renderMailTemplate } from "../../mail/templates.js";
 import { responds } from "../api-metadata.js";
 import { sourceAddress, sourceFingerprint } from "../caller.js";
 import { byAddress, enforceRateLimit } from "../rate-limit.js";
-import { HttpError, ok } from "../response.js";
+import { fail, HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
-const slugParam = z.object({
-  slug: z
-    .string()
-    .regex(/^[a-z0-9][a-z0-9-]*$/)
-    .max(120),
-});
 export const publicFormsRoutes = new Hono();
 
 publicFormsRoutes.get(
   "/:slug/challenge",
-  validate("param", slugParam),
+  validate("param", formSlugParam),
   responds(formChallenge),
   async (c) => {
     const { slug } = c.req.valid("param");
@@ -42,7 +36,7 @@ publicFormsRoutes.get(
 
 publicFormsRoutes.post(
   "/:slug/submissions",
-  validate("param", slugParam),
+  validate("param", formSlugParam),
   validate("json", submitFormBody),
   responds(formSubmitted),
   async (c) => {
@@ -70,17 +64,7 @@ publicFormsRoutes.post(
         },
         "form submission refused",
       );
-      return c.json(
-        {
-          error: {
-            code: ErrorCode.InvalidRequest,
-            message: "Check the marked fields.",
-            id: c.get("requestId"),
-          },
-          fieldErrors: checked.errors,
-        },
-        400,
-      );
+      return fail(c, ErrorCode.InvalidRequest, "Check the marked fields.", { fieldErrors: checked.errors });
     }
     enforceRateLimit(c, {
       name: "form-submission",

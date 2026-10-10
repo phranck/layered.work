@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import { focalPoint } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { listAccountMedia } from "../account/repository.js";
 import { publicMedia } from "../content/snapshot.js";
 import { media } from "../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
 import { saveMediaFocalPoint } from "./focal.js";
+import { listMedia } from "./library.js";
 
 const id = randomUUID();
 (hasTestDatabase ? describe : describe.skip)("one focal point on every surface", () => {
@@ -33,7 +33,8 @@ const id = randomUUID();
       x: 0.2,
       y: 0.8,
     });
-    expect((await listAccountMedia(db, { search: `focal-${id}`, page: 1 })).items[0]?.focalPoint).toEqual({
+    const listing = await listMedia(db, { search: `focal-${id}`, kind: "all", page: 1, order: "slug" });
+    expect(listing.items[0]?.focalPoint).toEqual({
       x: 0.2,
       y: 0.8,
     });

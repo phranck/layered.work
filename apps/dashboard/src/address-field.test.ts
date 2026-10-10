@@ -1,5 +1,6 @@
+import { addressPrefix } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
-import { addressPrefix, finishedSlug, isSavableSlug, typedSlug } from "./address-field.js";
+import { finishedSlug, isSavableSlug, typedSlug } from "./address-field.js";
 
 describe("an address being typed", () => {
   it("becomes a slug as it is typed, keeping a hyphen at the end for the next word", () => {

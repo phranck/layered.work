@@ -1,11 +1,15 @@
-import { ErrorCode, type FormSubmission, type FormSubmissionStatus } from "@layered/schemas";
+import {
+  ErrorCode,
+  type FormSubmission,
+  type FormSubmissionStatus,
+  submittedValueText,
+} from "@layered/schemas";
 import { and, desc, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, formSubmissions } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readForm } from "./repository.js";
 
-type Database = ReturnType<typeof database>;
 type SubmissionRow = typeof formSubmissions.$inferSelect;
 
 function view(row: SubmissionRow): FormSubmission {
@@ -87,10 +91,7 @@ export function submissionsCsv(fields: string[], rows: FormSubmission[]): string
       row.createdAt,
       row.status,
       row.sourceHash ?? "",
-      ...columns.map((key) => {
-        const value = row.values[key];
-        return Array.isArray(value) ? value.join(", ") : (value ?? "");
-      }),
+      ...columns.map((key) => submittedValueText(row.values[key])),
       row.consents.map((consent) => `${consent.revision}: ${consent.notice}`).join(" | "),
     ]),
   );

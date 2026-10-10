@@ -1,7 +1,7 @@
 import { SEARCH_HIT_LIMIT, type SearchResults } from "@layered/schemas";
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
-import { mediaContentUrl, RASTER_MIME_TYPES } from "../account/repository.js";
-import type { database } from "../db/connect.js";
+import { mediaContentUrl } from "../account/repository.js";
+import type { Database } from "../db/connect.js";
 import { containing } from "../db/like.js";
 import {
   entries,
@@ -11,8 +11,7 @@ import {
   mediaTranslations,
   topicTranslations,
 } from "../db/schema/index.js";
-
-type Database = ReturnType<typeof database>;
+import { isRasterImage } from "../media/pictures.js";
 
 /**
  * Everything in the dashboard that matches what the reader typed.
@@ -75,13 +74,12 @@ export async function searchEverything(db: Database, text: string): Promise<Sear
     .orderBy(asc(media.slug))
     .limit(SEARCH_HIT_LIMIT);
 
-  const shown = new Set<string>(RASTER_MIME_TYPES);
   return {
     entries: entryRows,
     media: mediaRows.map((row) => ({
       id: row.id,
       slug: row.slug,
-      thumbnailUrl: row.kind === "image" && shown.has(row.mimeType) ? mediaContentUrl(row.id) : null,
+      thumbnailUrl: isRasterImage(row) ? mediaContentUrl(row.id) : null,
       altText: row.altText,
     })),
   };

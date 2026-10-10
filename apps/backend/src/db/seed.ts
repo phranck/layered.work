@@ -1,4 +1,5 @@
 import { hashPassword } from "@layered/passwords";
+import { emailAddress } from "@layered/schemas";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { connectOnce, databaseUrl } from "./connect.js";
 import { users } from "./schema/people.js";
@@ -23,13 +24,17 @@ const NAME = "SEED_NAME";
  * @returns What happened, so the caller can say it rather than guess.
  */
 export async function seedOwner(): Promise<{ created: boolean; detail: string }> {
-  const email = process.env[EMAIL]?.trim().toLowerCase();
+  const givenEmail = process.env[EMAIL];
   const password = process.env[PASSWORD];
   const displayName = process.env[NAME]?.trim();
 
-  if (!email || !password || !displayName) {
+  if (!givenEmail || !password || !displayName) {
     throw new Error(`${EMAIL}, ${PASSWORD} and ${NAME} all have to be set to seed an account.`);
   }
+  // Read as the sign-in reads it, so the address seeded is the address that signs in.
+  const parsedEmail = emailAddress.safeParse(givenEmail);
+  if (!parsedEmail.success) throw new Error(`${EMAIL} is not an email address.`);
+  const email = parsedEmail.data;
 
   const sql = connectOnce(databaseUrl());
   try {

@@ -2,11 +2,11 @@ import {
   createEntryBody,
   emptiedTrash,
   entryDetail,
-  entryIdParam,
   entryList,
   entryListQuery,
   entryPreview,
   entryTrashImpact,
+  idParam,
   previewEntryBody,
   saveEntryBody,
 } from "@layered/schemas";
@@ -59,7 +59,7 @@ entriesRoutes.post(
 entriesRoutes.get(
   "/:id",
   requireScope("content:read"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   responds(entryDetail),
   async (c) => ok(c, await readEntry(database(), c.req.valid("param").id)),
 );
@@ -68,7 +68,7 @@ entriesRoutes.get(
 entriesRoutes.post(
   "/:id/previews",
   requireScope("content:write"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   validate("json", previewEntryBody),
   responds(entryPreview),
   async (c) =>
@@ -89,7 +89,7 @@ entriesRoutes.post(
 entriesRoutes.post(
   "/:id/translation",
   requireScope("content:write"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   responds(entryDetail),
   async (c) =>
     ok(
@@ -106,7 +106,7 @@ entriesRoutes.post(
 entriesRoutes.put(
   "/:id",
   requireScope("content:write"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   validate("json", saveEntryBody),
   requirePublishForPublicSave,
   responds(entryDetail),
@@ -127,7 +127,7 @@ entriesRoutes.put(
 entriesRoutes.get(
   "/:id/trash-impact",
   requireScope("content:read"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   responds(entryTrashImpact),
   async (c) => ok(c, await trashImpact(database(), c.req.valid("param").id)),
 );
@@ -135,7 +135,7 @@ entriesRoutes.get(
 entriesRoutes.post(
   "/:id/trash",
   requireScope("content:write"),
-  validate("param", entryIdParam),
+  validate("param", idParam),
   responds(entryDetail),
   async (c) =>
     ok(
@@ -154,7 +154,7 @@ entriesRoutes.post(
   "/:id/restore",
   requireScope("content:write"),
   requirePublishScope,
-  validate("param", entryIdParam),
+  validate("param", idParam),
   responds(entryDetail),
   async (c) =>
     ok(

@@ -83,8 +83,8 @@ auth.post(
     const { email, password } = c.req.valid("json");
     const db = database();
 
-    // Lower-cased on the way in, because the column is written lower-cased and
-    // two spellings of one address must not be two accounts nor one miss.
+    // The schema has already lower-cased the address, which is how the column
+    // is written, so two spellings of one address are one account.
     const [account] = await db
       .select({
         id: users.id,
@@ -94,7 +94,7 @@ auth.post(
         passwordHash: users.passwordHash,
       })
       .from(users)
-      .where(eq(users.email, email.trim().toLowerCase()))
+      .where(eq(users.email, email))
       .limit(1);
 
     const correct = await verifyPassword(password, account?.passwordHash ?? NO_SUCH_ACCOUNT);
@@ -116,12 +116,7 @@ auth.post(
 
     logger.info({ requestId: c.get("requestId"), userId: account.id, route: c.req.routePath }, "signed in");
 
-    return ok(c, {
-      id: account.id,
-      email: account.email,
-      displayName: account.displayName,
-      role: account.role,
-    } satisfies SignedInAs);
+    return ok(c, asSignedIn({ ...account, userId: account.id }));
   },
 );
 

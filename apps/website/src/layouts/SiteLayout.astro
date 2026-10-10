@@ -1,4 +1,5 @@
 ---
+import { CONTENT_LOCALES, type ContentLanguage, LANGUAGE_ROOTS, type ReadingWidth } from "@layered/schemas";
 import "@layered/tokens/index.css";
 import "@layered/ui/base.css";
 import "@layered/ui/index.css";
@@ -13,11 +14,11 @@ import { TAGLINE } from "../site";
 interface Props {
   title: string;
   description?: string;
-  language?: "en" | "de";
+  language?: ContentLanguage;
   canonicalPath?: string;
   translationPath?: string | null;
   alternates?: LanguageLink[];
-  readingWidth?: "narrow" | "normal" | "wide" | "full";
+  readingWidth?: ReadingWidth;
   navigation?: SiteNavigationItem[];
   footer?: SiteFooterData;
   siteName?: string;
@@ -64,7 +65,7 @@ const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content={article ? "article" : "website"} />
-    <meta property="og:locale" content={language === "de" ? "de_AT" : "en_GB"} />
+    <meta property="og:locale" content={CONTENT_LOCALES[language].replace("-", "_")} />
     <meta property="og:image" content={socialImage.url} />
     <meta property="og:image:alt" content={socialImage.alt} />
     {socialImage.width && <meta property="og:image:width" content={String(socialImage.width)} />}
@@ -90,13 +91,13 @@ const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
       rel="alternate"
       type="application/rss+xml"
       title={siteName}
-      href={new URL(`${language === "de" ? "/de" : ""}/feed.xml`, canonical)}
+      href={new URL(`${LANGUAGE_ROOTS[language]}feed.xml`, canonical)}
     />
     <link
       rel="alternate"
       type="application/feed+json"
       title={siteName}
-      href={new URL(`${language === "de" ? "/de" : ""}/feed.json`, canonical)}
+      href={new URL(`${LANGUAGE_ROOTS[language]}feed.json`, canonical)}
     />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     {leadImage && (

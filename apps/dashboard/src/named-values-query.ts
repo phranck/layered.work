@@ -7,6 +7,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
+import { queryKeys } from "./query-keys.js";
 
 /**
  * The named values as the dashboard holds them, in one cache entry, and every
@@ -18,13 +19,10 @@ import { refreshCounts } from "./dashboard-counts.js";
  * the screen only draws.
  */
 
-/** Where the list is cached. */
-export const NAMED_VALUES_KEY = ["named-values"] as const;
-
 /** Every named value, with where each one is used. */
 export function useNamedValues() {
   const api = useDashboardApi();
-  return useQuery({ queryKey: NAMED_VALUES_KEY, queryFn: api.fetchNamedValues });
+  return useQuery({ queryKey: queryKeys.namedValues, queryFn: api.fetchNamedValues });
 }
 
 /**
@@ -53,7 +51,7 @@ export function checkedValueDraft(
 function useRefreshAfterChange() {
   const client = useQueryClient();
   return () => {
-    void client.invalidateQueries({ queryKey: NAMED_VALUES_KEY });
+    void client.invalidateQueries({ queryKey: queryKeys.namedValues });
     void refreshCounts(client);
   };
 }

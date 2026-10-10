@@ -114,7 +114,7 @@
   gap: var(--space-5);
 }
 
-dialog.account-dialog {
+dialog.card-dialog {
   width: 100%;
   max-width: none;
   height: 100%;
@@ -123,11 +123,11 @@ dialog.account-dialog {
   border: 0;
 }
 
-dialog.account-dialog::backdrop {
+dialog.card-dialog::backdrop {
   background: transparent;
 }
 
-.account-dialog.card-overlay > .card {
+.card-dialog.card-overlay > .card {
   width: min(520px, 100%);
 }
 
@@ -403,15 +403,6 @@ dialog.account-dialog::backdrop {
 .sidebar__footer .row__tile {
   border-radius: var(--radius-pill);
 }
-/* --- Entry editor -----------------------------------------------------------
-   The way back out stands where the list's eyebrow stood and takes the
-   eyebrow's lettering, so the heading below it does not move when an entry
-   opens. A link resets the inherited case and spacing, so both are asked for
-   again. The colour changes on hover at once. */
-
-/* A flex box of its own rather than an inline one: an inline box sits on the
-   eyebrow's baseline and makes that line taller than the text alone, which
-   moved the heading below by 1.8 pixels. */
 /* --- Notifications ---------------------------------------------------------
    One at a time in the centre of the bar. It arrives at once and fades when it
    leaves, so news is seen the moment it happens and does not snap away. The
@@ -516,6 +507,10 @@ dialog.account-dialog::backdrop {
 .app-bar-title:first-child {
   margin-inline-start: 0;
 }
+
+/* --- Entry editor -----------------------------------------------------------
+   The writing surface, the state beside the save, and the actions of the
+   panel. */
 
 /* The element CodeMirror is mounted in fills the writing surface, so the editor
    inside it can scroll within the surface's height. */

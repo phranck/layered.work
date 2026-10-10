@@ -1,11 +1,9 @@
 import { and, asc, eq, isNull, lte } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type * as schema from "../db/schema/index.js";
+import type { Database } from "../db/connect.js";
 import { mailJobs } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import type { SendOutcome } from "./smtp2go.js";
 
-type Database = PostgresJsDatabase<typeof schema>;
 export type PendingMail = { to: string; subject: string; text: string; html?: string };
 type Sender = (mail: PendingMail) => Promise<SendOutcome>;
 

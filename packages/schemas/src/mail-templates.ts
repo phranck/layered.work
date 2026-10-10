@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { CONTENT_LANGUAGES, inBothLanguages } from "./entries.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 
 export const mailTemplateKind = z.enum(["submission_notification", "submission_confirmation"]);
 export type MailTemplateKind = z.infer<typeof mailTemplateKind>;
 
-const translated = body({ en: text(MaxLength.Line), de: text(MaxLength.Line) });
-const translatedBody = body({ en: text(10_000), de: text(10_000) });
+const translated = inBothLanguages(text(MaxLength.Line));
+const translatedBody = inBothLanguages(text(10_000));
 
 /** The two site messages share the same editing and delivery path. */
 export const mailTemplate = body({
@@ -21,8 +22,19 @@ export const saveMailTemplateBody = mailTemplate.omit({ kind: true, allowedVaria
 export type SaveMailTemplateBody = z.infer<typeof saveMailTemplateBody>;
 export const previewMailTemplateBody = body({
   template: saveMailTemplateBody,
-  language: z.enum(["en", "de"]),
+  language: z.enum(CONTENT_LANGUAGES),
 });
 export const renderedMail = body({ subject: z.string(), text: z.string(), html: z.string() });
+
+/**
+ * The elements a rendered mail is made of, and nothing else.
+ *
+ * The API renders a template into these, which a test holds it to, and the
+ * dashboard rebuilds its preview from them and drops anything else.
+ */
+export const MAIL_ELEMENTS = ["div", "p", "strong", "em", "ul", "ol", "li", "a", "br"] as const;
+
+/** The addresses a link in a mail may point at: HTTP and HTTPS, and no other scheme. */
+export const MAIL_LINK = /^https?:\/\//i;
 export type RenderedMail = z.infer<typeof renderedMail>;
-export const testMailTemplateBody = previewMailTemplateBody.extend({ recipient: z.email().max(254) });
+export const testMailTemplateBody = previewMailTemplateBody.extend({ recipient: emailAddress });

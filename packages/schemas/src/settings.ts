@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { CONTENT_LANGUAGES, type ContentLanguage } from "./entries.js";
+import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  inBothLanguages,
+  inEachLanguage,
+  languagePath,
+} from "./entries.js";
 import { navigationHref } from "./navigation.js";
-import { body, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text, withoutControlCharacters } from "./request.js";
 
 /**
  * What belongs to the site as a whole rather than to any entry.
@@ -15,9 +21,6 @@ import { body, MaxLength, text } from "./request.js";
  * environment variable from the platform's secret store, and the dashboard is
  * only told whether it is there.
  */
-
-/** A value written in both languages of the site. */
-const inBothLanguages = <Schema extends z.ZodType>(value: Schema) => z.strictObject({ en: value, de: value });
 
 /**
  * The site's own values: its name, its footer line, its language, its fallback
@@ -44,6 +47,9 @@ export type SiteSettings = z.infer<typeof siteSettings>;
 
 /** The site settings that name a library picture, which therefore count as uses of it. */
 export const SITE_PICTURE_SETTINGS = ["socialImageMediaId", "watermarkMediaId"] as const;
+
+/** One site setting that names a library picture. */
+export type SitePictureSetting = (typeof SITE_PICTURE_SETTINGS)[number];
 /** Only settings and enabled account links that visitors may see. */
 export const publicSiteFrame = siteSettings.pick({ title: true, footerLine: true }).extend({
   social: z.array(z.object({ platform: z.string(), handle: z.string(), href: navigationHref })),
@@ -54,17 +60,16 @@ export type PublicSiteFrame = z.infer<typeof publicSiteFrame>;
 /**
  * A sender name, which becomes part of a mail header.
  *
- * Angle brackets, quotes and control characters are refused, because a name is
- * written into `Name <address>` and any of them could close that form and start
- * another header.
+ * Angle brackets, quotes, backslashes and control characters are refused,
+ * because a name is written into `Name <address>` and any of them could close
+ * that form and start another header.
  */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: Control characters are what this refuses.
-const SENDER_NAME = /^[^<>"\\\u0000-\u001f\u007f]+$/;
+const senderName = text(MaxLength.Line, { pattern: /^[^<>"\\]+$/ }).refine(withoutControlCharacters);
 
 /** Who mail comes from. The address has to be verified at SMTP2GO before anything sends from it. */
 export const mailSettings = body({
-  senderAddress: z.string().trim().toLowerCase().pipe(z.email().max(MaxLength.Line)).nullable(),
-  senderName: text(MaxLength.Line, { pattern: SENDER_NAME }),
+  senderAddress: emailAddress.nullable(),
+  senderName,
 });
 export type MailSettings = z.infer<typeof mailSettings>;
 
@@ -83,8 +88,8 @@ export type ListedKind = (typeof LISTED_KINDS)[number];
  * page found at one of these into that overview's introduction.
  */
 export const LISTING_PATHS: Record<ListedKind, Record<ContentLanguage, string>> = {
-  post: { en: "/posts/", de: "/de/posts/" },
-  project: { en: "/projects/", de: "/de/projects/" },
+  post: inEachLanguage((language) => languagePath(language, "posts")),
+  project: inEachLanguage((language) => languagePath(language, "projects")),
 };
 
 /**
@@ -131,6 +136,25 @@ export const listingSettings = body({
 });
 export type ListingSettings = z.infer<typeof listingSettings>;
 
+/**
+ * Each group of settings, by the key it is stored and saved under, and what it
+ * holds. The API reads and stores each group through its schema here, and the
+ * dashboard types each form from it.
+ */
+export const SETTINGS_SCHEMAS = {
+  site: siteSettings,
+  mail: mailSettings,
+  analytics: analyticsSettings,
+  postListing: listingSettings,
+  projectListing: listingSettings,
+} as const;
+
+/** A group of settings, by its key. */
+export type SettingsGroup = keyof typeof SETTINGS_SCHEMAS;
+
+/** What each group of settings holds. */
+export type SettingsValues = { [Group in SettingsGroup]: z.infer<(typeof SETTINGS_SCHEMAS)[Group]> };
+
 /** What an overview nobody has set up uses. */
 export const DEFAULT_LISTING: ListingSettings = {
   pageSize: 12,
@@ -165,21 +189,13 @@ export const DEFAULT_SETTINGS = {
   analytics: { umamiWebsiteId: DEFAULT_UMAMI_WEBSITE_ID },
   postListing: DEFAULT_LISTING,
   projectListing: DEFAULT_LISTING,
-} as const satisfies {
-  site: SiteSettings;
-  mail: MailSettings;
-  analytics: AnalyticsSettings;
-  postListing: ListingSettings;
-  projectListing: ListingSettings;
-};
+} as const satisfies SettingsValues;
 
 /** Everything the settings screens show, as the API answers it. */
 export const settingsView = z.object({
   site: siteSettings.extend({
-    /** Where the sharing picture can be shown from, when one is chosen. */
-    socialImageUrl: z.string().nullable(),
-    /** Where the watermark picture can be shown from, when one is chosen. */
-    watermarkUrl: z.string().nullable(),
+    /** Where the dashboard can show each picture the site settings name, or null where none is chosen. */
+    pictureUrls: z.record(z.enum(SITE_PICTURE_SETTINGS), z.string().nullable()),
   }),
   mail: mailSettings.extend({
     /** Whether an SMTP2GO key reached the API. The key itself is never sent. */

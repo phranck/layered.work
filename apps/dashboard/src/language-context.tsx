@@ -1,10 +1,10 @@
+import type { InterfaceLanguage } from "@layered/schemas";
 import { createContext, type ReactNode, use, useEffect } from "react";
 import {
   browserLanguage,
   type DashboardStringArgs,
   type DashboardStringKey,
   dashboardText,
-  type InterfaceLanguage,
 } from "./dashboard-i18n.js";
 
 const LanguageContext = createContext<InterfaceLanguage | null>(null);

@@ -10,6 +10,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { browserLanguage } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 
 /** The sign-in form's id, which the footer's button names to submit it. */
 const LOGIN_FORM = "login-form";
@@ -42,7 +43,7 @@ function LoginForm({ loginAlias }: LoginScreenProps) {
   const submittingRef = useRef(false);
   const mutation = useMutation({
     mutationFn: api.signIn,
-    onSuccess: (session) => queryClient.setQueryData(["session"], session),
+    onSuccess: (session) => queryClient.setQueryData(queryKeys.session, session),
   });
 
   useEffect(() => {
@@ -99,7 +100,7 @@ function LoginForm({ loginAlias }: LoginScreenProps) {
                 name="email"
                 type={loginAlias ? "text" : "email"}
                 autoComplete="username"
-                maxLength={MaxLength.Line}
+                maxLength={MaxLength.Email}
                 required
                 autoFocus
               />

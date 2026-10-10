@@ -1,19 +1,14 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { CONTENT_LANGUAGES, type ContentLanguage, inBothLanguages } from "./entries.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 import { SLUG_PATTERN } from "./slug.js";
 
-/** Text shown in each of the site's two languages. */
-export const formText = body({
-  en: text(MaxLength.Paragraph),
-  de: text(MaxLength.Paragraph),
-});
+/** Text shown in each of the site's languages. */
+export const formText = inBothLanguages(text(MaxLength.Paragraph));
 export type FormText = z.infer<typeof formText>;
 
-/** A hint may be absent, but both languages are still represented. */
-const formHint = body({
-  en: z.string().trim().max(MaxLength.Paragraph),
-  de: z.string().trim().max(MaxLength.Paragraph),
-});
+/** A hint may be absent, but every language is still represented. */
+const formHint = inBothLanguages(z.string().trim().max(MaxLength.Paragraph));
 
 /**
  * Deliberately small pattern language: one character class, optionally with a
@@ -54,11 +49,21 @@ const option = body({
   label: formText,
 });
 
+/** How many options a choice field offers. Fewer than two leaves nothing to choose between. */
+export const FORM_OPTION_COUNT = { min: 2, max: 30 } as const;
+
+/** How many fields one form holds. */
+export const FORM_FIELD_COUNT = { min: 1, max: 40 } as const;
+
 const choices = (type: "singleChoice" | "multipleChoice") =>
-  body({ ...fieldBase, type: z.literal(type), options: z.array(option).min(2).max(30) }).refine(
-    (field) => new Set(field.options.map((item) => item.value)).size === field.options.length,
-    { path: ["options"], message: "Choice values must be unique." },
-  );
+  body({
+    ...fieldBase,
+    type: z.literal(type),
+    options: z.array(option).min(FORM_OPTION_COUNT.min).max(FORM_OPTION_COUNT.max),
+  }).refine((field) => new Set(field.options.map((item) => item.value)).size === field.options.length, {
+    path: ["options"],
+    message: "Choice values must be unique.",
+  });
 
 /** The declaration shared by the builder, the site's renderer and the API. */
 export const formField = z.discriminatedUnion("type", [
@@ -96,18 +101,37 @@ export const formField = z.discriminatedUnion("type", [
 export type FormField = z.infer<typeof formField>;
 export type FormFieldType = FormField["type"];
 
+/**
+ * Every kind of field a form can hold, in the order the declaration above lists
+ * them, which is the order the form builder offers them in. Read off the
+ * declaration, so a kind added there is offered with no other edit.
+ */
+export const FORM_FIELD_TYPES: readonly FormFieldType[] = formField.options.map(
+  (option) => option.shape.type.value,
+);
+
+/**
+ * A form's slug: what content embeds it by and what its public address names.
+ * The save and the public routes read this one declaration, so a form that can
+ * be saved can always be reached.
+ */
+export const formSlug = text(MaxLength.Handle, { pattern: SLUG_PATTERN });
+
+/** A form's slug as a path parameter of the public routes. */
+export const formSlugParam = z.object({ slug: formSlug });
+
 /** What the dashboard saves, including field order and form-wide settings. */
 const publicDeclarationFields = {
-  slug: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
+  slug: formSlug,
   name: text(MaxLength.Line),
   successMessage: formText,
-  fields: z.array(formField).min(1).max(40),
+  fields: z.array(formField).min(FORM_FIELD_COUNT.min).max(FORM_FIELD_COUNT.max),
 };
 const uniqueFieldKeys = (form: { fields: FormField[] }) =>
   new Set(form.fields.map((field) => field.key)).size === form.fields.length;
 export const createFormBody = body({
   ...publicDeclarationFields,
-  notificationEmail: z.email().max(254).nullable(),
+  notificationEmail: emailAddress.nullable(),
   /** Send the confirmation to this validated email field, when present. */
   confirmationEmailField: z.string().max(MaxLength.Handle).nullable().optional(),
   storeSubmissions: z.boolean(),
@@ -146,17 +170,37 @@ export const publicForm = body(publicDeclarationFields).refine(uniqueFieldKeys, 
 });
 export type PublicForm = z.infer<typeof publicForm>;
 
-/** A browser may submit a value once or several times for a choice group. */
+/**
+ * A browser may submit a value once or several times for a choice group, and
+ * never more often than the group has options.
+ */
 export const formSubmissionValues = z.record(
   z.string().max(MaxLength.Handle),
-  z.union([z.string().max(MaxLength.Paragraph), z.array(z.string().max(MaxLength.Paragraph)).max(30)]),
+  z.union([
+    z.string().max(MaxLength.Paragraph),
+    z.array(z.string().max(MaxLength.Paragraph)).max(FORM_OPTION_COUNT.max),
+  ]),
 );
 export type FormSubmissionValues = z.infer<typeof formSubmissionValues>;
+
+/**
+ * The text a submitted value is read as: the values of a choice group joined
+ * with a comma, and a field the submission left out as nothing.
+ *
+ * One answer for every place a person reads a submission, which is the
+ * dashboard's inbox, its export and the mail that reports it.
+ *
+ * @param value - The value as the submission holds it, or undefined for a field it lacks.
+ * @returns The value as one line of text.
+ */
+export function submittedValueText(value: FormSubmissionValues[string] | undefined): string {
+  return Array.isArray(value) ? value.join(", ") : (value ?? "");
+}
 
 export const submitFormBody = body({
   challenge: z.string().min(1).max(256),
   honeypot: z.string().max(256),
-  language: z.enum(["en", "de"]),
+  language: z.enum(CONTENT_LANGUAGES),
   values: formSubmissionValues,
 });
 
@@ -167,7 +211,7 @@ export type FormConsent = { key: string; revision: string; notice: string };
 export function validateFormValues(
   form: PublicForm,
   submitted: FormSubmissionValues,
-  language: "en" | "de",
+  language: ContentLanguage,
 ): { values: FormSubmissionValues; errors: Record<string, string>; consents: FormConsent[] } {
   const values: FormSubmissionValues = {};
   const errors: Record<string, string> = {};
@@ -258,9 +302,10 @@ export function validateFormValues(
 export const formList = z.array(formDetail);
 export type FormList = z.infer<typeof formList>;
 
-export const formIdParam = body({ id: z.uuid() });
+/** Where a submission stands in the inbox: not yet read, read, or set aside as spam. */
+export const FORM_SUBMISSION_STATUSES = ["unread", "read", "spam"] as const;
 
-export const formSubmissionStatus = z.enum(["unread", "read", "spam"]);
+export const formSubmissionStatus = z.enum(FORM_SUBMISSION_STATUSES);
 export type FormSubmissionStatus = z.infer<typeof formSubmissionStatus>;
 
 /** One stored response, with only a fingerprint of the request origin. */

@@ -1,6 +1,6 @@
 import {
-  navigationIdParam,
-  reorderSocialAccountsBody,
+  idParam,
+  reorderBody,
   saveSocialAccountBody,
   socialAccount,
   socialAccountList,
@@ -26,7 +26,7 @@ socialAccountRoutes.get("/", responds(socialAccountList), async (c) =>
 socialAccountRoutes.patch(
   "/order",
   requireOwner,
-  validate("json", reorderSocialAccountsBody),
+  validate("json", reorderBody),
   responds(socialAccountList),
   async (c) =>
     ok(c, await reorderSocialAccounts(database(), c.req.valid("json").positions, principalOf(c).userId)),
@@ -41,7 +41,7 @@ socialAccountRoutes.post(
 socialAccountRoutes.put(
   "/:id",
   requireOwner,
-  validate("param", navigationIdParam),
+  validate("param", idParam),
   validate("json", saveSocialAccountBody),
   responds(socialAccount),
   async (c) =>
@@ -58,7 +58,7 @@ socialAccountRoutes.put(
 socialAccountRoutes.delete(
   "/:id",
   requireOwner,
-  validate("param", navigationIdParam),
+  validate("param", idParam),
   responds(z.null()),
   async (c) => {
     await deleteSocialAccount(database(), c.req.valid("param").id, principalOf(c).userId);

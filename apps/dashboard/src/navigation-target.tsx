@@ -1,10 +1,11 @@
-import type { SaveFooterNavigationBody } from "@layered/schemas";
+import { NAVIGATION_HREF_MAX_LENGTH, type SaveFooterNavigationBody } from "@layered/schemas";
 import { Field, Input, Select } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 
 type Item = SaveFooterNavigationBody["items"][number];
 export function NavigationTarget({
@@ -20,14 +21,18 @@ export function NavigationTarget({
   const { text, language } = useDashboardLanguage();
   const [kind, setKind] = useState(item.entryId ? "entry" : item.topicId ? "topic" : "external");
   const entries = useQuery({
-    queryKey: ["navigation-target-entries"],
+    queryKey: queryKeys.navigationTargetEntries,
     enabled: kind === "entry",
     queryFn: async () =>
       (await Promise.all([api.fetchEntries("post"), api.fetchEntries("page"), api.fetchEntries("project")]))
         .flat()
         .filter((row) => !row.trashed),
   });
-  const topics = useQuery({ queryKey: ["topics"], queryFn: api.fetchTopics, enabled: kind === "topic" });
+  const topics = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: api.fetchTopics,
+    enabled: kind === "topic",
+  });
   const options =
     kind === "entry"
       ? [
@@ -64,7 +69,7 @@ export function NavigationTarget({
           <Input
             id={`navigation-${itemKey}-href`}
             value={item.href ?? ""}
-            maxLength={2048}
+            maxLength={NAVIGATION_HREF_MAX_LENGTH}
             onChange={(event) => onChange({ href: event.target.value || null })}
           />
         </Field>

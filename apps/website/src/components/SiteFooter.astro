@@ -1,9 +1,10 @@
 ---
+import { type ContentLanguage, LANGUAGE_ROOTS } from "@layered/schemas";
 import { BrandMark, Logo } from "@layered/ui";
 import type { SiteFooterData } from "./site-navigation";
 
 interface Props {
-  language: "en" | "de";
+  language: ContentLanguage;
   siteName: string;
   footer: SiteFooterData;
 }
@@ -14,11 +15,7 @@ const { language, siteName, footer } = Astro.props;
 <footer class="site-footer">
   <div class="page site-footer__row">
     <div class="site-footer__brand">
-      <Logo
-        href={language === "de" ? "/de/" : "/"}
-        label={siteName}
-        inkHeight="var(--logo-ink-height-large)"
-      />
+      <Logo href={LANGUAGE_ROOTS[language]} label={siteName} inkHeight="var(--logo-ink-height-large)" />
       {footer.description && <p class="site-footer__note">{footer.description}</p>}
       {!!footer.social?.length && (
         <ul class="social-row" aria-label={language === "de" ? "Social-Media-Konten" : "Social accounts"}>

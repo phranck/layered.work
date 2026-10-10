@@ -1,4 +1,5 @@
 import {
+  type ContentLanguage,
   ErrorCode,
   mailTemplate,
   mailTemplateKind,
@@ -13,10 +14,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
-import { readMailConfiguration } from "../../mail/sender.js";
+import { requireMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import {
   listMailTemplates,
+  type MailTemplateValues,
   mailTemplateDraft,
   readMailTemplate,
   renderMailTemplate,
@@ -29,7 +31,8 @@ import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
 const kindParam = z.object({ kind: mailTemplateKind });
-const samples = {
+/** What a preview fills the placeholders with. The notification uses every one there is. */
+const samples: MailTemplateValues<"submission_notification"> = {
   formName: "Contact",
   submittedAt: "5 October 2026, 10:00",
   fields: "Name: Ada\nEmail: ada@example.test",
@@ -39,7 +42,7 @@ const samples = {
 function rendered(
   kind: z.infer<typeof mailTemplateKind>,
   value: z.infer<typeof saveMailTemplateBody>,
-  language: "en" | "de",
+  language: ContentLanguage,
 ) {
   try {
     return renderMailTemplate(mailTemplateDraft(kind, value), language, samples);
@@ -96,9 +99,7 @@ mailTemplateRoutes.post(
     });
     const { template, language, recipient } = c.req.valid("json");
     const message = rendered(c.req.valid("param").kind, template, language);
-    const configuration = await readMailConfiguration(database());
-    if (!configuration.ready)
-      throw new HttpError(ErrorCode.Conflict, `Mail sending needs a configured ${configuration.reason}.`);
+    const configuration = await requireMailConfiguration(database());
     const outcome = await sendThroughSmtp2go(configuration.apiKey, {
       sender: configuration.sender,
       to: recipient,

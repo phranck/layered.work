@@ -1,20 +1,31 @@
-import type { FormConsent, FormDetail, FormSubmissionValues } from "@layered/schemas";
+import {
+  CONTENT_LOCALES,
+  type ContentLanguage,
+  type FormConsent,
+  type FormDetail,
+  type FormSubmissionValues,
+  submittedValueText,
+} from "@layered/schemas";
+import type { MailTemplateValues } from "./templates.js";
 
-/** Values are snapshotted at submission time, independent of later form edits. */
+/**
+ * What a form's mails are filled with: every placeholder the notification may
+ * use, which the confirmation's are a part of. Snapshotted at submission time,
+ * independent of later form edits.
+ */
 export function formMailValues(
   form: FormDetail,
   values: FormSubmissionValues,
-  language: "en" | "de",
+  language: ContentLanguage,
   consents: FormConsent[],
   now: Date = new Date(),
-): Record<string, string> {
-  const fields = form.fields.map((field) => {
-    const value = values[field.key];
-    return `${field.label[language]}: ${Array.isArray(value) ? value.join(", ") : (value ?? "")}`;
-  });
+): MailTemplateValues<"submission_notification"> {
+  const fields = form.fields.map(
+    (field) => `${field.label[language]}: ${submittedValueText(values[field.key])}`,
+  );
   return {
     formName: form.name,
-    submittedAt: new Intl.DateTimeFormat(language === "de" ? "de-AT" : "en-GB", {
+    submittedAt: new Intl.DateTimeFormat(CONTENT_LOCALES[language], {
       dateStyle: "long",
       timeStyle: "short",
       timeZone: "Europe/Vienna",

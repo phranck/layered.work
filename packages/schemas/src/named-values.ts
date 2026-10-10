@@ -40,9 +40,6 @@ export type CreateNamedValueBody = z.infer<typeof createNamedValueBody>;
 export const updateNamedValueBody = body({ value: valueText });
 export type UpdateNamedValueBody = z.infer<typeof updateNamedValueBody>;
 
-/** The value an address names. */
-export const namedValueIdParam = z.strictObject({ id: z.uuid() });
-
 /**
  * One place that refers to a value, so the dashboard can say where a value is
  * used and why it cannot be deleted yet: an entry, by its title, or the

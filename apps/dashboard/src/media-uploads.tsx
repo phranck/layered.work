@@ -17,6 +17,7 @@ import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 
 /** How far one upload has got, and why it failed where it did. */
 export type UploadProgress = { id: number; name: string; percent: number; error?: unknown };
@@ -56,14 +57,14 @@ export async function uploadInOrder(
 }
 
 /**
- * Every cached view of the library that a new file changes: the library screen,
- * the account's choice of picture, and the counts in the sidebar.
+ * Every cached view of the library that a new file changes: each page of the
+ * library, which the library screen and every picker show, and the counts in
+ * the sidebar.
  *
  * @param client - The dashboard's query cache.
  */
 export async function refreshMediaQueries(client: QueryClient): Promise<void> {
-  await client.invalidateQueries({ queryKey: ["media"] });
-  await client.invalidateQueries({ queryKey: ["account-media"] });
+  await client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery });
   await refreshCounts(client);
 }
 

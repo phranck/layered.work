@@ -8,7 +8,7 @@
  * costs nothing.
  */
 
-import { DEFAULT_UMAMI_WEBSITE_ID } from "@layered/schemas";
+import { CONTENT_LOCALES, DEFAULT_UMAMI_WEBSITE_ID } from "@layered/schemas";
 
 /**
  * When the site opens.
@@ -42,13 +42,13 @@ const SITE_TIMEZONE = "Europe/Vienna";
  */
 export const LAUNCH_TEXT = ((): string => {
   const moment = new Date(LAUNCH);
-  const day = new Intl.DateTimeFormat("en-GB", {
+  const day = new Intl.DateTimeFormat(CONTENT_LOCALES.en, {
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: SITE_TIMEZONE,
   }).format(moment);
-  const time = new Intl.DateTimeFormat("en-GB", {
+  const time = new Intl.DateTimeFormat(CONTENT_LOCALES.en, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

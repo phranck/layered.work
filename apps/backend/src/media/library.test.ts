@@ -1,10 +1,22 @@
 import { randomUUID } from "node:crypto";
+import { DEFAULT_LISTING } from "@layered/schemas";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { publicMedia } from "../content/snapshot.js";
-import { media, mediaJobs, mediaTranslations } from "../db/schema/index.js";
+import {
+  entries,
+  entryTranslations,
+  homeBlocks,
+  media,
+  mediaJobs,
+  mediaReferences,
+  mediaTranslations,
+  settingMediaReferences,
+  settings,
+  users,
+} from "../db/schema/index.js";
 import { closeTestDatabase, hasTestDatabase, testDatabase } from "../test-support/database.js";
-import { getMediaDetail, listMedia, saveMediaMetadata } from "./library.js";
+import { getMediaDetail, getMediaUses, listMedia, saveMediaMetadata } from "./library.js";
 
 const ids = [randomUUID(), randomUUID()];
 const prefix = `library-${randomUUID()}`;
@@ -130,5 +142,115 @@ const prefix = `library-${randomUUID()}`;
     const db = await testDatabase();
     const snapshot = await publicMedia(db, [], [`Image("${prefix}-0")`]);
     expect(snapshot.media.map((asset) => asset.slug)).toEqual([`${prefix}-0`]);
+  });
+
+  // The detail screen lists a file's uses and the library's "unused" filter
+  // hides them, from two queries that cannot be one, so this holds them together
+  // for every kind of use there is.
+  it("lists every use the unused filter counts, and none it does not", async () => {
+    const db = await testDatabase();
+    const created: string[] = [];
+    const picture = async () => {
+      const id = randomUUID();
+      created.push(id);
+      await db.insert(media).values({
+        id,
+        slug: `${prefix}-use-${id}`,
+        kind: "image",
+        mimeType: "image/png",
+        storageKey: `test/${id}`,
+        checksum: id,
+        byteSize: 1,
+        width: 10,
+        height: 10,
+      });
+      return id;
+    };
+    const [entry] = await db.insert(entries).values({ kind: "post" }).returning({ id: entries.id });
+    const [translation] = await db
+      .insert(entryTranslations)
+      .values({ entryId: entry?.id ?? "", language: "en", title: `${prefix} uses` })
+      .returning({ id: entryTranslations.id });
+    const translationId = translation?.id ?? "";
+    const [storedSite] = await db.select().from(settings).where(eq(settings.key, "site"));
+    const [storedListing] = await db.select().from(settings).where(eq(settings.key, "postListing"));
+    const blockIds: string[] = [];
+    const uses: Record<string, (id: string) => Promise<unknown>> = {
+      cover: (id) =>
+        db
+          .update(entryTranslations)
+          .set({ featuredMediaId: id })
+          .where(eq(entryTranslations.id, translationId)),
+      socialCard: (id) =>
+        db
+          .update(entryTranslations)
+          .set({ socialCardMediaId: id })
+          .where(eq(entryTranslations.id, translationId)),
+      body: (id) => db.insert(mediaReferences).values({ translationId, mediaId: id }),
+      portrait: (id) =>
+        db.insert(users).values({
+          email: `${prefix}-${id}@example.test`,
+          passwordHash: "unused",
+          displayName: "Portrait",
+          role: "editor",
+          avatarMediaId: id,
+        }),
+      sitePicture: (id) =>
+        db
+          .insert(settings)
+          .values({ key: "site", value: { socialImageMediaId: id } })
+          .onConflictDoUpdate({ target: settings.key, set: { value: { socialImageMediaId: id } } }),
+      homeBlock: async (id) => {
+        const [block] = await db
+          .insert(homeBlocks)
+          .values({ type: "hero", sortOrder: 99, settings: { picture: id } })
+          .returning({ id: homeBlocks.id });
+        if (block) blockIds.push(block.id);
+      },
+      introduction: async (id) => {
+        await db
+          .insert(settings)
+          .values({ key: "postListing", value: DEFAULT_LISTING })
+          .onConflictDoNothing();
+        await db
+          .insert(settingMediaReferences)
+          .values({ settingsKey: "postListing", language: "en", mediaId: id });
+      },
+    };
+    try {
+      for (const [kind, use] of Object.entries(uses)) {
+        const id = await picture();
+        await use(id);
+        const unused = await listMedia(db, {
+          search: `${prefix}-use-${id}`,
+          kind: "all",
+          page: 1,
+          order: "slug",
+          unused: true,
+        });
+        expect({ kind, listed: (await getMediaUses(db, id)).length > 0 }).toEqual({ kind, listed: true });
+        expect({ kind, unused: unused.items.length }).toEqual({ kind, unused: 0 });
+      }
+      const idle = await picture();
+      expect(await getMediaUses(db, idle)).toEqual([]);
+      const unused = await listMedia(db, {
+        search: `${prefix}-use-${idle}`,
+        kind: "all",
+        page: 1,
+        order: "slug",
+        unused: true,
+      });
+      expect(unused.items.map((item) => item.id)).toEqual([idle]);
+    } finally {
+      if (blockIds.length) await db.delete(homeBlocks).where(inArray(homeBlocks.id, blockIds));
+      await db.delete(users).where(inArray(users.avatarMediaId, created));
+      if (storedSite)
+        await db.update(settings).set({ value: storedSite.value }).where(eq(settings.key, "site"));
+      else await db.delete(settings).where(eq(settings.key, "site"));
+      await db.delete(settingMediaReferences).where(inArray(settingMediaReferences.mediaId, created));
+      if (!storedListing) await db.delete(settings).where(eq(settings.key, "postListing"));
+      await db.delete(entries).where(eq(entries.id, entry?.id ?? ""));
+      await db.delete(media).where(inArray(media.id, created));
+    }
   });
 });

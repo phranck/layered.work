@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import { sessions, users } from "../db/schema/index.js";
 import { deviation } from "../logger.js";
 import { sign, signedFor } from "./signature.js";
@@ -42,7 +42,6 @@ export type Principal = {
 };
 
 /** The database this module is given, rather than one it opens. */
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /**
  * Signs a token, so that a value that was never issued here is refused without

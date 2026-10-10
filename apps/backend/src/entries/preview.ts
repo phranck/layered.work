@@ -1,12 +1,18 @@
 import { resolveValues } from "@layered/content";
-import { type EntryPreview, ErrorCode, type PreviewEntryBody } from "@layered/schemas";
+import { type EntryPreview, ErrorCode, languagePath, type PreviewEntryBody } from "@layered/schemas";
 import { and, eq, isNull, lt } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { auditActor } from "../auth/audit-actor.js";
 import { claimsToken } from "../auth/signature.js";
 import { config } from "../config.js";
-import { type PublicSnapshot, publicForms, publicMedia, publicTopics } from "../content/snapshot.js";
+import {
+  type PublicSnapshot,
+  publicEntry,
+  publicForms,
+  publicMedia,
+  publicTopics,
+} from "../content/snapshot.js";
+import type { Database } from "../db/connect.js";
 import {
   auditLog,
   entries,
@@ -28,8 +34,6 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
  * without opening anything else, and it is signed with a key derived for this
  * purpose alone, so no token of another kind passes as one of these.
  */
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /** How long a preview link works. Long enough to read, short enough to forget. */
 export const PREVIEW_LIFETIME_MS = 60 * 60 * 1000;
@@ -142,6 +146,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
       publishedAt: entryTranslations.publishedAt,
       modifiedAt: entries.modifiedAt,
       featuredMediaId: entryTranslations.featuredMediaId,
+      socialCardMediaId: entryTranslations.socialCardMediaId,
       specs: entryTranslations.specs,
       title: entryPreviews.title,
       summary: entryPreviews.summary,
@@ -165,7 +170,7 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     .from(paths)
     .where(and(eq(paths.translationId, row.translationId), eq(paths.isCurrent, true)))
     .limit(1);
-  const path = current?.path ?? `/${row.language === "de" ? "de/" : ""}preview/`;
+  const path = current?.path ?? languagePath(row.language, "preview");
 
   const assigned = await db
     .select({ topicId: entryTopics.topicId })
@@ -196,28 +201,11 @@ export async function readPreview(db: Database, token: string, now = Date.now())
     mainNavigation: mainNavigationFromGroups(main),
     siteFrame: await readPublicSiteFrame(db),
     entries: [
-      {
-        id: row.translationId,
-        title: row.title,
-        slug: path.split("/").filter(Boolean).at(-1) ?? "preview",
-        path,
-        language: row.language,
-        visibility: "hidden",
-        kind: row.kind,
-        createdAt: row.createdAt.toISOString(),
-        publishedAt: row.publishedAt?.toISOString() ?? null,
-        updatedAt: row.modifiedAt.toISOString(),
-        summary: row.summary,
-        body: row.body,
-        topics: assigned.map((topic) => topic.topicId),
-        featuredImage: row.featuredMediaId ? (slugById.get(row.featuredMediaId) ?? null) : null,
-        translationPath: null,
-        featured: row.featured,
-        onHomePage: row.onHomePage,
-        readingWidth: row.readingWidth,
-        showInOtherLanguage: false,
-        specs: row.specs,
-      },
+      publicEntry(
+        { ...row, showInOtherLanguage: false },
+        { path, visibility: "hidden", topics: assigned.map((topic) => topic.topicId), translationPath: null },
+        slugById,
+      ),
     ],
     topics: assignedTopics,
     forms: await publicForms(db, [row.body]),

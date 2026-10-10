@@ -1,6 +1,5 @@
 import {
   analyticsSettings,
-  ErrorCode,
   LISTING_GROUP,
   listingSettings,
   mailSettings,
@@ -12,12 +11,12 @@ import { Hono } from "hono";
 import { getAccountProfile } from "../../account/repository.js";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
-import { readMailConfiguration } from "../../mail/sender.js";
+import { requireMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import { readSettings, saveSettings } from "../../settings/repository.js";
 import { responds } from "../api-metadata.js";
 import { principalOf, requireOwner, requireSession } from "../require-session.js";
-import { HttpError, ok } from "../response.js";
+import { ok } from "../response.js";
 import { validate } from "../validate.js";
 
 /**
@@ -71,12 +70,7 @@ for (const group of Object.values(LISTING_GROUP)) {
  * outcome and never the address.
  */
 settingsRoutes.post("/mail/test", requireOwner, responds(testMailResult), async (c) => {
-  const mailConfiguration = await readMailConfiguration(database());
-  if (!mailConfiguration.ready && mailConfiguration.reason === "key")
-    throw new HttpError(ErrorCode.Conflict, "No SMTP2GO key is configured, so nothing can be sent.");
-  if (!mailConfiguration.ready) {
-    throw new HttpError(ErrorCode.Conflict, "Save a sender address before sending a test message.");
-  }
+  const mailConfiguration = await requireMailConfiguration(database());
 
   const recipient = (await getAccountProfile(database(), principalOf(c).userId)).email;
   const outcome = await sendThroughSmtp2go(mailConfiguration.apiKey, {

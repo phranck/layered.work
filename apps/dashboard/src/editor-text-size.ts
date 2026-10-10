@@ -1,4 +1,4 @@
-import { restoredStep, useStoredChoice } from "./stored-choice.js";
+import { restoredStep, storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 
 /**
  * The text size of the writing surface, which the author chooses in the
@@ -14,7 +14,7 @@ export const EDITOR_TEXT_SIZES = ["s", "m", "l", "xl"] as const;
 export type EditorTextSize = (typeof EDITOR_TEXT_SIZES)[number];
 
 /** Where the choice is kept, beside the sidebar's width and order. */
-export const EDITOR_TEXT_SIZE_KEY = "layered:dashboard:editor-text-size";
+export const EDITOR_TEXT_SIZE_KEY = storedChoiceKey("editor-text-size");
 
 /** The size without a choice, which is the code size. */
 const DEFAULT_SIZE: EditorTextSize = "s";

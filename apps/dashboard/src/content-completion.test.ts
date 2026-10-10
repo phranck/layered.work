@@ -6,6 +6,7 @@ import { COMPONENT_NAMES, components, SPACE_STEPS } from "@layered/content";
 import type { MediaKind } from "@layered/schemas";
 import { describe, expect, it, vi } from "vitest";
 import {
+  type CompletionLabels,
   contentCompletions,
   type KnownValue,
   type LibraryFile,
@@ -22,13 +23,21 @@ import { contentLanguage } from "./content-editor.js";
  * offered are compared, because the labels are what the author picks from.
  */
 
-/** The labels offered at the `|` in the text. */
-function offered(textWithCursor: string, explicit = false): string[] | null {
+/** The words beside an option, as the interface would say them. */
+const LABELS: CompletionLabels = { defaultValue: () => "default", shownField: () => "shown by a column" };
+
+/** What is offered at the `|` in the text. */
+function completed(textWithCursor: string, explicit = false) {
   const position = textWithCursor.indexOf("|");
   const doc = textWithCursor.replace("|", "");
   const state = EditorState.create({ doc, selection: { anchor: position }, extensions: [contentLanguage()] });
   ensureSyntaxTree(state, doc.length, 5000);
-  const result = contentCompletions(new CompletionContext(state, position, explicit));
+  return contentCompletions(LABELS)(new CompletionContext(state, position, explicit));
+}
+
+/** The labels offered at the `|` in the text. */
+function offered(textWithCursor: string, explicit = false): string[] | null {
+  const result = completed(textWithCursor, explicit);
   return result ? result.options.map((option) => option.label) : null;
 }
 
@@ -59,7 +68,7 @@ describe("component names", () => {
       selection: { anchor: 3 },
       extensions: [contentLanguage()],
     });
-    const note = contentCompletions(new CompletionContext(state, 3, false))?.options.find(
+    const note = contentCompletions(LABELS)(new CompletionContext(state, 3, false))?.options.find(
       (option) => option.label === "Note",
     );
     expect(note?.info).toBe(components.Note.description);
@@ -81,16 +90,21 @@ describe("parameter names", () => {
     expect(offered('Image("front", |')).toEqual(["caption", "alt"]);
   });
 
-  it("in a row are the fields its table's columns show and it lacks", () => {
+  it("in a row are the fields its table's columns show and it lacks, said to be shown by a column", () => {
     const text =
       'Table {\n  TableColumn("A", value: part)\n  TableColumn("B", value: count)\n  TableRow(part: "x", |)\n}';
-    expect(offered(text)).toEqual(["count"]);
+    expect(completed(text)?.options.map((option) => [option.label, option.detail])).toEqual([
+      ["count", LABELS.shownField()],
+    ]);
   });
 });
 
 describe("values", () => {
-  it("of a tone are the tones a note takes", () => {
-    expect(offered("Note(tone: |")).toEqual([...components.Note.parameters.tone.values]);
+  it("of a tone are the tones a note takes, with the one taken without a value marked", () => {
+    const tone = components.Note.parameters.tone;
+    expect(completed("Note(tone: |")?.options.map((option) => [option.label, option.detail])).toEqual(
+      tone.values.map((value) => [value, value === tone.default ? LABELS.defaultValue() : undefined]),
+    );
   });
 
   it("of a spacing are the steps of the space scale", () => {

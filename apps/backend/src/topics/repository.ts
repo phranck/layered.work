@@ -1,7 +1,9 @@
 import {
+  CONTENT_LANGUAGES,
   type ContentLanguage,
   type CreateTopicBody,
   ErrorCode,
+  numberedSlug,
   type SaveTopicBody,
   slugFromTitle,
   type TopicList,
@@ -9,7 +11,7 @@ import {
 } from "@layered/schemas";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database, Transaction } from "../db/connect.js";
 import {
   auditLog,
   entryTopics,
@@ -29,9 +31,6 @@ import { HttpError } from "../http/response.js";
  * redirect. Every change is written to the audit log under the account that
  * made it.
  */
-
-type Database = ReturnType<typeof database>;
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** How many numbered alternatives a new topic's address tries before the request is refused. */
 const SLUG_ATTEMPTS = 9;
@@ -142,7 +141,7 @@ export async function createTopic(
     const base = slugFromTitle(value.name);
     let slug: string | undefined;
     for (let attempt = 0; attempt < SLUG_ATTEMPTS && !slug; attempt += 1) {
-      const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
+      const candidate = numberedSlug(base, attempt);
       if (await slugIsFree(tx, value.language, candidate, null)) slug = candidate;
     }
     if (!slug) throw new HttpError(ErrorCode.Conflict, "Every address for this topic is taken.");
@@ -198,7 +197,7 @@ export async function saveTopic(
       .where(eq(topicTranslations.topicId, id));
 
     const changedKeys: string[] = [];
-    for (const language of ["en", "de"] as const) {
+    for (const language of CONTENT_LANGUAGES) {
       const before = current.find((row) => row.language === language);
       const after = value[language];
       if (before?.name === after?.name && before?.slug === after?.slug) continue;

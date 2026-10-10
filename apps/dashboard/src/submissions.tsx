@@ -1,16 +1,18 @@
-import type { FormSubmission, FormSubmissionStatus } from "@layered/schemas";
+import { type FormSubmission, type FormSubmissionStatus, submittedValueText } from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT, DATE_TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import "./submissions.css";
 
@@ -21,14 +23,15 @@ const STATUS_TEXT: Record<FormSubmissionStatus, DashboardStringKey> = {
   spam: "submissionSpam",
 };
 
+/** How many characters of a submission's first answer its row shows. */
+const PREVIEW_LENGTH = 120;
+
+/** The first answer of a submission that is not empty, shortened to what its row shows. */
 const preview = (submission: FormSubmission): string =>
   Object.values(submission.values)
-    .map((value) => (Array.isArray(value) ? value.join(", ") : value))
+    .map((value) => submittedValueText(value))
     .find(Boolean)
-    ?.slice(0, 120) ?? "";
-
-const displayValue = (value: string | string[] | undefined): string =>
-  Array.isArray(value) ? value.join(", ") : (value ?? "");
+    ?.slice(0, PREVIEW_LENGTH) ?? "";
 
 /** An inbox for one form at a time, using the dashboard's card and row compounds. */
 export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
@@ -41,14 +44,11 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const field = useTableSearch();
-  // One formatter per language rather than one per row and render, in the form the Posts list uses.
-  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
-  const forms = useQuery({ queryKey: ["forms"], queryFn: api.fetchForms });
+  const forms = useQuery({ queryKey: queryKeys.forms, queryFn: api.fetchForms });
   const formId = selectedFormId || forms.data?.[0]?.id || "";
   const form = forms.data?.find((item) => item.id === formId);
-  const submissionsKey = ["form-submissions", formId] as const;
   const submissions = useQuery({
-    queryKey: submissionsKey,
+    queryKey: queryKeys.formSubmissions(formId),
     queryFn: () => api.fetchFormSubmissions(formId),
     enabled: Boolean(formId),
     refetchInterval: 1000,
@@ -64,7 +64,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: submissionsKey }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.formSubmissions(formId) }),
       refreshCounts(queryClient),
     ]);
   };
@@ -154,7 +154,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                   <DataTable.Cell kind="state">{text(STATUS_TEXT[submission.status])}</DataTable.Cell>
                   <DataTable.Cell kind="date">
                     <time dateTime={submission.createdAt}>
-                      {dates.format(new Date(submission.createdAt))}
+                      {DATE_FORMAT[language].format(new Date(submission.createdAt))}
                     </time>
                   </DataTable.Cell>
                 </DataTable.Row>
@@ -168,7 +168,11 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
             <Card.Body>
               <dl className="submissions-detail">
                 <dt>{text("submissionSubmitted")}</dt>
-                <dd>{new Date(selected.createdAt).toLocaleString(language === "de" ? "de-AT" : "en-GB")}</dd>
+                <dd>
+                  <time dateTime={selected.createdAt}>
+                    {DATE_TIME_FORMAT[language].format(new Date(selected.createdAt))}
+                  </time>
+                </dd>
                 <dt>{text("submissionOrigin")}</dt>
                 <dd>
                   <code>{selected.sourceHash ?? text("submissionOriginUnknown")}</code>
@@ -176,7 +180,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 {Object.entries(selected.values).map(([key, value]) => (
                   <div key={key} className="submissions-detail__field">
                     <dt>{form.fields.find((field) => field.key === key)?.label[language] ?? key}</dt>
-                    <dd>{displayValue(value)}</dd>
+                    <dd>{submittedValueText(value)}</dd>
                   </div>
                 ))}
                 {selected.consents.map((consent) => (

@@ -4,9 +4,10 @@ import {
   type HomeBlockType,
   homeBlockText,
   homeBlockTypes,
+  type InterfaceLanguage,
   type StoredHomeBlock,
 } from "@layered/schemas";
-import type { DashboardStringKey, InterfaceLanguage } from "./dashboard-i18n.js";
+import type { DashboardStringKey } from "./dashboard-i18n.js";
 import type { useDashboardLanguage } from "./language-context.js";
 
 /**

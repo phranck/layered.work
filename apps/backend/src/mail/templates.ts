@@ -1,5 +1,8 @@
 import { NODE, parseContent } from "@layered/content";
 import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  MAIL_LINK,
   type MailTemplate,
   type MailTemplateKind,
   type RenderedMail,
@@ -7,18 +10,26 @@ import {
   saveMailTemplateBody,
 } from "@layered/schemas";
 import { eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, settings } from "../db/schema/index.js";
 import { escapeMarkup } from "../markup.js";
 
-type Database = ReturnType<typeof database>;
-type Language = "en" | "de";
 type Node = ReturnType<typeof parseContent>["topNode"];
 
-const VARIABLES: Record<MailTemplateKind, readonly string[]> = {
+/** The placeholders each template may use, which are the values its sender fills in. */
+const VARIABLES = {
   submission_notification: ["formName", "submittedAt", "fields", "consents"],
   submission_confirmation: ["formName", "submittedAt"],
-};
+} as const satisfies Record<MailTemplateKind, readonly string[]>;
+
+/**
+ * The values a template of one kind is rendered with, one for each placeholder
+ * it may use, so a sender or a preview that misses one fails to compile.
+ */
+export type MailTemplateValues<Kind extends MailTemplateKind> = Record<
+  (typeof VARIABLES)[Kind][number],
+  string
+>;
 
 /** Defaults remain usable before an editor changes either template. */
 export const DEFAULT_MAIL_TEMPLATES: Record<MailTemplateKind, MailTemplate> = {
@@ -79,7 +90,7 @@ function renderInline(
     const urlNode = children(node).find((child) => child.name === "URL");
     if (!urlNode) throw new Error("Mail links require a URL.");
     const url = substitute(source.slice(urlNode.from, urlNode.to), allowed, values);
-    if (!/^https?:\/\//i.test(url)) throw new Error("Mail links require an HTTP or HTTPS URL.");
+    if (!MAIL_LINK.test(url)) throw new Error("Mail links require an HTTP or HTTPS URL.");
     const label = source.slice(
       node.from + 1,
       children(node).find((child) => child.name === "LinkMark" && child.from > node.from)?.from ?? node.to,
@@ -147,7 +158,7 @@ function renderBlock(
 
 /** Only paragraphs, emphasis, lists and HTTP links can enter email HTML. */
 export function validateMailTemplate(template: MailTemplate): void {
-  for (const language of ["en", "de"] as const) {
+  for (const language of CONTENT_LANGUAGES) {
     substitute(template.subject[language], VARIABLES[template.kind]);
     substitute(template.body[language], VARIABLES[template.kind]);
     const source = template.body[language];
@@ -158,7 +169,7 @@ export function validateMailTemplate(template: MailTemplate): void {
 
 export function renderMailTemplate(
   template: MailTemplate,
-  language: Language,
+  language: ContentLanguage,
   values: Record<string, string>,
 ): RenderedMail {
   validateMailTemplate(template);

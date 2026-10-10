@@ -8,15 +8,21 @@ import { drawSelection, EditorView, keymap } from "@codemirror/view";
 import { CONTENT_SYNTAX, type Finding } from "@layered/content";
 import type { MediaKind } from "@layered/schemas";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
-import { contentAutocompletion, type KnownValue, type MediaLibrary } from "./content-completion.js";
+import {
+  type CompletionLabels,
+  contentAutocompletion,
+  type KnownValue,
+  type MediaLibrary,
+} from "./content-completion.js";
 import { contentFileDrop } from "./content-files.js";
 import { componentHighlighting, contentHighlighting } from "./content-highlight.js";
 import { contentIndentation, reindentDocument } from "./content-indent.js";
 import { insertComponentBlock } from "./content-insert.js";
 import { contentValidation } from "./content-lint.js";
-import { type CheckedContent, findingMessage } from "./content-validation.js";
+import type { CheckedContent } from "./content-validation.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { tableSync } from "./table-sync.js";
+import "./content-validation.css";
 
 /**
  * The writing surface for an entry's body.
@@ -146,18 +152,20 @@ const surfaceTheme = EditorView.theme(
  * cursor is added with Alt and a click, or Mod-D on the next match.
  *
  * @param label - What the surface is called to assistive technology.
+ * @param completionLabels - The words completion shows beside an option.
  * @param library - The media library completion offers files from, where there is one.
  * @param values - The named values completion offers after `{{`.
  */
 function surfaceExtensions(
   label: string,
+  completionLabels: CompletionLabels,
   library: MediaLibrary | undefined,
   values: () => readonly KnownValue[],
 ): Extension[] {
   return [
     contentLanguage(),
     contentHighlighting(),
-    contentAutocompletion(library, values),
+    contentAutocompletion(completionLabels, library, values),
     library ? contentFileDrop(library) : [],
     contentIndentation(),
     tableSync(),
@@ -244,7 +252,7 @@ export function ContentEditor({
   library,
   values,
 }: ContentEditorProps) {
-  const { language } = useDashboardLanguage();
+  const { text } = useDashboardLanguage();
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
 
@@ -309,8 +317,10 @@ export function ContentEditor({
     [],
   );
   const validated = useEffectEvent((checked: CheckedContent) => onValidation?.(checked));
-  const message = useEffectEvent((finding: Finding) => findingMessage(finding, language));
-  const changed = useEffectEvent((text: string) => onChange(text));
+  const message = useEffectEvent((finding: Finding) => text("contentFinding", finding));
+  const defaultValueLabel = useEffectEvent(() => text("completionDefault"));
+  const shownFieldLabel = useEffectEvent(() => text("completionShownField"));
+  const changed = useEffectEvent((body: string) => onChange(body));
   const searchLibrary = useEffectEvent(
     (kind: MediaKind, query: string) => library?.search(kind, query) ?? Promise.resolve([]),
   );
@@ -337,6 +347,7 @@ export function ContentEditor({
         extensions: [
           surfaceExtensions(
             initialLabel.current,
+            { defaultValue: () => defaultValueLabel(), shownField: () => shownFieldLabel() },
             hasLibrary.current
               ? {
                   search: (kind, query) => searchLibrary(kind, query),

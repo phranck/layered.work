@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { ErrorCode, type MediaDeletionResult } from "@layered/schemas";
+import { ErrorCode, isProcessing, type MediaDeletionResult } from "@layered/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import {
   auditLog,
   media,
@@ -15,8 +15,6 @@ import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { getMediaUses } from "./library.js";
 import { deleteMediaObject } from "./storage.js";
-
-type Database = ReturnType<typeof database>;
 
 /** Cleanup has its own durable row and lock; storage deletes are idempotent after a crash. */
 export async function processMediaDeletion(db: Database, id?: string): Promise<MediaDeletionResult | null> {
@@ -91,7 +89,7 @@ export async function deleteMedia(
         ErrorCode.Conflict,
         `This file is used by: ${uses.map((use) => use.title).join(", ")}. Remove those references first.`,
       );
-    if (job?.state === "queued" || job?.state === "processing")
+    if (job && isProcessing(job.state))
       throw new HttpError(
         ErrorCode.Conflict,
         "This file is still being processed. Wait for processing to finish before deleting it.",

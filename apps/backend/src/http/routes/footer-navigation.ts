@@ -1,8 +1,9 @@
 import {
   footerNavigation,
   footerNavigationList,
-  navigationIdParam,
-  reorderFooterNavigationBody,
+  idParam,
+  type NavigationPlacement,
+  reorderBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
 import { Hono } from "hono";
@@ -11,7 +12,6 @@ import { database } from "../../db/connect.js";
 import {
   deleteFooterNavigation,
   listFooterNavigations,
-  type NavigationPlacement,
   reorderFooterNavigations,
   saveFooterNavigation,
 } from "../../navigation/repository.js";
@@ -29,7 +29,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.patch(
     "/order",
     requireOwner,
-    validate("json", reorderFooterNavigationBody),
+    validate("json", reorderBody),
     responds(footerNavigationList),
     async (c) =>
       ok(
@@ -56,7 +56,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.put(
     "/:id",
     requireOwner,
-    validate("param", navigationIdParam),
+    validate("param", idParam),
     validate("json", saveFooterNavigationBody),
     responds(footerNavigation),
     async (c) =>
@@ -74,7 +74,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.delete(
     "/:id",
     requireOwner,
-    validate("param", navigationIdParam),
+    validate("param", idParam),
     responds(z.null()),
     async (c) => {
       await deleteFooterNavigation(database(), c.req.valid("param").id, principalOf(c).userId, placement);

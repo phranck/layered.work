@@ -26,7 +26,20 @@ export const MaxLength = {
   Paragraph: 2_000,
   /** The body of an entry, which is the longest thing this API accepts. */
   Body: 500_000,
+  /** An email address: the longest path SMTP carries (RFC 5321). */
+  Email: 254,
 } as const;
+
+/**
+ * An email address as a request carries it: trimmed, lower case, and no longer
+ * than an address can be.
+ *
+ * Lower case because the accounts table stores it so, and two spellings of one
+ * address must be neither two accounts nor one miss. Every request field holding
+ * an address reads this, so the sign-in, the account, the mail settings and the
+ * forms cannot disagree about what an address is.
+ */
+export const emailAddress = z.string().trim().toLowerCase().pipe(z.email().max(MaxLength.Email));
 
 /**
  * An object that refuses what it was not asked for.
@@ -56,6 +69,56 @@ export function text(max: number, options: { pattern?: RegExp } = {}) {
   const base = z.string().trim().min(1).max(max);
   return options.pattern ? base.regex(options.pattern) : base;
 }
+
+/**
+ * A record named by its id in the path, such as `/entries/:id`.
+ *
+ * One declaration for every route, so no route accepts an id another refuses.
+ */
+export const idParam = z.strictObject({ id: z.uuid() });
+
+/**
+ * One control character: the C0 range and DEL.
+ *
+ * No line a person wrote contains one, and in a header, a path or a log line one
+ * can end the line and begin another, so every field that refuses them refuses
+ * exactly these.
+ */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: Control characters are what this finds.
+export const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
+/**
+ * Whether a value is free of control characters, as a refinement.
+ *
+ * @param value - The string to check.
+ */
+export function withoutControlCharacters(value: string): boolean {
+  return !CONTROL_CHARACTER.test(value);
+}
+
+/** The highest position a row of an ordered list may take. */
+export const MAX_SORT_ORDER = 10_000;
+
+/** A row's position in an ordered list, such as the navigations, the social accounts or the home blocks. */
+export const sortOrder = z.number().int().min(0).max(MAX_SORT_ORDER);
+
+/** How many rows one change of order may move. */
+const MAX_POSITIONS = 100;
+
+/**
+ * A new order for a list: each named row and the position it takes, each row
+ * once. Every ordered list is reordered with this one body.
+ */
+export const reorderBody = body({
+  positions: z
+    .array(body({ id: z.uuid(), sortOrder }))
+    .min(1)
+    .max(MAX_POSITIONS),
+}).refine(
+  (value) => new Set(value.positions.map((item) => item.id)).size === value.positions.length,
+  "Each row may be listed once.",
+);
+export type ReorderBody = z.infer<typeof reorderBody>;
 
 /**
  * A signed token as the API issues them, a preview link's or an upload's: a

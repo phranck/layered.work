@@ -1,11 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import { mediaAttempts, mediaJobs } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import { deleteMediaObject } from "./storage.js";
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /** A lost, unacknowledged generation retains its tombstone because its upload may finish late. */
 export async function processMediaAttemptCleanup(

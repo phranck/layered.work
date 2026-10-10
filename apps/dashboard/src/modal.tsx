@@ -46,7 +46,7 @@ export function CardDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="card-overlay account-dialog"
+      className="card-overlay card-dialog"
       data-open
       aria-labelledby={labelId}
       onCancel={(event) => {

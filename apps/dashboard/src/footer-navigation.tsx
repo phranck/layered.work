@@ -1,6 +1,8 @@
 import {
   type FooterNavigation,
   MaxLength,
+  NAVIGATION_ITEMS_MAX,
+  type NavigationPlacement,
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
@@ -24,6 +26,7 @@ import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
@@ -32,23 +35,21 @@ import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./footer-navigation.css";
 
-type Placement = "main" | "footer";
-const listKey = (placement: Placement) => [`${placement}-navigation`] as const;
-function refresh(client: QueryClient, placement: Placement) {
-  void client.invalidateQueries({ queryKey: listKey(placement) });
+function refresh(client: QueryClient, placement: NavigationPlacement) {
+  void client.invalidateQueries({ queryKey: queryKeys.navigation(placement) });
   void refreshCounts(client);
 }
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 
 export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
-  const placement: Placement = area.id === "main-nav" ? "main" : "footer";
+  const placement: NavigationPlacement = area.id === "main-nav" ? "main" : "footer";
   const api = useDashboardApi();
   const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const session = useSession();
   const owner = session.data?.role === "owner";
   const list = useQuery({
-    queryKey: listKey(placement),
+    queryKey: queryKeys.navigation(placement),
     queryFn: () => api.fetchFooterNavigations(placement),
   });
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -163,7 +164,7 @@ function NavigationEditor({
   sortOrder,
   onClose,
 }: {
-  placement: Placement;
+  placement: NavigationPlacement;
   group: FooterNavigation | null;
   sortOrder: number;
   onClose: () => void;
@@ -248,7 +249,7 @@ function NavigationEditor({
             </Reorder.List>
             <Button
               icon={<PlusIcon />}
-              disabled={items.length >= 100}
+              disabled={items.length >= NAVIGATION_ITEMS_MAX}
               onClick={() =>
                 setItems((current) => [
                   ...current,
@@ -380,7 +381,7 @@ function NavigationDelete({
   group,
   onClose,
 }: {
-  placement: Placement;
+  placement: NavigationPlacement;
   group: FooterNavigation;
   onClose: () => void;
 }) {

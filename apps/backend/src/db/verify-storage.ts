@@ -1,10 +1,9 @@
 import { asc, eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { storedInLibrary } from "../media/pictures.js";
 import { mediaObjectExists } from "../media/storage.js";
+import type { Database } from "./connect.js";
 import { media, mediaVariants } from "./schema/index.js";
 
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 type MediaVariant = typeof mediaVariants.$inferSelect;
 
 /** How many keys are asked about at once, so a large library does not open hundreds of requests together. */

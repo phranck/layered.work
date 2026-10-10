@@ -2,9 +2,13 @@ import {
   CONTENT_LANGUAGES,
   ENTRY_KINDS,
   homeBlockTypes,
+  IMAGE_FORMATS,
+  MEDIA_KINDS,
+  NAVIGATION_PLACEMENTS,
   PUBLICATION_STATES,
   READING_WIDTHS,
   TOKEN_SCOPES,
+  USER_ROLES,
   WATERMARK_ANCHORS,
 } from "@layered/schemas";
 import { pgEnum } from "drizzle-orm/pg-core";
@@ -69,7 +73,7 @@ export const readingWidth = pgEnum("reading_width", READING_WIDTHS);
  * one account today and it is the `owner`, the one the seed creates. `editor`
  * exists so that adding a second person is a row rather than a migration.
  */
-export const userRole = pgEnum("user_role", ["owner", "editor"]);
+export const userRole = pgEnum("user_role", USER_ROLES);
 
 /**
  * What an access token may do.
@@ -88,7 +92,7 @@ export const tokenScope = pgEnum("token_scope", TOKEN_SCOPES);
  * processing it goes through, and both of those answers are the same for every
  * JPEG and every PNG. The exact type is in the mime type beside it.
  */
-export const mediaKind = pgEnum("media_kind", ["image", "video", "document", "model"]);
+export const mediaKind = pgEnum("media_kind", MEDIA_KINDS);
 
 /**
  * The formats an image is derived into.
@@ -97,7 +101,7 @@ export const mediaKind = pgEnum("media_kind", ["image", "video", "document", "mo
  * what it falls back to, and which of the two depends on whether the original
  * has transparency, so both have to exist here.
  */
-export const imageFormat = pgEnum("image_format", ["avif", "webp", "jpeg", "png"]);
+export const imageFormat = pgEnum("image_format", IMAGE_FORMATS);
 
 /**
  * Where a picture's watermark sits: a corner, the middle of an edge, or the
@@ -112,7 +116,7 @@ export const watermarkAnchor = pgEnum("watermark_anchor", WATERMARK_ANCHORS);
  * heading, which is the arrangement phranck asked for and the reason a
  * navigation is a row rather than a setting.
  */
-export const navigationPlacement = pgEnum("navigation_placement", ["main", "footer"]);
+export const navigationPlacement = pgEnum("navigation_placement", NAVIGATION_PLACEMENTS);
 
 /**
  * The kinds of block the home page is assembled from.

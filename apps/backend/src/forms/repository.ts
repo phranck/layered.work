@@ -1,11 +1,9 @@
 import { type CreateFormBody, ErrorCode, type FormDetail } from "@layered/schemas";
 import { asc, eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type * as schema from "../db/schema/index.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, forms } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-type Database = PostgresJsDatabase<typeof schema>;
 type FormRow = typeof forms.$inferSelect;
 
 function detail(row: FormRow): FormDetail {

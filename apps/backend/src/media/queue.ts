@@ -1,8 +1,6 @@
 import { isNotNull, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import { media, mediaJobs } from "../db/schema/index.js";
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /**
  * Puts pictures back in the processing queue, so their sizes are derived again

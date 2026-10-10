@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { restoredStep, useStoredChoice } from "./stored-choice.js";
+import { restoredStep, storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 
-const KEY = "layered:dashboard:test-choice";
+const KEY = storedChoiceKey("test-choice");
 const STEPS = ["s", "m", "l"] as const;
 const restore = (stored: string | null) => restoredStep(STEPS, stored, "m");
 

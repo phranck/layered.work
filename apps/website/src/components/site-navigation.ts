@@ -1,4 +1,4 @@
-import type { PublicSiteFrame } from "@layered/schemas";
+import { type ContentLanguage, LISTING_PATHS, languagePath, type PublicSiteFrame } from "@layered/schemas";
 import type { BrandName } from "@layered/ui";
 
 export interface SiteNavigationItem {
@@ -24,13 +24,15 @@ export interface SiteFooterData {
  *
  * @param language - The language of the page.
  */
-export function siteNavigation(language: "en" | "de", stored?: SiteNavigationItem[]): SiteNavigationItem[] {
+export function siteNavigation(
+  language: ContentLanguage,
+  stored?: SiteNavigationItem[],
+): SiteNavigationItem[] {
   if (stored !== undefined) return stored;
-  const root = language === "de" ? "/de/" : "/";
   const de = language === "de";
   return [
-    { label: de ? "Projekte" : "Projects", href: `${root}projects/` },
-    { label: de ? "Beiträge" : "Posts", href: `${root}posts/` },
+    { label: de ? "Projekte" : "Projects", href: LISTING_PATHS.project[language] },
+    { label: de ? "Beiträge" : "Posts", href: LISTING_PATHS.post[language] },
   ];
 }
 
@@ -40,7 +42,7 @@ export function siteNavigation(language: "en" | "de", stored?: SiteNavigationIte
  * @param language - The language of the page.
  */
 export function siteFooter(
-  language: "en" | "de",
+  language: ContentLanguage,
   navigation?: NonNullable<SiteFooterData["navigation"]>,
   frame?: PublicSiteFrame,
 ): SiteFooterData {
@@ -55,7 +57,6 @@ export function siteFooter(
         brand: socialBrand(account.platform),
       })),
     };
-  const root = language === "de" ? "/de/" : "/";
   const de = language === "de";
   return {
     description: de
@@ -64,7 +65,10 @@ export function siteFooter(
     navigation: navigation ?? [
       {
         title: de ? "Entdecken" : "Explore",
-        items: [...siteNavigation(language), { label: de ? "Themen" : "Topics", href: `${root}topics/` }],
+        items: [
+          ...siteNavigation(language),
+          { label: de ? "Themen" : "Topics", href: languagePath(language, "topics") },
+        ],
       },
       {
         title: de ? "Abonnieren" : "Subscribe",

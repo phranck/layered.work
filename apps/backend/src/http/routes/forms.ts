@@ -2,10 +2,10 @@ import {
   createFormBody,
   deletionResult,
   formDetail,
-  formIdParam,
   formList,
   formSubmission,
   formSubmissionList,
+  idParam,
   saveFormBody,
   updateFormSubmission,
 } from "@layered/schemas";
@@ -31,26 +31,26 @@ formsRoutes.get("/", responds(formList), async (c) => ok(c, await listForms(data
 formsRoutes.post("/", validate("json", createFormBody), responds(formDetail), async (c) =>
   ok(c, await createForm(database(), c.req.valid("json"), principalOf(c).userId)),
 );
-formsRoutes.get("/:id", validate("param", formIdParam), responds(formDetail), async (c) =>
+formsRoutes.get("/:id", validate("param", idParam), responds(formDetail), async (c) =>
   ok(c, await readForm(database(), c.req.valid("param").id)),
 );
 formsRoutes.put(
   "/:id",
-  validate("param", formIdParam),
+  validate("param", idParam),
   validate("json", saveFormBody),
   responds(formDetail),
   async (c) =>
     ok(c, await saveForm(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId)),
 );
 
-const submissionParam = z.object({ id: z.uuid(), submissionId: z.uuid() });
+const submissionParam = idParam.extend({ submissionId: z.uuid() });
 
-formsRoutes.get("/:id/submissions", validate("param", formIdParam), responds(formSubmissionList), async (c) =>
+formsRoutes.get("/:id/submissions", validate("param", idParam), responds(formSubmissionList), async (c) =>
   ok(c, await listFormSubmissions(database(), c.req.valid("param").id)),
 );
 formsRoutes.get(
   "/:id/submissions/export",
-  validate("param", formIdParam),
+  validate("param", idParam),
   responds(z.string(), { envelope: false, mediaType: "text/csv" }),
   async (c) => {
     const db = database();

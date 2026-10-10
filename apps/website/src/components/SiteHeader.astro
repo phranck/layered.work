@@ -1,20 +1,21 @@
 ---
+import { CONTENT_LANGUAGES, type ContentLanguage, LANGUAGE_ROOTS, languagePath } from "@layered/schemas";
 import { Logo, Shortcut } from "@layered/ui";
 import { MagnifyingGlassIcon } from "@layered/ui/icons";
 import { isCurrentPath, type SiteNavigationItem } from "./site-navigation";
 
 interface Props {
-  language: "en" | "de";
+  language: ContentLanguage;
   siteName: string;
   navigation: SiteNavigationItem[];
   translationPath?: string | null;
 }
 
 const { language, siteName, navigation, translationPath } = Astro.props;
-const homePath = language === "de" ? "/de/" : "/";
-const searchPath = language === "de" ? "/de/search/" : "/search/";
-const endpoint = language === "de" ? "/de/search.json" : "/search.json";
-const indexPath = language === "de" ? "/de/search-index.json" : "/search-index.json";
+const homePath = LANGUAGE_ROOTS[language];
+const searchPath = languagePath(language, "search");
+const endpoint = `${homePath}search.json`;
+const indexPath = `${homePath}search-index.json`;
 const unavailable =
   language === "de"
     ? "Dieser Inhalt ist nicht auf Englisch verfügbar."
@@ -28,6 +29,7 @@ const searchCopy =
         hint: "Tippe, um zu suchen.",
         all: "Alle Ergebnisse anzeigen",
         failed: "Die Suche ist gerade nicht verfügbar.",
+        controlKey: "Strg",
       }
     : {
         label: "Search",
@@ -36,6 +38,7 @@ const searchCopy =
         hint: "Type to search.",
         all: "Show every result",
         failed: "Search is unavailable right now.",
+        controlKey: "Ctrl",
       };
 const kindNames =
   language === "de"
@@ -87,10 +90,10 @@ const kindNames =
       >
         <MagnifyingGlassIcon weight="duotone" aria-hidden="true" />
         <span>{searchCopy.label}</span>
-        <Shortcut shortcutKey="K" platform="apple" aria-hidden="true" />
+        <Shortcut shortcutKey="K" platform="apple" controlLabel={searchCopy.controlKey} aria-hidden="true" />
       </a>
       <div class="lang-switch" role="group" aria-label={language === "de" ? "Sprache" : "Language"}>
-        {(["en", "de"] as const).map((code) =>
+        {CONTENT_LANGUAGES.map((code) =>
           code === language ? (
             <span class="lang-switch__option" aria-current="true" lang={code}>
               {code.toUpperCase()}

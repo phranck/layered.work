@@ -2,8 +2,8 @@ import {
   addHomeBlockBody,
   homeBlock,
   homeBlockList,
-  navigationIdParam,
-  reorderHomeBlocksBody,
+  idParam,
+  reorderBody,
   saveHomeBlockBody,
 } from "@layered/schemas";
 import { Hono } from "hono";
@@ -31,7 +31,7 @@ homeBlockRoutes.get("/", responds(homeBlockList), async (c) => ok(c, await listH
 homeBlockRoutes.patch(
   "/order",
   requireOwner,
-  validate("json", reorderHomeBlocksBody),
+  validate("json", reorderBody),
   responds(homeBlockList),
   async (c) =>
     ok(c, await reorderHomeBlocks(database(), c.req.valid("json").positions, principalOf(c).userId)),
@@ -42,7 +42,7 @@ homeBlockRoutes.post("/", requireOwner, validate("json", addHomeBlockBody), resp
 homeBlockRoutes.put(
   "/:id",
   requireOwner,
-  validate("param", navigationIdParam),
+  validate("param", idParam),
   validate("json", saveHomeBlockBody),
   responds(homeBlock),
   async (c) =>
@@ -51,13 +51,7 @@ homeBlockRoutes.put(
       await saveHomeBlock(database(), c.req.valid("param").id, c.req.valid("json"), principalOf(c).userId),
     ),
 );
-homeBlockRoutes.delete(
-  "/:id",
-  requireOwner,
-  validate("param", navigationIdParam),
-  responds(z.null()),
-  async (c) => {
-    await deleteHomeBlock(database(), c.req.valid("param").id, principalOf(c).userId);
-    return ok(c, null);
-  },
-);
+homeBlockRoutes.delete("/:id", requireOwner, validate("param", idParam), responds(z.null()), async (c) => {
+  await deleteHomeBlock(database(), c.req.valid("param").id, principalOf(c).userId);
+  return ok(c, null);
+});
