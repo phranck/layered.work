@@ -108,10 +108,10 @@ it("shows every submitted field as text after form edits, marks it read and conf
     </QueryClientProvider>,
   );
 
-  fireEvent.change(await screen.findByRole("textbox", { name: "Search submissions" }), {
+  fireEvent.change(await screen.findByRole("searchbox", { name: "Search submissions" }), {
     target: { value: "Österreich" },
   });
-  fireEvent.click(await screen.findByRole("button", { name: /Österreich/ }));
+  fireEvent.click(await screen.findByRole("row", { name: /Österreich/ }));
   expect(screen.getAllByText("<img src=x onerror=alert(1)> Österreich").length).toBeGreaterThan(0);
   expect(document.querySelector("img[src=x]")).toBeNull();
   expect(screen.getByText("removedField", { selector: "dt" })).toBeTruthy();

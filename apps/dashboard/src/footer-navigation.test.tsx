@@ -6,6 +6,7 @@ import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { FooterNavigationScreen } from "./footer-navigation.js";
 import { DashboardLanguageProvider } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 import { dashboardAreas } from "./routes.js";
 import { chooseTextLanguage } from "./test-support.js";
 
@@ -32,7 +33,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", sent);
   vi.stubGlobal("__API_BASE__", "/api");
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(["session"], {
+  queryClient.setQueryData(queryKeys.session, {
     id: "00000000-0000-4000-8000-000000000009",
     email: "test@example.test",
     displayName: "Test",

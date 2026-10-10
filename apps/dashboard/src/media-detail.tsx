@@ -1,4 +1,6 @@
 import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
   MaxLength,
   type MediaDetail,
   type SaveMediaMetadataBody,
@@ -6,16 +8,19 @@ import {
   WATERMARK_ANCHORS,
   type WatermarkAnchor,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, MediaCredit, Row, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Card, Field, Input, MediaCredit, Select, Switch, Textarea } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
+import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { CardDialog } from "./modal.js";
+import { queryKeys } from "./query-keys.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -41,7 +46,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   const { text, language: interfaceLanguage } = useDashboardLanguage();
   const [value, setValue] = useState<SaveMediaMetadataBody>({
     focalPoint: detail.focalPoint,
-    translations: (["en", "de"] as const).map((language) => ({ language, ...detail.translations[language] })),
+    translations: CONTENT_LANGUAGES.map((language) => ({ language, ...detail.translations[language] })),
     watermark: detail.watermark,
   });
   const formId = useId();
@@ -65,12 +70,11 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
         })),
       }),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["media"] });
-      await client.invalidateQueries({ queryKey: ["account-media"] });
+      await client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery });
       onClose();
     },
   });
-  function description(language: "en" | "de", field: "altText" | "caption", next: string | null) {
+  function description(language: ContentLanguage, field: "altText" | "caption", next: string | null) {
     setValue((current) => ({
       ...current,
       translations: current.translations.map((translation) =>
@@ -131,68 +135,62 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
             </>
           )}
           {detail.kind === "image" && detail.url && (
-            <>
-              <FocalPointEditor
-                src={detail.url}
-                point={value.focalPoint}
-                onChange={(focalPoint) => setValue((current) => ({ ...current, focalPoint }))}
-              />
-            </>
+            <FocalPointEditor
+              src={detail.url}
+              point={value.focalPoint}
+              onChange={(focalPoint) => setValue((current) => ({ ...current, focalPoint }))}
+            />
           )}
           {/* A picture from Unsplash has no bytes here to lay a mark into. */}
           {detail.kind === "image" && detail.url && !detail.credit && (
-            <>
-              <Field label={text("watermark")} htmlFor={`${prefix}-watermark`}>
-                <Select
-                  id={`${prefix}-watermark`}
-                  value={value.watermark ?? NO_WATERMARK}
-                  options={[
-                    { value: NO_WATERMARK, label: text("watermarkNone") },
-                    ...WATERMARK_ANCHORS.map((anchor) => ({
-                      value: anchor,
-                      label: text(ANCHOR_TEXT[anchor]),
-                    })),
-                  ]}
-                  onChange={(event) => {
-                    const chosen = event.target.value;
-                    setValue((current) => ({
-                      ...current,
-                      watermark: WATERMARK_ANCHORS.find((anchor) => anchor === chosen) ?? null,
-                    }));
-                  }}
-                />
-              </Field>
-            </>
+            <Field label={text("watermark")} htmlFor={`${prefix}-watermark`}>
+              <Select
+                id={`${prefix}-watermark`}
+                value={value.watermark ?? NO_WATERMARK}
+                options={[
+                  { value: NO_WATERMARK, label: text("watermarkNone") },
+                  ...WATERMARK_ANCHORS.map((anchor) => ({
+                    value: anchor,
+                    label: text(ANCHOR_TEXT[anchor]),
+                  })),
+                ]}
+                onChange={(event) => {
+                  const chosen = event.target.value;
+                  setValue((current) => ({
+                    ...current,
+                    watermark: WATERMARK_ANCHORS.find((anchor) => anchor === chosen) ?? null,
+                  }));
+                }}
+              />
+            </Field>
           )}
           <section>
             <h3>{text("mediaVariants")}</h3>
-            <p>
-              {text(
-                (
-                  {
-                    queued: "mediaQueued",
-                    processing: "mediaProcessing",
-                    ready: "mediaReady",
-                    failed: "mediaFailed",
-                  } as const
-                )[detail.processing.state],
-              )}
-            </p>
+            <p>{text(PROCESSING_TEXT[detail.processing.state])}</p>
             {detail.processing.errorId && (
               <p>
                 {text("errorId")}: {detail.processing.errorId}
               </p>
             )}
-            <div className="media-detail__variants">
-              {detail.processing.variants.map((variant) => (
-                <Row.Bare key={`${variant.format}-${variant.width}`}>
-                  <Row.Text
-                    title={`${variant.format.toUpperCase()} · ${variant.width} × ${variant.height}`}
-                    note={`${variant.byteSize} B`}
-                  />
-                </Row.Bare>
-              ))}
-            </div>
+            {detail.processing.variants.length > 0 && (
+              <DataTable
+                columns={[
+                  { kind: "text", label: text("columnFormat") },
+                  { kind: "title", label: text("mediaDimensions") },
+                  { kind: "count", label: text("columnBytes") },
+                ]}
+              >
+                {detail.processing.variants.map((variant) => (
+                  <DataTable.Row key={`${variant.format}-${variant.width}`}>
+                    <DataTable.Cell>{variant.format.toUpperCase()}</DataTable.Cell>
+                    <DataTable.Cell kind="title">
+                      {variant.width} × {variant.height}
+                    </DataTable.Cell>
+                    <DataTable.Cell kind="count">{variant.byteSize} B</DataTable.Cell>
+                  </DataTable.Row>
+                ))}
+              </DataTable>
+            )}
           </section>
           <MediaUses uses={detail.uses} />
           {save.isError && <ErrorNotice error={save.error} />}
@@ -222,13 +220,11 @@ export function MediaDetailDialog({ id, onClose }: { id: string; onClose: () => 
   const { text } = useDashboardLanguage();
   const titleId = useId();
   const detail = useQuery({
-    queryKey: ["media", "detail", id],
+    queryKey: queryKeys.mediaDetail(id),
     queryFn: () => api.fetchMediaDetail(id),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.processing.state === "queued" || query.state.data?.processing.state === "processing"
-        ? 2_000
-        : false,
+    refetchInterval: (current) =>
+      pollWhileProcessing(current.state.data ? [current.state.data.processing.state] : []),
   });
   return (
     <Translated>

@@ -19,9 +19,11 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
+import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { contentLanguageOptions, Translated } from "./translated.js";
 
 /**
@@ -32,12 +34,6 @@ import { contentLanguageOptions, Translated } from "./translated.js";
  * change to the mail sender cannot be lost to an unrelated mistake in the site
  * title. Every author can read them; only the owner can change them.
  */
-
-/** The query every settings card shares, so saving one refreshes the others. */
-export const SETTINGS_KEY = ["settings"] as const;
-
-/** How long an Umami website id is: a UUID, hyphens included. */
-const UUID_LENGTH = 36;
 
 /** Anything that checks a draft and says which fields failed. */
 interface DraftSchema<Value> {
@@ -82,8 +78,17 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
  * anything is sent, so the reader learns which field is wrong and why. The API
  * checks it again and says only that the request was refused, which is the
  * backstop rather than the explanation.
+ *
+ * The card starts again from what is stored whenever that changes, so after a
+ * save, or a change made elsewhere, its fields show what is stored.
  */
-export function SettingsCard<Group extends keyof SettingsGroups>({
+export function SettingsCard<Group extends keyof SettingsGroups>(props: SettingsCardProps<Group>) {
+  const revision = useStoredRevision(props.saved);
+  return <SettingsCardDraft key={revision} {...props} />;
+}
+
+/** The card of `SettingsCard`, holding one draft of what was stored when it opened. */
+function SettingsCardDraft<Group extends keyof SettingsGroups>({
   group,
   title,
   saved,
@@ -107,11 +112,11 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
     mutationFn: (value: SettingsGroups[Group]) => api.saveSettings(group, value),
     onError: (error) => notifyError(error),
     onSuccess: (view) => {
-      queryClient.setQueryData(SETTINGS_KEY, view);
+      queryClient.setQueryData(queryKeys.settings, view);
       notify({ tone: "success", message: text("saved") });
     },
   });
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const dirty = !sameValue(draft, saved);
   const formId = `settings-${group}`;
   const form = useRef<HTMLFormElement>(null);
 
@@ -197,7 +202,7 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
 function WithSettings({ area, render }: { area: DashboardArea; render: (view: SettingsView) => ReactNode }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
+  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
@@ -280,7 +285,6 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
         return (
           <Translated>
             <SettingsCard<"site">
-              key={JSON.stringify(saved)}
               group="site"
               title={text("settingsSite")}
               saved={saved}
@@ -357,7 +361,6 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
         const { apiKeyConfigured, ...saved } = view.mail;
         return (
           <SettingsCard<"mail">
-            key={JSON.stringify(saved)}
             group="mail"
             title={text("settingsMail")}
             saved={saved}
@@ -395,7 +398,7 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                       id="sender-address"
                       type="email"
                       value={draft.senderAddress ?? ""}
-                      maxLength={MaxLength.Line}
+                      maxLength={MaxLength.Email}
                       disabled={!editable}
                       onChange={(event) => update({ senderAddress: event.target.value.trim() || null })}
                     />
@@ -441,7 +444,6 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
       area={area}
       render={(view) => (
         <SettingsCard<"analytics">
-          key={JSON.stringify(view.analytics)}
           group="analytics"
           title={text("settingsAnalytics")}
           saved={view.analytics}
@@ -462,7 +464,6 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
                   id="umami-website-id"
                   className="settings-form__code"
                   value={draft.umamiWebsiteId ?? ""}
-                  maxLength={UUID_LENGTH}
                   spellCheck={false}
                   disabled={!editable}
                   onChange={(event) => update({ umamiWebsiteId: event.target.value.trim() || null })}

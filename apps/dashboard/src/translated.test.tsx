@@ -1,8 +1,7 @@
-import type { BilingualText } from "@layered/schemas";
+import type { BilingualText, InterfaceLanguage } from "@layered/schemas";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
-import type { InterfaceLanguage } from "./dashboard-i18n.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { chooseTextLanguage } from "./test-support.js";
 import { Translated } from "./translated.js";

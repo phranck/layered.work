@@ -7,27 +7,21 @@ import {
   type TopicListItem,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, Select } from "@layered/ui";
-import {
-  ArrowsMergeIcon,
-  FloppyDiskIcon,
-  MagnifyingGlassIcon,
-  PencilSimpleIcon,
-  TrashIcon,
-  XIcon,
-} from "@layered/ui/icons";
+import { ArrowsMergeIcon, FloppyDiskIcon, PencilSimpleIcon, TrashIcon, XIcon } from "@layered/ui/icons";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type KeyboardEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { DashboardApiError } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
-import { SearchShortcutCap, useSearchField } from "./search.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -39,9 +33,6 @@ import { Translated } from "./translated.js";
  * A language a topic has no name in shows as missing rather than borrowing the
  * other language's name, because this is the screen where the gap gets filled.
  */
-
-/** The query the topic list is cached under, shared with the editor's topic field. */
-export const topicListKey = ["topics"] as const;
 
 /**
  * What a topic is called in one language, or in the other where it has no name
@@ -81,9 +72,9 @@ export function filterTopics(topics: readonly TopicListItem[], search: string): 
 
 /** Refreshes everything a change to a topic shows up in. */
 function refreshAfterTopicChange(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({ queryKey: topicListKey });
-  void queryClient.invalidateQueries({ queryKey: ["entries"] });
-  void queryClient.invalidateQueries({ queryKey: ["entry"] });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
   void refreshCounts(queryClient);
 }
 
@@ -98,21 +89,15 @@ type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | 
 export function TopicsScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: topicListKey, queryFn: api.fetchTopics });
+  const list = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const rows = useMemo(() => filterTopics(list.data ?? [], search), [list.data, search]);
-  const { fieldRef, returnFocus } = useSearchField();
+  const field = useTableSearch();
   const title = text(area.labelKey);
   // A topic is named in the interface's language where it can be, because that
   // is the language the reader is working in.
   const interfaceLanguage: ContentLanguage = language;
-
-  const onFieldKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Escape") return;
-    event.preventDefault();
-    returnFocus();
-  };
 
   return (
     <>
@@ -124,21 +109,12 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
             meta={list.data?.length}
             actions={
               <>
-                <label className="search-field">
-                  <MagnifyingGlassIcon aria-hidden="true" />
-                  <input
-                    ref={fieldRef}
-                    className="input"
-                    type="search"
-                    aria-label={text("searchTopics")}
-                    placeholder={text("searchTopics")}
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    onKeyDown={onFieldKeyDown}
-                    data-search-field=""
-                  />
-                  <SearchShortcutCap />
-                </label>
+                <DataTable.Search
+                  label={text("searchTopics")}
+                  value={search}
+                  onChange={setSearch}
+                  search={field}
+                />
                 <Translated.Switch />
               </>
             }
@@ -156,7 +132,12 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
             </Card.Body>
           )}
           {rows.length > 0 && (
-            <TopicTable rows={rows} canMerge={(list.data?.length ?? 0) >= 2} onOpen={setDialog} />
+            <TopicTable
+              rows={rows}
+              canMerge={(list.data?.length ?? 0) >= 2}
+              onOpen={setDialog}
+              search={field}
+            />
           )}
         </Card>
       </Translated>
@@ -183,76 +164,76 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
 /**
  * The topics as a table, named in the language the card's switch has chosen.
  *
- * A topic with no name in that language shows as missing rather than borrowing
- * the other one, because this is where the gap gets filled.
+ * A row opens the topic for editing, as a row of Posts opens the entry, and the
+ * pencil at its end stays as the visible sign of that. A topic with no name in
+ * that language shows as missing rather than borrowing the other one, because
+ * this is where the gap gets filled.
  *
  * @param rows - The topics the search leaves.
  * @param canMerge - Whether there is another topic to merge into.
  * @param onOpen - Opens a dialog for one topic.
+ * @param search - The search field above, which the arrow keys walk between.
  */
 function TopicTable({
   rows,
   canMerge,
   onOpen,
+  search,
 }: {
   rows: readonly TopicListItem[];
   canMerge: boolean;
   onOpen: (dialog: OpenDialog) => void;
+  search: ReturnType<typeof useTableSearch>;
 }) {
   const { text } = useDashboardLanguage();
   const language = useTextLanguage();
   return (
-    <table className="data-table data-table--static">
-      <thead>
-        <tr>
-          <th>{text("topicName")}</th>
-          <th className="col-count align-end">{text("columnEntries")}</th>
-          <th className="col-actions align-end">{text("columnAction")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((topic) => {
-          const named = topic[language];
-          return (
-            <tr key={topic.id}>
-              <td lang={language}>
-                {named ? (
-                  <span className="topic-name">
-                    <span className="topic-name__name">{named.name}</span>
-                    <span className="topic-name__slug">{named.slug}</span>
-                  </span>
-                ) : (
-                  <span className="badge" data-status="draft">
-                    {text("topicNameMissing")}
-                  </span>
-                )}
-              </td>
-              <td className="align-end">{topic.entryCount}</td>
-              <td>
-                <div className="actions">
-                  <Button.Icon
-                    label={text("editTopic")}
-                    icon={<PencilSimpleIcon />}
-                    onClick={() => onOpen({ kind: "edit", topic })}
-                  />
-                  <Button.Icon
-                    label={text("mergeTopic")}
-                    icon={<ArrowsMergeIcon />}
-                    disabled={!canMerge}
-                    onClick={() => onOpen({ kind: "merge", topic })}
-                  />
-                  <Button.Icon
-                    label={text("deleteTopic")}
-                    icon={<TrashIcon />}
-                    onClick={() => onOpen({ kind: "delete", topic })}
-                  />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <DataTable
+      bodyRef={search.bodyRef}
+      onLeaveTop={search.onLeaveTop}
+      columns={[
+        { kind: "title", label: text("topicName") },
+        { kind: "count", label: text("columnEntries") },
+        { kind: "action", label: text("columnAction"), actions: 3 },
+      ]}
+    >
+      {rows.map((topic) => {
+        const named = topic[language];
+        return (
+          <DataTable.Row key={topic.id} onOpen={() => onOpen({ kind: "edit", topic })}>
+            <DataTable.Cell kind="title" lang={language}>
+              {named ? (
+                <DataTable.Title title={named.name} note={named.slug} />
+              ) : (
+                <span className="badge" data-status="draft">
+                  {text("topicNameMissing")}
+                </span>
+              )}
+            </DataTable.Cell>
+            <DataTable.Cell kind="count">{topic.entryCount}</DataTable.Cell>
+            <DataTable.Actions>
+              <Button.Icon
+                label={text("editTopic")}
+                icon={<PencilSimpleIcon />}
+                tabIndex={-1}
+                onClick={() => onOpen({ kind: "edit", topic })}
+              />
+              <Button.Icon
+                label={text("mergeTopic")}
+                icon={<ArrowsMergeIcon />}
+                disabled={!canMerge}
+                onClick={() => onOpen({ kind: "merge", topic })}
+              />
+              <Button.Icon
+                label={text("deleteTopic")}
+                icon={<TrashIcon />}
+                onClick={() => onOpen({ kind: "delete", topic })}
+              />
+            </DataTable.Actions>
+          </DataTable.Row>
+        );
+      })}
+    </DataTable>
   );
 }
 

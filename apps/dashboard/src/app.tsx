@@ -8,7 +8,7 @@ import { useDashboardCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { NotificationProvider } from "./notifications.js";
-import { dashboardGroups } from "./routes.js";
+import { dashboardGroups, START_PATH } from "./routes.js";
 import { SaveShortcutProvider } from "./save-shortcut.js";
 import { SearchProvider } from "./search.js";
 import { useAccount, useSession, useSignOut } from "./session-queries.js";
@@ -55,7 +55,7 @@ function DashboardSidebar({
   handle: SidebarHandleProps;
 }) {
   const { text } = useDashboardLanguage();
-  const handleLogoClick = useLinkClickHandler("/posts");
+  const handleLogoClick = useLinkClickHandler(START_PATH);
   const session = useSession();
   const account = useAccount();
   const signOut = useSignOut();
@@ -67,7 +67,7 @@ function DashboardSidebar({
   return (
     <Sidebar ref={sidebar}>
       <Sidebar.Header>
-        <Logo href="/posts" inkHeight="32px" onClick={handleLogoClick} />
+        <Logo href={START_PATH} inkHeight="32px" onClick={handleLogoClick} />
       </Sidebar.Header>
       <Sidebar.Body>
         {session.isError && <ErrorNotice error={session.error} />}

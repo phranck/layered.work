@@ -2,11 +2,12 @@ import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLen
 import { Field, Input, Segmented } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
-import { type DashboardStringKey, dashboardText } from "./dashboard-i18n.js";
+import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { SETTINGS_KEY, SettingsCard } from "./settings.js";
-import { useStoredChoice } from "./stored-choice.js";
+import { queryKeys } from "./query-keys.js";
+import { SettingsCard } from "./settings.js";
+import { storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -18,7 +19,7 @@ import { Translated } from "./translated.js";
  */
 
 /** Where the card's open state is kept between visits. */
-export const LISTING_SETTINGS_OPEN_KEY = "layered:dashboard:listing-settings-open";
+export const LISTING_SETTINGS_OPEN_KEY = storedChoiceKey("listing-settings-open");
 
 /** Each overview's name, as the site shows it where no headline is set. */
 const DEFAULT_HEADLINE: Record<ListedKind, DashboardStringKey> = { post: "posts", project: "projects" };
@@ -35,7 +36,7 @@ const typedNumber = (value: string) => Number.parseInt(value, 10);
 export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: api.fetchSettings });
+  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
   const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);
   const group = LISTING_GROUP[kind];
 
@@ -45,7 +46,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   return (
     <Translated>
       <SettingsCard
-        key={JSON.stringify(saved)}
         group={group}
         title={text("listingSettings")}
         saved={saved}
@@ -66,10 +66,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
               label={text("listingHeadline")}
               hint={text("listingHeadlineHint")}
               value={draft.headline}
-              placeholder={{
-                en: dashboardText("en", DEFAULT_HEADLINE[kind]),
-                de: dashboardText("de", DEFAULT_HEADLINE[kind]),
-              }}
+              placeholder={bilingualText(DEFAULT_HEADLINE[kind])}
               maxLength={MaxLength.Line}
               disabled={!editable}
               onChange={(headline) => update({ headline })}

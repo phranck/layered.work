@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { useDashboardApi } from "./dashboard-context.js";
+import { queryKeys } from "./query-keys.js";
 
 /**
  * Who is signed in, and their account, as every screen asks for them.
@@ -14,7 +15,12 @@ import { useDashboardApi } from "./dashboard-context.js";
 /** The signed-in identity, or null when nobody is signed in. */
 export function useSession() {
   const api = useDashboardApi();
-  return useQuery({ queryKey: ["session"], queryFn: api.fetchSession, retry: false, staleTime: Infinity });
+  return useQuery({
+    queryKey: queryKeys.session,
+    queryFn: api.fetchSession,
+    retry: false,
+    staleTime: Infinity,
+  });
 }
 
 /** The signed-in author's account, once the session says who that is. */
@@ -22,7 +28,7 @@ export function useAccount() {
   const api = useDashboardApi();
   const session = useSession();
   return useQuery({
-    queryKey: ["account", session.data?.id],
+    queryKey: queryKeys.account(session.data?.id),
     queryFn: api.fetchAccount,
     enabled: Boolean(session.data),
     retry: false,

@@ -325,14 +325,24 @@ describe("controlled form components", () => {
 
 describe("small primitives", () => {
   it("renders Shortcut during SSR without navigator and allows a platform override", () => {
-    expect(renderToStaticMarkup(<Shortcut shortcutKey="K" platform="control" />)).toContain("Strg K");
-    expect(renderToStaticMarkup(<Shortcut shortcutKey="K" platform="apple" />)).toContain("⌘K");
+    expect(
+      renderToStaticMarkup(<Shortcut shortcutKey="K" platform="control" controlLabel="Strg" />),
+    ).toContain("Strg K");
+    expect(renderToStaticMarkup(<Shortcut shortcutKey="K" platform="apple" controlLabel="Strg" />)).toContain(
+      "⌘K",
+    );
+  });
+
+  it("names the Control key in the caller's word", () => {
+    expect(
+      renderToStaticMarkup(<Shortcut shortcutKey="K" platform="control" controlLabel="Ctrl" />),
+    ).toContain("Ctrl K");
   });
 
   it("updates Shortcut when an explicit platform prop changes", () => {
-    const { rerender } = render(<Shortcut shortcutKey="K" platform="control" />);
+    const { rerender } = render(<Shortcut shortcutKey="K" platform="control" controlLabel="Strg" />);
     expect(screen.getByText("Strg K")).toBeTruthy();
-    rerender(<Shortcut shortcutKey="K" platform="apple" />);
+    rerender(<Shortcut shortcutKey="K" platform="apple" controlLabel="Strg" />);
     expect(screen.getByText("⌘K")).toBeTruthy();
   });
 

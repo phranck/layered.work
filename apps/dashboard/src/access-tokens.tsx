@@ -1,14 +1,18 @@
 import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
 import { Button, Card, Field, Input, Switch } from "@layered/ui";
+import { TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
+import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 
 /** What each permission is called in the catalogue. */
 const SCOPE_TEXT: Record<TokenScope, DashboardStringKey> = {
@@ -28,7 +32,7 @@ export function AccessTokensScreen() {
   const [scopes, setScopes] = useState<TokenScope[]>([]);
   const [expiry, setExpiry] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
-  const tokens = useQuery({ queryKey: ["access-tokens"], queryFn: api.fetchAccessTokens });
+  const tokens = useQuery({ queryKey: queryKeys.accessTokens, queryFn: api.fetchAccessTokens });
   const issue = useMutation({
     mutationFn: (value: IssueTokenBody) => api.issueAccessToken(value),
     onError: (error) => notifyError(error),
@@ -37,7 +41,7 @@ export function AccessTokensScreen() {
       setName("");
       setScopes([]);
       setExpiry("");
-      void queryClient.invalidateQueries({ queryKey: ["access-tokens"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       notify({ tone: "success", message: text("tokenCreated") });
     },
   });
@@ -45,18 +49,17 @@ export function AccessTokensScreen() {
   const revoke = useMutation({
     mutationFn: (id: string) => api.revokeAccessToken(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["access-tokens"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       setRevoking(null);
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
   });
-  const timestamp = (value: string | null) =>
-    value
-      ? new Intl.DateTimeFormat(language === "de" ? "de-AT" : "en-GB", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(new Date(value))
-      : text("tokenNever");
+  const dateOf = (value: string | null) =>
+    value ? (
+      <time dateTime={value}>{DATE_FORMAT[language].format(new Date(value))}</time>
+    ) : (
+      text("tokenNever")
+    );
 
   return (
     <>
@@ -135,23 +138,42 @@ export function AccessTokensScreen() {
             <p>{text("tokensEmpty")}</p>
           </Card.Body>
         )}
-        {tokens.data?.map((token) => (
-          <Card.Body key={token.id}>
-            <strong>{token.name}</strong>
-            <p>{token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}</p>
-            <p>
-              {text("tokenLastUse")}: {timestamp(token.lastUsedAt)} · {text("tokenExpires")}:{" "}
-              {timestamp(token.expiresAt)}
-            </p>
-            {token.revokedAt ? (
-              <p>{text("tokenRevoked")}</p>
-            ) : (
-              <Button tone="danger" onClick={() => setRevoking(token)}>
-                {text("tokenRevoke")}
-              </Button>
-            )}
-          </Card.Body>
-        ))}
+        {tokens.isSuccess && tokens.data.length > 0 && (
+          <DataTable
+            columns={[
+              { kind: "title", label: text("columnName") },
+              { kind: "state", label: text("columnState") },
+              { kind: "date", label: text("tokenLastUse") },
+              { kind: "date", label: text("tokenExpires") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {tokens.data.map((token) => (
+              <DataTable.Row key={token.id}>
+                <DataTable.Cell kind="title">
+                  <DataTable.Title
+                    title={token.name}
+                    note={token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}
+                  />
+                </DataTable.Cell>
+                <DataTable.Cell kind="state">
+                  {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
+                </DataTable.Cell>
+                <DataTable.Cell kind="date">{dateOf(token.lastUsedAt)}</DataTable.Cell>
+                <DataTable.Cell kind="date">{dateOf(token.expiresAt)}</DataTable.Cell>
+                <DataTable.Actions>
+                  {!token.revokedAt && (
+                    <Button.Icon
+                      label={text("tokenRevoke")}
+                      icon={<TrashIcon />}
+                      onClick={() => setRevoking(token)}
+                    />
+                  )}
+                </DataTable.Actions>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        )}
       </Card>
       {revoking && (
         <ConfirmDialog

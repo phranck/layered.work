@@ -1,33 +1,29 @@
 import {
+  CONTENT_LANGUAGES,
   type ContentLanguage,
   type EntryKind,
   type EntryListItem,
   PUBLICATION_STATES,
   type PublicationState,
 } from "@layered/schemas";
-import { Button, Card, Row, Segmented, Select } from "@layered/ui";
-import {
-  ArrowCounterClockwiseIcon,
-  MagnifyingGlassIcon,
-  PencilSimpleIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@layered/ui/icons";
+import { Button, Card, Segmented, Select } from "@layered/ui";
+import { ArrowCounterClockwiseIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type KeyboardEvent, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { entryKey } from "./entry-query.js";
+import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
-import { SearchShortcutCap, useSearchField } from "./search.js";
 import { contentLanguageOptions } from "./translated.js";
 
 /**
@@ -124,11 +120,8 @@ export const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = {
 
 /** The other of the site's two languages. */
 export function otherLanguage(language: ContentLanguage): ContentLanguage {
-  return language === "en" ? "de" : "en";
+  return CONTENT_LANGUAGES.find((other) => other !== language) ?? language;
 }
-
-/** The query key every entry list is cached under, so a later screen can read or refresh it. */
-export const entryListKey = (kind: EntryKind) => ["entries", kind] as const;
 
 /**
  * One of the figures above a list: a label, the number, and what it means.
@@ -176,32 +169,27 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const { notify, notifyError } = useNotify();
   const { language, text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
-  const list = useQuery({ queryKey: entryListKey(kind), queryFn: () => api.fetchEntries(kind) });
-
-  // One formatter per language rather than one per row and render.
-  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
+  const list = useQuery({ queryKey: queryKeys.entryList(kind), queryFn: () => api.fetchEntries(kind) });
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
   const title = text(area.labelKey);
 
-  const { fieldRef, returnFocus } = useSearchField();
-  const field = useRef<HTMLInputElement | null>(null);
-  const body = useRef<HTMLTableSectionElement>(null);
+  const search = useTableSearch();
 
   const open = (row: EntryListItem) => navigate(`/${area.path}/${row.id}`);
 
   // Restoring and emptying both change what every list and the sidebar's
   // counts show, so both refresh all of them.
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["entries"] });
-    void queryClient.invalidateQueries({ queryKey: ["entry"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
     void refreshCounts(queryClient);
   };
   const create = useMutation({
     mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),
     onError: (error) => notifyError(error),
     onSuccess: (created) => {
-      queryClient.setQueryData(entryKey(created.id), created);
+      queryClient.setQueryData(queryKeys.entryDetail(created.id), created);
       refresh();
       navigate(`/${area.path}/${created.id}`, { state: { focusTitle: true } });
     },
@@ -223,33 +211,6 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
       notify({ tone: "success", message: text("trashEmptied", deleted) });
     },
   });
-
-  // The rows are the search's results, so the arrow keys walk from the field
-  // into them and between them, and back up into the field from the first.
-  const onFieldKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      const first = body.current?.querySelector<HTMLElement>("tr");
-      if (!first) return;
-      event.preventDefault();
-      first.focus();
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      returnFocus();
-    }
-  };
-  const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: EntryListItem) => {
-    if (event.target !== event.currentTarget) return;
-    const current = event.currentTarget;
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      open(row);
-    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      const next = event.key === "ArrowDown" ? current.nextElementSibling : current.previousElementSibling;
-      if (next instanceof HTMLElement) next.focus();
-      else if (event.key === "ArrowUp") field.current?.focus();
-    }
-  };
 
   return (
     <>
@@ -297,24 +258,12 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           meta={counts.total}
           actions={
             <>
-              <label className="search-field">
-                <MagnifyingGlassIcon aria-hidden="true" />
-                <input
-                  ref={(element) => {
-                    field.current = element;
-                    fieldRef(element);
-                  }}
-                  className="input"
-                  type="search"
-                  aria-label={text("searchTitles")}
-                  placeholder={text("searchTitles")}
-                  value={filter.search}
-                  onChange={(event) => setFilter((current) => ({ ...current, search: event.target.value }))}
-                  onKeyDown={onFieldKeyDown}
-                  data-search-field=""
-                />
-                <SearchShortcutCap />
-              </label>
+              <DataTable.Search
+                label={text("searchTitles")}
+                value={filter.search}
+                onChange={(value) => setFilter((current) => ({ ...current, search: value }))}
+                search={search}
+              />
               <Select
                 aria-label={text("filterState")}
                 value={filter.state}
@@ -360,85 +309,66 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           </Card.Body>
         )}
         {rows.length > 0 && (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="col-title">{text("columnTitle")}</th>
-                <th className="col-state">{text("columnState")}</th>
-                <th className="col-language">{text("columnLanguage")}</th>
-                <th className="col-date align-end">{text("columnDate")}</th>
-                <th className="col-action align-end">{text("columnAction")}</th>
-              </tr>
-            </thead>
-            <tbody ref={body}>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  tabIndex={0}
-                  onClick={() => open(row)}
-                  onKeyDown={(event) => onRowKeyDown(event, row)}
-                >
-                  <td>
-                    <Row.Bare>
-                      <Row.Tile aria-hidden="true">
-                        {row.thumbnailUrl && <img src={row.thumbnailUrl} alt="" loading="lazy" />}
-                      </Row.Tile>
-                      <Row.Text title={row.title} />
-                    </Row.Bare>
-                  </td>
-                  <td>
-                    <span className="badge" data-status={row.trashed ? "trashed" : row.state}>
-                      {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
+          <DataTable
+            bodyRef={search.bodyRef}
+            onLeaveTop={search.onLeaveTop}
+            columns={[
+              { kind: "title", label: text("columnTitle") },
+              { kind: "state", label: text("columnState") },
+              { kind: "language", label: text("columnLanguage") },
+              { kind: "date", label: text("columnDate") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {rows.map((row) => (
+              <DataTable.Row key={row.id} onOpen={() => open(row)}>
+                <DataTable.Cell kind="title">
+                  <DataTable.Title title={row.title} thumbnail={row.thumbnailUrl} />
+                </DataTable.Cell>
+                <DataTable.Cell kind="state">
+                  <span className="badge" data-status={row.trashed ? "trashed" : row.state}>
+                    {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
+                  </span>
+                </DataTable.Cell>
+                <DataTable.Cell kind="language">
+                  <span className="lang-tags">
+                    <span className="lang-tag" data-language={row.language} lang={row.language}>
+                      {row.language}
                     </span>
-                  </td>
-                  <td>
-                    <span className="lang-tags">
-                      <span className="lang-tag" data-language={row.language} lang={row.language}>
-                        {row.language}
+                    {row.translated && (
+                      <span
+                        className="lang-tag lang-tag--counterpart"
+                        data-language={otherLanguage(row.language)}
+                        title={text("alsoIn", text(LANGUAGE_TEXT[otherLanguage(row.language)]))}
+                      >
+                        {otherLanguage(row.language)}
                       </span>
-                      {row.translated && (
-                        <span
-                          className="lang-tag lang-tag--counterpart"
-                          data-language={otherLanguage(row.language)}
-                          title={text("alsoIn", text(LANGUAGE_TEXT[otherLanguage(row.language)]))}
-                        >
-                          {otherLanguage(row.language)}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="align-end">
-                    <time dateTime={row.date}>{dates.format(new Date(row.date))}</time>
-                  </td>
-                  <td>
-                    <div className="actions">
-                      {row.trashed ? (
-                        <Button.Icon
-                          label={text("restore")}
-                          icon={<ArrowCounterClockwiseIcon />}
-                          disabled={restore.isPending}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            restore.mutate(row.id);
-                          }}
-                        />
-                      ) : (
-                        <Button.Icon
-                          label={text("editEntry")}
-                          icon={<PencilSimpleIcon weight="duotone" />}
-                          tabIndex={-1}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            open(row);
-                          }}
-                        />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    )}
+                  </span>
+                </DataTable.Cell>
+                <DataTable.Cell kind="date">
+                  <time dateTime={row.date}>{DATE_FORMAT[language].format(new Date(row.date))}</time>
+                </DataTable.Cell>
+                <DataTable.Actions>
+                  {row.trashed ? (
+                    <Button.Icon
+                      label={text("restore")}
+                      icon={<ArrowCounterClockwiseIcon />}
+                      disabled={restore.isPending}
+                      onClick={() => restore.mutate(row.id)}
+                    />
+                  ) : (
+                    <Button.Icon
+                      label={text("editEntry")}
+                      icon={<PencilSimpleIcon />}
+                      tabIndex={-1}
+                      onClick={() => open(row)}
+                    />
+                  )}
+                </DataTable.Actions>
+              </DataTable.Row>
+            ))}
+          </DataTable>
         )}
       </Card>
       {emptying && (

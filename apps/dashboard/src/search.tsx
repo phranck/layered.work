@@ -19,7 +19,8 @@ import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
-import { dashboardAreas } from "./routes.js";
+import { queryKeys } from "./query-keys.js";
+import { entryPath } from "./routes.js";
 
 /**
  * Search, on the same shortcut everywhere.
@@ -169,16 +170,13 @@ export function SearchShortcutCap() {
   const { text } = useDashboardLanguage();
   const apple = isApplePlatform();
   return (
-    <Shortcut shortcutKey="K" platform={apple ? "apple" : "control"} aria-hidden="true">
-      {apple ? "⌘K" : `${text("controlKey")} K`}
-    </Shortcut>
+    <Shortcut
+      shortcutKey="K"
+      platform={apple ? "apple" : "control"}
+      controlLabel={text("controlKey")}
+      aria-hidden="true"
+    />
   );
-}
-
-/** The sidebar area that lists each kind of entry, which is where a hit opens. */
-function entryPath(kind: EntryKind, id: string): string {
-  const area = dashboardAreas.find((candidate) => candidate.entryKind === kind);
-  return area ? `/${area.path}/${id}` : "/";
 }
 
 /** The catalogue word for each kind of entry, as a hit's note. */
@@ -252,7 +250,7 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
   const settled = useSettled(query.trim(), SEARCH_DELAY_MS);
   const [active, setActive] = useState(0);
   const results = useQuery({
-    queryKey: ["search", settled],
+    queryKey: queryKeys.search(settled),
     queryFn: () => api.search(settled),
     enabled: settled.length > 0,
   });

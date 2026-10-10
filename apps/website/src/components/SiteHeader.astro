@@ -29,6 +29,7 @@ const searchCopy =
         hint: "Tippe, um zu suchen.",
         all: "Alle Ergebnisse anzeigen",
         failed: "Die Suche ist gerade nicht verfügbar.",
+        controlKey: "Strg",
       }
     : {
         label: "Search",
@@ -37,6 +38,7 @@ const searchCopy =
         hint: "Type to search.",
         all: "Show every result",
         failed: "Search is unavailable right now.",
+        controlKey: "Ctrl",
       };
 const kindNames =
   language === "de"
@@ -88,7 +90,7 @@ const kindNames =
       >
         <MagnifyingGlassIcon weight="duotone" aria-hidden="true" />
         <span>{searchCopy.label}</span>
-        <Shortcut shortcutKey="K" platform="apple" aria-hidden="true" />
+        <Shortcut shortcutKey="K" platform="apple" controlLabel={searchCopy.controlKey} aria-hidden="true" />
       </a>
       <div class="lang-switch" role="group" aria-label={language === "de" ? "Sprache" : "Language"}>
         {CONTENT_LANGUAGES.map((code) =>

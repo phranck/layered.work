@@ -2,8 +2,17 @@ import { z } from "zod";
 import { focalPoint, mediaProcessingState } from "./media.js";
 import { body, emailAddress, MaxLength, text } from "./request.js";
 
+/**
+ * The languages the editorial interface speaks, German first, as the account
+ * dialog offers them.
+ */
+export const INTERFACE_LANGUAGES = ["de", "en"] as const;
+
+/** A language the editorial interface speaks. */
+export type InterfaceLanguage = (typeof INTERFACE_LANGUAGES)[number];
+
 /** A language the editorial interface supports. */
-const interfaceLanguage = z.enum(["de", "en"]);
+export const interfaceLanguage = z.enum(INTERFACE_LANGUAGES);
 
 /** The signed-in author's editable profile and immutable role. */
 export const accountProfile = z.object({

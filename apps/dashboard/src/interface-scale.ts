@@ -1,5 +1,5 @@
 import { readStored } from "@layered/ui/stored";
-import { restoredStep, useStoredChoice } from "./stored-choice.js";
+import { restoredStep, storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 
 /**
  * The size of the whole dashboard, which the author chooses in the account
@@ -16,7 +16,7 @@ export const INTERFACE_SCALES = ["s", "m", "l", "xl"] as const;
 export type InterfaceScale = (typeof INTERFACE_SCALES)[number];
 
 /** Where the choice is kept, beside the sidebar's width and the editor's text size. */
-export const INTERFACE_SCALE_KEY = "layered:dashboard:interface-scale";
+export const INTERFACE_SCALE_KEY = storedChoiceKey("interface-scale");
 
 /** The attribute on the root element that `app.css` sizes the document by. */
 const SCALE_ATTRIBUTE = "data-interface-scale";

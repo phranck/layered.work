@@ -19,7 +19,7 @@ import {
   TagIcon,
   TrashIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentType, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -30,11 +30,13 @@ import { HomeBlockSettingsFields } from "./home-block-settings.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { Translated } from "./translated.js";
 import "./home-blocks.css";
 
@@ -47,9 +49,6 @@ import "./home-blocks.css";
  * stand side by side in the same `Editor` the writing screen uses. Every
  * account sees the arrangement; only the owner changes it.
  */
-
-/** The query the list and the panel share, so a save in one shows in the other. */
-const BLOCKS_KEY = ["home-blocks"] as const;
 
 /** The mark of each kind of block, as the prototype draws it. */
 const BLOCK_ICONS: Record<HomeBlockType, ComponentType<IconProps>> = {
@@ -75,6 +74,12 @@ function allowedTarget(blocks: readonly StoredHomeBlock[], to: number): number {
   return Math.max(to, firstMovable === -1 ? 0 : firstMovable);
 }
 
+/** Fetches the blocks and the sidebar's count again after one was added, switched or removed. */
+function refreshBlocks(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.homeBlocks });
+  void refreshCounts(client);
+}
+
 /** The blocks screen. */
 export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
@@ -82,16 +87,16 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   const { text, language } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const owner = useSession().data?.role === "owner";
-  const blocks = useQuery({ queryKey: BLOCKS_KEY, queryFn: api.fetchHomeBlocks });
+  const blocks = useQuery({ queryKey: queryKeys.homeBlocks, queryFn: api.fetchHomeBlocks });
   const [openId, setOpenId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<StoredHomeBlock | null>(null);
   const list = blocks.data ?? [];
   const open = list.find((block) => block.id === openId) ?? list[0];
+  // The panel starts again from the open block's settings whenever what is
+  // stored changes, and keeps its draft whilst the blocks are only reordered.
+  const revision = useStoredRevision(open?.settings);
 
-  const refresh = () => {
-    void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-    void refreshCounts(client);
-  };
+  const refresh = () => refreshBlocks(client);
   const toggle = useMutation({
     mutationFn: (block: StoredHomeBlock) =>
       api.saveHomeBlock(block.id, { enabled: !block.enabled, settings: block.settings }),
@@ -100,7 +105,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   });
   const reorder = useMutation({
     mutationFn: api.reorderHomeBlocks,
-    onSuccess: (ordered) => client.setQueryData(BLOCKS_KEY, ordered),
+    onSuccess: (ordered) => client.setQueryData(queryKeys.homeBlocks, ordered),
     onError: (error) => notifyError(error),
   });
   const add = useMutation({
@@ -202,9 +207,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
             />
           </Card>
         </Editor.Main>
-        {open && (
-          <BlockPanel key={`${open.id}:${JSON.stringify(open.settings)}`} block={open} editable={owner} />
-        )}
+        {open && <BlockPanel key={`${open.id}:${revision}`} block={open} editable={owner} />}
       </Editor>
       {removing && (
         <RemoveBlock
@@ -232,12 +235,12 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
   const { notify, notifyError } = useNotify();
   const [draft, setDraft] = useState<HomeBlockSettings>(block.settings);
   const [problem, setProblem] = useState<string | null>(null);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(block.settings);
+  const dirty = !sameValue(draft, block.settings);
   const save = useMutation({
     mutationFn: (settings: HomeBlockSettings) =>
       api.saveHomeBlock(block.id, { enabled: block.enabled, settings }),
     onSuccess: (saved) => {
-      client.setQueryData<StoredHomeBlock[]>(BLOCKS_KEY, (current) =>
+      client.setQueryData<StoredHomeBlock[]>(queryKeys.homeBlocks, (current) =>
         current?.map((item) => (item.id === saved.id ? saved : item)),
       );
       notify({ tone: "success", message: text("saved") });
@@ -302,8 +305,7 @@ function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (rem
   const remove = useMutation({
     mutationFn: () => api.deleteHomeBlock(block.id),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: BLOCKS_KEY });
-      void refreshCounts(client);
+      refreshBlocks(client);
       onClose(true);
     },
   });

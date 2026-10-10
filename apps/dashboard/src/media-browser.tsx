@@ -5,9 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT, KILOBYTE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
+import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
+import { queryKeys } from "./query-keys.js";
 import { UnsplashSearch } from "./unsplash-search.js";
 import "./media-browser.css";
 
@@ -17,17 +20,10 @@ const KIND_LABEL = {
   document: "mediaKindDocument",
   model: "mediaKindModel",
 } as const;
-const STATE_LABEL = {
-  queued: "mediaQueued",
-  processing: "mediaProcessing",
-  ready: "mediaReady",
-  failed: "mediaFailed",
-} as const;
-const DATES = { de: new Intl.DateTimeFormat("de-AT"), en: new Intl.DateTimeFormat("en-GB") };
-const BYTES = {
-  de: new Intl.NumberFormat("de-AT", { style: "unit", unit: "kilobyte", maximumFractionDigits: 1 }),
-  en: new Intl.NumberFormat("en-GB", { style: "unit", unit: "kilobyte", maximumFractionDigits: 1 }),
-};
+
+/** How many bytes the grid counts as one kilobyte. */
+const BYTES_PER_KILOBYTE = 1024;
+
 type Props = {
   onChoose?: (slug: string, item: MediaLibraryItem) => void;
   onCancel?: () => void;
@@ -56,9 +52,9 @@ function MediaGrid({
           </Row.Tile>
           <Row.Text
             title={item.slug}
-            note={`${text(KIND_LABEL[item.kind])} · ${BYTES[language].format(item.byteSize / 1024)} · ${DATES[language].format(new Date(item.uploadedAt))}`}
+            note={`${text(KIND_LABEL[item.kind])} · ${KILOBYTE_FORMAT[language].format(item.byteSize / BYTES_PER_KILOBYTE)} · ${DATE_FORMAT[language].format(new Date(item.uploadedAt))}`}
           >
-            <span className="row__note">{text(STATE_LABEL[item.processingState])}</span>
+            <span className="row__note">{text(PROCESSING_TEXT[item.processingState])}</span>
           </Row.Text>
         </Row.Button>
       ))}
@@ -75,15 +71,11 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   const [unused, setUnused] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const media = useQuery({
-    queryKey: ["media", "list", query, imageOnly ? "image" : kind, page, unused],
+    queryKey: queryKeys.mediaPage(query, imageOnly ? "image" : kind, page, unused),
     queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page, unused),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.items.some(
-        (item) => item.processingState === "queued" || item.processingState === "processing",
-      )
-        ? 2_000
-        : false,
+    refetchInterval: (current) =>
+      pollWhileProcessing(current.state.data?.items.map((item) => item.processingState) ?? []),
   });
   const choose = (item: MediaLibraryItem) => {
     if (onChoose) onChoose(item.slug, item);

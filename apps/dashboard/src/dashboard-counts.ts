@@ -1,5 +1,6 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
+import { queryKeys } from "./query-keys.js";
 import { useSession } from "./session-queries.js";
 
 /**
@@ -9,15 +10,12 @@ import { useSession } from "./session-queries.js";
  * `refreshCounts`, so the figure beside the area follows the list.
  */
 
-/** Where the counts are cached, followed by the account's id. */
-export const DASHBOARD_COUNTS_KEY = ["dashboard-counts"] as const;
-
 /** The counts of the signed-in account, asked for only while one is signed in. */
 export function useDashboardCounts() {
   const api = useDashboardApi();
   const session = useSession();
   return useQuery({
-    queryKey: [...DASHBOARD_COUNTS_KEY, session.data?.id],
+    queryKey: queryKeys.dashboardCounts(session.data?.id),
     queryFn: api.fetchDashboardCounts,
     enabled: Boolean(session.data),
     retry: false,
@@ -32,5 +30,5 @@ export function useDashboardCounts() {
  * @returns The refresh, for a caller that waits for it.
  */
 export function refreshCounts(client: QueryClient) {
-  return client.invalidateQueries({ queryKey: DASHBOARD_COUNTS_KEY });
+  return client.invalidateQueries({ queryKey: queryKeys.everyDashboardCount });
 }

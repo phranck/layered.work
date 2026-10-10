@@ -1,4 +1,16 @@
-import { type ErrorCode, LISTING_BOUNDS, MAX_UPLOAD_BYTES } from "@layered/schemas";
+import type { Finding, FindingCode } from "@layered/content";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type AcceptedImageType,
+  type BilingualText,
+  CONTENT_LANGUAGES,
+  type ErrorCode,
+  INTERFACE_LANGUAGES,
+  type InterfaceLanguage,
+  LISTING_BOUNDS,
+  MAX_UPLOAD_BYTES,
+} from "@layered/schemas";
+import { LIST_FORMAT } from "./format.js";
 
 /**
  * The dashboard's own language.
@@ -17,24 +29,73 @@ import { type ErrorCode, LISTING_BOUNDS, MAX_UPLOAD_BYTES } from "@layered/schem
  * the whole sentence in its own order rather than gluing fragments together.
  */
 
-/** A language the dashboard interface speaks. */
-export const InterfaceLanguage = { German: "de", English: "en" } as const;
-export type InterfaceLanguage = (typeof InterfaceLanguage)[keyof typeof InterfaceLanguage];
-
 /**
- * The interface languages as they are offered, each named in itself.
+ * Each interface language named in itself.
  *
  * Not in the catalogue, because a language's own name is the same whichever
  * language the interface is in: a German reader looking for English looks for
  * "English".
  */
-export const DASHBOARD_LANGUAGES = [
-  { value: InterfaceLanguage.German, label: "Deutsch" },
-  { value: InterfaceLanguage.English, label: "English" },
-] as const;
+const LANGUAGE_NAMES: Record<InterfaceLanguage, string> = { de: "Deutsch", en: "English" };
+
+/** The interface languages as the account dialog offers them, each named in itself. */
+export const DASHBOARD_LANGUAGES = INTERFACE_LANGUAGES.map((language) => ({
+  value: language,
+  label: LANGUAGE_NAMES[language],
+}));
+
+/** The language the interface speaks to a browser that prefers none of its languages. */
+const FALLBACK_LANGUAGE: InterfaceLanguage = "en";
 
 /** The upload limit in megabytes, as the refusal states it. */
 const UPLOAD_LIMIT_MB = MAX_UPLOAD_BYTES / 1024 / 1024;
+
+/** What each picture type the library accepts is called, which is the same in every language. */
+const IMAGE_TYPE_NAMES: Record<AcceptedImageType, string> = {
+  "image/jpeg": "JPEG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+  "image/avif": "AVIF",
+  "image/gif": "GIF",
+};
+
+/**
+ * The picture types the library accepts, as one phrase in a language, so the
+ * refusal of an upload names exactly the types the schema accepts.
+ *
+ * @param language - The interface language, whose word for "and" joins the last two.
+ */
+function acceptedImageTypes(language: InterfaceLanguage): string {
+  return LIST_FORMAT[language].format(ACCEPTED_IMAGE_TYPES.map((type) => IMAGE_TYPE_NAMES[type]));
+}
+
+/**
+ * What each kind of finding says about the component it is about, in German.
+ *
+ * The validator writes its own sentence in English, and a German one is built
+ * from the finding's code and the names it carries. A code the validator adds
+ * fails the type check here until it has its words.
+ */
+const GERMAN_FINDING_REASONS: Record<FindingCode, string> = {
+  "unknown-component": "ist keine Komponente",
+  "deprecated-component": "verwendet einen veralteten Namen",
+  "unknown-parameter": "hat diesen Parameter nicht",
+  "duplicate-parameter": "hat einen doppelt angegebenen Parameter",
+  "unnamed-not-accepted": "akzeptiert diesen Wert ohne Parameternamen nicht",
+  "missing-parameter": "braucht einen fehlenden Parameter",
+  "value-not-permitted": "hat einen ungültigen Parameterwert",
+  "unknown-media": "verweist auf eine unbekannte Mediendatei",
+  "unknown-value": "verweist auf einen unbekannten Wert",
+  "body-not-accepted": "akzeptiert keinen Inhalt",
+  "missing-body": "braucht Inhalt",
+  "misplaced-component": "steht an einer nicht erlaubten Stelle",
+  "content-not-accepted": "akzeptiert diesen Inhalt nicht",
+  "unknown-field": "verweist auf ein unbekanntes Tabellenfeld",
+  "missing-field": "braucht ein fehlendes Tabellenfeld",
+  unclosed: "ist nicht geschlossen",
+  "unexpected-character": "steht nicht allein auf seiner Zeile",
+  unreadable: "konnte nicht gelesen werden",
+};
 
 const de = {
   // Areas and their groups in the sidebar
@@ -190,6 +251,14 @@ const de = {
   columnLanguage: "Sprache",
   columnDate: "Datum",
   columnAction: "Aktion",
+  columnName: "Name",
+  columnFields: "Felder",
+  columnUses: "Verwendung",
+  columnFormat: "Format",
+  columnBytes: "Größe",
+  editForm: "Formular bearbeiten",
+  editMailTemplate: "Vorlage bearbeiten",
+  tokenActive: "Aktiv",
   searchTitles: "Titel und Themen durchsuchen",
   filterState: "Status",
   filterLanguage: "Sprache",
@@ -247,6 +316,8 @@ const de = {
   toolCode: "Code",
   toolReindent: "Dokument neu einrücken",
   completionUpload: "Hochladen…",
+  completionDefault: "Standard",
+  completionShownField: "ein Feld, das eine Spalte zeigt",
   toolLinkText: "Linktext",
   toolPlaceholder: "Text",
   contentValidation: "Inhaltsprüfung",
@@ -256,6 +327,8 @@ const de = {
   contentError: "Fehler",
   contentWarning: "Warnung",
   contentPosition: (line: number, column: number) => `Zeile ${line}, Spalte ${column}`,
+  contentFinding: (finding: Finding) =>
+    `${finding.component ?? "Der Inhalt"} ${GERMAN_FINDING_REASONS[finding.code]}${finding.parameter ? ` (${finding.parameter})` : ""}.${finding.suggestion ? ` Vorschlag: ${finding.suggestion}.` : ""}`,
   editorPublication: "Veröffentlichung",
   editorState: "Status",
   statePublicNote: "Für alle sichtbar",
@@ -466,7 +539,7 @@ const de = {
   mediaSearch: "Bilder durchsuchen",
   mediaEmpty: "Keine Bilder gefunden.",
   mediaLoadError: "Die Medien konnten nicht geladen werden.",
-  uploadRefused: `Nur JPEG, PNG, WebP, AVIF und GIF bis ${UPLOAD_LIMIT_MB} MB können hochgeladen werden.`,
+  uploadRefused: `Nur ${acceptedImageTypes("de")} bis ${UPLOAD_LIMIT_MB} MB können hochgeladen werden.`,
   uploadNotSent: "Die Datei konnte nicht gesendet werden.",
   uploadNotAccepted: "Die Datei wurde nicht angenommen.",
 
@@ -561,6 +634,18 @@ const de = {
   formOptionRemove: (position: number) => `Option ${position} entfernen`,
   formConsentNotice: "Einwilligungstext",
   formConsentRevision: "Einwilligungsversion",
+  formTypeShortText: "Kurztext",
+  formTypeLongText: "Langtext",
+  formTypeEmail: "E-Mail",
+  formTypeNumber: "Zahl",
+  formTypeSingleChoice: "Einfachauswahl",
+  formTypeMultipleChoice: "Mehrfachauswahl",
+  formTypeCheckbox: "Kontrollkästchen",
+  formTypeDate: "Datum",
+  formTypeConsent: "Einwilligung",
+  formDefaultOption: (position: number) => `Option ${position}`,
+  formDefaultConsent: "Ich stimme zu.",
+  formDefaultSuccess: "Vielen Dank!",
 
   // Actions
   save: "Speichern",
@@ -761,6 +846,14 @@ const en: Catalogue = {
   columnLanguage: "Language",
   columnDate: "Date",
   columnAction: "Action",
+  columnName: "Name",
+  columnFields: "Fields",
+  columnUses: "Used in",
+  columnFormat: "Format",
+  columnBytes: "Size",
+  editForm: "Edit form",
+  editMailTemplate: "Edit template",
+  tokenActive: "Active",
   searchTitles: "Search titles and topics",
   filterState: "Status",
   filterLanguage: "Language",
@@ -817,6 +910,8 @@ const en: Catalogue = {
   toolCode: "Code",
   toolReindent: "Reindent document",
   completionUpload: "Upload…",
+  completionDefault: "default",
+  completionShownField: "a field a column shows",
   toolLinkText: "link text",
   toolPlaceholder: "text",
   contentValidation: "Content validation",
@@ -826,6 +921,8 @@ const en: Catalogue = {
   contentError: "Error",
   contentWarning: "Warning",
   contentPosition: (line, column) => `Line ${line}, column ${column}`,
+  // The validator writes its findings in English, so its own sentence is the English one.
+  contentFinding: (finding) => finding.message,
   editorPublication: "Publication",
   editorState: "Status",
   statePublicNote: "Visible to everyone",
@@ -1027,7 +1124,7 @@ const en: Catalogue = {
   mediaSearch: "Search pictures",
   mediaEmpty: "No pictures found.",
   mediaLoadError: "Media could not be loaded.",
-  uploadRefused: `Only JPEG, PNG, WebP, AVIF and GIF up to ${UPLOAD_LIMIT_MB} MB can be uploaded.`,
+  uploadRefused: `Only ${acceptedImageTypes("en")} up to ${UPLOAD_LIMIT_MB} MB can be uploaded.`,
   uploadNotSent: "The file could not be sent.",
   uploadNotAccepted: "The file was not accepted.",
 
@@ -1117,6 +1214,18 @@ const en: Catalogue = {
   formOptionRemove: (position) => `Remove option ${position}`,
   formConsentNotice: "Consent notice",
   formConsentRevision: "Consent revision",
+  formTypeShortText: "Short text",
+  formTypeLongText: "Long text",
+  formTypeEmail: "Email",
+  formTypeNumber: "Number",
+  formTypeSingleChoice: "Single choice",
+  formTypeMultipleChoice: "Multiple choice",
+  formTypeCheckbox: "Checkbox",
+  formTypeDate: "Date",
+  formTypeConsent: "Consent notice",
+  formDefaultOption: (position) => `Option ${position}`,
+  formDefaultConsent: "I agree.",
+  formDefaultSuccess: "Thank you!",
 
   save: "Save",
   savePending: "Saving…",
@@ -1193,14 +1302,36 @@ export function dashboardText<Key extends DashboardStringKey>(
 }
 
 /**
+ * One catalogue entry in each of the site's languages, for a text the site
+ * shows in both that starts out as the dashboard's own words, such as the label
+ * of a new form field or the placeholder of an overview's headline.
+ *
+ * @param key - The catalogue key.
+ * @param args - Passed to an entry that is a function.
+ * @returns The entry in English and in German.
+ */
+export function bilingualText<Key extends DashboardStringKey>(
+  key: Key,
+  ...args: DashboardStringArgs<Key>
+): BilingualText {
+  return Object.fromEntries(
+    CONTENT_LANGUAGES.map((language) => [language, dashboardText(language, key, ...args)]),
+  ) as BilingualText;
+}
+
+/**
  * The interface language a visitor who is not signed in gets.
  *
  * The language belongs to the account, and before signing in there is none, so
- * the sign-in screen follows the browser: German where the browser prefers it,
- * English otherwise.
+ * the sign-in screen follows the browser: the first of its preferred languages
+ * the interface speaks, and English where it prefers none of them.
  */
 export function browserLanguage(): InterfaceLanguage {
   const preferred = typeof navigator === "undefined" ? [] : (navigator.languages ?? [navigator.language]);
-  const first = preferred.find((tag) => /^(de|en)\b/i.test(tag));
-  return first?.toLowerCase().startsWith("de") ? InterfaceLanguage.German : InterfaceLanguage.English;
+  for (const tag of preferred) {
+    const primary = tag.split("-")[0]?.toLowerCase();
+    const spoken = INTERFACE_LANGUAGES.find((language) => language === primary);
+    if (spoken) return spoken;
+  }
+  return FALLBACK_LANGUAGE;
 }

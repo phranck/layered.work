@@ -8,7 +8,8 @@ import { LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
-import { topicLabel, topicListKey } from "./topics.js";
+import { queryKeys } from "./query-keys.js";
+import { topicLabel } from "./topics.js";
 
 /**
  * An entry's topics in the editor panel: a chip per topic with a button that
@@ -78,7 +79,7 @@ export function TopicField({
   const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const listId = useId();
-  const topics = useQuery({ queryKey: topicListKey, queryFn: api.fetchTopics });
+  const topics = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
   const [typed, setTyped] = useState("");
   const [active, setActive] = useState(0);
 
@@ -99,7 +100,7 @@ export function TopicField({
     mutationFn: (name: string) => api.createTopic({ language, name }),
     onError: (error) => notifyError(error),
     onSuccess: (topic) => {
-      queryClient.setQueryData<TopicListItem[]>(topicListKey, (current) =>
+      queryClient.setQueryData<TopicListItem[]>(queryKeys.topics, (current) =>
         current?.some((item) => item.id === topic.id) ? current : [...(current ?? []), topic],
       );
       add(topic.id);

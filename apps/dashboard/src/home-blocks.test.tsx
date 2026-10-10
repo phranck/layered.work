@@ -9,6 +9,7 @@ import { declaredKeys, segmentsFit } from "./home-block-labels.js";
 import { SettingControl } from "./home-block-settings.js";
 import { HomeBlocksScreen } from "./home-blocks.js";
 import { DashboardLanguageProvider } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 import { dashboardAreas } from "./routes.js";
 import { chooseTextLanguage } from "./test-support.js";
 
@@ -61,7 +62,7 @@ function renderScreen() {
   vi.stubGlobal("fetch", sent);
   vi.stubGlobal("__API_BASE__", "/api");
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(["session"], {
+  client.setQueryData(queryKeys.session, {
     id: "00000000-0000-4000-8000-0000000000aa",
     email: "owner@example.test",
     displayName: "Owner",

@@ -6,6 +6,7 @@ import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { NamedValuesScreen } from "./named-values.js";
+import { queryKeys } from "./query-keys.js";
 import { dashboardAreas } from "./routes.js";
 
 afterEach(() => {
@@ -44,7 +45,7 @@ function renderScreen() {
   vi.stubGlobal("fetch", sent);
   vi.stubGlobal("__API_BASE__", "/api");
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(["session"], {
+  client.setQueryData(queryKeys.session, {
     id: USED.id,
     email: "owner@example.test",
     displayName: "Owner",

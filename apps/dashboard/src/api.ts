@@ -4,6 +4,7 @@ import {
   type AnalyticsSettings,
   accountProfile,
   addHomeBlockBody,
+  type ContentLanguage,
   type CreateEntryBody,
   type CreateFormBody,
   type CreateNamedValueBody,
@@ -154,6 +155,9 @@ export interface SettingsGroups {
   projectListing: ListingSettings;
 }
 
+/** Where on the site a navigation stands: across the top, or in the footer. */
+export type NavigationPlacement = "main" | "footer";
+
 /** Anything that checks an unknown value and hands back a typed one, which every schema does. */
 interface ResponseSchema<Value> {
   safeParse(value: unknown): { success: true; data: Value } | { success: false };
@@ -237,20 +241,20 @@ export interface DashboardApi {
   updateNamedValue(id: string, value: UpdateNamedValueBody): Promise<NamedValue>;
   /** Deletes a value nothing refers to. */
   deleteNamedValue(id: string): Promise<void>;
-  fetchFooterNavigations(placement?: "main" | "footer"): Promise<FooterNavigation[]>;
+  fetchFooterNavigations(placement?: NavigationPlacement): Promise<FooterNavigation[]>;
   createFooterNavigation(
     value: SaveFooterNavigationBody,
-    placement?: "main" | "footer",
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation>;
   saveFooterNavigation(
     id: string,
     value: SaveFooterNavigationBody,
-    placement?: "main" | "footer",
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation>;
-  deleteFooterNavigation(id: string, placement?: "main" | "footer"): Promise<void>;
+  deleteFooterNavigation(id: string, placement?: NavigationPlacement): Promise<void>;
   reorderFooterNavigations(
     positions: { id: string; sortOrder: number }[],
-    placement?: "main" | "footer",
+    placement?: NavigationPlacement,
   ): Promise<FooterNavigation[]>;
   /** The home page's blocks in the order of the page, the declared set where nothing is arranged yet. */
   fetchHomeBlocks(): Promise<StoredHomeBlock[]>;
@@ -277,12 +281,12 @@ export interface DashboardApi {
   previewMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
   ): Promise<RenderedMail>;
   testMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
     recipient: string,
   ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;

@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { DashboardLanguageProvider } from "./language-context.js";
+import { queryKeys } from "./query-keys.js";
 import { dashboardAreas } from "./routes.js";
 import { SocialAccountsScreen } from "./social-accounts.js";
 
@@ -32,7 +33,7 @@ it("renders the mark, disables without deleting, and validates a new account", a
   vi.stubGlobal("fetch", sent);
   vi.stubGlobal("__API_BASE__", "/api");
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(["session"], {
+  client.setQueryData(queryKeys.session, {
     id: account.id,
     email: "fixture@example.test",
     displayName: "Test",
