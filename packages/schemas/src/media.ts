@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body, MaxLength } from "./request.js";
+import { body, MaxLength, signedToken } from "./request.js";
 import { mediaCredit } from "./unsplash.js";
 
 /**
@@ -54,14 +54,8 @@ export const createUploadBody = body({
 
 export type CreateUploadBody = z.infer<typeof createUploadBody>;
 
-/**
- * The shape of an upload token: two base64url parts joined by a dot, the claims
- * and their signature. Bounded so a forged token costs nothing to refuse.
- */
-export const uploadToken = z
-  .string()
-  .max(1_024)
-  .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+/** An upload token as it arrives. */
+export const uploadToken = signedToken(1_024);
 
 /** What the API answers an upload request with. */
 export const uploadTicket = z.object({
