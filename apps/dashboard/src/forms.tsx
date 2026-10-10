@@ -2,6 +2,7 @@ import {
   type CreateFormBody,
   createFormBody,
   FORM_FIELD_COUNT,
+  FORM_FIELD_TYPES,
   FORM_OPTION_COUNT,
   type FormField,
   type FormFieldType,
@@ -16,7 +17,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
-import { addField, FIELD_NAMES, FIELD_TYPES, newField, newForm, reorderFields } from "./forms-model.js";
+import { addField, FIELD_TYPE_TEXT, newField, newForm, newOption, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
@@ -185,8 +186,8 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
                 onChange={(event) =>
                   update({
                     ...field,
-                    options: field.options.map((item, i) =>
-                      i === index ? { ...item, value: event.target.value } : item,
+                    options: field.options.map((item, position) =>
+                      position === index ? { ...item, value: event.target.value } : item,
                     ),
                   })
                 }
@@ -199,13 +200,17 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
               onChange={(label) =>
                 update({
                   ...field,
-                  options: field.options.map((item, i) => (i === index ? { ...item, label } : item)),
+                  options: field.options.map((item, position) =>
+                    position === index ? { ...item, label } : item,
+                  ),
                 })
               }
             />
             <Button
               disabled={field.options.length <= FORM_OPTION_COUNT.min}
-              onClick={() => update({ ...field, options: field.options.filter((_, i) => i !== index) })}
+              onClick={() =>
+                update({ ...field, options: field.options.filter((_, position) => position !== index) })
+              }
             >
               {text("formOptionRemove", index + 1)}
             </Button>
@@ -213,17 +218,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
         ))}
         <Button
           disabled={field.options.length >= FORM_OPTION_COUNT.max}
-          onClick={() => {
-            let n = field.options.length + 1;
-            while (field.options.some((option) => option.value === `option-${n}`)) n += 1;
-            update({
-              ...field,
-              options: [
-                ...field.options,
-                { value: `option-${n}`, label: { en: `Option ${n}`, de: `Option ${n}` } },
-              ],
-            });
-          }}
+          onClick={() => update({ ...field, options: [...field.options, newOption(field.options)] })}
         >
           {text("formOptionAdd")}
         </Button>
@@ -267,7 +262,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     queryFn: () => api.fetchForm(id ?? ""),
     enabled: Boolean(id && !isNew),
   });
-  const [draft, setDraft] = useState<CreateFormBody | null>(isNew ? newForm() : null);
+  const [draft, setDraft] = useState<CreateFormBody | null>(isNew ? newForm(text("formNew")) : null);
   const [selected, setSelected] = useState<number | null>(null);
   const [addType, setAddType] = useState<FormFieldType>("shortText");
   const [problem, setProblem] = useState("");
@@ -324,9 +319,13 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   };
   const updateField = (index: number, field: FormField) => {
     if (!draft) return;
-    change({ ...draft, fields: draft.fields.map((current, i) => (i === index ? field : current)) });
+    change({
+      ...draft,
+      fields: draft.fields.map((current, position) => (position === index ? field : current)),
+    });
   };
   const selectedField = selected === null ? null : draft?.fields[selected];
+  const typeOptions = FORM_FIELD_TYPES.map((type) => ({ value: type, label: text(FIELD_TYPE_TEXT[type]) }));
 
   return (
     <>
@@ -376,7 +375,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                           >
                             <span>{field.label[language] || field.key}</span>
                             <small>
-                              {FIELD_NAMES[field.type][language]} · {field.key}
+                              {text(FIELD_TYPE_TEXT[field.type])} · {field.key}
                             </small>
                           </button>
                         </div>
@@ -390,10 +389,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       <Select
                         aria-label={text("formField")}
                         value={addType}
-                        options={FIELD_TYPES.map((type) => ({
-                          value: type,
-                          label: FIELD_NAMES[type][language],
-                        }))}
+                        options={typeOptions}
                         onChange={(event) => setAddType(event.target.value as FormFieldType)}
                       />
                       <Button
@@ -430,10 +426,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     <Select
                       id="form-type"
                       value={selectedField.type}
-                      options={FIELD_TYPES.map((type) => ({
-                        value: type,
-                        label: FIELD_NAMES[type][language],
-                      }))}
+                      options={typeOptions}
                       onChange={(event) => {
                         const replacement = newField(event.target.value as FormFieldType, selectedField.key);
                         updateField(selected, {

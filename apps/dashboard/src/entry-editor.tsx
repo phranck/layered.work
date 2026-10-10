@@ -15,7 +15,7 @@ import {
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useBlocker, useLinkClickHandler, useLocation, useNavigate, useParams } from "react-router";
 import { isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
@@ -29,6 +29,7 @@ import { LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
 import { EntryProperties } from "./entry-properties.js";
 import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
+import { TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
@@ -192,7 +193,6 @@ function EntryEditor({
   const publishable = contentIsPublishable(draft.body, checked);
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
   const dirty = !sameDraft(asStored(draft), saved);
-  const times = useMemo(() => new Intl.DateTimeFormat(language, { timeStyle: "short" }), [language]);
 
   const save = useMutation({
     mutationFn: ({ value }: { value: SaveEntryBody; automatic: boolean }) => api.saveEntry(entry.id, value),
@@ -330,7 +330,7 @@ function EntryEditor({
     : dirty
       ? text("unsavedChanges")
       : savedAt
-        ? text(savedAt.automatic ? "autosavedAt" : "savedAt", times.format(savedAt.at))
+        ? text(savedAt.automatic ? "autosavedAt" : "savedAt", TIME_FORMAT[language].format(savedAt.at))
         : "";
 
   return (

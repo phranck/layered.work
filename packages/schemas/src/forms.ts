@@ -107,6 +107,15 @@ export type FormField = z.infer<typeof formField>;
 export type FormFieldType = FormField["type"];
 
 /**
+ * Every kind of field a form can hold, in the order the declaration above lists
+ * them, which is the order the form builder offers them in. Read off the
+ * declaration, so a kind added there is offered with no other edit.
+ */
+export const FORM_FIELD_TYPES: readonly FormFieldType[] = formField.options.map(
+  (option) => option.shape.type.value,
+);
+
+/**
  * A form's slug: what content embeds it by and what its public address names.
  * The save and the public routes read this one declaration, so a form that can
  * be saved can always be reached.

@@ -16,6 +16,7 @@ import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
 import { ConfirmDialog } from "./modal.js";
@@ -168,9 +169,6 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const { language, text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
   const list = useQuery({ queryKey: queryKeys.entryList(kind), queryFn: () => api.fetchEntries(kind) });
-
-  // One formatter per language rather than one per row and render.
-  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
   const title = text(area.labelKey);
@@ -348,7 +346,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                   </span>
                 </DataTable.Cell>
                 <DataTable.Cell kind="date">
-                  <time dateTime={row.date}>{dates.format(new Date(row.date))}</time>
+                  <time dateTime={row.date}>{DATE_FORMAT[language].format(new Date(row.date))}</time>
                 </DataTable.Cell>
                 <DataTable.Actions>
                   {row.trashed ? (

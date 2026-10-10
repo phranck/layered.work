@@ -23,6 +23,13 @@ export const CONTENT_LANGUAGES = ["en", "de"] as const;
 export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
 
 /**
+ * The locale each language formats dates, numbers and lists in: British English
+ * and Austrian German. Declared once, so a date written for a reader of one
+ * language follows the same conventions in the mail as in the dashboard.
+ */
+export const CONTENT_LOCALES: Record<ContentLanguage, string> = { en: "en-GB", de: "de-AT" };
+
+/**
  * How wide the text of a translation is set: `narrow` 56ch, `normal` 68ch,
  * `wide` 82ch, and `full` the page's own measure.
  */

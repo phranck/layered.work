@@ -2,12 +2,13 @@ import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope, type TokenSummary }
 import { Button, Card, Field, Input, Switch } from "@layered/ui";
 import { TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
@@ -53,10 +54,12 @@ export function AccessTokensScreen() {
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
   });
-  // One formatter per language rather than one per row and render, in the form the Posts list uses.
-  const dates = useMemo(() => new Intl.DateTimeFormat(language, { dateStyle: "medium" }), [language]);
   const dateOf = (value: string | null) =>
-    value ? <time dateTime={value}>{dates.format(new Date(value))}</time> : text("tokenNever");
+    value ? (
+      <time dateTime={value}>{DATE_FORMAT[language].format(new Date(value))}</time>
+    ) : (
+      text("tokenNever")
+    );
 
   return (
     <>

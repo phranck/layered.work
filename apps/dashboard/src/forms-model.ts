@@ -1,29 +1,22 @@
 import { type CreateFormBody, type FormField, type FormFieldType, MaxLength } from "@layered/schemas";
+import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { moveItem } from "./sidebar-order.js";
 
-export const FIELD_TYPES: readonly FormFieldType[] = [
-  "shortText",
-  "longText",
-  "email",
-  "number",
-  "singleChoice",
-  "multipleChoice",
-  "checkbox",
-  "date",
-  "consent",
-];
-
-export const FIELD_NAMES: Record<FormFieldType, { en: string; de: string }> = {
-  shortText: { en: "Short text", de: "Kurztext" },
-  longText: { en: "Long text", de: "Langtext" },
-  email: { en: "Email", de: "E-Mail" },
-  number: { en: "Number", de: "Zahl" },
-  singleChoice: { en: "Single choice", de: "Einfachauswahl" },
-  multipleChoice: { en: "Multiple choice", de: "Mehrfachauswahl" },
-  checkbox: { en: "Checkbox", de: "Kontrollkästchen" },
-  date: { en: "Date", de: "Datum" },
-  consent: { en: "Consent notice", de: "Einwilligung" },
+/** What each kind of field is called in the catalogue, which is also the label a new field starts with. */
+export const FIELD_TYPE_TEXT: Record<FormFieldType, DashboardStringKey> = {
+  shortText: "formTypeShortText",
+  longText: "formTypeLongText",
+  email: "formTypeEmail",
+  number: "formTypeNumber",
+  singleChoice: "formTypeSingleChoice",
+  multipleChoice: "formTypeMultipleChoice",
+  checkbox: "formTypeCheckbox",
+  date: "formTypeDate",
+  consent: "formTypeConsent",
 };
+
+/** One option of a choice field. */
+type ChoiceOption = Extract<FormField, { options: unknown }>["options"][number];
 
 /**
  * The longest answer a new text field takes, by what it asks for: a line, a
@@ -35,11 +28,23 @@ const DEFAULT_MAX_LENGTH = {
   email: MaxLength.Email,
 } as const satisfies Partial<Record<FormFieldType, number>>;
 
+/**
+ * The option a choice field gets next: numbered after the options it has, with
+ * a value none of them holds yet, and labelled in both languages.
+ *
+ * @param options - The options the field has.
+ */
+export function newOption(options: readonly ChoiceOption[]): ChoiceOption {
+  let position = options.length + 1;
+  while (options.some((option) => option.value === `option-${position}`)) position += 1;
+  return { value: `option-${position}`, label: bilingualText("formDefaultOption", position) };
+}
+
 /** Defaults are complete declarations, so a new field can be saved immediately. */
 export function newField(type: FormFieldType, key: string): FormField {
   const common = {
     key,
-    label: { en: FIELD_NAMES[type].en, de: FIELD_NAMES[type].de },
+    label: bilingualText(FIELD_TYPE_TEXT[type]),
     hint: { en: "", de: "" },
     required: type === "consent",
   };
@@ -51,15 +56,10 @@ export function newField(type: FormFieldType, key: string): FormField {
     case "number":
       return { ...common, type, min: null, max: null };
     case "singleChoice":
-    case "multipleChoice":
-      return {
-        ...common,
-        type,
-        options: [
-          { value: "option-1", label: { en: "Option 1", de: "Option 1" } },
-          { value: "option-2", label: { en: "Option 2", de: "Option 2" } },
-        ],
-      };
+    case "multipleChoice": {
+      const first = newOption([]);
+      return { ...common, type, options: [first, newOption([first])] };
+    }
     case "checkbox":
       return { ...common, type };
     case "date":
@@ -68,19 +68,25 @@ export function newField(type: FormFieldType, key: string): FormField {
       return {
         ...common,
         type,
-        notice: { en: "I agree.", de: "Ich stimme zu." },
+        notice: bilingualText("formDefaultConsent"),
         revision: "1",
       };
   }
 }
 
-export function newForm(): CreateFormBody {
+/**
+ * A form as the builder starts it: one short text field, a thank-you in both
+ * languages, and submissions kept.
+ *
+ * @param name - The form's name, which only the dashboard shows.
+ */
+export function newForm(name: string): CreateFormBody {
   return {
     slug: "new-form",
-    name: "New form",
+    name,
     notificationEmail: null,
     confirmationEmailField: null,
-    successMessage: { en: "Thank you!", de: "Vielen Dank!" },
+    successMessage: bilingualText("formDefaultSuccess"),
     storeSubmissions: true,
     fields: [newField("shortText", "name")],
   };

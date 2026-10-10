@@ -1,6 +1,6 @@
-import type { ContentLanguage } from "@layered/schemas";
+import { type ContentLanguage, INTERFACE_LANGUAGES } from "@layered/schemas";
 import { fireEvent, within } from "@testing-library/react";
-import { DASHBOARD_LANGUAGES, dashboardText } from "./dashboard-i18n.js";
+import { dashboardText } from "./dashboard-i18n.js";
 import { contentLanguageOptions } from "./translated.js";
 
 /**
@@ -10,7 +10,7 @@ import { contentLanguageOptions } from "./translated.js";
 
 /** What the language switch of a card is called, in every interface language. */
 const SWITCH_NAMES = new Set<string>(
-  DASHBOARD_LANGUAGES.map((interfaceLanguage) => dashboardText(interfaceLanguage.value, "textLanguage")),
+  INTERFACE_LANGUAGES.map((interfaceLanguage) => dashboardText(interfaceLanguage, "textLanguage")),
 );
 
 /**

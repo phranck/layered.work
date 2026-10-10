@@ -214,13 +214,35 @@ function parameterOption(
 }
 
 /**
+ * The words the completion list shows beside an option, read in the interface's
+ * language each time the list opens.
+ */
+export interface CompletionLabels {
+  /** Beside the value a parameter takes where none is written. */
+  defaultValue(): string;
+  /** Beside a field a row lacks that one of its table's columns shows. */
+  shownField(): string;
+}
+
+/**
  * Completes component names at the start of a line, parameter names inside an
  * argument list, and values after a parameter's colon.
  *
- * @param context - Where the cursor is, and whether completion was asked for.
- * @returns What to offer, or null where nothing in the language fits.
+ * @param labels - The words shown beside an option, in the interface's language.
+ * @returns A completion source for the surface, which answers with what to
+ *   offer, or null where nothing in the language fits.
  */
-export function contentCompletions(context: CompletionContext): CompletionResult | null {
+export function contentCompletions(labels: CompletionLabels) {
+  return (context: CompletionContext): CompletionResult | null => completeContent(context, labels);
+}
+
+/**
+ * What `contentCompletions` offers where the cursor stands.
+ *
+ * @param context - Where the cursor is, and whether completion was asked for.
+ * @param labels - The words shown beside an option.
+ */
+function completeContent(context: CompletionContext, labels: CompletionLabels): CompletionResult | null {
   const { state, pos: position } = context;
   const line = state.doc.lineAt(position);
   const before = state.sliceDoc(line.from, position);
@@ -268,7 +290,7 @@ export function contentCompletions(context: CompletionContext): CompletionResult
       (option, index): Completion => ({
         label: option,
         type: "enum",
-        detail: option === String(parameter.default) ? "default" : undefined,
+        detail: option === String(parameter.default) ? labels.defaultValue() : undefined,
         // In the order the register gives them, rather than alphabetically.
         boost: values.length - index,
       }),
@@ -302,7 +324,7 @@ export function contentCompletions(context: CompletionContext): CompletionResult
   if (definition.fields) {
     for (const field of fields()) {
       if (written.has(field)) continue;
-      options.push(parameterOption(field, definition.fields, { detail: "a field a column shows" }));
+      options.push(parameterOption(field, definition.fields, { detail: labels.shownField() }));
     }
   }
 
@@ -506,15 +528,20 @@ function thumbnailOf(completion: Completion): Node | null {
  * Escape; Enter takes the highlighted entry, and Tab then moves between the
  * places a snippet leaves open.
  *
+ * @param labels - The words shown beside an option, in the interface's language.
  * @param library - The media library, which completes the quotes of a file
  *   parameter where it is given.
  * @param values - The named values, which complete a reference after `{{`
  *   where they are given.
  */
-export function contentAutocompletion(library?: MediaLibrary, values?: () => readonly KnownValue[]) {
+export function contentAutocompletion(
+  labels: CompletionLabels,
+  library?: MediaLibrary,
+  values?: () => readonly KnownValue[],
+) {
   return autocompletion({
     override: [
-      contentCompletions,
+      contentCompletions(labels),
       ...(library ? [libraryCompletions(library)] : []),
       ...(values ? [valueCompletions(values)] : []),
     ],

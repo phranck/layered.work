@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
+import { DATE_FORMAT, KILOBYTE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
 import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
@@ -19,11 +20,10 @@ const KIND_LABEL = {
   document: "mediaKindDocument",
   model: "mediaKindModel",
 } as const;
-const DATES = { de: new Intl.DateTimeFormat("de-AT"), en: new Intl.DateTimeFormat("en-GB") };
-const BYTES = {
-  de: new Intl.NumberFormat("de-AT", { style: "unit", unit: "kilobyte", maximumFractionDigits: 1 }),
-  en: new Intl.NumberFormat("en-GB", { style: "unit", unit: "kilobyte", maximumFractionDigits: 1 }),
-};
+
+/** How many bytes the grid counts as one kilobyte. */
+const BYTES_PER_KILOBYTE = 1024;
+
 type Props = {
   onChoose?: (slug: string, item: MediaLibraryItem) => void;
   onCancel?: () => void;
@@ -52,7 +52,7 @@ function MediaGrid({
           </Row.Tile>
           <Row.Text
             title={item.slug}
-            note={`${text(KIND_LABEL[item.kind])} · ${BYTES[language].format(item.byteSize / 1024)} · ${DATES[language].format(new Date(item.uploadedAt))}`}
+            note={`${text(KIND_LABEL[item.kind])} · ${KILOBYTE_FORMAT[language].format(item.byteSize / BYTES_PER_KILOBYTE)} · ${DATE_FORMAT[language].format(new Date(item.uploadedAt))}`}
           >
             <span className="row__note">{text(PROCESSING_TEXT[item.processingState])}</span>
           </Row.Text>

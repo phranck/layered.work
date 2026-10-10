@@ -1,6 +1,6 @@
 import type { Finding } from "@layered/content";
 import { Button, Field } from "@layered/ui";
-import { type CheckedContent, findingMessage } from "./content-validation.js";
+import type { CheckedContent } from "./content-validation.js";
 import { useDashboardLanguage } from "./language-context.js";
 import "./content-validation.css";
 export function ContentFindings({
@@ -12,7 +12,7 @@ export function ContentFindings({
   source: string;
   onSelect: (finding: Finding) => void;
 }) {
-  const { text, language } = useDashboardLanguage();
+  const { text } = useDashboardLanguage();
   const current = source === checked.source;
   const errors = checked.validation.findings.filter((finding) => finding.severity === "error");
   return (
@@ -21,7 +21,7 @@ export function ContentFindings({
         {!current
           ? text("contentChecking")
           : errors[0]
-            ? text("contentPublishBlocked", findingMessage(errors[0], language))
+            ? text("contentPublishBlocked", text("contentFinding", errors[0]))
             : text("contentValid")}
       </p>
       {current && (
@@ -31,7 +31,7 @@ export function ContentFindings({
               <Button onClick={() => onSelect(finding)}>
                 <span>
                   {text(finding.severity === "error" ? "contentError" : "contentWarning")}:{" "}
-                  {findingMessage(finding, language)}
+                  {text("contentFinding", finding)}
                 </span>
                 <small>{text("contentPosition", finding.line, finding.column)}</small>
               </Button>

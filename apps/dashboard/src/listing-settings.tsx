@@ -2,7 +2,7 @@ import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLen
 import { Field, Input, Segmented } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
-import { type DashboardStringKey, dashboardText } from "./dashboard-i18n.js";
+import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { queryKeys } from "./query-keys.js";
@@ -67,10 +67,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
               label={text("listingHeadline")}
               hint={text("listingHeadlineHint")}
               value={draft.headline}
-              placeholder={{
-                en: dashboardText("en", DEFAULT_HEADLINE[kind]),
-                de: dashboardText("de", DEFAULT_HEADLINE[kind]),
-              }}
+              placeholder={bilingualText(DEFAULT_HEADLINE[kind])}
               maxLength={MaxLength.Line}
               disabled={!editable}
               onChange={(headline) => update({ headline })}
