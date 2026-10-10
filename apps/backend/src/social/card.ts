@@ -1,17 +1,12 @@
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { WORDMARK } from "../assets.js";
+import { escapeMarkup } from "../markup.js";
 
 export const CARD_SIZE = { width: 1200, height: 630 } as const;
 const BACKGROUND = { r: 17, g: 21, b: 26, alpha: 1 };
 const WORDMARK_TOP = 80;
 const WORDMARK_HEIGHT = 230;
-const escapeXml = (value: string) =>
-  value.replace(
-    /[<>&"']/g,
-    (character) =>
-      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character] ?? character,
-  );
 
 function titleLines(title: string): string[] {
   const lines: string[] = [];
@@ -43,7 +38,7 @@ export async function renderSocialCard(title: string) {
     `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg"><g fill="#eef3fa" font-family="sans-serif" font-size="38" text-anchor="middle">${titleLines(
       title,
     )
-      .map((line, index) => `<text x="600" y="${390 + index * 52}">${escapeXml(line)}</text>`)
+      .map((line, index) => `<text x="600" y="${390 + index * 52}">${escapeMarkup(line)}</text>`)
       .join("")}</g></svg>`,
   );
   const bytes = await sharp({ create: { ...CARD_SIZE, channels: 4, background: BACKGROUND } })

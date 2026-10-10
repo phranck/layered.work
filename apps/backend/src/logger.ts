@@ -1,5 +1,5 @@
 import pino from "pino";
-import { config, isProduction } from "./config.js";
+import { config, isProduction, SECRET_VARIABLES } from "./config.js";
 
 /**
  * One logger, configured once, redacting at the point of logging.
@@ -19,9 +19,11 @@ import { config, isProduction } from "./config.js";
  * Property names that never appear in a log line, wherever they occur.
  *
  * `remove: true` rather than a placeholder, so a line cannot say that a token
- * was present and how long it was.
+ * was present and how long it was. The secret variables come from
+ * `SECRET_VARIABLES` beside the configuration's schema, so a secret added there
+ * is never logged without an edit here.
  */
-const NEVER_LOGGED = [
+export const NEVER_LOGGED: readonly string[] = [
   "password",
   "passwordHash",
   "token",
@@ -31,10 +33,7 @@ const NEVER_LOGGED = [
   "secret",
   "sessionSecret",
   "connectionString",
-  "DATABASE_URL",
-  "SESSION_SECRET",
-  "S3_SECRET_ACCESS_KEY",
-  "SMTP2GO_API_KEY",
+  ...SECRET_VARIABLES,
 ];
 
 /**

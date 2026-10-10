@@ -1,8 +1,11 @@
-import { createHmac, hkdfSync } from "node:crypto";
-import { ACCEPTED_IMAGE_TYPES, type AcceptedImageType, MAX_UPLOAD_BYTES } from "@layered/schemas";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type AcceptedImageType,
+  MAX_UPLOAD_BYTES,
+  SLUG_PATTERN,
+} from "@layered/schemas";
 import { z } from "zod";
-import { sameSignature } from "../auth/signature.js";
-import { sessionSecret } from "../config.js";
+import { claimsToken } from "../auth/signature.js";
 
 /**
  * The token an upload is carried by, from the request that asked for it to the
@@ -10,42 +13,29 @@ import { sessionSecret } from "../config.js";
  *
  * It holds everything the server decided when the upload was asked for, so the
  * three requests need no table between them: the key it generated, the type and
- * size the author declared, who asked, and until when. It is signed, so none of
- * that can be changed on the way, and the signature uses a key derived for this
- * purpose alone, so a token of another kind can never pass as one of these even
- * where the two share a secret.
+ * size the author declared, and who asked. It is signed with the upload's own
+ * key, so none of that can be changed on the way and no token of another kind
+ * passes as one of these.
  */
-
-/** What an upload token is for, written into it and checked on the way back. */
-const PURPOSE = "media-upload";
 
 /** How long an upload may take from being asked for to being completed. */
 const LIFETIME_MS = 10 * 60 * 1000;
 
-/** The signing key, derived from the session secret for this purpose only. */
-const KEY = Buffer.from(hkdfSync("sha256", sessionSecret, "", `layered:${PURPOSE}`, 32));
+/** The longest slug stem an upload's file name is reduced to, which a token's slug may not exceed. */
+export const SLUG_STEM_LENGTH = 80;
 
 /** What an upload token says. */
 const claimsSchema = z.strictObject({
-  purpose: z.literal(PURPOSE),
   storageKey: z.string().regex(/^uploads\/[A-Za-z0-9_-]{22}$/),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-    .max(80),
+  slug: z.string().regex(SLUG_PATTERN).max(SLUG_STEM_LENGTH),
   type: z.enum(ACCEPTED_IMAGE_TYPES),
   size: z.number().int().min(1).max(MAX_UPLOAD_BYTES),
   userId: z.uuid(),
-  expiresAt: z.number().int(),
 });
 
-export type UploadClaims = Omit<z.infer<typeof claimsSchema>, "purpose" | "expiresAt"> & {
-  type: AcceptedImageType;
-};
+export type UploadClaims = z.infer<typeof claimsSchema> & { type: AcceptedImageType };
 
-function sign(payload: string): string {
-  return createHmac("sha256", KEY).update(payload).digest("base64url");
-}
+const uploadTokens = claimsToken("media-upload", claimsSchema);
 
 /**
  * Issues a token for an upload.
@@ -54,10 +44,7 @@ function sign(payload: string): string {
  * @param now - The current time, which a test can fix.
  */
 export function issueUploadToken(claims: UploadClaims, now = Date.now()): string {
-  const payload = Buffer.from(
-    JSON.stringify({ purpose: PURPOSE, ...claims, expiresAt: now + LIFETIME_MS }),
-  ).toString("base64url");
-  return `${payload}.${sign(payload)}`;
+  return uploadTokens.issue(claims, now + LIFETIME_MS);
 }
 
 /**
@@ -70,19 +57,5 @@ export function issueUploadToken(claims: UploadClaims, now = Date.now()): string
  *   caller learns nothing about which.
  */
 export function readUploadToken(token: string, now = Date.now()): UploadClaims | null {
-  const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra !== undefined) return null;
-  if (!sameSignature(signature, sign(payload))) return null;
-
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
-  const parsed = claimsSchema.safeParse(decoded);
-  if (!parsed.success || parsed.data.expiresAt <= now) return null;
-
-  const { purpose: _purpose, expiresAt: _expiresAt, ...claims } = parsed.data;
-  return claims;
+  return uploadTokens.read(token, now);
 }

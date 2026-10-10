@@ -9,6 +9,9 @@ import { byAddress, enforceRateLimit } from "./rate-limit.js";
 import { principalOf } from "./require-session.js";
 import { HttpError } from "./response.js";
 
+/** The scheme an access token arrives under in the `Authorization` header. */
+const BEARER = "Bearer ";
+
 /** Browser sessions and bearer PATs are verified by separate code paths. */
 export function requireScope(scope: TokenScope) {
   return describeMiddleware(
@@ -21,8 +24,10 @@ export function requireScope(scope: TokenScope) {
           windowSeconds: 60,
           keys: (context) => [byAddress(context)],
         });
-        const match = /^Bearer (lwpat_[A-Za-z0-9_-]{43})$/.exec(header);
-        const token = match ? await verifyAccessToken(database(), match[1] ?? "") : null;
+        // The token's own shape is checked by `verifyAccessToken`, which holds its pattern.
+        const token = header.startsWith(BEARER)
+          ? await verifyAccessToken(database(), header.slice(BEARER.length))
+          : null;
         if (!token) throw new HttpError(ErrorCode.Unauthenticated, "This access token is not valid.");
         enforceRateLimit(c, {
           name: "bearer-token",

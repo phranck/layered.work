@@ -1,6 +1,7 @@
 import pino from "pino";
 import { describe, expect, it, vi } from "vitest";
-import { deviation, logger, loggerOptions } from "./logger.js";
+import { CONFIG_VARIABLES, SECRET_VARIABLES } from "./config.js";
+import { deviation, logger, loggerOptions, NEVER_LOGGED } from "./logger.js";
 
 /**
  * What must never reach a log line, checked against the real redaction list.
@@ -56,6 +57,19 @@ describe("redaction", () => {
     logger.error({ connectionString: `postgres://app:${SECRET}@db:5432/app` }, "a driver");
 
     expect(written()).not.toContain(SECRET);
+  });
+
+  it("drops every secret variable of the configuration, and knows every variable named like one", () => {
+    const { logger, written } = capturing();
+    for (const name of SECRET_VARIABLES) logger.error({ [name]: SECRET, nested: { [name]: SECRET } }, name);
+    expect(written()).not.toContain(SECRET);
+
+    // A variable whose name says it holds a secret has to be in the list, so the
+    // next key added to the configuration cannot be logged by being forgotten.
+    const secretLooking = CONFIG_VARIABLES.filter((name) =>
+      /(?:SECRET|PASSWORD|_KEY|TOKEN)$|^DATABASE_URL$/.test(name),
+    );
+    expect(secretLooking.filter((name) => !NEVER_LOGGED.includes(name))).toEqual([]);
   });
 
   it("removes the property rather than replacing it", () => {

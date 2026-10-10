@@ -104,6 +104,25 @@ const schema = z.object({
 /** What the environment turned out to say. */
 export type Config = z.infer<typeof schema>;
 
+/** Every variable the service reads, by name. */
+export const CONFIG_VARIABLES = Object.keys(schema.shape) as (keyof Config)[];
+
+/**
+ * The variables whose values are secrets.
+ *
+ * The logger never writes a property of any of these names, wherever in an
+ * object it occurs. Kept beside the schema so a secret added there is added
+ * here in the same edit, and a test refuses a variable whose name marks it as
+ * a secret but which is missing here.
+ */
+export const SECRET_VARIABLES = [
+  "DATABASE_URL",
+  "SESSION_SECRET",
+  "S3_SECRET_ACCESS_KEY",
+  "SMTP2GO_API_KEY",
+  "UNSPLASH_ACCESS_KEY",
+] as const satisfies readonly (keyof Config)[];
+
 /**
  * Reads the environment, or explains what is missing.
  *

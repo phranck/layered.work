@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { isProduction } from "../config.js";
+import { SESSION_LIFETIME_MS } from "./session.js";
 
 /**
  * The session cookie's attributes, decided once.
@@ -30,11 +31,11 @@ export const SESSION_COOKIE = isProduction ? `__Host-${NAME}` : NAME;
 /**
  * How long the browser keeps it, in seconds.
  *
- * Matches the expiry stored on the row. The row is what actually decides,
- * because the cookie's own expiry is a request the browser stops making rather
- * than a rule anybody enforces.
+ * The session's own lifetime, which also sets the expiry stored on the row. The
+ * row is what actually decides, because the cookie's own expiry is a request the
+ * browser stops making rather than a rule anybody enforces.
  */
-const MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const MAX_AGE_SECONDS = SESSION_LIFETIME_MS / 1000;
 
 /**
  * Puts the session cookie on the response.

@@ -56,3 +56,18 @@ export function text(max: number, options: { pattern?: RegExp } = {}) {
   const base = z.string().trim().min(1).max(max);
   return options.pattern ? base.regex(options.pattern) : base;
 }
+
+/**
+ * A signed token as the API issues them, a preview link's or an upload's: a
+ * base64url payload and its signature joined by one dot.
+ *
+ * Bounded, because it reaches a decoder, so a forged one costs nothing to refuse.
+ *
+ * @param max - The longest token of this kind.
+ */
+export function signedToken(max: number) {
+  return z
+    .string()
+    .max(max)
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+}
