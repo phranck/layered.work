@@ -15,7 +15,7 @@ import { auditLog, media, mediaJobs } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { deleteMediaObject, readMediaBytes, uploadTarget } from "./storage.js";
-import { issueUploadToken, readUploadToken } from "./upload-token.js";
+import { issueUploadToken, readUploadToken, SLUG_STEM_LENGTH } from "./upload-token.js";
 
 /**
  * Putting a file into the media library: asking for an upload, and checking
@@ -37,9 +37,6 @@ const KEY_BYTES = 16;
 
 /** How many numbered slugs are tried before an upload gives up on a name. */
 const SLUG_ATTEMPTS = 50;
-
-/** The longest slug stem a file name is reduced to. */
-const SLUG_STEM_LENGTH = 80;
 
 /** What sharp calls each accepted type. AVIF is decoded as HEIF with AV1 inside. */
 const DECODED_TYPE: Record<string, AcceptedImageType> = {

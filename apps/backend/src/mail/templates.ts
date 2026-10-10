@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import type { database } from "../db/connect.js";
 import { auditLog, settings } from "../db/schema/index.js";
+import { escapeMarkup } from "../markup.js";
 
 type Database = ReturnType<typeof database>;
 type Language = "en" | "de";
@@ -48,8 +49,6 @@ export const DEFAULT_MAIL_TEMPLATES: Record<MailTemplateKind, MailTemplate> = {
 
 const keyOf = (kind: MailTemplateKind) => `mail-template:${kind}`;
 const pattern = /{{\s*([A-Za-z][A-Za-z0-9]*)\s*}}/g;
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function substitute(source: string, allowed: readonly string[], values?: Record<string, string>): string {
   if (source.includes("{{") && !source.replace(pattern, "").includes("{{")) {
@@ -86,7 +85,7 @@ function renderInline(
       children(node).find((child) => child.name === "LinkMark" && child.from > node.from)?.from ?? node.to,
     );
     const text = substitute(label, allowed, values);
-    return { html: `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`, text: `${text} (${url})` };
+    return { html: `<a href="${escapeMarkup(url)}">${escapeMarkup(text)}</a>`, text: `${text} (${url})` };
   }
   let html = "";
   let text = "";
@@ -97,7 +96,7 @@ function renderInline(
     // placeholder, so it stays in the text and `substitute` fills it in.
     if (child.name === NODE.ValueReference) continue;
     const before = substitute(source.slice(cursor, child.from), allowed, values);
-    html += escapeHtml(before).replace(/\n/g, "<br>");
+    html += escapeMarkup(before).replace(/\n/g, "<br>");
     text += before;
     if (!["EmphasisMark", "ListMark", "LinkMark", "URL"].includes(child.name)) {
       if (!["StrongEmphasis", "Emphasis", "Link"].includes(child.name))
@@ -109,7 +108,7 @@ function renderInline(
     cursor = child.to;
   }
   const after = substitute(source.slice(cursor, node.to), allowed, values);
-  html += escapeHtml(after).replace(/\n/g, "<br>");
+  html += escapeMarkup(after).replace(/\n/g, "<br>");
   text += after;
   if (node.name === "StrongEmphasis") html = `<strong>${html}</strong>`;
   if (node.name === "Emphasis") html = `<em>${html}</em>`;

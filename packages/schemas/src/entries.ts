@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { body, MaxLength, signedToken, text } from "./request.js";
 import { SLUG_PATTERN } from "./slug.js";
 
 /**
@@ -229,13 +229,5 @@ export type PreviewEntryBody = z.infer<typeof previewEntryBody>;
 export const entryPreview = z.object({ url: z.url(), expiresAt: z.iso.datetime() });
 export type EntryPreview = z.infer<typeof entryPreview>;
 
-/**
- * A preview token as a path parameter: a signed payload, base64url on both sides
- * of one dot, and bounded, because it reaches a decoder.
- */
-export const previewTokenParam = z.strictObject({
-  token: z
-    .string()
-    .max(512)
-    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/),
-});
+/** A preview token as a path parameter. */
+export const previewTokenParam = z.strictObject({ token: signedToken(512) });

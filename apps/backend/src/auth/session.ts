@@ -1,10 +1,9 @@
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { sessionSecret } from "../config.js";
 import { sessions, users } from "../db/schema/index.js";
 import { deviation } from "../logger.js";
-import { sameSignature } from "./signature.js";
+import { sign, signedFor } from "./signature.js";
 
 /**
  * What a signed-in browser holds, and how a request is traced back to a person.
@@ -24,8 +23,12 @@ import { sameSignature } from "./signature.js";
 /** 32 bytes, which is 256 bits and 43 base64url characters. */
 const TOKEN_BYTES = 32;
 
-/** How long a session lasts without being used at all. */
-const LIFETIME_DAYS = 30;
+/**
+ * How long a session lasts, in milliseconds. The row's expiry is set from it,
+ * and so is the cookie's `Max-Age`, so the browser keeps the cookie exactly as
+ * long as the row accepts it.
+ */
+export const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** What a request turned out to be, once the cookie was believed. */
 export type Principal = {
@@ -53,9 +56,12 @@ type Database = PostgresJsDatabase<Record<string, unknown>>;
  *
  * It also gives a way to end every session at once, by changing the secret,
  * without writing to the database at all.
+ *
+ * The key is the session's own, so no other signed value this API hands out
+ * passes as a cookie.
  */
-function sign(token: string): string {
-  return createHmac("sha256", sessionSecret).update(token).digest("base64url");
+function signToken(token: string): string {
+  return sign("session", token);
 }
 
 /** SHA-256, hex. Fast on purpose: a 256-bit random value has nothing to guess. */
@@ -73,7 +79,7 @@ export function readCookieValue(value: string): string | null {
   if (separator <= 0) return null;
 
   const token = value.slice(0, separator);
-  return sameSignature(value.slice(separator + 1), sign(token)) ? token : null;
+  return signedFor("session", token, value.slice(separator + 1)) ? token : null;
 }
 
 /**
@@ -92,7 +98,7 @@ export async function openSession(
   userAgent: string | null,
 ): Promise<{ cookieValue: string; expiresAt: Date }> {
   const token = randomBytes(TOKEN_BYTES).toString("base64url");
-  const expiresAt = new Date(Date.now() + LIFETIME_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + SESSION_LIFETIME_MS);
 
   await database.insert(sessions).values({
     userId,
@@ -101,7 +107,7 @@ export async function openSession(
     userAgent,
   });
 
-  return { cookieValue: `${token}.${sign(token)}`, expiresAt };
+  return { cookieValue: `${token}.${signToken(token)}`, expiresAt };
 }
 
 /**

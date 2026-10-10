@@ -1,12 +1,11 @@
-import { createHmac, hkdfSync } from "node:crypto";
 import { resolveValues } from "@layered/content";
 import { type EntryPreview, ErrorCode, type PreviewEntryBody } from "@layered/schemas";
 import { and, eq, isNull, lt } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { auditActor } from "../auth/audit-actor.js";
-import { sameSignature } from "../auth/signature.js";
-import { config, sessionSecret } from "../config.js";
+import { claimsToken } from "../auth/signature.js";
+import { config } from "../config.js";
 import { type PublicSnapshot, publicForms, publicMedia, publicTopics } from "../content/snapshot.js";
 import {
   auditLog,
@@ -32,25 +31,11 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
 
-/** What a preview token is for, written into it and checked on the way back. */
-const PURPOSE = "entry-preview";
-
 /** How long a preview link works. Long enough to read, short enough to forget. */
 export const PREVIEW_LIFETIME_MS = 60 * 60 * 1000;
 
-/** The signing key, derived from the session secret for this purpose only. */
-const KEY = Buffer.from(hkdfSync("sha256", sessionSecret, "", `layered:${PURPOSE}`, 32));
-
-/** What a preview token says. */
-const claimsSchema = z.strictObject({
-  purpose: z.literal(PURPOSE),
-  previewId: z.uuid(),
-  expiresAt: z.number().int(),
-});
-
-function sign(payload: string): string {
-  return createHmac("sha256", KEY).update(payload).digest("base64url");
-}
+/** Preview tokens, which name the preview row and nothing else. */
+const previewTokens = claimsToken("entry-preview", z.strictObject({ previewId: z.uuid() }));
 
 /**
  * Issues the token for one preview.
@@ -59,10 +44,7 @@ function sign(payload: string): string {
  * @param expiresAt - When it stops working, in milliseconds since the epoch.
  */
 export function issuePreviewToken(previewId: string, expiresAt: number): string {
-  const payload = Buffer.from(JSON.stringify({ purpose: PURPOSE, previewId, expiresAt })).toString(
-    "base64url",
-  );
-  return `${payload}.${sign(payload)}`;
+  return previewTokens.issue({ previewId }, expiresAt);
 }
 
 /**
@@ -75,19 +57,7 @@ export function issuePreviewToken(previewId: string, expiresAt: number): string 
  *   all three, so a caller learns nothing about which.
  */
 export function readPreviewToken(token: string, now = Date.now()): string | null {
-  const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra !== undefined) return null;
-  if (!sameSignature(signature, sign(payload))) return null;
-
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
-  const parsed = claimsSchema.safeParse(decoded);
-  if (!parsed.success || parsed.data.expiresAt <= now) return null;
-  return parsed.data.previewId;
+  return previewTokens.read(token, now)?.previewId ?? null;
 }
 
 /**
