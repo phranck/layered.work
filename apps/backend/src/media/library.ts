@@ -29,6 +29,7 @@ import {
   users,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
+import { SITE_PICTURES } from "../settings/site-pictures.js";
 import { storedInLibrary } from "./pictures.js";
 import { getMediaProcessing } from "./processing.js";
 import { queueMediaProcessing } from "./queue.js";
@@ -36,12 +37,6 @@ import { namesPictureInBlock, namesSitePicture, unusedMedia } from "./usage.js";
 
 type Database = ReturnType<typeof database>;
 const PAGE_SIZE = 24;
-
-/** How a use through a site setting is named in the list of a file's uses. */
-const SITE_PICTURE_TITLE: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
-  socialImageMediaId: "Site sharing image",
-  watermarkMediaId: "Site watermark",
-};
 /**
  * What each order sorts by. The id comes last in both, so two files with the same
  * slug or the same upload time fall on the same side of a page boundary on every
@@ -130,8 +125,7 @@ export async function getMediaUses(db: Pick<Database, "select">, id: string): Pr
     .where(and(eq(settings.key, "site"), namesSitePicture(id)));
   const named = (site?.value ?? {}) as Record<string, unknown>;
   for (const key of SITE_PICTURE_SETTINGS)
-    if (named[key] === id)
-      uses.push({ id, title: SITE_PICTURE_TITLE[key], language: "en", kind: "settings" });
+    if (named[key] === id) uses.push({ id, title: SITE_PICTURES[key].use, language: "en", kind: "settings" });
   const blocks = await db
     .select({ id: homeBlocks.id, type: homeBlocks.type })
     .from(homeBlocks)

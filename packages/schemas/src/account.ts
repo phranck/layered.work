@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { focalPoint, mediaProcessingState } from "./media.js";
-import { body, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 
 /** A language the editorial interface supports. */
 const interfaceLanguage = z.enum(["de", "en"]);
@@ -21,7 +21,7 @@ export type AccountProfile = z.infer<typeof accountProfile>;
 /** Every editable account field, with unknown authority-bearing fields refused. */
 export const updateAccountBody = body({
   displayName: text(MaxLength.Line),
-  email: z.string().trim().toLowerCase().pipe(z.email().max(MaxLength.Line)),
+  email: emailAddress,
   interfaceLanguage,
   avatarMediaId: z.uuid().nullable(),
 });

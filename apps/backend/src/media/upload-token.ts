@@ -2,6 +2,7 @@ import {
   ACCEPTED_IMAGE_TYPES,
   type AcceptedImageType,
   MAX_UPLOAD_BYTES,
+  SLUG_MAX_LENGTH,
   SLUG_PATTERN,
 } from "@layered/schemas";
 import { z } from "zod";
@@ -21,13 +22,10 @@ import { claimsToken } from "../auth/signature.js";
 /** How long an upload may take from being asked for to being completed. */
 const LIFETIME_MS = 10 * 60 * 1000;
 
-/** The longest slug stem an upload's file name is reduced to, which a token's slug may not exceed. */
-export const SLUG_STEM_LENGTH = 80;
-
 /** What an upload token says. */
 const claimsSchema = z.strictObject({
   storageKey: z.string().regex(/^uploads\/[A-Za-z0-9_-]{22}$/),
-  slug: z.string().regex(SLUG_PATTERN).max(SLUG_STEM_LENGTH),
+  slug: z.string().regex(SLUG_PATTERN).max(SLUG_MAX_LENGTH),
   type: z.enum(ACCEPTED_IMAGE_TYPES),
   size: z.number().int().min(1).max(MAX_UPLOAD_BYTES),
   userId: z.uuid(),

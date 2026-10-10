@@ -24,6 +24,7 @@ import { deliveredFile } from "../media/delivery.js";
 import { holdLibraryPicture } from "../media/pictures.js";
 import { queueWatermarkedMedia } from "../media/queue.js";
 import { replaceSettingMediaReferences } from "../media/references.js";
+import { SITE_PICTURES } from "./site-pictures.js";
 
 type Database = ReturnType<typeof database>;
 
@@ -207,12 +208,6 @@ export async function saveSettings<Group extends SettingsGroup>(
   return readSettings(db);
 }
 
-/** What the site is told when one of its picture settings names no raster image stored here. */
-const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], string> = {
-  socialImageMediaId: "Choose a raster image uploaded to the library for the sharing picture.",
-  watermarkMediaId: "Choose a raster image uploaded to the library for the watermark.",
-};
-
 /**
  * Refuses a site picture that is not a raster image stored in the library, and
  * holds each one until the settings are saved.
@@ -223,6 +218,6 @@ const SITE_PICTURE_REFUSAL: Record<(typeof SITE_PICTURE_SETTINGS)[number], strin
 async function requireSitePictures(site: SiteSettings, db: Pick<Database, "select">): Promise<void> {
   for (const key of SITE_PICTURE_SETTINGS) {
     const mediaId = site[key];
-    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURE_REFUSAL[key], { storedHere: true });
+    if (mediaId) await holdLibraryPicture(db, mediaId, SITE_PICTURES[key].refusal, { storedHere: true });
   }
 }

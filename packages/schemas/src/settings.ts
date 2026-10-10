@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CONTENT_LANGUAGES, type ContentLanguage } from "./entries.js";
 import { navigationHref } from "./navigation.js";
-import { body, MaxLength, text } from "./request.js";
+import { body, emailAddress, MaxLength, text } from "./request.js";
 
 /**
  * What belongs to the site as a whole rather than to any entry.
@@ -44,6 +44,9 @@ export type SiteSettings = z.infer<typeof siteSettings>;
 
 /** The site settings that name a library picture, which therefore count as uses of it. */
 export const SITE_PICTURE_SETTINGS = ["socialImageMediaId", "watermarkMediaId"] as const;
+
+/** One site setting that names a library picture. */
+export type SitePictureSetting = (typeof SITE_PICTURE_SETTINGS)[number];
 /** Only settings and enabled account links that visitors may see. */
 export const publicSiteFrame = siteSettings.pick({ title: true, footerLine: true }).extend({
   social: z.array(z.object({ platform: z.string(), handle: z.string(), href: navigationHref })),
@@ -63,7 +66,7 @@ const SENDER_NAME = /^[^<>"\\\u0000-\u001f\u007f]+$/;
 
 /** Who mail comes from. The address has to be verified at SMTP2GO before anything sends from it. */
 export const mailSettings = body({
-  senderAddress: z.string().trim().toLowerCase().pipe(z.email().max(MaxLength.Line)).nullable(),
+  senderAddress: emailAddress.nullable(),
   senderName: text(MaxLength.Line, { pattern: SENDER_NAME }),
 });
 export type MailSettings = z.infer<typeof mailSettings>;

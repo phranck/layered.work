@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ErrorCode, validateFormValues } from "@layered/schemas";
+import { ErrorCode, MaxLength, validateFormValues } from "@layered/schemas";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closeDatabase } from "../db/connect.js";
@@ -219,6 +219,18 @@ runs("public form submission", () => {
     expect(confirmation?.body).toContain("Vielen Dank");
     expect(confirmation?.htmlBody).toContain("<strong>Submission test</strong>");
     expect(jobs.find((job) => job.recipient === "notify@example.test")?.htmlBody).toContain("Ada");
+  });
+
+  it("reaches a form whose slug is as long as a save allows", async () => {
+    const db = await testDatabase();
+    const longSlug = `long-${suffix}-${"a".repeat(MaxLength.Handle)}`.slice(0, MaxLength.Handle);
+    const longId = (await createForm(db, { ...declaration, slug: longSlug }, actorId)).id;
+    try {
+      expect((await app.request(`/forms/${longSlug}/challenge`)).status).toBe(200);
+    } finally {
+      await db.delete(auditLog).where(eq(auditLog.subjectId, longId));
+      await db.delete(forms).where(eq(forms.id, longId));
+    }
   });
 
   it("rejects a filled honeypot and a forged challenge", async () => {

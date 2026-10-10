@@ -3,6 +3,7 @@ import {
   type AcceptedImageType,
   type CreateUploadBody,
   ErrorCode,
+  slugFromTitle,
   type UploadedMedia,
   type UploadTicket,
 } from "@layered/schemas";
@@ -15,7 +16,7 @@ import { auditLog, media, mediaJobs } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { deleteMediaObject, readMediaBytes, uploadTarget } from "./storage.js";
-import { issueUploadToken, readUploadToken, SLUG_STEM_LENGTH } from "./upload-token.js";
+import { issueUploadToken, readUploadToken } from "./upload-token.js";
 
 /**
  * Putting a file into the media library: asking for an upload, and checking
@@ -48,25 +49,14 @@ const DECODED_TYPE: Record<string, AcceptedImageType> = {
 };
 
 /**
- * A file name reduced to what a slug may hold.
- *
- * The extension goes, accents fold to their letters, and everything that is
- * not a letter or a digit becomes one hyphen. The name reaches nothing else:
+ * A file name reduced to what a slug may hold: the extension goes, and the rest
+ * is written as every slug of the project is. The name reaches nothing else:
  * the storage key is generated, never derived from it.
  *
  * @param filename - As the reader's computer called the file.
  */
 export function slugStem(filename: string): string {
-  const stem = filename
-    .replace(/\.[^.]*$/, "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, SLUG_STEM_LENGTH)
-    .replace(/-+$/, "");
-  return stem || "upload";
+  return slugFromTitle(filename.replace(/\.[^.]*$/, ""), "upload");
 }
 
 /**

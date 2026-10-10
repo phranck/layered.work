@@ -1,14 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import { referencedFormNames, renderContent, resolveValues } from "@layered/content";
 import {
-  type EntrySpec,
   homeBlockSettings,
-  type ListedKind,
-  type ListingSettings,
-  type PublicFooterNavigation,
+  type PublicEntry,
   type PublicForm,
-  type PublicMainNavigation,
-  type PublicSiteFrame,
+  type PublicMedia,
+  type PublicSnapshot,
+  type PublicTopic,
   publicForm,
   RESERVED_PATHS,
 } from "@layered/schemas";
@@ -41,12 +39,8 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
 
 /**
  * The public content of the site, read out of the database in the shape the
- * site already parses.
- *
- * The shape is the snapshot's rather than the schema's, deliberately. The site
- * has a repository that takes it, a fallback file written in it, and a set of
- * tests against it, so keeping the shape means the change is where the data
- * comes from and nowhere else.
+ * site parses: `publicSnapshot` in `@layered/schemas`, which also describes the
+ * API's answer, so what is built here and what is promised cannot differ.
  *
  * Nothing that is not published leaves this file. The state filter is in the
  * query rather than applied to a fuller result, because a draft that is read
@@ -54,82 +48,8 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
  * one forgotten filter away from publishing it.
  */
 
-/** What a caller receives. */
-export interface PublicSnapshot {
-  entries: PublicEntry[];
-  forms: PublicForm[];
-  topics: PublicTopic[];
-  media: PublicMedia[];
-  redirects: { source: string; target: string }[];
-  /** Addresses of translations in the trash or deleted for good, which answer 410. */
-  gone: string[];
-  /** How the overviews of posts and projects are set up. */
-  listings: Record<ListedKind, ListingSettings>;
-  homeBlocks: { type: string; enabled: boolean; sortOrder: number; settings: Record<string, unknown> }[];
-  footerNavigation: PublicFooterNavigation;
-  mainNavigation?: PublicMainNavigation;
-  siteFrame: PublicSiteFrame;
-}
-
-/** One subject and the names and addresses it has in each language. */
-export interface PublicTopic {
-  id: string;
-  translations: {
-    en: { slug: string; name: string } | null;
-    de: { slug: string; name: string } | null;
-  };
-}
-
-/** One entry, in the shape the site's repository parses. */
-export interface PublicEntry {
-  id: string;
-  title: string;
-  slug: string;
-  path: string;
-  language: "en" | "de";
-  visibility: "public" | "hidden";
-  kind: "post" | "page" | "project";
-  createdAt: string;
-  publishedAt: string | null;
-  updatedAt: string | null;
-  summary: string | null;
-  body: string;
-  topics: string[];
-  featuredImage: string | null;
-  socialImage?: string | null;
-  translationPath: string | null;
-  featured: boolean;
-  onHomePage: boolean;
-  readingWidth: string;
-  /** Listed in the other language as well whilst that language has no version a reader can open. */
-  showInOtherLanguage: boolean;
-  /** The specification pairs a project page shows under its hero. */
-  specs: EntrySpec[];
-}
-
-/** One asset, in the shape the site's repository parses. */
-export interface PublicMedia {
-  slug: string;
-  src: string;
-  mime: string;
-  filename: string;
-  source: string;
-  bytes: number;
-  sha256: string;
-  width?: number;
-  height?: number;
-  alt?: string;
-  caption?: string;
-  translations?: {
-    en: { altText: string | null; caption: string | null };
-    de: { altText: string | null; caption: string | null };
-  };
-  srcSet?: string;
-  placeholder?: string;
-  focalPoint?: { x: number; y: number };
-  /** Who took a picture that lives on Unsplash. */
-  credit?: { photographer: string; profileUrl: string };
-}
+/** What a caller receives, typed by the declaration the API answers with and the site parses. */
+export type { PublicEntry, PublicMedia, PublicSnapshot, PublicTopic };
 
 type Database = PostgresJsDatabase<Record<string, unknown>>;
 

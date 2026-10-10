@@ -69,7 +69,7 @@ function upload(
 
 describe("a file name, as a slug", () => {
   it("keeps letters and digits, folds accents and drops the extension", () => {
-    expect(slugStem("Mein Bild (Ölgemälde) 2.JPG")).toBe("mein-bild-olgemalde-2");
+    expect(slugStem("Mein Bild (Ölgemälde) 2.JPG")).toBe("mein-bild-oelgemaelde-2");
   });
 
   it("falls back to a name when nothing is left", () => {

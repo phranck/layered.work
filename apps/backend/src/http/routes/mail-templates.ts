@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
-import { readMailConfiguration } from "../../mail/sender.js";
+import { requireMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import {
   listMailTemplates,
@@ -96,9 +96,7 @@ mailTemplateRoutes.post(
     });
     const { template, language, recipient } = c.req.valid("json");
     const message = rendered(c.req.valid("param").kind, template, language);
-    const configuration = await readMailConfiguration(database());
-    if (!configuration.ready)
-      throw new HttpError(ErrorCode.Conflict, `Mail sending needs a configured ${configuration.reason}.`);
+    const configuration = await requireMailConfiguration(database());
     const outcome = await sendThroughSmtp2go(configuration.apiKey, {
       sender: configuration.sender,
       to: recipient,
