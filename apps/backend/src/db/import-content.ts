@@ -5,6 +5,7 @@ import {
   CONTENT_LANGUAGES,
   type ContentLanguage,
   createFormBody,
+  DEFAULT_FOCAL_POINT,
   DEFAULT_LISTING,
   type EntryKind,
   type EntrySpec,
@@ -15,16 +16,18 @@ import {
   type ListedKind,
   type ListingSettings,
   listingSettings,
+  type MediaDescriptions,
   MIGRATION_KEY_PREFIX,
+  noMediaDescriptions,
   type PublicationState,
   type PublicForm,
   type ReadingWidth,
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 import type { PublicTopic } from "../content/snapshot.js";
 import { decodedFormatName } from "../media/decoded-format.js";
+import type { Database } from "./connect.js";
 import {
   entries,
   entryTopics,
@@ -103,7 +106,7 @@ export interface SnapshotMedia {
   alt?: string;
   caption?: string;
   /** The description in each language. Absent from the migration output, which knew English alt text only. */
-  translations?: Record<ContentLanguage, { altText: string | null; caption: string | null }>;
+  translations?: MediaDescriptions;
   srcSet?: string;
   placeholder?: string;
   focalPoint?: { x: number; y: number };
@@ -149,8 +152,6 @@ export interface ImportReport {
   aliased: { slug: string; sameFileAs: string }[];
 }
 
-type Database = PostgresJsDatabase<Record<string, unknown>>;
-
 /**
  * Which kind of asset a MIME type describes.
  *
@@ -194,9 +195,6 @@ export function migratedStorageKey(src: string): string {
 export function storageKeyOf(path: string): string {
   return path.startsWith(EXPORT_MEDIA_PATH) ? migratedStorageKey(path) : path.slice(1);
 }
-
-/** Where a picture is cropped around when nothing says otherwise: its middle, as the table's default. */
-const DEFAULT_FOCUS = 0.5;
 
 /**
  * The directories a snapshot's files are read from when their sizes are
@@ -399,8 +397,8 @@ async function importMedia(
       byteSize: asset.bytes,
       width: asset.width ?? null,
       height: asset.height ?? null,
-      focalX: asset.focalPoint?.x ?? DEFAULT_FOCUS,
-      focalY: asset.focalPoint?.y ?? DEFAULT_FOCUS,
+      focalX: (asset.focalPoint ?? DEFAULT_FOCAL_POINT).x,
+      focalY: (asset.focalPoint ?? DEFAULT_FOCAL_POINT).y,
       placeholder: asset.placeholder ?? null,
     };
     const [row] = await database
@@ -418,8 +416,8 @@ async function importMedia(
     // snapshot read from the database carries both languages. A language saying
     // nothing gets no row, because the table refuses an empty one.
     const descriptions = asset.translations ?? {
+      ...noMediaDescriptions(),
       en: { altText: asset.alt ?? null, caption: asset.caption ?? null },
-      de: { altText: null, caption: null },
     };
     for (const language of CONTENT_LANGUAGES) {
       const { altText, caption } = descriptions[language];

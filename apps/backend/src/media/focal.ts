@@ -1,13 +1,13 @@
 import { ErrorCode, type FocalPoint, focalPoint } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, media } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
 /** Store one validated point; all public and private readers use this row. */
 export async function saveMediaFocalPoint(
-  db: ReturnType<typeof database>,
+  db: Database,
   id: string,
   input: FocalPoint,
   actor?: { userId: string; tokenId?: string },

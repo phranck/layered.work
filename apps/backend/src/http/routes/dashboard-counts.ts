@@ -1,6 +1,6 @@
 import { type DashboardCounts, mailTemplateKind } from "@layered/schemas";
 import { sql } from "drizzle-orm";
-import type { database } from "../../db/connect.js";
+import type { Database } from "../../db/connect.js";
 import {
   entries,
   entryTranslations,
@@ -25,9 +25,7 @@ type StoredDashboardCounts = Omit<DashboardCounts, "mailTemplates">;
  * languages it has, and it counts while one of them is outside the trash. Disabled blocks and accounts remain rows an editor
  * manages, so the administrative total includes them.
  */
-export async function readDashboardCounts(
-  db: Pick<ReturnType<typeof database>, "execute">,
-): Promise<DashboardCounts> {
+export async function readDashboardCounts(db: Pick<Database, "execute">): Promise<DashboardCounts> {
   // An entry counts while one of its languages is outside the trash.
   const kept = sql`exists (
     select 1 from ${entryTranslations}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { reorderFooterNavigationBody } from "./navigation.js";
+import type { ContentLanguage } from "./entries.js";
 import { body, MaxLength } from "./request.js";
 
 /**
@@ -19,8 +19,8 @@ export const homeBlockTypes = ["hero", "featured_entry", "project_grid", "post_g
 /** One kind of home page block, as a type. */
 export type HomeBlockType = (typeof homeBlockTypes)[number];
 
-/** A text in each of the site's two languages. */
-export type BilingualText = { en: string; de: string };
+/** A text in each of the site's languages. */
+export type BilingualText = Record<ContentLanguage, string>;
 
 /** How many entries a grid may show. */
 export const HOME_GRID_LIMIT = { min: 1, max: 24 } as const;
@@ -337,6 +337,3 @@ export const saveHomeBlockBody = body({
   settings: z.record(z.string(), z.unknown()),
 });
 export type SaveHomeBlockBody = z.infer<typeof saveHomeBlockBody>;
-
-/** The order of the blocks, as the navigations and the social accounts are ordered. */
-export const reorderHomeBlocksBody = reorderFooterNavigationBody;

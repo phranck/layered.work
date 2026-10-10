@@ -11,7 +11,7 @@ import {
 } from "@layered/schemas";
 import { asc, eq, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
-import type { database } from "../db/connect.js";
+import type { Database, Transaction } from "../db/connect.js";
 import { type Position, writePositions } from "../db/positions.js";
 import { auditLog, homeBlocks } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
@@ -26,8 +26,6 @@ import { holdLibraryPicture } from "../media/pictures.js";
  * cannot be removed.
  */
 
-type Database = ReturnType<typeof database>;
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Row = typeof homeBlocks.$inferSelect;
 
 /** Every setting key, across all types, that names a picture in the library. */

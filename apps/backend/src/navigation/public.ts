@@ -2,12 +2,13 @@ import {
   CONTENT_LANGUAGES,
   type ContentLanguage,
   languagePath,
+  type NavigationPlacement,
   navigationHref,
   type PublicFooterNavigation,
   type PublicMainNavigation,
 } from "@layered/schemas";
 import { and, asc, eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import {
   navigationItems,
   navigationItemTranslations,
@@ -26,13 +27,13 @@ export function mainNavigationFromGroups(groups: PublicFooterNavigation): Public
 
 /** Resolve stored targets only against published addresses in the requested language. */
 export async function readPublicNavigation(
-  db: PostgresJsDatabase<Record<string, unknown>>,
+  db: Database,
   entries: readonly { entryId: string; language: ContentLanguage; path: string }[],
   topics: readonly {
     id: string;
     translations: { en: { slug: string } | null; de: { slug: string } | null };
   }[],
-  placement: "main" | "footer",
+  placement: NavigationPlacement,
 ): Promise<PublicFooterNavigation> {
   const result: PublicFooterNavigation = { en: [], de: [] };
   for (const language of CONTENT_LANGUAGES) {

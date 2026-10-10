@@ -1,13 +1,11 @@
 import type { AccountProfile, UpdateAccountBody } from "@layered/schemas";
 import { ErrorCode } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, media, unsplashPhotos, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { rasterImage } from "../media/pictures.js";
 import { unsplashImageUrl } from "../unsplash/client.js";
-
-type Database = ReturnType<typeof database>;
 
 /**
  * The address the dashboard reads a library picture from, through this API.

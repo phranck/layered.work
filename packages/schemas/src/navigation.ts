@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { body, MaxLength, text } from "./request.js";
+import { inBothLanguages } from "./entries.js";
+import { body, MaxLength, sortOrder, text } from "./request.js";
 
-const bilingual = <Schema extends z.ZodType>(schema: Schema) => body({ en: schema, de: schema });
+/** Where a navigation appears: the header holds one, the footer several, each with its own heading. */
+export const NAVIGATION_PLACEMENTS = ["main", "footer"] as const;
+
+/** One place a navigation appears. */
+export type NavigationPlacement = (typeof NAVIGATION_PLACEMENTS)[number];
 
 /**
  * How long a link's address may be, in a navigation and in a social account
@@ -27,8 +32,8 @@ export const navigationHref = z
     }
   });
 const itemFields = {
-  label: bilingual(text(MaxLength.Line)),
-  visible: bilingual(z.boolean()),
+  label: inBothLanguages(text(MaxLength.Line)),
+  visible: inBothLanguages(z.boolean()),
   entryId: z.uuid().nullable(),
   topicId: z.uuid().nullable(),
   href: navigationHref.nullable(),
@@ -39,35 +44,25 @@ const savedItem = body({ id: z.uuid().optional(), ...itemFields }).refine((item)
   return count === 1 || (count === 0 && item.id !== undefined);
 }, "Choose one target for a navigation item.");
 export const saveFooterNavigationBody = body({
-  title: bilingual(text(MaxLength.Line)),
-  sortOrder: z.number().int().min(0).max(10000),
+  title: inBothLanguages(text(MaxLength.Line)),
+  sortOrder,
   items: z.array(savedItem).max(NAVIGATION_ITEMS_MAX),
 });
 export type SaveFooterNavigationBody = z.infer<typeof saveFooterNavigationBody>;
 export const footerNavigation = z.object({
   id: z.uuid(),
-  title: bilingual(z.string()),
+  title: inBothLanguages(z.string()),
   sortOrder: z.number().int(),
-  items: z.array(z.object({ ...itemFields, id: z.uuid(), label: bilingual(z.string()) })),
+  items: z.array(z.object({ ...itemFields, id: z.uuid(), label: inBothLanguages(z.string()) })),
 });
 export const footerNavigationList = z.array(footerNavigation);
-export const navigationIdParam = z.object({ id: z.uuid() });
 export type FooterNavigation = z.infer<typeof footerNavigation>;
 const publicNavigationLink = z.object({ label: z.string(), href: navigationHref });
 export const publicNavigationItem = publicNavigationLink.extend({
   children: z.array(publicNavigationLink).optional(),
 });
 export const publicNavigationGroup = z.object({ title: z.string(), items: z.array(publicNavigationItem) });
-export const publicFooterNavigation = bilingual(z.array(publicNavigationGroup));
-export const publicMainNavigation = bilingual(z.array(publicNavigationItem));
+export const publicFooterNavigation = inBothLanguages(z.array(publicNavigationGroup));
+export const publicMainNavigation = inBothLanguages(z.array(publicNavigationItem));
 export type PublicMainNavigation = z.infer<typeof publicMainNavigation>;
 export type PublicFooterNavigation = z.infer<typeof publicFooterNavigation>;
-export const reorderFooterNavigationBody = body({
-  positions: z
-    .array(body({ id: z.uuid(), sortOrder: z.number().int().min(0).max(10000) }))
-    .min(1)
-    .max(100),
-}).refine(
-  (value) => new Set(value.positions.map((item) => item.id)).size === value.positions.length,
-  "Each navigation may be listed once.",
-);

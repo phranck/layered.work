@@ -10,11 +10,10 @@ import {
   saveMailTemplateBody,
 } from "@layered/schemas";
 import { eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, settings } from "../db/schema/index.js";
 import { escapeMarkup } from "../markup.js";
 
-type Database = ReturnType<typeof database>;
 type Node = ReturnType<typeof parseContent>["topNode"];
 
 /** The placeholders each template may use, which are the values its sender fills in. */

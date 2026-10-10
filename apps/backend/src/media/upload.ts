@@ -10,10 +10,10 @@ import {
   type UploadTicket,
 } from "@layered/schemas";
 import { eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
+import type { Database, Transaction } from "../db/connect.js";
 import { auditLog, media, mediaJobs } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
@@ -29,8 +29,6 @@ import { issueUploadToken, readUploadToken } from "./upload-token.js";
  * is what sharp decodes, the size is what was stored, and the checksum is what
  * decides whether the file is new.
  */
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /**
  * 16 random bytes, 22 base64url characters: a space of 2^128, so two uploads
@@ -209,10 +207,7 @@ export async function completeUpload(
 export async function insertUnderFreeSlug<Row>(
   db: Database,
   stem: string,
-  write: (
-    tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
-    slug: string,
-  ) => Promise<Row | undefined>,
+  write: (tx: Transaction, slug: string) => Promise<Row | undefined>,
 ): Promise<Row | undefined> {
   for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt++) {
     const slug = numberedSlug(stem, attempt);

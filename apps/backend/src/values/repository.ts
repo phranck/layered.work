@@ -11,7 +11,7 @@ import {
   type UpdateNamedValueBody,
 } from "@layered/schemas";
 import { asc, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, entryTranslations, namedValues } from "../db/schema/index.js";
 import { isUniqueViolation } from "../db/unique-violation.js";
 import { HttpError } from "../http/response.js";
@@ -28,7 +28,6 @@ import { readListingSettings } from "../settings/repository.js";
  * and its name, being what bodies write, cannot change.
  */
 
-type Database = ReturnType<typeof database>;
 type Reader = Pick<Database, "select">;
 
 /** The constraint the migration created on the name, which a second value of one name runs into. */

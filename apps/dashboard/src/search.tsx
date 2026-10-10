@@ -20,7 +20,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import { queryKeys } from "./query-keys.js";
-import { entryPath } from "./routes.js";
+import { entryPath, MEDIA_PATH } from "./routes.js";
 
 /**
  * Search, on the same shortcut everywhere.
@@ -211,9 +211,8 @@ function hitsOf(results: SearchResults | undefined, kindText: (kind: EntryKind) 
     })),
     ...results.media.map((hit) => ({
       key: `media-${hit.id}`,
-      // The library opens on its own screen; the media browser is where a file
-      // will open by itself.
-      path: "/media",
+      // A file has no screen of its own; it opens in the library.
+      path: MEDIA_PATH,
       title: hit.slug,
       note: hit.altText ?? "",
       thumbnailUrl: hit.thumbnailUrl,

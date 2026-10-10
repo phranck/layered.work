@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ContentLanguage } from "./entries.js";
 import { focalPoint, mediaProcessingState } from "./media.js";
 import { body, emailAddress, MaxLength, text } from "./request.js";
 
@@ -6,7 +7,9 @@ import { body, emailAddress, MaxLength, text } from "./request.js";
  * The languages the editorial interface speaks, German first, as the account
  * dialog offers them.
  */
-export const INTERFACE_LANGUAGES = ["de", "en"] as const;
+// Every one is a language the site is written in, which is what lets the
+// accounts table store it in the same column type as an entry's language.
+export const INTERFACE_LANGUAGES = ["de", "en"] as const satisfies readonly ContentLanguage[];
 
 /** A language the editorial interface speaks. */
 export type InterfaceLanguage = (typeof INTERFACE_LANGUAGES)[number];
@@ -14,12 +17,18 @@ export type InterfaceLanguage = (typeof INTERFACE_LANGUAGES)[number];
 /** A language the editorial interface supports. */
 export const interfaceLanguage = z.enum(INTERFACE_LANGUAGES);
 
+/**
+ * What an account may do. The owner changes the site's settings, and an editor
+ * writes. There is one account today, and it is the owner.
+ */
+export const USER_ROLES = ["owner", "editor"] as const;
+
 /** The signed-in author's editable profile and immutable role. */
 export const accountProfile = z.object({
   id: z.uuid(),
   email: z.email(),
   displayName: z.string(),
-  role: z.enum(["owner", "editor"]),
+  role: z.enum(USER_ROLES),
   interfaceLanguage,
   avatarMediaId: z.uuid().nullable(),
   avatarUrl: z.string().nullable(),
@@ -49,20 +58,3 @@ export const accountMediaItem = z.object({
 });
 
 export type AccountMediaItem = z.infer<typeof accountMediaItem>;
-
-/** A page from the portrait chooser. */
-export const accountMediaPage = z.object({
-  items: z.array(accountMediaItem),
-  page: z.number().int().positive(),
-  hasMore: z.boolean(),
-});
-
-export type AccountMediaPage = z.infer<typeof accountMediaPage>;
-
-/** Search and page selection accepted by the portrait chooser. */
-export const accountMediaQuery = z.object({
-  search: z.string().trim().max(MaxLength.Line).default(""),
-  page: z.coerce.number().int().positive().max(10_000).default(1),
-});
-
-export type AccountMediaQuery = z.infer<typeof accountMediaQuery>;

@@ -5,12 +5,11 @@ import {
   submittedValueText,
 } from "@layered/schemas";
 import { and, desc, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { auditLog, formSubmissions } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 import { readForm } from "./repository.js";
 
-type Database = ReturnType<typeof database>;
 type SubmissionRow = typeof formSubmissions.$inferSelect;
 
 function view(row: SubmissionRow): FormSubmission {

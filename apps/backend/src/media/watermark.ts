@@ -2,13 +2,11 @@ import { readFile } from "node:fs/promises";
 import type { WatermarkAnchor } from "@layered/schemas";
 import { eq } from "drizzle-orm";
 import { WORDMARK } from "../assets.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { media } from "../db/schema/index.js";
 import { readSiteSettings } from "../settings/repository.js";
 import { readMediaBytes } from "./storage.js";
 import { prepareMark, type Watermark } from "./variants.js";
-
-type Database = ReturnType<typeof database>;
 
 /**
  * The mark a picture is derived with, or nothing for a picture without a watermark.

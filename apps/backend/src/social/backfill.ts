@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { isReadable, READABLE_STATES } from "@layered/schemas";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { closeDatabase, database } from "../db/connect.js";
+import { closeDatabase, type Database, database } from "../db/connect.js";
 import { entryTranslations } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import { hasRasterPicture, storeSocialCard, withCardObjects } from "./store.js";
 
 /** Bring existing publications into the publish-time image pipeline before serving this deployment. */
-export async function backfillSocialCards(
-  db: ReturnType<typeof database>,
-  translationIds?: readonly string[],
-): Promise<number> {
+export async function backfillSocialCards(db: Database, translationIds?: readonly string[]): Promise<number> {
   if (translationIds?.length === 0) return 0;
   const candidates = await db
     .select({ id: entryTranslations.id })

@@ -4,6 +4,7 @@ import {
   type ContentLanguage,
   homeBlockSettings,
   languagePath,
+  noMediaDescriptions,
   type PublicEntry,
   type PublicForm,
   type PublicMedia,
@@ -15,7 +16,7 @@ import {
   type ReadableState,
 } from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Database } from "../db/connect.js";
 import {
   entries,
   entryTopics,
@@ -54,8 +55,6 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
 
 /** What a caller receives, typed by the declaration the API answers with and the site parses. */
 export type { PublicEntry, PublicMedia, PublicSnapshot, PublicTopic };
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /**
  * The files that published content names, by id.
@@ -140,10 +139,7 @@ export async function publicMedia(
     : [];
   const descriptionsByMedia = new Map<string, NonNullable<PublicMedia["translations"]>>();
   for (const description of descriptions) {
-    const localized = descriptionsByMedia.get(description.mediaId) ?? {
-      en: { altText: null, caption: null },
-      de: { altText: null, caption: null },
-    };
+    const localized = descriptionsByMedia.get(description.mediaId) ?? noMediaDescriptions();
     localized[description.language] = { altText: description.altText, caption: description.caption };
     descriptionsByMedia.set(description.mediaId, localized);
   }
@@ -177,10 +173,7 @@ export async function publicMedia(
     media: assets
       .filter((asset) => named.has(asset.id))
       .map((asset) => {
-        const localized = descriptionsByMedia.get(asset.id) ?? {
-          en: { altText: null, caption: null },
-          de: { altText: null, caption: null },
-        };
+        const localized = descriptionsByMedia.get(asset.id) ?? noMediaDescriptions();
         const photo = fromUnsplash.get(asset.id);
         if (photo)
           return { ...unsplashMedia(asset, photo), translations: localized, ...described(localized) };

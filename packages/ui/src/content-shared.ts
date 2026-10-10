@@ -68,8 +68,17 @@ export function contentColumns(value: unknown): CSSProperties {
     : {};
 }
 
+/**
+ * Where a picture without a focal point is cropped around: its middle.
+ *
+ * The same value as `DEFAULT_FOCAL_POINT` in `@layered/schemas`, kept here
+ * because this module runs in the site's islands, which do not load the
+ * schemas. `content-shared.test.ts` holds the two together.
+ */
+const DEFAULT_FOCUS = { x: 0.5, y: 0.5 } as const;
+
 /** One crop calculation for React and Astro image surfaces. */
 export function imagePosition(asset: Pick<MediaAsset, "focalPoint">): string {
-  const point = asset.focalPoint ?? { x: 0.5, y: 0.5 };
+  const point = asset.focalPoint ?? DEFAULT_FOCUS;
   return `${point.x * 100}% ${point.y * 100}%`;
 }

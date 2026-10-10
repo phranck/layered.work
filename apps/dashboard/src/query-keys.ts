@@ -1,5 +1,4 @@
-import type { EntryKind, MailTemplateKind } from "@layered/schemas";
-import type { NavigationPlacement } from "./api.js";
+import type { EntryKind, MailTemplateKind, NavigationPlacement } from "@layered/schemas";
 
 /**
  * Every key the dashboard caches an answer of the API under.

@@ -3,6 +3,8 @@ import {
   analyticsSettings,
   MaxLength,
   mailSettings,
+  type SettingsGroup,
+  type SettingsValues,
   type SettingsView,
   type SiteSettings,
   siteSettings,
@@ -11,7 +13,6 @@ import { Button, Card, Field, Input, Segmented } from "@layered/ui";
 import { FloppyDiskIcon, ImagesIcon, PaperPlaneTiltIcon, XIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
-import type { SettingsGroups } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -43,18 +44,18 @@ interface DraftSchema<Value> {
 }
 
 /** Props for one group's card. */
-interface SettingsCardProps<Group extends keyof SettingsGroups> {
+interface SettingsCardProps<Group extends SettingsGroup> {
   group: Group;
   title: string;
   /** What is stored now, which the draft starts from. */
-  saved: SettingsGroups[Group];
-  schema: DraftSchema<SettingsGroups[Group]>;
+  saved: SettingsValues[Group];
+  schema: DraftSchema<SettingsValues[Group]>;
   /** The sentence for a failing field, by the first segment of its path. */
   reasons: Partial<Record<string, DashboardStringKey>>;
   /** Draws the fields from the draft. `update` replaces part of it. */
   children: (
-    draft: SettingsGroups[Group],
-    update: (change: Partial<SettingsGroups[Group]>) => void,
+    draft: SettingsValues[Group],
+    update: (change: Partial<SettingsValues[Group]>) => void,
     editable: boolean,
   ) => ReactNode;
   /** Further actions beside save, told whether the draft differs from what is stored. */
@@ -82,13 +83,13 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
  * The card starts again from what is stored whenever that changes, so after a
  * save, or a change made elsewhere, its fields show what is stored.
  */
-export function SettingsCard<Group extends keyof SettingsGroups>(props: SettingsCardProps<Group>) {
+export function SettingsCard<Group extends SettingsGroup>(props: SettingsCardProps<Group>) {
   const revision = useStoredRevision(props.saved);
   return <SettingsCardDraft key={revision} {...props} />;
 }
 
 /** The card of `SettingsCard`, holding one draft of what was stored when it opened. */
-function SettingsCardDraft<Group extends keyof SettingsGroups>({
+function SettingsCardDraft<Group extends SettingsGroup>({
   group,
   title,
   saved,
@@ -109,7 +110,7 @@ function SettingsCardDraft<Group extends keyof SettingsGroups>({
   const [problems, setProblems] = useState<DashboardStringKey[]>([]);
   const { notify, notifyError } = useNotify();
   const save = useMutation({
-    mutationFn: (value: SettingsGroups[Group]) => api.saveSettings(group, value),
+    mutationFn: (value: SettingsValues[Group]) => api.saveSettings(group, value),
     onError: (error) => notifyError(error),
     onSuccess: (view) => {
       queryClient.setQueryData(queryKeys.settings, view);
@@ -126,7 +127,7 @@ function SettingsCardDraft<Group extends keyof SettingsGroups>({
     if (editable && dirty && !save.isPending) form.current?.requestSubmit();
   });
 
-  const update = (change: Partial<SettingsGroups[Group]>) => {
+  const update = (change: Partial<SettingsValues[Group]>) => {
     setDraft((current) => ({ ...current, ...change }));
     setProblems([]);
   };
@@ -281,7 +282,7 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
     <WithSettings
       area={area}
       render={(view) => {
-        const { socialImageUrl, watermarkUrl, ...saved } = view.site;
+        const { pictureUrls, ...saved } = view.site;
         return (
           <Translated>
             <SettingsCard<"site">
@@ -326,7 +327,7 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                     hint={text("socialImageHint")}
                     none={text("socialImageNone")}
                     mediaId={draft.socialImageMediaId}
-                    savedUrl={socialImageUrl}
+                    savedUrl={pictureUrls.socialImageMediaId}
                     editable={editable}
                     onChange={(socialImageMediaId) => update({ socialImageMediaId })}
                   />
@@ -335,7 +336,7 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                     hint={text("watermarkHint")}
                     none={text("watermarkWordmark")}
                     mediaId={draft.watermarkMediaId}
-                    savedUrl={watermarkUrl}
+                    savedUrl={pictureUrls.watermarkMediaId}
                     editable={editable}
                     onChange={(watermarkMediaId) => update({ watermarkMediaId })}
                   />

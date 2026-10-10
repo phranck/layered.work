@@ -2,10 +2,11 @@ import {
   CONTENT_LANGUAGES,
   ErrorCode,
   type FooterNavigation,
+  type NavigationPlacement,
   type SaveFooterNavigationBody,
 } from "@layered/schemas";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { type Position, writePositions } from "../db/positions.js";
 import {
   auditLog,
@@ -17,9 +18,6 @@ import {
   topics,
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
-
-type Database = ReturnType<typeof database>;
-export type NavigationPlacement = "main" | "footer";
 
 /** Groups for one placement, their bilingual titles and links, in stored order. */
 export async function listFooterNavigations(

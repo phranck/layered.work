@@ -1,14 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import { UPLOAD_KEY_PREFIX } from "@layered/schemas";
 import { and, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { media } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 import { rasterImage } from "../media/pictures.js";
 import { deleteMediaObject, writeMediaBytes } from "../media/storage.js";
 import { CARD_SIZE, renderSocialCard } from "./card.js";
 
-type Writer = Pick<ReturnType<typeof database>, "select" | "insert">;
+type Writer = Pick<Database, "select" | "insert">;
 
 /** A featured asset must be a raster image a social client can show. */
 export async function hasRasterPicture(db: Pick<Writer, "select">, mediaId: string | null): Promise<boolean> {

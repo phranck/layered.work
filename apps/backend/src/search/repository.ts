@@ -1,7 +1,7 @@
 import { SEARCH_HIT_LIMIT, type SearchResults } from "@layered/schemas";
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { containing } from "../db/like.js";
 import {
   entries,
@@ -12,8 +12,6 @@ import {
   topicTranslations,
 } from "../db/schema/index.js";
 import { isRasterImage } from "../media/pictures.js";
-
-type Database = ReturnType<typeof database>;
 
 /**
  * Everything in the dashboard that matches what the reader typed.

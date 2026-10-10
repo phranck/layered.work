@@ -8,7 +8,7 @@ import {
   listingSettings,
 } from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database, Transaction } from "../db/connect.js";
 import {
   entryTranslations,
   media,
@@ -18,8 +18,6 @@ import {
 } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-type Database = ReturnType<typeof database>;
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Asset = { id: string; slug: string; storageKey: string };
 
 /** Resolve declared slug parameters and rendered Markdown links/images, never prose or code. */

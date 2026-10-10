@@ -18,7 +18,7 @@ import {
 import { and, desc, eq, inArray, isNotNull, ne, type SQLWrapper, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database, Transaction } from "../db/connect.js";
 import {
   auditLog,
   entries,
@@ -38,8 +38,6 @@ import { replaceMediaReferences } from "../media/references.js";
 import { readSettings } from "../settings/repository.js";
 import { hasRasterPicture, storeSocialCard, withCardObjects } from "../social/store.js";
 import { readValueMap } from "../values/repository.js";
-
-type Database = ReturnType<typeof database>;
 
 /** Creates one entry with one draft translation, leaving its address for the first save. */
 export async function createEntry(
@@ -265,8 +263,6 @@ export async function readEntry(db: Database, id: string): Promise<EntryDetail> 
     specs: row.specs,
   };
 }
-
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** Drafts may be incomplete; every translation readers can reach must be valid. */
 async function requirePublishableContent(

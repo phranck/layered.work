@@ -1,10 +1,8 @@
 import { ErrorCode } from "@layered/schemas";
 import { config } from "../config.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { HttpError } from "../http/response.js";
 import { readSettings } from "../settings/repository.js";
-
-type Database = ReturnType<typeof database>;
 
 /** What a request that wants to send mail is told about each thing still missing. */
 const NOT_READY: Record<"key" | "sender", string> = {

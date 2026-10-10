@@ -4,6 +4,7 @@ import {
   type MediaLibraryItem,
   type MediaLibraryPage,
   type MediaLibraryQuery,
+  noMediaDescriptions,
   type SaveMediaMetadataBody,
   SITE_PICTURE_SETTINGS,
   saveMediaMetadataBody,
@@ -11,7 +12,7 @@ import {
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { mediaContentUrl } from "../account/repository.js";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { containing } from "../db/like.js";
 import {
   auditLog,
@@ -33,8 +34,6 @@ import { isRasterImage, storedInLibrary } from "./pictures.js";
 import { getMediaProcessing } from "./processing.js";
 import { queueMediaProcessing } from "./queue.js";
 import { namesPictureInBlock, namesSitePicture, unusedMedia } from "./usage.js";
-
-type Database = ReturnType<typeof database>;
 
 /** How many files one page of the library holds. */
 const LIBRARY_PAGE_SIZE = 24;
@@ -166,10 +165,7 @@ export async function getMediaDetail(db: Database, id: string): Promise<MediaDet
     .where(eq(media.id, id));
   if (!found) throw new HttpError(ErrorCode.NotFound, "That file is not in the media library.");
   const { watermark, photographer, profileUrl, ...row } = found;
-  const translations: MediaDetail["translations"] = {
-    en: { altText: null, caption: null },
-    de: { altText: null, caption: null },
-  };
+  const translations = noMediaDescriptions();
   for (const translation of await db
     .select()
     .from(mediaTranslations)

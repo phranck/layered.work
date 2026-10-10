@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type SaveSocialAccountBody, saveSocialAccountBody } from "@layered/schemas";
 import { eq, sql } from "drizzle-orm";
-import { closeDatabase, database } from "../db/connect.js";
+import { closeDatabase, type Database, database } from "../db/connect.js";
 import { settings, socialAccounts } from "../db/schema/index.js";
 import { logger } from "../logger.js";
 
@@ -45,7 +45,7 @@ export const ORIGINAL_SOCIAL_ACCOUNTS: SaveSocialAccountBody[] = [
 ];
 /** An application-data import marker preserves later edits, disables and deletions across deploys. */
 export async function importSocialAccounts(
-  db: ReturnType<typeof database>,
+  db: Database,
   accounts: (SaveSocialAccountBody & { id?: string })[],
   marker: string,
 ): Promise<number> {

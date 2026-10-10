@@ -2,6 +2,7 @@ import {
   type FooterNavigation,
   MaxLength,
   NAVIGATION_ITEMS_MAX,
+  type NavigationPlacement,
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
@@ -17,7 +18,6 @@ import {
 } from "@layered/ui/icons";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import type { NavigationPlacement } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";

@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
@@ -12,6 +12,18 @@ import * as schema from "./schema/index.js";
  * about the wrong place. An empty table then reads as "this record does not
  * exist" rather than as "you are looking in the wrong database".
  */
+
+/**
+ * A database to read and write, whichever way it was opened: the server's
+ * pool, a task's single connection, or a test's.
+ *
+ * Typed without the schema's relations, because a task opens its connection
+ * without them and no code here uses the relational queries they type.
+ */
+export type Database = PostgresJsDatabase<Record<string, unknown>>;
+
+/** The transaction `Database.transaction` hands its callback. */
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** What the address is called, so the name is written once. */
 export const DATABASE_URL = "DATABASE_URL";

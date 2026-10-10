@@ -1,3 +1,4 @@
+import { DEFAULT_FOCAL_POINT, MEDIA_PROCESSING_STATES } from "@layered/schemas";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -93,8 +94,8 @@ export const media = pgTable(
      * every surface reads these two numbers and applies them as
      * `object-position`, so nothing does the arithmetic at the call site.
      */
-    focalX: real("focal_x").notNull().default(0.5),
-    focalY: real("focal_y").notNull().default(0.5),
+    focalX: real("focal_x").notNull().default(DEFAULT_FOCAL_POINT.x),
+    focalY: real("focal_y").notNull().default(DEFAULT_FOCAL_POINT.y),
 
     /**
      * A very small blurred version, inline.
@@ -224,12 +225,7 @@ export const unsplashPhotos = pgTable("unsplash_photos", {
 });
 
 /** Durable processing leases fence concurrent workers and survive service restarts. */
-export const mediaProcessingState = pgEnum("media_processing_state", [
-  "queued",
-  "processing",
-  "ready",
-  "failed",
-]);
+export const mediaProcessingState = pgEnum("media_processing_state", MEDIA_PROCESSING_STATES);
 export const mediaJobs = pgTable("media_jobs", {
   mediaId: uuid("media_id")
     .primaryKey()

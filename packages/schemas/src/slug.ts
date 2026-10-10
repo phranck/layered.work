@@ -60,18 +60,30 @@ export function numberedSlug(slug: string, attempt: number): string {
 }
 
 /**
- * The address a translation answers at with its last segment replaced.
+ * Everything of a translation's address before its last segment, which follows
+ * from what the entry is: its language prefix, or the section a migrated
+ * project sits in. A translation without an address gets one carrying its
+ * language, `/en/…` or `/de/…`, as everything written after the migration does.
  *
- * Every segment before the last stays, because it follows from what the entry
- * is: its language prefix, or the section a migrated project sits in. A
- * translation without an address gets one carrying its language, `/en/…` or
- * `/de/…`, as everything written after the migration does.
+ * The API builds the address it stores from this, and the editor shows it as the
+ * fixed part in front of the slug, so the two always agree.
+ *
+ * @param current - Its current address, or null where it has none.
+ * @param language - Its language.
+ * @returns The prefix, starting and ending with a slash, such as `/de/`.
+ */
+export function addressPrefix(current: string | null, language: ContentLanguage): string {
+  const parents = current ? current.split("/").filter(Boolean).slice(0, -1) : [language];
+  return `/${parents.map((segment) => `${segment}/`).join("")}`;
+}
+
+/**
+ * The address a translation answers at with its last segment replaced.
  *
  * @param current - Its current address, or null where it has none.
  * @param language - Its language.
  * @param slug - The new last segment.
  */
 export function addressWithSlug(current: string | null, language: ContentLanguage, slug: string): string {
-  const parents = current ? current.split("/").filter(Boolean).slice(0, -1) : [language];
-  return `/${[...parents, slug].join("/")}/`;
+  return `${addressPrefix(current, language)}${slug}/`;
 }

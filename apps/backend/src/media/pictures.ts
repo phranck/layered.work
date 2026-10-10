@@ -1,10 +1,8 @@
 import { ACCEPTED_IMAGE_TYPES, ErrorCode } from "@layered/schemas";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { media, unsplashPhotos } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
-
-type Database = ReturnType<typeof database>;
 
 const RASTER_TYPES: ReadonlySet<string> = new Set(ACCEPTED_IMAGE_TYPES);
 

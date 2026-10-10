@@ -27,8 +27,10 @@ export const previewMailTemplateBody = body({
 export const renderedMail = body({ subject: z.string(), text: z.string(), html: z.string() });
 
 /**
- * The elements a rendered mail is made of, and nothing else, which a test holds
- * the renderer to.
+ * The elements a rendered mail is made of, and nothing else.
+ *
+ * The API renders a template into these, which a test holds it to, and the
+ * dashboard rebuilds its preview from them and drops anything else.
  */
 export const MAIL_ELEMENTS = ["div", "p", "strong", "em", "ul", "ol", "li", "a", "br"] as const;
 

@@ -6,7 +6,7 @@ import {
   READABLE_STATES,
 } from "@layered/schemas";
 import { type SQL, sql } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { readValueMap } from "../values/repository.js";
 
 /**
@@ -37,7 +37,7 @@ const readableStates = sql.join(
 
 /** PostgreSQL stemming and ranking over reachable public translations only. */
 export async function searchPublicEntries(
-  db: ReturnType<typeof database>,
+  db: Database,
   { q, language, page, limit }: PublicSearchQuery,
 ): Promise<PublicSearchResults> {
   const body = resolvedBody(await readValueMap(db));

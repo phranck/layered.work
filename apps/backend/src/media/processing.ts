@@ -1,13 +1,10 @@
 import { ErrorCode, type MediaProcessing } from "@layered/schemas";
 import { asc, eq } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { media, mediaJobs, mediaVariants } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-export async function getMediaProcessing(
-  db: ReturnType<typeof database>,
-  id: string,
-): Promise<MediaProcessing> {
+export async function getMediaProcessing(db: Database, id: string): Promise<MediaProcessing> {
   const [row] = await db
     .select({ state: mediaJobs.state, errorId: mediaJobs.errorId })
     .from(media)

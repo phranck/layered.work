@@ -1,6 +1,6 @@
 import {
   idParam,
-  reorderSocialAccountsBody,
+  reorderBody,
   saveSocialAccountBody,
   socialAccount,
   socialAccountList,
@@ -26,7 +26,7 @@ socialAccountRoutes.get("/", responds(socialAccountList), async (c) =>
 socialAccountRoutes.patch(
   "/order",
   requireOwner,
-  validate("json", reorderSocialAccountsBody),
+  validate("json", reorderBody),
   responds(socialAccountList),
   async (c) =>
     ok(c, await reorderSocialAccounts(database(), c.req.valid("json").positions, principalOf(c).userId)),

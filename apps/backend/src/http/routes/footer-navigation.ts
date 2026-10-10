@@ -2,7 +2,8 @@ import {
   footerNavigation,
   footerNavigationList,
   idParam,
-  reorderFooterNavigationBody,
+  type NavigationPlacement,
+  reorderBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
 import { Hono } from "hono";
@@ -11,7 +12,6 @@ import { database } from "../../db/connect.js";
 import {
   deleteFooterNavigation,
   listFooterNavigations,
-  type NavigationPlacement,
   reorderFooterNavigations,
   saveFooterNavigation,
 } from "../../navigation/repository.js";
@@ -29,7 +29,7 @@ export function navigationRoutes(placement: NavigationPlacement) {
   footerNavigationRoutes.patch(
     "/order",
     requireOwner,
-    validate("json", reorderFooterNavigationBody),
+    validate("json", reorderBody),
     responds(footerNavigationList),
     async (c) =>
       ok(

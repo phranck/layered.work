@@ -1,19 +1,14 @@
 import { z } from "zod";
+import { CONTENT_LANGUAGES, type ContentLanguage, inBothLanguages } from "./entries.js";
 import { body, emailAddress, MaxLength, text } from "./request.js";
 import { SLUG_PATTERN } from "./slug.js";
 
-/** Text shown in each of the site's two languages. */
-export const formText = body({
-  en: text(MaxLength.Paragraph),
-  de: text(MaxLength.Paragraph),
-});
+/** Text shown in each of the site's languages. */
+export const formText = inBothLanguages(text(MaxLength.Paragraph));
 export type FormText = z.infer<typeof formText>;
 
-/** A hint may be absent, but both languages are still represented. */
-const formHint = body({
-  en: z.string().trim().max(MaxLength.Paragraph),
-  de: z.string().trim().max(MaxLength.Paragraph),
-});
+/** A hint may be absent, but every language is still represented. */
+const formHint = inBothLanguages(z.string().trim().max(MaxLength.Paragraph));
 
 /**
  * Deliberately small pattern language: one character class, optionally with a
@@ -205,7 +200,7 @@ export function submittedValueText(value: FormSubmissionValues[string] | undefin
 export const submitFormBody = body({
   challenge: z.string().min(1).max(256),
   honeypot: z.string().max(256),
-  language: z.enum(["en", "de"]),
+  language: z.enum(CONTENT_LANGUAGES),
   values: formSubmissionValues,
 });
 
@@ -216,7 +211,7 @@ export type FormConsent = { key: string; revision: string; notice: string };
 export function validateFormValues(
   form: PublicForm,
   submitted: FormSubmissionValues,
-  language: "en" | "de",
+  language: ContentLanguage,
 ): { values: FormSubmissionValues; errors: Record<string, string>; consents: FormConsent[] } {
   const values: FormSubmissionValues = {};
   const errors: Record<string, string> = {};
@@ -307,9 +302,10 @@ export function validateFormValues(
 export const formList = z.array(formDetail);
 export type FormList = z.infer<typeof formList>;
 
-export const formIdParam = body({ id: z.uuid() });
+/** Where a submission stands in the inbox: not yet read, read, or set aside as spam. */
+export const FORM_SUBMISSION_STATUSES = ["unread", "read", "spam"] as const;
 
-export const formSubmissionStatus = z.enum(["unread", "read", "spam"]);
+export const formSubmissionStatus = z.enum(FORM_SUBMISSION_STATUSES);
 export type FormSubmissionStatus = z.infer<typeof formSubmissionStatus>;
 
 /** One stored response, with only a fingerprint of the request origin. */

@@ -1,6 +1,7 @@
 import { COMPONENT_NAMES } from "@layered/content";
 import {
   CONTENT_LANGUAGES,
+  CONTENT_LOCALES,
   DEFAULT_LISTING,
   ENTRY_KINDS,
   EXPORT_MEDIA_PATH,
@@ -218,7 +219,7 @@ export function readingTime(entry: Entry): number {
 }
 export function dateLabel(entry: Entry): string {
   return entry.publishedAt
-    ? new Intl.DateTimeFormat(entry.language === "de" ? "de-AT" : "en-GB", {
+    ? new Intl.DateTimeFormat(CONTENT_LOCALES[entry.language], {
         day: "numeric",
         month: "short",
         year: "numeric",

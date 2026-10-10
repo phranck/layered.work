@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ErrorCode, isProcessing, type MediaDeletionResult } from "@layered/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import {
   auditLog,
   media,
@@ -15,8 +15,6 @@ import { HttpError } from "../http/response.js";
 import { logger } from "../logger.js";
 import { getMediaUses } from "./library.js";
 import { deleteMediaObject } from "./storage.js";
-
-type Database = ReturnType<typeof database>;
 
 /** Cleanup has its own durable row and lock; storage deletes are idempotent after a crash. */
 export async function processMediaDeletion(db: Database, id?: string): Promise<MediaDeletionResult | null> {

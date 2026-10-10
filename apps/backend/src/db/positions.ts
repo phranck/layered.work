@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { PgColumn, PgTable, PgUpdateSetSource } from "drizzle-orm/pg-core";
-import type { database } from "./connect.js";
+import type { Transaction } from "./connect.js";
 import { auditLog } from "./schema/index.js";
-
-type Transaction = Parameters<Parameters<ReturnType<typeof database>["transaction"]>[0]>[0];
 
 /** Where one row of an ordered list goes. */
 export interface Position {

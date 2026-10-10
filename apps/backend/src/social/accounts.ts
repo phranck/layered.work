@@ -5,12 +5,11 @@ import {
   socialAccountList,
 } from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { database } from "../db/connect.js";
+import type { Database } from "../db/connect.js";
 import { type Position, writePositions } from "../db/positions.js";
 import { auditLog, socialAccounts } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-type Database = ReturnType<typeof database>;
 export async function listSocialAccounts(db: Database): Promise<SocialAccount[]> {
   return socialAccountList.parse(
     await db

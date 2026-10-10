@@ -2,6 +2,8 @@ import {
   type BilingualText,
   CONTENT_LANGUAGES,
   type ContentLanguage,
+  MAIL_ELEMENTS,
+  MAIL_LINK,
   type MailTemplateKind,
   type SaveMailTemplateBody,
   saveMailTemplateBody,
@@ -21,7 +23,7 @@ import { queryKeys } from "./query-keys.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
-const MAIL_TAGS = new Set(["div", "p", "strong", "em", "ul", "ol", "li", "a", "br"]);
+const MAIL_TAGS: ReadonlySet<string> = new Set(MAIL_ELEMENTS);
 
 /** Rebuild the API's preview with email-safe tags rather than injecting HTML. */
 function SafeMailPreview({ html }: { html: string }) {
@@ -34,7 +36,7 @@ function SafeMailPreview({ html }: { html: string }) {
     const props: Record<string, unknown> = { key };
     if (tag === "a") {
       const href = node.getAttribute("href") ?? "";
-      if (!/^https?:\/\//i.test(href)) return null;
+      if (!MAIL_LINK.test(href)) return null;
       props.href = href;
       props.rel = "noopener noreferrer";
     }

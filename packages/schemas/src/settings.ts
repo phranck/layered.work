@@ -136,6 +136,25 @@ export const listingSettings = body({
 });
 export type ListingSettings = z.infer<typeof listingSettings>;
 
+/**
+ * Each group of settings, by the key it is stored and saved under, and what it
+ * holds. The API reads and stores each group through its schema here, and the
+ * dashboard types each form from it.
+ */
+export const SETTINGS_SCHEMAS = {
+  site: siteSettings,
+  mail: mailSettings,
+  analytics: analyticsSettings,
+  postListing: listingSettings,
+  projectListing: listingSettings,
+} as const;
+
+/** A group of settings, by its key. */
+export type SettingsGroup = keyof typeof SETTINGS_SCHEMAS;
+
+/** What each group of settings holds. */
+export type SettingsValues = { [Group in SettingsGroup]: z.infer<(typeof SETTINGS_SCHEMAS)[Group]> };
+
 /** What an overview nobody has set up uses. */
 export const DEFAULT_LISTING: ListingSettings = {
   pageSize: 12,
@@ -170,21 +189,13 @@ export const DEFAULT_SETTINGS = {
   analytics: { umamiWebsiteId: DEFAULT_UMAMI_WEBSITE_ID },
   postListing: DEFAULT_LISTING,
   projectListing: DEFAULT_LISTING,
-} as const satisfies {
-  site: SiteSettings;
-  mail: MailSettings;
-  analytics: AnalyticsSettings;
-  postListing: ListingSettings;
-  projectListing: ListingSettings;
-};
+} as const satisfies SettingsValues;
 
 /** Everything the settings screens show, as the API answers it. */
 export const settingsView = z.object({
   site: siteSettings.extend({
-    /** Where the sharing picture can be shown from, when one is chosen. */
-    socialImageUrl: z.string().nullable(),
-    /** Where the watermark picture can be shown from, when one is chosen. */
-    watermarkUrl: z.string().nullable(),
+    /** Where the dashboard can show each picture the site settings name, or null where none is chosen. */
+    pictureUrls: z.record(z.enum(SITE_PICTURE_SETTINGS), z.string().nullable()),
   }),
   mail: mailSettings.extend({
     /** Whether an SMTP2GO key reached the API. The key itself is never sent. */

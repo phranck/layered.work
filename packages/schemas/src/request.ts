@@ -96,6 +96,30 @@ export function withoutControlCharacters(value: string): boolean {
   return !CONTROL_CHARACTER.test(value);
 }
 
+/** The highest position a row of an ordered list may take. */
+export const MAX_SORT_ORDER = 10_000;
+
+/** A row's position in an ordered list, such as the navigations, the social accounts or the home blocks. */
+export const sortOrder = z.number().int().min(0).max(MAX_SORT_ORDER);
+
+/** How many rows one change of order may move. */
+const MAX_POSITIONS = 100;
+
+/**
+ * A new order for a list: each named row and the position it takes, each row
+ * once. Every ordered list is reordered with this one body.
+ */
+export const reorderBody = body({
+  positions: z
+    .array(body({ id: z.uuid(), sortOrder }))
+    .min(1)
+    .max(MAX_POSITIONS),
+}).refine(
+  (value) => new Set(value.positions.map((item) => item.id)).size === value.positions.length,
+  "Each row may be listed once.",
+);
+export type ReorderBody = z.infer<typeof reorderBody>;
+
 /**
  * A signed token as the API issues them, a preview link's or an upload's: a
  * base64url payload and its signature joined by one dot.

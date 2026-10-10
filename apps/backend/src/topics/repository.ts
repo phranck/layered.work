@@ -11,7 +11,7 @@ import {
 } from "@layered/schemas";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
-import type { database } from "../db/connect.js";
+import type { Database, Transaction } from "../db/connect.js";
 import {
   auditLog,
   entryTopics,
@@ -31,9 +31,6 @@ import { HttpError } from "../http/response.js";
  * redirect. Every change is written to the audit log under the account that
  * made it.
  */
-
-type Database = ReturnType<typeof database>;
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** How many numbered alternatives a new topic's address tries before the request is refused. */
 const SLUG_ATTEMPTS = 9;

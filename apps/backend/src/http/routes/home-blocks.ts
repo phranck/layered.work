@@ -3,7 +3,7 @@ import {
   homeBlock,
   homeBlockList,
   idParam,
-  reorderHomeBlocksBody,
+  reorderBody,
   saveHomeBlockBody,
 } from "@layered/schemas";
 import { Hono } from "hono";
@@ -31,7 +31,7 @@ homeBlockRoutes.get("/", responds(homeBlockList), async (c) => ok(c, await listH
 homeBlockRoutes.patch(
   "/order",
   requireOwner,
-  validate("json", reorderHomeBlocksBody),
+  validate("json", reorderBody),
   responds(homeBlockList),
   async (c) =>
     ok(c, await reorderHomeBlocks(database(), c.req.valid("json").positions, principalOf(c).userId)),

@@ -7,12 +7,10 @@ import {
   type TokenSummary,
 } from "@layered/schemas";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type * as schema from "../db/schema/index.js";
+import type { Database } from "../db/connect.js";
 import { accessTokens, auditLog, users } from "../db/schema/index.js";
 import { HttpError } from "../http/response.js";
 
-type Database = PostgresJsDatabase<typeof schema>;
 type TokenRow = typeof accessTokens.$inferSelect;
 
 /** The prefix is the credential's purpose claim; browser cookies have a different format and verifier. */

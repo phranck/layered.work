@@ -208,6 +208,9 @@ export function settingsGroupArea(group: "site" | ListingGroup): DashboardArea {
   return listed ? entryArea(listed) : areaById(SITE_SETTINGS_AREA_ID);
 }
 
+/** Where the media library opens, which is also where a file found by a search is shown. */
+export const MEDIA_PATH = `/${areaById("media").path}`;
+
 /**
  * Where the dashboard opens: the list of posts. The logo leads there, and so
  * does a sign-in that names no destination the dashboard may return to.

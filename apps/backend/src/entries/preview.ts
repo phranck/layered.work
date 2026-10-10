@@ -1,7 +1,6 @@
 import { resolveValues } from "@layered/content";
 import { type EntryPreview, ErrorCode, languagePath, type PreviewEntryBody } from "@layered/schemas";
 import { and, eq, isNull, lt } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { auditActor } from "../auth/audit-actor.js";
 import { claimsToken } from "../auth/signature.js";
@@ -13,6 +12,7 @@ import {
   publicMedia,
   publicTopics,
 } from "../content/snapshot.js";
+import type { Database } from "../db/connect.js";
 import {
   auditLog,
   entries,
@@ -34,8 +34,6 @@ import { readValueMap, resolveListingIntroductions } from "../values/repository.
  * without opening anything else, and it is signed with a key derived for this
  * purpose alone, so no token of another kind passes as one of these.
  */
-
-type Database = PostgresJsDatabase<Record<string, unknown>>;
 
 /** How long a preview link works. Long enough to read, short enough to forget. */
 export const PREVIEW_LIFETIME_MS = 60 * 60 * 1000;

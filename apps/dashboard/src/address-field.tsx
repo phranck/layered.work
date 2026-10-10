@@ -1,4 +1,10 @@
-import { type ContentLanguage, MaxLength, SLUG_PATTERN, slugFromTitle } from "@layered/schemas";
+import {
+  addressPrefix,
+  type ContentLanguage,
+  MaxLength,
+  SLUG_PATTERN,
+  slugFromTitle,
+} from "@layered/schemas";
 
 /**
  * The address of an entry in the editor panel: the part that follows from what
@@ -34,17 +40,6 @@ export function finishedSlug(typed: string, title: string): string {
 /** Whether a slug can be saved as it stands. */
 export function isSavableSlug(slug: string): boolean {
   return SLUG_PATTERN.test(slug);
-}
-
-/**
- * Everything of an address before its last segment.
- *
- * @param path - The current address, or null where there is none yet.
- * @param language - The entry's language, which an address written now starts with.
- */
-export function addressPrefix(path: string | null, language: ContentLanguage): string {
-  const parents = path ? path.split("/").filter(Boolean).slice(0, -1) : [language];
-  return `/${parents.map((segment) => `${segment}/`).join("")}`;
 }
 
 /**
