@@ -7,6 +7,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
+import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
 import { queryKeys } from "./query-keys.js";
 import { UnsplashSearch } from "./unsplash-search.js";
@@ -17,12 +18,6 @@ const KIND_LABEL = {
   video: "mediaKindVideo",
   document: "mediaKindDocument",
   model: "mediaKindModel",
-} as const;
-const STATE_LABEL = {
-  queued: "mediaQueued",
-  processing: "mediaProcessing",
-  ready: "mediaReady",
-  failed: "mediaFailed",
 } as const;
 const DATES = { de: new Intl.DateTimeFormat("de-AT"), en: new Intl.DateTimeFormat("en-GB") };
 const BYTES = {
@@ -59,7 +54,7 @@ function MediaGrid({
             title={item.slug}
             note={`${text(KIND_LABEL[item.kind])} · ${BYTES[language].format(item.byteSize / 1024)} · ${DATES[language].format(new Date(item.uploadedAt))}`}
           >
-            <span className="row__note">{text(STATE_LABEL[item.processingState])}</span>
+            <span className="row__note">{text(PROCESSING_TEXT[item.processingState])}</span>
           </Row.Text>
         </Row.Button>
       ))}
@@ -79,12 +74,8 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
     queryKey: queryKeys.mediaPage(query, imageOnly ? "image" : kind, page, unused),
     queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page, unused),
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.items.some(
-        (item) => item.processingState === "queued" || item.processingState === "processing",
-      )
-        ? 2_000
-        : false,
+    refetchInterval: (current) =>
+      pollWhileProcessing(current.state.data?.items.map((item) => item.processingState) ?? []),
   });
   const choose = (item: MediaLibraryItem) => {
     if (onChoose) onChoose(item.slug, item);

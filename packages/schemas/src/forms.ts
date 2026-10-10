@@ -54,11 +54,21 @@ const option = body({
   label: formText,
 });
 
+/** How many options a choice field offers. Fewer than two leaves nothing to choose between. */
+export const FORM_OPTION_COUNT = { min: 2, max: 30 } as const;
+
+/** How many fields one form holds. */
+export const FORM_FIELD_COUNT = { min: 1, max: 40 } as const;
+
 const choices = (type: "singleChoice" | "multipleChoice") =>
-  body({ ...fieldBase, type: z.literal(type), options: z.array(option).min(2).max(30) }).refine(
-    (field) => new Set(field.options.map((item) => item.value)).size === field.options.length,
-    { path: ["options"], message: "Choice values must be unique." },
-  );
+  body({
+    ...fieldBase,
+    type: z.literal(type),
+    options: z.array(option).min(FORM_OPTION_COUNT.min).max(FORM_OPTION_COUNT.max),
+  }).refine((field) => new Set(field.options.map((item) => item.value)).size === field.options.length, {
+    path: ["options"],
+    message: "Choice values must be unique.",
+  });
 
 /** The declaration shared by the builder, the site's renderer and the API. */
 export const formField = z.discriminatedUnion("type", [
@@ -111,7 +121,7 @@ const publicDeclarationFields = {
   slug: formSlug,
   name: text(MaxLength.Line),
   successMessage: formText,
-  fields: z.array(formField).min(1).max(40),
+  fields: z.array(formField).min(FORM_FIELD_COUNT.min).max(FORM_FIELD_COUNT.max),
 };
 const uniqueFieldKeys = (form: { fields: FormField[] }) =>
   new Set(form.fields.map((field) => field.key)).size === form.fields.length;
@@ -156,10 +166,16 @@ export const publicForm = body(publicDeclarationFields).refine(uniqueFieldKeys, 
 });
 export type PublicForm = z.infer<typeof publicForm>;
 
-/** A browser may submit a value once or several times for a choice group. */
+/**
+ * A browser may submit a value once or several times for a choice group, and
+ * never more often than the group has options.
+ */
 export const formSubmissionValues = z.record(
   z.string().max(MaxLength.Handle),
-  z.union([z.string().max(MaxLength.Paragraph), z.array(z.string().max(MaxLength.Paragraph)).max(30)]),
+  z.union([
+    z.string().max(MaxLength.Paragraph),
+    z.array(z.string().max(MaxLength.Paragraph)).max(FORM_OPTION_COUNT.max),
+  ]),
 );
 export type FormSubmissionValues = z.infer<typeof formSubmissionValues>;
 

@@ -1,4 +1,4 @@
-import type { MediaDetail } from "@layered/schemas";
+import { isProcessing, type MediaDetail } from "@layered/schemas";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
@@ -6,8 +6,31 @@ import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
+import { entryPath, settingsGroupArea } from "./routes.js";
 
-const ENTRY_AREA = { post: "posts", page: "pages", project: "projects" } as const;
+/** One place a file is used, as the API lists it. */
+type MediaUse = MediaDetail["uses"][number];
+
+/**
+ * A file used by the site's settings, linked to the screen that changes it: an
+ * overview's introduction on the list of the kind it lists, and the site's own
+ * picture on the Settings screen, so the link leads to where the file can be
+ * replaced.
+ *
+ * @param use - The use, which the API marks with the settings group it is in.
+ */
+function SettingsUse({ use }: { use: MediaUse }) {
+  const { text } = useDashboardLanguage();
+  const area = settingsGroupArea(use.settingsGroup ?? "site");
+  return (
+    <a href={`/${area.path}`}>
+      {area.entryKind
+        ? `${text("mediaListingIntroduction", text(area.labelKey))} (${use.language.toUpperCase()})`
+        : text("socialImage")}
+    </a>
+  );
+}
+
 export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
   const { text } = useDashboardLanguage();
   return (
@@ -20,21 +43,9 @@ export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
             {use.kind === "account" ? (
               `${use.title} (${text("account")})`
             ) : use.kind === "settings" ? (
-              <a
-                href={
-                  use.settingsGroup === "postListing"
-                    ? "/posts"
-                    : use.settingsGroup === "projectListing"
-                      ? "/projects"
-                      : "/settings"
-                }
-              >
-                {use.settingsGroup === "postListing" || use.settingsGroup === "projectListing"
-                  ? `${text("mediaListingIntroduction", text(use.settingsGroup === "postListing" ? "posts" : "projects"))} (${use.language.toUpperCase()})`
-                  : text("socialImage")}
-              </a>
+              <SettingsUse use={use} />
             ) : (
-              <a href={`/${ENTRY_AREA[use.kind]}/${use.id}`}>
+              <a href={entryPath(use.kind, use.id)}>
                 {use.title} ({use.language.toUpperCase()})
               </a>
             )}
@@ -57,7 +68,7 @@ export function MediaDeleteDialog({
   const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
-  const processing = detail.processing.state === "queued" || detail.processing.state === "processing";
+  const processing = isProcessing(detail.processing.state);
   const remove = useMutation({
     mutationFn: () => api.deleteMedia(detail.id),
     onError: () => client.invalidateQueries({ queryKey: queryKeys.mediaDetail(detail.id) }),

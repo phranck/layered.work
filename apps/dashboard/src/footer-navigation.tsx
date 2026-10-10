@@ -1,6 +1,7 @@
 import {
   type FooterNavigation,
   MaxLength,
+  NAVIGATION_ITEMS_MAX,
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
@@ -248,7 +249,7 @@ function NavigationEditor({
             </Reorder.List>
             <Button
               icon={<PlusIcon />}
-              disabled={items.length >= 100}
+              disabled={items.length >= NAVIGATION_ITEMS_MAX}
               onClick={() =>
                 setItems((current) => [
                   ...current,

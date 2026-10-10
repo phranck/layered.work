@@ -1,4 +1,4 @@
-import type { SaveFooterNavigationBody } from "@layered/schemas";
+import { NAVIGATION_HREF_MAX_LENGTH, type SaveFooterNavigationBody } from "@layered/schemas";
 import { Field, Input, Select } from "@layered/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -69,7 +69,7 @@ export function NavigationTarget({
           <Input
             id={`navigation-${itemKey}-href`}
             value={item.href ?? ""}
-            maxLength={2048}
+            maxLength={NAVIGATION_HREF_MAX_LENGTH}
             onChange={(event) => onChange({ href: event.target.value || null })}
           />
         </Field>

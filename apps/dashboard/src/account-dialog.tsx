@@ -179,7 +179,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                     id="account-email"
                     type="email"
                     value={draft.email}
-                    maxLength={MaxLength.Line}
+                    maxLength={MaxLength.Email}
                     onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
                     required
                   />

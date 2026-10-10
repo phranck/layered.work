@@ -20,7 +20,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
 import { queryKeys } from "./query-keys.js";
-import { dashboardAreas } from "./routes.js";
+import { entryPath } from "./routes.js";
 
 /**
  * Search, on the same shortcut everywhere.
@@ -174,12 +174,6 @@ export function SearchShortcutCap() {
       {apple ? "⌘K" : `${text("controlKey")} K`}
     </Shortcut>
   );
-}
-
-/** The sidebar area that lists each kind of entry, which is where a hit opens. */
-function entryPath(kind: EntryKind, id: string): string {
-  const area = dashboardAreas.find((candidate) => candidate.entryKind === kind);
-  return area ? `/${area.path}/${id}` : "/";
 }
 
 /** The catalogue word for each kind of entry, as a hit's note. */

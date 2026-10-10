@@ -2,11 +2,21 @@ import { z } from "zod";
 import { body, MaxLength, text } from "./request.js";
 
 const bilingual = <Schema extends z.ZodType>(schema: Schema) => body({ en: schema, de: schema });
+
+/**
+ * How long a link's address may be, in a navigation and in a social account
+ * alike, so the field that takes one can stop where the API would refuse.
+ */
+export const NAVIGATION_HREF_MAX_LENGTH = 2048;
+
+/** How many links one navigation may hold. */
+export const NAVIGATION_ITEMS_MAX = 100;
+
 /** Links are site-relative or HTTP(S); active schemes and ambiguous origins are refused. */
 export const navigationHref = z
   .string()
   .trim()
-  .max(2048)
+  .max(NAVIGATION_HREF_MAX_LENGTH)
   .refine((value) => {
     if (/\s|\\/.test(value)) return false;
     if (value.startsWith("/") && !value.startsWith("//")) return true;
@@ -31,7 +41,7 @@ const savedItem = body({ id: z.uuid().optional(), ...itemFields }).refine((item)
 export const saveFooterNavigationBody = body({
   title: bilingual(text(MaxLength.Line)),
   sortOrder: z.number().int().min(0).max(10000),
-  items: z.array(savedItem).max(100),
+  items: z.array(savedItem).max(NAVIGATION_ITEMS_MAX),
 });
 export type SaveFooterNavigationBody = z.infer<typeof saveFooterNavigationBody>;
 export const footerNavigation = z.object({

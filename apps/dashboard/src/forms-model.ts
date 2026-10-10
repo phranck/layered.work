@@ -1,4 +1,4 @@
-import type { CreateFormBody, FormField, FormFieldType } from "@layered/schemas";
+import { type CreateFormBody, type FormField, type FormFieldType, MaxLength } from "@layered/schemas";
 import { moveItem } from "./sidebar-order.js";
 
 export const FIELD_TYPES: readonly FormFieldType[] = [
@@ -25,6 +25,16 @@ export const FIELD_NAMES: Record<FormFieldType, { en: string; de: string }> = {
   consent: { en: "Consent notice", de: "Einwilligung" },
 };
 
+/**
+ * The longest answer a new text field takes, by what it asks for: a line, a
+ * paragraph or an email address, each as long as the API takes such a value.
+ */
+const DEFAULT_MAX_LENGTH = {
+  shortText: MaxLength.Line,
+  longText: MaxLength.Paragraph,
+  email: MaxLength.Email,
+} as const satisfies Partial<Record<FormFieldType, number>>;
+
 /** Defaults are complete declarations, so a new field can be saved immediately. */
 export function newField(type: FormFieldType, key: string): FormField {
   const common = {
@@ -37,7 +47,7 @@ export function newField(type: FormFieldType, key: string): FormField {
     case "shortText":
     case "longText":
     case "email":
-      return { ...common, type, minLength: 0, maxLength: type === "longText" ? 2000 : 254, pattern: null };
+      return { ...common, type, minLength: 0, maxLength: DEFAULT_MAX_LENGTH[type], pattern: null };
     case "number":
       return { ...common, type, min: null, max: null };
     case "singleChoice":

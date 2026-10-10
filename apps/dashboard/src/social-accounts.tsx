@@ -1,4 +1,6 @@
 import {
+  MaxLength,
+  NAVIGATION_HREF_MAX_LENGTH,
   type SaveSocialAccountBody,
   SOCIAL_PLATFORM_NAMES,
   SOCIAL_PLATFORMS,
@@ -200,7 +202,7 @@ function SocialEditor({
             <Input
               id="social-handle"
               value={value.handle}
-              maxLength={300}
+              maxLength={MaxLength.Line}
               onChange={(event) => setValue((current) => ({ ...current, handle: event.target.value }))}
             />
           </Field>
@@ -209,7 +211,7 @@ function SocialEditor({
               id="social-href"
               type="url"
               value={value.href}
-              maxLength={2048}
+              maxLength={NAVIGATION_HREF_MAX_LENGTH}
               onChange={(event) => setValue((current) => ({ ...current, href: event.target.value }))}
             />
           </Field>

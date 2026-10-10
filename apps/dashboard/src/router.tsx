@@ -15,7 +15,7 @@ import { MailTemplateEditorScreen, MailTemplatesScreen } from "./mail-templates.
 import { MediaScreen } from "./media-screen.js";
 import { NamedValuesScreen } from "./named-values.js";
 import { queryKeys } from "./query-keys.js";
-import { type DashboardArea, dashboardAreas } from "./routes.js";
+import { type DashboardArea, dashboardAreas, START_PATH } from "./routes.js";
 import { AnalyticsSettingsScreen, MailSettingsScreen, SiteSettingsScreen } from "./settings.js";
 import { SocialAccountsScreen } from "./social-accounts.js";
 import { SubmissionsScreen } from "./submissions.js";
@@ -88,7 +88,7 @@ export function dashboardRouteObjects({
         return session;
       },
       children: [
-        { index: true, element: <Navigate to="/posts" replace /> },
+        { index: true, element: <Navigate to={START_PATH} replace /> },
         ...dashboardAreas.map((area): RouteObject => {
           const kind = area.entryKind;
           const Screen = AREA_SCREENS[area.id];

@@ -87,8 +87,33 @@ export const uploadedMedia = z.object({
 
 export type UploadedMedia = z.infer<typeof uploadedMedia>;
 
+/**
+ * The states a file's processing passes through: waiting for a worker, having
+ * its variants made, finished, or failed.
+ */
+export const MEDIA_PROCESSING_STATES = ["queued", "processing", "ready", "failed"] as const;
+
+/** One state of a file's processing. */
+export type MediaProcessingState = (typeof MEDIA_PROCESSING_STATES)[number];
+
 /** Processing state shared by the library and its detail view. */
-export const mediaProcessingState = z.enum(["queued", "processing", "ready", "failed"]);
+export const mediaProcessingState = z.enum(MEDIA_PROCESSING_STATES);
+
+/**
+ * Whether a file's processing has yet to finish, so its variants are still
+ * being made.
+ *
+ * One answer for every place that waits on it: the dashboard asks for such a
+ * file again until it is done and does not offer to delete it, and the API
+ * refuses to delete it.
+ *
+ * @param state - The state of the file's processing.
+ * @returns True while it is queued or being processed, false once it is ready or failed.
+ */
+export function isProcessing(state: MediaProcessingState): boolean {
+  return state === "queued" || state === "processing";
+}
+
 export const mediaProcessing = z.object({
   state: mediaProcessingState,
   errorId: z.uuid().nullable(),

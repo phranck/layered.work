@@ -1,4 +1,11 @@
-import { type CreateFormBody, createFormBody, type FormField, type FormFieldType } from "@layered/schemas";
+import {
+  type CreateFormBody,
+  createFormBody,
+  FORM_FIELD_COUNT,
+  FORM_OPTION_COUNT,
+  type FormField,
+  type FormFieldType,
+} from "@layered/schemas";
 import { Button, Card, Editor, Field, FormControls, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -197,7 +204,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
               }
             />
             <Button
-              disabled={field.options.length <= 2}
+              disabled={field.options.length <= FORM_OPTION_COUNT.min}
               onClick={() => update({ ...field, options: field.options.filter((_, i) => i !== index) })}
             >
               {text("formOptionRemove", index + 1)}
@@ -205,6 +212,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
           </div>
         ))}
         <Button
+          disabled={field.options.length >= FORM_OPTION_COUNT.max}
           onClick={() => {
             let n = field.options.length + 1;
             while (field.options.some((option) => option.value === `option-${n}`)) n += 1;
@@ -390,6 +398,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       />
                       <Button
                         icon={<PlusIcon />}
+                        disabled={draft.fields.length >= FORM_FIELD_COUNT.max}
                         onClick={() => {
                           const next = addField(draft, addType);
                           change(next);
@@ -467,7 +476,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   </Field.Inline>
                   <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
                   <Button
-                    disabled={draft.fields.length <= 1}
+                    disabled={draft.fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
                       change({ ...draft, fields: draft.fields.filter((_, index) => index !== selected) });
                       setSelected(null);

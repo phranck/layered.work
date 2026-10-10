@@ -1,4 +1,10 @@
-import type { DashboardCounts, EntryKind } from "@layered/schemas";
+import {
+  type DashboardCounts,
+  type EntryKind,
+  LISTED_KINDS,
+  LISTING_GROUP,
+  type ListedKind,
+} from "@layered/schemas";
 import {
   ArticleIcon,
   BracketsCurlyIcon,
@@ -23,6 +29,9 @@ import type { ComponentType } from "react";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 
 export type CountKey = keyof DashboardCounts;
+
+/** The settings group one of the site's overviews is stored under. */
+type ListingGroup = (typeof LISTING_GROUP)[ListedKind];
 
 export interface DashboardArea {
   id: string;
@@ -140,3 +149,67 @@ export const dashboardGroups: DashboardGroup[] = [
 ];
 
 export const dashboardAreas = dashboardGroups.flatMap((group) => group.areas);
+
+/** Each area by its id. */
+const AREAS_BY_ID = new Map(dashboardAreas.map((area) => [area.id, area]));
+
+/** The area that lists each kind of entry. */
+const ENTRY_AREAS = new Map(
+  dashboardAreas.flatMap((area) => (area.entryKind ? [[area.entryKind, area] as const] : [])),
+);
+
+/** The area the site's own settings are changed in. */
+const SITE_SETTINGS_AREA_ID = "settings";
+
+/**
+ * One area, by the id `dashboardGroups` gives it.
+ *
+ * @throws When no area has that id, which is a mistake in the code asking
+ *   rather than anything a reader did.
+ */
+function areaById(id: string): DashboardArea {
+  const area = AREAS_BY_ID.get(id);
+  if (!area) throw new Error(`The dashboard has no area ${id}.`);
+  return area;
+}
+
+/**
+ * The area that lists one kind of entry, which is where an entry of that kind
+ * opens and where the site's overview of that kind is set up.
+ *
+ * @param kind - The kind of entry.
+ * @throws When no area lists that kind, which is a mistake in `dashboardGroups`.
+ */
+export function entryArea(kind: EntryKind): DashboardArea {
+  const area = ENTRY_AREAS.get(kind);
+  if (!area) throw new Error(`No dashboard area lists entries of the kind ${kind}.`);
+  return area;
+}
+
+/**
+ * The address one translation opens at, in the area that lists its kind.
+ *
+ * @param kind - The kind of its entry.
+ * @param id - The translation.
+ */
+export function entryPath(kind: EntryKind, id: string): string {
+  return `/${entryArea(kind).path}/${id}`;
+}
+
+/**
+ * The area a group of the site's settings is changed in. An overview's group
+ * stands on the list of the kind it lists, and the site's own group on the
+ * Settings screen.
+ *
+ * @param group - The settings group.
+ */
+export function settingsGroupArea(group: "site" | ListingGroup): DashboardArea {
+  const listed = LISTED_KINDS.find((kind) => LISTING_GROUP[kind] === group);
+  return listed ? entryArea(listed) : areaById(SITE_SETTINGS_AREA_ID);
+}
+
+/**
+ * Where the dashboard opens: the list of posts. The logo leads there, and so
+ * does a sign-in that names no destination the dashboard may return to.
+ */
+export const START_PATH = `/${entryArea("post").path}`;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ErrorCode, type MediaDeletionResult } from "@layered/schemas";
+import { ErrorCode, isProcessing, type MediaDeletionResult } from "@layered/schemas";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { auditActor } from "../auth/audit-actor.js";
 import type { database } from "../db/connect.js";
@@ -91,7 +91,7 @@ export async function deleteMedia(
         ErrorCode.Conflict,
         `This file is used by: ${uses.map((use) => use.title).join(", ")}. Remove those references first.`,
       );
-    if (job?.state === "queued" || job?.state === "processing")
+    if (job && isProcessing(job.state))
       throw new HttpError(
         ErrorCode.Conflict,
         "This file is still being processed. Wait for processing to finish before deleting it.",

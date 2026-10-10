@@ -34,9 +34,6 @@ import { contentLanguageOptions, Translated } from "./translated.js";
  * title. Every author can read them; only the owner can change them.
  */
 
-/** How long an Umami website id is: a UUID, hyphens included. */
-const UUID_LENGTH = 36;
-
 /** Anything that checks a draft and says which fields failed. */
 interface DraftSchema<Value> {
   safeParse(
@@ -393,7 +390,7 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                       id="sender-address"
                       type="email"
                       value={draft.senderAddress ?? ""}
-                      maxLength={MaxLength.Line}
+                      maxLength={MaxLength.Email}
                       disabled={!editable}
                       onChange={(event) => update({ senderAddress: event.target.value.trim() || null })}
                     />
@@ -460,7 +457,6 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
                   id="umami-website-id"
                   className="settings-form__code"
                   value={draft.umamiWebsiteId ?? ""}
-                  maxLength={UUID_LENGTH}
                   spellCheck={false}
                   disabled={!editable}
                   onChange={(event) => update({ umamiWebsiteId: event.target.value.trim() || null })}

@@ -100,7 +100,7 @@ function LoginForm({ loginAlias }: LoginScreenProps) {
                 name="email"
                 type={loginAlias ? "text" : "email"}
                 autoComplete="username"
-                maxLength={MaxLength.Line}
+                maxLength={MaxLength.Email}
                 required
                 autoFocus
               />
