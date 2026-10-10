@@ -4,6 +4,7 @@ import {
   type AnalyticsSettings,
   accountProfile,
   addHomeBlockBody,
+  type ContentLanguage,
   type CreateEntryBody,
   type CreateFormBody,
   type CreateNamedValueBody,
@@ -280,12 +281,12 @@ export interface DashboardApi {
   previewMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
   ): Promise<RenderedMail>;
   testMailTemplate(
     kind: MailTemplateKind,
     value: SaveMailTemplateBody,
-    language: "en" | "de",
+    language: ContentLanguage,
     recipient: string,
   ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;

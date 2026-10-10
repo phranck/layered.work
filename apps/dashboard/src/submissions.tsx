@@ -1,4 +1,4 @@
-import type { FormSubmission, FormSubmissionStatus } from "@layered/schemas";
+import { type FormSubmission, type FormSubmissionStatus, submittedValueText } from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -23,14 +23,15 @@ const STATUS_TEXT: Record<FormSubmissionStatus, DashboardStringKey> = {
   spam: "submissionSpam",
 };
 
+/** How many characters of a submission's first answer its row shows. */
+const PREVIEW_LENGTH = 120;
+
+/** The first answer of a submission that is not empty, shortened to what its row shows. */
 const preview = (submission: FormSubmission): string =>
   Object.values(submission.values)
-    .map((value) => (Array.isArray(value) ? value.join(", ") : value))
+    .map((value) => submittedValueText(value))
     .find(Boolean)
-    ?.slice(0, 120) ?? "";
-
-const displayValue = (value: string | string[] | undefined): string =>
-  Array.isArray(value) ? value.join(", ") : (value ?? "");
+    ?.slice(0, PREVIEW_LENGTH) ?? "";
 
 /** An inbox for one form at a time, using the dashboard's card and row compounds. */
 export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
@@ -179,7 +180,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 {Object.entries(selected.values).map(([key, value]) => (
                   <div key={key} className="submissions-detail__field">
                     <dt>{form.fields.find((field) => field.key === key)?.label[language] ?? key}</dt>
-                    <dd>{displayValue(value)}</dd>
+                    <dd>{submittedValueText(value)}</dd>
                   </div>
                 ))}
                 {selected.consents.map((consent) => (

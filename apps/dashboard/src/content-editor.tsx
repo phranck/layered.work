@@ -22,6 +22,7 @@ import { contentValidation } from "./content-lint.js";
 import type { CheckedContent } from "./content-validation.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { tableSync } from "./table-sync.js";
+import "./content-validation.css";
 
 /**
  * The writing surface for an entry's body.

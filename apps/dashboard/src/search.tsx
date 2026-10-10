@@ -170,9 +170,12 @@ export function SearchShortcutCap() {
   const { text } = useDashboardLanguage();
   const apple = isApplePlatform();
   return (
-    <Shortcut shortcutKey="K" platform={apple ? "apple" : "control"} aria-hidden="true">
-      {apple ? "⌘K" : `${text("controlKey")} K`}
-    </Shortcut>
+    <Shortcut
+      shortcutKey="K"
+      platform={apple ? "apple" : "control"}
+      controlLabel={text("controlKey")}
+      aria-hidden="true"
+    />
   );
 }
 

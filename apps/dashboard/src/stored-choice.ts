@@ -6,10 +6,22 @@ import { useCallback, useState } from "react";
  * interface or whether a card was left open, held as state of the screen that
  * shows it.
  *
- * Each choice has its own key under `layered:dashboard:`. Reading and writing go
- * through `@layered/ui/stored`, which the website uses too, so a browser that
+ * Each choice has its own key under the dashboard's prefix. Reading and writing
+ * go through `@layered/ui/stored`, which the website uses too, so a browser that
  * refuses storage gets the default and keeps the choice for this visit only.
  */
+
+/** What every key the dashboard keeps a choice under starts with, so none meets one of the website's. */
+const STORED_CHOICE_PREFIX = "layered:dashboard:";
+
+/**
+ * Where one choice is kept: its name under the dashboard's prefix.
+ *
+ * @param name - The choice's own name, such as `sidebar-width`.
+ */
+export function storedChoiceKey(name: string): string {
+  return `${STORED_CHOICE_PREFIX}${name}`;
+}
 
 /**
  * The step a stored value stands for, out of a set of named steps.

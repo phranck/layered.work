@@ -1,4 +1,6 @@
 import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
   MaxLength,
   type MediaDetail,
   type SaveMediaMetadataBody,
@@ -44,7 +46,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   const { text, language: interfaceLanguage } = useDashboardLanguage();
   const [value, setValue] = useState<SaveMediaMetadataBody>({
     focalPoint: detail.focalPoint,
-    translations: (["en", "de"] as const).map((language) => ({ language, ...detail.translations[language] })),
+    translations: CONTENT_LANGUAGES.map((language) => ({ language, ...detail.translations[language] })),
     watermark: detail.watermark,
   });
   const formId = useId();
@@ -72,7 +74,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
       onClose();
     },
   });
-  function description(language: "en" | "de", field: "altText" | "caption", next: string | null) {
+  function description(language: ContentLanguage, field: "altText" | "caption", next: string | null) {
     setValue((current) => ({
       ...current,
       translations: current.translations.map((translation) =>

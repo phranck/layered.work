@@ -25,8 +25,12 @@
 .content-findings [data-severity="warning"] .button {
   color: var(--state-warning);
 }
-/* CSS underlines work under the dashboard CSP without the linter's data-URL images. */
-.content-editor .cm-lintRange-error {
+/* An error is underlined with a wave in the danger tone, whether the validator
+   found it or the parser could not read it, so both read as the same mistake.
+   CSS underlines work under the dashboard CSP without the linter's data-URL
+   images. */
+.content-editor .cm-lintRange-error,
+.content-editor .content-invalid {
   background-image: none;
   text-decoration: underline wavy var(--state-danger);
   text-underline-offset: 3px;

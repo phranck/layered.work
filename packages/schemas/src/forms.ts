@@ -188,6 +188,20 @@ export const formSubmissionValues = z.record(
 );
 export type FormSubmissionValues = z.infer<typeof formSubmissionValues>;
 
+/**
+ * The text a submitted value is read as: the values of a choice group joined
+ * with a comma, and a field the submission left out as nothing.
+ *
+ * One answer for every place a person reads a submission, which is the
+ * dashboard's inbox, its export and the mail that reports it.
+ *
+ * @param value - The value as the submission holds it, or undefined for a field it lacks.
+ * @returns The value as one line of text.
+ */
+export function submittedValueText(value: FormSubmissionValues[string] | undefined): string {
+  return Array.isArray(value) ? value.join(", ") : (value ?? "");
+}
+
 export const submitFormBody = body({
   challenge: z.string().min(1).max(256),
   honeypot: z.string().max(256),

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { zoomOf } from "./interface-scale.js";
+import { storedChoiceKey } from "./stored-choice.js";
 
 /**
  * The sidebar's width, which the reader sets by dragging its edge.
@@ -22,7 +23,7 @@ import { zoomOf } from "./interface-scale.js";
  */
 
 /** Where the chosen width is kept between visits. */
-export const SIDEBAR_WIDTH_KEY = "layered:dashboard:sidebar-width";
+export const SIDEBAR_WIDTH_KEY = storedChoiceKey("sidebar-width");
 
 /** How far one press of an arrow key moves the edge, in pixels. */
 const KEYBOARD_STEP = 16;

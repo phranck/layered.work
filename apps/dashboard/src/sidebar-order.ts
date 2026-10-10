@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { zoomOf } from "./interface-scale.js";
+import { storedChoiceKey } from "./stored-choice.js";
 
 /**
  * The order of the sidebar's groups, which the reader sets by dragging a
@@ -27,7 +28,7 @@ import { zoomOf } from "./interface-scale.js";
  */
 
 /** Where the chosen order is kept between visits. */
-export const SIDEBAR_ORDER_KEY = "layered:dashboard:sidebar-order";
+export const SIDEBAR_ORDER_KEY = storedChoiceKey("sidebar-order");
 
 /**
  * The group ids a stored value holds, or none where it holds anything else.

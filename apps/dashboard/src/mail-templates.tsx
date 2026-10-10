@@ -1,5 +1,6 @@
 import {
   type BilingualText,
+  CONTENT_LANGUAGES,
   type ContentLanguage,
   type MailTemplateKind,
   type SaveMailTemplateBody,
@@ -37,7 +38,7 @@ function SafeMailPreview({ html }: { html: string }) {
       props.href = href;
       props.rel = "noopener noreferrer";
     }
-    if (tag === "div" && ["en", "de"].includes(node.getAttribute("lang") ?? "")) {
+    if (tag === "div" && CONTENT_LANGUAGES.some((language) => language === node.getAttribute("lang"))) {
       props.lang = node.getAttribute("lang");
     }
     return createElement(tag, props, ...Array.from(node.childNodes).map(nodeToReact));

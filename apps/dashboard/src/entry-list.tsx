@@ -1,4 +1,5 @@
 import {
+  CONTENT_LANGUAGES,
   type ContentLanguage,
   type EntryKind,
   type EntryListItem,
@@ -119,7 +120,7 @@ export const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = {
 
 /** The other of the site's two languages. */
 export function otherLanguage(language: ContentLanguage): ContentLanguage {
-  return language === "en" ? "de" : "en";
+  return CONTENT_LANGUAGES.find((other) => other !== language) ?? language;
 }
 
 /**

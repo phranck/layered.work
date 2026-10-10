@@ -7,6 +7,12 @@ export type ShortcutPlatform = "apple" | "control" | "auto";
 export interface ShortcutProps extends ComponentPropsWithoutRef<"kbd"> {
   shortcutKey: string;
   platform?: ShortcutPlatform;
+  /**
+   * What the Control key is called in the reader's language, such as "Ctrl" or
+   * the German "Strg". The caller knows the language and the package does
+   * not, so the word comes from the caller.
+   */
+  controlLabel: string;
 }
 /**
  * Whether this browser runs on an Apple platform, where the shortcut modifier
@@ -26,6 +32,7 @@ export function Shortcut({
   className,
   platform = "control",
   shortcutKey,
+  controlLabel,
   ...props
 }: ShortcutProps) {
   const [resolvedPlatform, setResolvedPlatform] = useState(platform === "auto" ? "control" : platform);
@@ -35,7 +42,7 @@ export function Shortcut({
   const displayedPlatform = platform === "auto" ? resolvedPlatform : platform;
   return (
     <kbd className={join("shortcut", className)} {...props}>
-      {children ?? (displayedPlatform === "apple" ? `⌘${shortcutKey}` : `Strg ${shortcutKey}`)}
+      {children ?? (displayedPlatform === "apple" ? `⌘${shortcutKey}` : `${controlLabel} ${shortcutKey}`)}
     </kbd>
   );
 }

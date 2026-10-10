@@ -1,6 +1,16 @@
 import { Button } from "@layered/ui";
 import { CheckCircleIcon, InfoIcon, WarningIcon, WarningOctagonIcon, XIcon } from "@layered/ui/icons";
-import { createContext, type ReactNode, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  type TransitionEvent,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DashboardApiError } from "./api.js";
 import { HeaderCenter } from "./app-bar-slots.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -33,11 +43,25 @@ export interface Notification {
 /** How long a notification that leaves by itself stays, in milliseconds. */
 export const NOTIFICATION_VISIBLE_MS = 4000;
 
-/** How long it takes to fade, matching the workbench's `--duration`, in milliseconds. */
-const NOTIFICATION_FADE_MS = 160;
-
 /** Whether a notification of this tone leaves by itself. */
 const leavesByItself = (tone: NotificationTone) => tone === "success" || tone === "info";
+
+/**
+ * Whether an element has a transition to run, as its stylesheet says.
+ *
+ * The fade's length is the stylesheet's `--duration` and nowhere else, so a
+ * notification waits for its transition to end rather than counting the time
+ * itself. Where no transition would run, such as where no stylesheet applies,
+ * there is no end to wait for.
+ *
+ * @param element - The notification.
+ */
+function fades(element: Element): boolean {
+  const style = getComputedStyle(element);
+  const longest = (times: string) =>
+    Math.max(0, ...times.split(",").map((time) => Number.parseFloat(time) || 0));
+  return longest(style.transitionDuration) + longest(style.transitionDelay) > 0;
+}
 
 /** What a screen can say. */
 interface Notify {
@@ -69,12 +93,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [shown, setShown] = useState<(Notification & { id: number; leaving: boolean }) | null>(null);
   const next = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pill = useRef<HTMLDivElement>(null);
 
+  // The notification fades and is removed when its fade ends, or at once where
+  // nothing would fade.
   const leave = useCallback(() => {
     clearTimeout(timer.current);
-    setShown((current) => (current ? { ...current, leaving: true } : current));
-    timer.current = setTimeout(() => setShown(null), NOTIFICATION_FADE_MS);
+    if (pill.current && fades(pill.current)) {
+      setShown((current) => (current ? { ...current, leaving: true } : current));
+    } else {
+      setShown(null);
+    }
   }, []);
+
+  // A transition of the close button inside bubbles up here as well, and is not the fade.
+  const gone = (event: TransitionEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget && shown?.leaving) setShown(null);
+  };
 
   const schedule = useCallback(
     (tone: NotificationTone) => {
@@ -126,11 +161,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         {shown && Icon && (
           <div
             key={shown.id}
+            ref={pill}
             className="notification"
             data-tone={shown.tone}
             data-leaving={shown.leaving ? "" : undefined}
             onPointerEnter={() => clearTimeout(timer.current)}
             onPointerLeave={() => !shown.leaving && schedule(shown.tone)}
+            onTransitionEnd={gone}
+            onTransitionCancel={gone}
           >
             <Icon className="notification__icon" />
             <span className="notification__text">

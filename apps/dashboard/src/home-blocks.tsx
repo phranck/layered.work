@@ -36,6 +36,7 @@ import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { Translated } from "./translated.js";
 import "./home-blocks.css";
 
@@ -91,6 +92,9 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   const [removing, setRemoving] = useState<StoredHomeBlock | null>(null);
   const list = blocks.data ?? [];
   const open = list.find((block) => block.id === openId) ?? list[0];
+  // The panel starts again from the open block's settings whenever what is
+  // stored changes, and keeps its draft whilst the blocks are only reordered.
+  const revision = useStoredRevision(open?.settings);
 
   const refresh = () => refreshBlocks(client);
   const toggle = useMutation({
@@ -203,9 +207,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
             />
           </Card>
         </Editor.Main>
-        {open && (
-          <BlockPanel key={`${open.id}:${JSON.stringify(open.settings)}`} block={open} editable={owner} />
-        )}
+        {open && <BlockPanel key={`${open.id}:${revision}`} block={open} editable={owner} />}
       </Editor>
       {removing && (
         <RemoveBlock
@@ -233,7 +235,7 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
   const { notify, notifyError } = useNotify();
   const [draft, setDraft] = useState<HomeBlockSettings>(block.settings);
   const [problem, setProblem] = useState<string | null>(null);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(block.settings);
+  const dirty = !sameValue(draft, block.settings);
   const save = useMutation({
     mutationFn: (settings: HomeBlockSettings) =>
       api.saveHomeBlock(block.id, { enabled: block.enabled, settings }),

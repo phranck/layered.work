@@ -23,6 +23,7 @@ import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
+import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { contentLanguageOptions, Translated } from "./translated.js";
 
 /**
@@ -77,8 +78,17 @@ interface SettingsCardProps<Group extends keyof SettingsGroups> {
  * anything is sent, so the reader learns which field is wrong and why. The API
  * checks it again and says only that the request was refused, which is the
  * backstop rather than the explanation.
+ *
+ * The card starts again from what is stored whenever that changes, so after a
+ * save, or a change made elsewhere, its fields show what is stored.
  */
-export function SettingsCard<Group extends keyof SettingsGroups>({
+export function SettingsCard<Group extends keyof SettingsGroups>(props: SettingsCardProps<Group>) {
+  const revision = useStoredRevision(props.saved);
+  return <SettingsCardDraft key={revision} {...props} />;
+}
+
+/** The card of `SettingsCard`, holding one draft of what was stored when it opened. */
+function SettingsCardDraft<Group extends keyof SettingsGroups>({
   group,
   title,
   saved,
@@ -106,7 +116,7 @@ export function SettingsCard<Group extends keyof SettingsGroups>({
       notify({ tone: "success", message: text("saved") });
     },
   });
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const dirty = !sameValue(draft, saved);
   const formId = `settings-${group}`;
   const form = useRef<HTMLFormElement>(null);
 
@@ -275,7 +285,6 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
         return (
           <Translated>
             <SettingsCard<"site">
-              key={JSON.stringify(saved)}
               group="site"
               title={text("settingsSite")}
               saved={saved}
@@ -352,7 +361,6 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
         const { apiKeyConfigured, ...saved } = view.mail;
         return (
           <SettingsCard<"mail">
-            key={JSON.stringify(saved)}
             group="mail"
             title={text("settingsMail")}
             saved={saved}
@@ -436,7 +444,6 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
       area={area}
       render={(view) => (
         <SettingsCard<"analytics">
-          key={JSON.stringify(view.analytics)}
           group="analytics"
           title={text("settingsAnalytics")}
           saved={view.analytics}

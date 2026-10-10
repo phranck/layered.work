@@ -7,7 +7,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { queryKeys } from "./query-keys.js";
 import { SettingsCard } from "./settings.js";
-import { useStoredChoice } from "./stored-choice.js";
+import { storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -19,7 +19,7 @@ import { Translated } from "./translated.js";
  */
 
 /** Where the card's open state is kept between visits. */
-export const LISTING_SETTINGS_OPEN_KEY = "layered:dashboard:listing-settings-open";
+export const LISTING_SETTINGS_OPEN_KEY = storedChoiceKey("listing-settings-open");
 
 /** Each overview's name, as the site shows it where no headline is set. */
 const DEFAULT_HEADLINE: Record<ListedKind, DashboardStringKey> = { post: "posts", project: "projects" };
@@ -46,7 +46,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   return (
     <Translated>
       <SettingsCard
-        key={JSON.stringify(saved)}
         group={group}
         title={text("listingSettings")}
         saved={saved}

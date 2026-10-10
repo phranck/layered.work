@@ -87,11 +87,9 @@ export const contentHighlightStyle = HighlightStyle.define([
   { tag: CONTENT_TAGS.valueName, color: scheme("value") },
   { tag: tags.string, color: scheme("shortcode-string") },
   { tag: [tags.number, tags.atom], color: scheme("shortcode-target") },
-  {
-    tag: tags.invalid,
-    textDecoration: "underline wavy var(--state-danger)",
-    textUnderlineOffset: "3px",
-  },
+  // What the parser could not read is underlined like an error the validator
+  // found, by the one rule in `content-validation.css` that draws both.
+  { tag: tags.invalid, class: "content-invalid" },
 ]);
 
 /** The colouring, as one extension for the surface. */
