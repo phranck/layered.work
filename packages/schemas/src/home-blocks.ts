@@ -46,22 +46,34 @@ export type PictureShape = "sharing" | "home-plate" | "whole";
  * validated with no other code. A text is written in both languages, and an
  * empty one shows `fallback`, which the dashboard offers as the field's
  * placeholder. A picture names the shape the site shows it in.
+ *
+ * A flag that `requires` another flag of the same block only has an effect
+ * while that one is on, and with `firstOnly` only on the first block of the
+ * page that has that flag on and is shown. The dashboard disables its switch
+ * everywhere else.
  */
 export type HomeBlockSetting =
   | { key: string; kind: "line"; fallback: BilingualText }
   | { key: string; kind: "paragraph"; fallback: BilingualText }
   | { key: string; kind: "number"; min: number; max: number; default: number }
-  | { key: string; kind: "flag"; default: boolean }
+  | { key: string; kind: "flag"; default: boolean; requires?: string; firstOnly?: boolean }
   | { key: string; kind: "choice"; options: readonly [string, ...string[]]; default: string }
   | { key: string; kind: "picture"; shape: PictureShape };
 
 /**
- * Whether the countdown's sky of nodes is drawn behind a block.
+ * Whether the countdown's sky of nodes is drawn behind a block, and whether the
+ * two washes of light the countdown shows at its top lie over the sky's top.
  *
- * Every kind of block declares it, and it is off unless somebody switches it on,
- * so a page arranged before it existed looks as it did.
+ * Every kind of block declares both. The sky is off unless somebody switches it
+ * on, so a page arranged before it existed looks as it did. The site draws one
+ * sky behind every block that has it on, however many there are, and the
+ * clouds only over the first of them, because the sky has one top. They are on
+ * by default, because the sky showed them before they could be switched off.
  */
-const SKY_SETTING: HomeBlockSetting = { key: "sky", kind: "flag", default: false };
+const SKY_SETTINGS: readonly HomeBlockSetting[] = [
+  { key: "sky", kind: "flag", default: false },
+  { key: "clouds", kind: "flag", default: true, requires: "sky", firstOnly: true },
+];
 
 /** What one kind of block is and what it can be set to. */
 export interface HomeBlockDeclaration {
@@ -102,7 +114,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       },
       { key: "showPicture", kind: "flag", default: true },
       { key: "picture", kind: "picture", shape: "home-plate" },
-      SKY_SETTING,
+      ...SKY_SETTINGS,
     ],
   },
   featured_entry: {
@@ -114,7 +126,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
         fallback: { en: "From the workbench", de: "Woran gerade gearbeitet wird" },
       },
       { key: "source", kind: "choice", options: ["featured", "newest"], default: "featured" },
-      SKY_SETTING,
+      ...SKY_SETTINGS,
     ],
   },
   project_grid: {
@@ -127,7 +139,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       },
       { key: "limit", kind: "number", ...HOME_GRID_LIMIT, default: 6 },
       { key: "order", kind: "choice", options: ["newest", "oldest", "title"], default: "newest" },
-      SKY_SETTING,
+      ...SKY_SETTINGS,
     ],
   },
   post_grid: {
@@ -141,7 +153,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
       { key: "limit", kind: "number", ...HOME_GRID_LIMIT, default: 6 },
       { key: "order", kind: "choice", options: ["newest", "oldest", "title"], default: "newest" },
       { key: "excludeFeatured", kind: "flag", default: false },
-      SKY_SETTING,
+      ...SKY_SETTINGS,
     ],
   },
   topic_bar: {
@@ -149,7 +161,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
     settings: [
       { key: "title", kind: "line", fallback: { en: "Browse by topic", de: "Themen im Archiv" } },
       { key: "showCounts", kind: "flag", default: true },
-      SKY_SETTING,
+      ...SKY_SETTINGS,
     ],
   },
 };

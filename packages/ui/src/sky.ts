@@ -2,7 +2,7 @@
  * The web of nodes behind the countdown page, for any surface that wants it.
  *
  * A cloud of nodes in three dimensions, joined by hair-thin lines to whichever
- * neighbours are near them in space. The whole cloud turns very slowly, each
+ * neighbors are near them in space. The whole cloud turns very slowly, each
  * node drifts on its own long cycle, and the pointer pulls the nearest ones
  * towards it before they wander back.
  *
@@ -75,19 +75,30 @@ function unit(value: number): number {
   return value < 0 ? 0 : value > 1 ? 1 : value;
 }
 
+/** What decides, besides the canvas itself, whether the web is drawn. */
+export interface SkyOptions {
+  /**
+   * The elements the web shows through. It is drawn while any of them is in
+   * view and rests while none is, which matters where the canvas lies behind
+   * more of the page than shows it. The canvas itself where none are given.
+   */
+  watch?: readonly Element[];
+}
+
 /**
  * Draws the web on a canvas and keeps it moving until stopped.
  *
- * The canvas fills the element that holds it: a fixed layer over the window
- * behind a whole screen, or one band of a page. Under
- * `prefers-reduced-motion: reduce` one frame is drawn and nothing moves; in a
- * hidden tab, or while the canvas is scrolled out of view, nothing is drawn at
- * all.
+ * The canvas is drawn at the size its stylesheet gives it, which is the window,
+ * whether it lies behind a whole screen or behind the bands of a page.
+ * Under `prefers-reduced-motion: reduce` one frame is drawn and nothing moves;
+ * in a hidden tab, or while nothing it shows through is in view, nothing is
+ * drawn at all.
  *
  * @param canvas - The canvas to draw on.
+ * @param options - What the web shows through, where that is not the canvas.
  * @returns A function that stops the animation and removes every listener.
  */
-export function startSky(canvas: HTMLCanvasElement): () => void {
+export function startSky(canvas: HTMLCanvasElement, options: SkyOptions = {}): () => void {
   const context = canvas.getContext("2d", { alpha: true });
   if (!context) return () => {};
   const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -146,17 +157,12 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
     }
   }
 
-  // What the canvas fills. A fixed layer makes it the window, a band makes it the band.
-  const host = canvas.parentElement ?? canvas;
-
   function resize() {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    width = host.clientWidth;
-    height = host.clientHeight;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
     build();
   }
@@ -330,13 +336,18 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
     running = 0;
   }
 
-  // A hidden tab draws nothing, and nor does a canvas scrolled out of view, so
-  // the animation does not keep a core warm behind whatever the reader is
-  // looking at instead.
-  let inView = true;
-  const follow = () => (document.hidden || !inView ? stop() : start());
-  const visibility = new IntersectionObserver(([entry]) => {
-    inView = entry?.isIntersecting ?? true;
+  // A hidden tab draws nothing, and nor does a web with nothing it shows
+  // through in view, so the animation does not keep a core warm behind whatever
+  // the reader is looking at instead. Until the observer first reports, the web
+  // counts as in view.
+  const watched = options.watch?.length ? options.watch : [canvas];
+  const inView = new Set<Element>(watched);
+  const follow = () => (document.hidden || inView.size === 0 ? stop() : start());
+  const visibility = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) inView.add(entry.target);
+      else inView.delete(entry.target);
+    }
     follow();
   });
 
@@ -344,7 +355,7 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
   // The observer reports the size it starts with as well, which would scatter
   // the cloud a second time a moment after it was built, so only a change counts.
   const sizing = new ResizeObserver(() => {
-    if (host.clientWidth === width && host.clientHeight === height) return;
+    if (canvas.clientWidth === width && canvas.clientHeight === height) return;
     clearTimeout(pending);
     pending = setTimeout(() => {
       resize();
@@ -357,8 +368,8 @@ export function startSky(canvas: HTMLCanvasElement): () => void {
     window.addEventListener("pointerleave", onPointerLeave, { passive: true });
   }
   document.addEventListener("visibilitychange", follow);
-  visibility.observe(canvas);
-  sizing.observe(host);
+  for (const element of watched) visibility.observe(element);
+  sizing.observe(canvas);
 
   resize();
   if (still) frame(performance.now());

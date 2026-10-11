@@ -1,13 +1,14 @@
 /*
- * The web behind a whole screen or behind one band of a page, and the light
+ * The web behind a whole screen or behind the bands of a page, and the light
  * over it.
  *
- * Behind a screen it is a fixed layer under everything rather than a background
- * with fixed attachment, which the browser repositions on every scroll frame.
- * The canvas draws the web; the layer's own `::after` lays the two washes over
- * it, so the corner they light is not evenly lit. The geometry is the countdown
- * page's, where the same background was settled. The washes are sized against
- * the layer, which for the fixed layer is the window.
+ * The web and its clouds stand still in the window while the page scrolls over
+ * them. Each is a fixed layer rather than a background with fixed attachment,
+ * which the browser repositions on every scroll frame. The canvas draws the
+ * web, and its stylesheet decides the canvas's size. The clouds, two washes
+ * that leave the corner they light unevenly lit, lie over the top of the web
+ * and are sized against the window. The geometry is the countdown page's, where
+ * the same background was settled.
  */
 
 .sky {
@@ -19,39 +20,92 @@
 
 .sky__web {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.sky::after {
-  position: absolute;
-  inset: 0;
+.sky::after,
+.section--clouds:nth-child(1 of .section--sky)::before {
   content: "";
+  pointer-events: none;
   background:
     radial-gradient(75% 55% at 14% -6%, var(--sky-wash-accent), transparent 60%),
     radial-gradient(65% 45% at 90% 6%, var(--sky-wash-neutral), transparent 56%);
 }
 
-/* --- Band --------------------------------------------------------------------
-   The same web behind one band of a page, from edge to edge of the window like
-   the band's own fill, while the band's content keeps the page measure. The
-   band is the stacking context, so the web lies over the band's fill and under
-   its content. The layer paints the page surface under the web whatever the
-   band's position, because that is what the countdown's web is drawn on. */
+.sky::after {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- Bands -------------------------------------------------------------------
+   One web behind every band of a page that shows it, so neighboring bands show
+   one sky rather than one each. The layer covers the element holding the bands
+   from edge to edge of the window, like a band's own fill, and paints the page
+   surface the countdown's web is drawn on. A band that shows the sky gives up
+   its fill so the layer shows through it, and every other band covers it with
+   its fill. The layer is the holder's only negative layer, so it lies under
+   every band. A band that shows the sky is a stacking context of its own, which
+   keeps its clouds between the layer and its content. */
+
+.sky-host {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The clip keeps the fixed canvas inside the layer's own box, so the web shows
+   behind the bands and nowhere else on the page. */
+.sky--bands {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(50% - 50vw);
+  background: var(--surface-page);
+  clip-path: inset(0);
+}
+
+/* The first band that shows the sky draws its clouds, because the band knows
+   where the sky's top is and the layer, which covers every band, does not. */
+.sky--bands::after {
+  content: none;
+}
+
+/* The window's size, standing still in it. The large viewport height, so a
+   phone's toolbar folding away does not resize it. */
+.sky--bands .sky__web {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100lvh;
+}
 
 .section--sky {
   position: relative;
   isolation: isolate;
 }
 
-.sky--band {
-  position: absolute;
-  inset-block: 0;
-  inset-inline: calc(50% - 50vw);
-  background: var(--surface-page);
+.section--band.section--sky {
+  border-image: none;
+}
+
+/* The sky has one top, so only the first band that shows it carries clouds,
+   whichever bands asked for them. Counted among the bands actually on the
+   page, so a block that renders nothing never takes the clouds with it. The
+   clouds stand still in the window like the web, and the band's clip shows
+   them only where the band is, from edge to edge of the window. */
+.section--clouds:nth-child(1 of .section--sky) {
+  clip-path: inset(0 calc(50% - 50vw));
+}
+
+.section--clouds:nth-child(1 of .section--sky)::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 100lvh;
 }
 
 /* A window with a classic scroll bar is narrower than 100vw, and the layer
    would widen the page by the bar's width. The band's own fill never needed
    this, because a border image paints without taking room. */
-body:has(.sky--band) {
+body:has(.sky--bands) {
   overflow-x: clip;
 }

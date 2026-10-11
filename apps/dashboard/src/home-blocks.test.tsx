@@ -131,11 +131,11 @@ describe("the blocks screen", () => {
     );
     // Three multi-word options are a dropdown, never a segmented control.
     expect(within(panel).getByLabelText("Sortierung").tagName).toBe("SELECT");
-    // The two flags the grid declares one after the other share a column.
+    // The three flags the grid declares one after the other share a column.
     const group = within(panel)
       .getByRole("switch", { name: "Hervorgehobenen auslassen" })
       .closest(".field-group");
-    expect(group && within(group as HTMLElement).getAllByRole("switch")).toHaveLength(2);
+    expect(group && within(group as HTMLElement).getAllByRole("switch")).toHaveLength(3);
 
     fireEvent.change(within(panel).getByLabelText("Anzahl"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -149,6 +149,24 @@ describe("the blocks screen", () => {
     expect(requests("PUT")[0]?.body.settings).toMatchObject({ limit: 9, order: "title" });
     // The summary is read from the saved settings, so it changes with them.
     expect(await screen.findByText("9 Einträge · Nach Titel")).toBeTruthy();
+  });
+
+  it("frees the clouds switch only on the first block whose sky is on, and saves both", async () => {
+    const { requests } = renderScreen();
+    // The hero is open first, and its sky is off on its defaults.
+    const clouds = await screen.findByRole("switch", { name: "Wolken" });
+    expect(clouds).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("switch", { name: "Star-Background" }));
+    expect(screen.getByRole("switch", { name: "Wolken" })).toHaveProperty("disabled", false);
+    fireEvent.click(screen.getByRole("switch", { name: "Wolken" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(requests("PUT")).toHaveLength(1));
+    expect(requests("PUT")[0]?.body.settings).toMatchObject({ sky: true, clouds: false });
+
+    // The sky has one top, so a block further down cannot have clouds of its own.
+    fireEvent.click(await screen.findByRole("row", { name: /Beitrags-Raster/ }));
+    fireEvent.click(await screen.findByRole("switch", { name: "Star-Background" }));
+    expect(screen.getByRole("switch", { name: "Wolken" })).toHaveProperty("disabled", true);
   });
 
   it("adds a block at the end and removes one after asking", async () => {
@@ -174,14 +192,19 @@ describe("the controls a declaration calls for", () => {
   it("holds flags that follow one another together, and every other setting apart", () => {
     const keys = (type: HomeBlockType) =>
       settingRuns(HOME_BLOCKS[type].settings).map((run) => run.map((setting) => setting.key));
-    expect(keys("post_grid")).toEqual([["title"], ["limit"], ["order"], ["excludeFeatured", "sky"]]);
+    expect(keys("post_grid")).toEqual([
+      ["title"],
+      ["limit"],
+      ["order"],
+      ["excludeFeatured", "sky", "clouds"],
+    ]);
     expect(keys("hero")).toEqual([
       ["eyebrow"],
       ["title"],
       ["description"],
       ["showPicture"],
       ["picture"],
-      ["sky"],
+      ["sky", "clouds"],
     ]);
   });
 

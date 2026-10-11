@@ -39,17 +39,21 @@ interface ControlProps {
  *
  * @param type - The block's type, whose declaration decides the controls.
  * @param draft - The values being edited, every declared key present.
+ * @param leads - Whether this block is the first shown one on the page with the
+ *   named flag on, which a `firstOnly` flag needs to be changed.
  * @param onChange - Replaces one setting's value in the draft.
  * @param editable - Whether the signed-in account may change them.
  */
 export function HomeBlockSettingsFields({
   type,
   draft,
+  leads,
   onChange,
   editable,
 }: {
   type: HomeBlockType;
   draft: HomeBlockSettings;
+  leads: (key: string) => boolean;
   onChange: (key: string, value: unknown) => void;
   editable: boolean;
 }) {
@@ -59,7 +63,7 @@ export function HomeBlockSettingsFields({
       setting={setting}
       value={draft[setting.key]}
       onChange={(value) => onChange(setting.key, value)}
-      editable={editable}
+      editable={editable && requirementMet(setting, draft, leads)}
       idPrefix={`home-${type}`}
     />
   );
@@ -72,6 +76,27 @@ export function HomeBlockSettingsFields({
       )}
     </>
   );
+}
+
+/**
+ * Whether the flag a setting requires is on in the draft, and for a `firstOnly`
+ * flag whether this block is the first on the page with it on, so its control
+ * can be changed. A setting that requires nothing always can.
+ *
+ * Read from the draft rather than from what is stored, so switching the sky on
+ * frees its clouds switch before anything is saved.
+ *
+ * @param setting - The declaration.
+ * @param draft - The values being edited.
+ * @param leads - Whether this block is the first shown one with the named flag on.
+ */
+function requirementMet(
+  setting: HomeBlockSetting,
+  draft: HomeBlockSettings,
+  leads: (key: string) => boolean,
+): boolean {
+  if (setting.kind !== "flag" || !setting.requires) return true;
+  return draft[setting.requires] === true && (!setting.firstOnly || leads(setting.requires));
 }
 
 /**

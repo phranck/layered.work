@@ -34,12 +34,15 @@ export function SkyBackdrop() {
 }
 
 /**
- * The countdown's web of nodes, behind one band of a page.
+ * The countdown's web of nodes, once, behind every band of a page that shows it.
  *
- * Placed as the first child of a band that carries `section--sky`. It spans the
- * window's width as the band's fill does, lies under the band's content, and
- * answers the pointer wherever it passes over the band.
+ * Placed once in the element that holds the bands, which carries `sky-host`.
+ * It covers that element from edge to edge of the window, and a band carrying
+ * `section--sky` lets it show through while every other band covers it with
+ * its own fill, so bands that show it show one sky rather than one each. Its
+ * canvas fills the window and stands still in it while the bands scroll over
+ * it, and the layer's clip keeps it behind the bands.
  */
-export function SkyBand() {
-  return <SkyLayer className="sky--band" />;
+export function SkyBands() {
+  return <SkyLayer className="sky--bands" />;
 }

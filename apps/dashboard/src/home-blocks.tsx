@@ -176,7 +176,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
             />
           </Card>
         </Editor.Main>
-        {open && <BlockPanel key={`${open.id}:${revision}`} block={open} editable={owner} />}
+        {open && <BlockPanel key={`${open.id}:${revision}`} block={open} blocks={list} editable={owner} />}
       </Editor>
       {removing && (
         <RemoveBlock
@@ -196,11 +196,29 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
  *
  * The draft is checked against the block's declaration before anything is
  * sent, and the setting that fails is named. The API checks it again.
+ *
+ * @param block - The open block, as stored.
+ * @param blocks - Every block in page order, which decides whether the open one
+ *   is the first with a flag on.
+ * @param editable - Whether the signed-in account may change the settings.
  */
-function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boolean }) {
+function BlockPanel({
+  block,
+  blocks,
+  editable,
+}: {
+  block: StoredHomeBlock;
+  blocks: readonly StoredHomeBlock[];
+  editable: boolean;
+}) {
   const { text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [draft, setDraft] = useState<HomeBlockSettings>(block.settings);
+  // The open block counts with its draft, so switching its sky on makes it the
+  // first with a sky before anything is saved.
+  const leads = (key: string) =>
+    blocks.find((other) => other.enabled && (other.id === block.id ? draft : other.settings)[key] === true)
+      ?.id === block.id;
   const [problem, setProblem] = useState<string | null>(null);
   const dirty = !sameValue(draft, block.settings);
   const save = useSaveHomeBlock(block, {
@@ -237,6 +255,7 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
         <HomeBlockSettingsFields
           type={block.type}
           draft={draft}
+          leads={leads}
           editable={editable}
           onChange={(key, value) => {
             setDraft((current) => ({ ...current, [key]: value }));
