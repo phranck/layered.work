@@ -1,11 +1,12 @@
 import { ensureSyntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { parseContent } from "@layered/content";
+import { parseContent, validateContent } from "@layered/content";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ContentEditor, type ContentEditorHandle, contentLanguage } from "./content-editor.js";
+import { dashboardText } from "./dashboard-i18n.js";
 
 afterEach(cleanup);
 
@@ -130,5 +131,56 @@ describe("the writing surface", () => {
     if (!(cm instanceof HTMLElement)) throw new Error("Missing editor");
     handle.current?.reindent();
     expect(EditorView.findFromDOM(cm)?.state.doc.toString()).toBe("VStack {\n  Spacer()\n}");
+  });
+});
+
+describe("a text written in a profile", () => {
+  const CAPTION = "# Die Front\n\nPrototyp(2), *grundiert*.";
+
+  it("parses as the server parses it in that profile, so a line shaped like a component stays words", () => {
+    const state = EditorState.create({ doc: CAPTION, extensions: [contentLanguage("inline")] });
+    const tree = ensureSyntaxTree(state, state.doc.length, 5000);
+    expect(tree?.toString()).toBe(parseContent(CAPTION, "inline").toString());
+    expect(tree?.toString()).not.toContain("Component");
+  });
+
+  it("underlines what the profile does not hold, and nothing else", async () => {
+    const checked = vi.fn();
+    const { container } = render(
+      <ContentEditor
+        value={CAPTION}
+        onChange={vi.fn()}
+        onValidation={checked}
+        label="Caption"
+        profile="inline"
+      />,
+    );
+    await waitFor(() =>
+      expect(container.querySelector(".cm-lintRange-error")?.textContent).toBe("# Die Front"),
+    );
+    expect(checked.mock.calls.at(-1)?.[0].validation.findings).toMatchObject([
+      { code: "not-in-profile", construct: "heading" },
+    ]);
+  });
+
+  it("says in German what cannot be written there", () => {
+    const [finding] = validateContent("- eins", { profile: "inline" }).findings;
+    if (!finding) throw new Error("Missing finding");
+    expect(dashboardText("de", "contentFinding", finding)).toBe(
+      "Eine Liste kann hier nicht geschrieben werden.",
+    );
+  });
+
+  it("refuses a change that would take the text past its limit", () => {
+    const { container } = render(
+      <ContentEditor value="1234" onChange={vi.fn()} label="Caption" maxLength={5} />,
+    );
+    const cm = container.querySelector(".cm-editor");
+    if (!(cm instanceof HTMLElement)) throw new Error("Missing editor");
+    const view = EditorView.findFromDOM(cm);
+    view?.dispatch({ changes: { from: 4, insert: "56" } });
+    expect(view?.state.doc.toString()).toBe("1234");
+    view?.dispatch({ changes: { from: 4, insert: "5" } });
+    expect(view?.state.doc.toString()).toBe("12345");
   });
 });

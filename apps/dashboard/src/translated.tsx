@@ -1,7 +1,10 @@
+import type { ContentProfile } from "@layered/content";
 import { type BilingualText, CONTENT_LANGUAGES, type ContentLanguage } from "@layered/schemas";
-import { Field, Input, Segmented, Textarea } from "@layered/ui";
+import { Field, Input, Segmented } from "@layered/ui";
 import type { ReactNode } from "react";
+import type { KnownValue } from "./content-completion.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MarkdownField } from "./markdown-field.js";
 import { TextLanguageScope, useTextLanguage, useTextLanguageChoice } from "./text-language.js";
 
 /**
@@ -45,16 +48,19 @@ function TranslatedSwitch() {
 interface TranslatedFieldProps {
   /** The field's id, which the chosen language is added to. */
   id: string;
-  label: ReactNode;
+  label: string;
   hint?: ReactNode;
   value: BilingualText;
   onChange: (value: BilingualText) => void;
   /** What the field shows while empty, in each language. */
   placeholder?: Partial<BilingualText>;
-  /** A text area rather than one line. */
-  multiline?: boolean;
-  /** Rows of a text area, where it should open taller than its default. */
-  rows?: number;
+  /**
+   * The part of the content language a text longer than a line is written in,
+   * which puts it in the Markdown editor. Without one the text is one line.
+   */
+  profile?: ContentProfile;
+  /** What completes after `{{` in the Markdown editor, where the profile holds references. */
+  values?: readonly KnownValue[];
   maxLength?: number;
   disabled?: boolean;
 }
@@ -67,8 +73,8 @@ function TranslatedField({
   value,
   onChange,
   placeholder,
-  multiline = false,
-  rows,
+  profile,
+  values,
   maxLength,
   disabled,
 }: TranslatedFieldProps) {
@@ -76,22 +82,30 @@ function TranslatedField({
   const shared = {
     id: `${id}-${language}`,
     lang: language,
-    value: value[language],
     placeholder: placeholder?.[language],
     maxLength,
     disabled,
   };
+  if (profile) {
+    return (
+      <MarkdownField
+        {...shared}
+        label={label}
+        hint={hint}
+        value={value[language]}
+        profile={profile}
+        values={values}
+        onChange={(text) => onChange({ ...value, [language]: text })}
+      />
+    );
+  }
   return (
     <Field label={label} hint={hint} htmlFor={shared.id}>
-      {multiline ? (
-        <Textarea
-          {...shared}
-          rows={rows}
-          onChange={(event) => onChange({ ...value, [language]: event.target.value })}
-        />
-      ) : (
-        <Input {...shared} onChange={(event) => onChange({ ...value, [language]: event.target.value })} />
-      )}
+      <Input
+        {...shared}
+        value={value[language]}
+        onChange={(event) => onChange({ ...value, [language]: event.target.value })}
+      />
     </Field>
   );
 }

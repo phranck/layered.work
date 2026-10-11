@@ -1,4 +1,4 @@
-import type { Finding, FindingCode } from "@layered/content";
+import type { Construct, Finding, FindingCode } from "@layered/content";
 import {
   ACCEPTED_IMAGE_TYPES,
   type AcceptedImageType,
@@ -95,6 +95,28 @@ const GERMAN_FINDING_REASONS: Record<FindingCode, string> = {
   unclosed: "ist nicht geschlossen",
   "unexpected-character": "steht nicht allein auf seiner Zeile",
   unreadable: "konnte nicht gelesen werden",
+  "not-in-profile": "kann hier nicht geschrieben werden",
+};
+
+/** What each construct a profile can refuse is called in German, as the subject of a sentence. */
+const GERMAN_CONSTRUCTS: Record<Construct, string> = {
+  heading: "Eine Überschrift",
+  quote: "Ein Zitat",
+  list: "Eine Liste",
+  task: "Eine Aufgabe",
+  code: "Code",
+  table: "Eine Tabelle",
+  image: "Ein Bild",
+  html: "HTML",
+  rule: "Eine Trennlinie",
+  strikethrough: "Durchgestrichener Text",
+  value: "Ein benannter Wert",
+  address: "Eine Adresse außerhalb eines Links",
+  escape: "Ein Escape",
+  entity: "Eine Entity",
+  break: "Ein Zeilenumbruch",
+  reference: "Eine Linkdefinition",
+  markup: "Dieses Markup",
 };
 
 const de = {
@@ -330,7 +352,7 @@ const de = {
   contentWarning: "Warnung",
   contentPosition: (line: number, column: number) => `Zeile ${line}, Spalte ${column}`,
   contentFinding: (finding: Finding) =>
-    `${finding.component ?? "Der Inhalt"} ${GERMAN_FINDING_REASONS[finding.code]}${finding.parameter ? ` (${finding.parameter})` : ""}.${finding.suggestion ? ` Vorschlag: ${finding.suggestion}.` : ""}`,
+    `${finding.component ?? (finding.construct && GERMAN_CONSTRUCTS[finding.construct]) ?? "Der Inhalt"} ${GERMAN_FINDING_REASONS[finding.code]}${finding.parameter ? ` (${finding.parameter})` : ""}.${finding.suggestion ? ` Vorschlag: ${finding.suggestion}.` : ""}`,
   editorPublication: "Veröffentlichung",
   editorState: "Status",
   statePublicNote: "Für alle sichtbar",

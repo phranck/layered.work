@@ -66,6 +66,27 @@ describe("mail template rendering", () => {
     ).toThrow("HTTP or HTTPS");
   });
 
+  it("draws a list nested under an item and a paragraph continuing one", () => {
+    const template = {
+      ...DEFAULT_MAIL_TEMPLATES.submission_confirmation,
+      body: { en: "- One\n\n  More on one.\n\n  - Inner\n- Two", de: "Zeile" },
+    };
+    const result = renderMailTemplate(template, "en", { formName: "Contact", submittedAt: "today" });
+    expect(result.html).toBe(
+      '<div lang="en"><ul><li>One<br>More on one.<ul><li>Inner</li></ul></li><li>Two</li></ul></div>',
+    );
+    expect(result.text).toBe("- One\n  More on one.\n  - Inner\n- Two");
+  });
+
+  it("reads a line shaped like a component as words, which is all a mail holds", () => {
+    const template = {
+      ...DEFAULT_MAIL_TEMPLATES.submission_confirmation,
+      body: { en: "Prototype(2)", de: "Zeile" },
+    };
+    const result = renderMailTemplate(template, "en", { formName: "Contact", submittedAt: "today" });
+    expect(result.html).toBe('<div lang="en"><p>Prototype(2)</p></div>');
+  });
+
   it("renders only the elements the dashboard's preview rebuilds", () => {
     const template = {
       ...DEFAULT_MAIL_TEMPLATES.submission_notification,

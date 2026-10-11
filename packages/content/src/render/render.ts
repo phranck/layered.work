@@ -109,6 +109,83 @@ export function renderTree(tree: Tree, text: string, options: RenderOptions = {}
 }
 
 /**
+ * Renders a text written in the inline profile, as phrasing content: words,
+ * emphasis, strong emphasis, links and line breaks, ready to stand inside a
+ * caption, a label or a paragraph that somebody else draws.
+ *
+ * A paragraph loses its wrapper, because the place the text stands in is
+ * already the block, and two paragraphs are joined by a space. A construct the
+ * profile does not admit keeps its words and loses its block, so a heading
+ * written into a caption reads as the caption's words rather than as a heading
+ * inside a `figcaption`, which HTML does not allow. The validator is what tells
+ * the author; a page that is drawn anyway still draws everything they wrote.
+ *
+ * Links keep whatever address was written. The drawing side limits them to the
+ * addresses any content may link to, as it does for an entry.
+ *
+ * @param markdown - The text as written.
+ * @param options - What is known besides the text.
+ * @returns The text, as phrasing nodes.
+ */
+export function renderInline(markdown: string, options: RenderOptions = {}): RenderNode[] {
+  return phrasingOf(renderTree(parseContent(markdown, "inline"), markdown, options));
+}
+
+/**
+ * The tags that may stand inside a line of text, which keep their element.
+ * Everything else is a block, and a block gives up its element and keeps its
+ * words.
+ */
+const PHRASING: ReadonlySet<string> = new Set(["a", "em", "strong", "del", "code", "br"]);
+
+/**
+ * The same nodes with every block taken apart into the words it holds.
+ *
+ * A space stands wherever a block began or ended, because the blank line or the
+ * list item that separated two runs of words is gone and the words would
+ * otherwise run into each other.
+ *
+ * @param nodes - Rendered nodes, blocks among them.
+ * @returns Phrasing nodes only.
+ */
+function phrasingOf(nodes: readonly RenderNode[]): RenderNode[] {
+  const result: RenderNode[] = [];
+  let afterBlock = false;
+
+  for (const node of nodes) {
+    const block = isBlock(node);
+    const content = block ? phrasingOf(wordsOf(node)) : [phrasingNode(node)];
+    if (content.length === 0) continue;
+    if (result.length > 0 && (block || afterBlock)) result.push(text(" "));
+    result.push(...content);
+    afterBlock = block;
+  }
+
+  return result;
+}
+
+/** Whether a node is a block rather than something a line of text can hold. */
+function isBlock(node: RenderNode): boolean {
+  return node.kind === "code" || (node.kind === "element" && !PHRASING.has(node.tag));
+}
+
+/**
+ * What a block says, once it is no longer a block: code its source, a picture
+ * its description, and anything else its children.
+ */
+function wordsOf(node: RenderNode): RenderNode[] {
+  if (node.kind === "code") return [text(node.source)];
+  if (node.kind !== "element") return [node];
+  if (node.tag === "img") return node.attributes.alt ? [text(node.attributes.alt)] : [];
+  return node.children;
+}
+
+/** A phrasing element with any block inside it taken apart as well. */
+function phrasingNode(node: RenderNode): RenderNode {
+  return node.kind === "element" ? { ...node, children: phrasingOf(node.children) } : node;
+}
+
+/**
  * Every reference link the document defines.
  *
  * Collected before anything is rendered, because a document may use one above
@@ -438,18 +515,14 @@ function fieldsOf(node: SyntaxNode, context: Context): Map<string, string> {
 }
 
 /**
- * A short piece of Markdown, rendered as the inline content of one paragraph.
- *
- * A value written in quotes is a separate text from the document around it, so
- * it is parsed on its own. A paragraph is what a line of text becomes, and its
- * wrapper is taken off because a cell or a caption is already the block.
+ * A table's caption or one of its cells, which is a line of text written in
+ * quotes and so a separate text from the document around it.
  *
  * @param markdown - What was written between the quotes.
- * @param context - The register to render with.
+ * @param context - The document, whose language the quotation marks follow.
  */
 function inlineMarkdown(markdown: string, context: Context): RenderNode[] {
-  const nodes = renderContent(markdown, { register: context.register });
-  return nodes.flatMap((node) => (node.kind === "element" && node.tag === "p" ? node.children : [node]));
+  return renderInline(markdown, { language: context.language });
 }
 
 /**

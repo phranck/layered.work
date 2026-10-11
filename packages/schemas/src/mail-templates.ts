@@ -36,5 +36,12 @@ export const MAIL_ELEMENTS = ["div", "p", "strong", "em", "ul", "ol", "li", "a",
 
 /** The addresses a link in a mail may point at: HTTP and HTTPS, and no other scheme. */
 export const MAIL_LINK = /^https?:\/\//i;
+
+/**
+ * What a template's placeholder may be called, as the source of a regular
+ * expression: a letter, then letters and digits, such as `formName`. Written
+ * between two pairs of braces in a subject or a body, as a named value is.
+ */
+export const MAIL_PLACEHOLDER_NAME_SOURCE = "[A-Za-z][A-Za-z0-9]*";
 export type RenderedMail = z.infer<typeof renderedMail>;
 export const testMailTemplateBody = previewMailTemplateBody.extend({ recipient: emailAddress });

@@ -4,8 +4,8 @@ import type { LanguageSupport } from "@codemirror/language";
 import { forceLinting } from "@codemirror/lint";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
-import { drawSelection, EditorView, keymap } from "@codemirror/view";
-import { CONTENT_SYNTAX, type Finding } from "@layered/content";
+import { drawSelection, EditorView, keymap, placeholder } from "@codemirror/view";
+import { type ContentProfile, type Finding, syntaxOf } from "@layered/content";
 import type { MediaKind } from "@layered/schemas";
 import { type Ref, useEffect, useEffectEvent, useImperativeHandle, useRef } from "react";
 import {
@@ -25,7 +25,8 @@ import { tableSync } from "./table-sync.js";
 import "./content-validation.css";
 
 /**
- * The writing surface for an entry's body.
+ * The writing surface for an entry's body, and for every other text of the
+ * dashboard longer than a line, each in the profile it is written in.
  *
  * CodeMirror 6, parsing with the content language's own Lezer extension, so
  * what the author types is parsed into exactly the tree the server parses.
@@ -43,11 +44,15 @@ import "./content-validation.css";
  * extension adds tags to node types and no nodes, so the tree stays the same. HTML tag
  * completion is off, because the content language is written with components
  * rather than markup.
+ *
+ * @param profile - The part of the language the text is written in. A profile
+ *   without components parses without them, as the server does, so a line
+ *   that only looks like a component stays the words it is.
  */
-export function contentLanguage(): LanguageSupport {
+export function contentLanguage(profile: ContentProfile = "entry"): LanguageSupport {
   return markdown({
     base: commonmarkLanguage,
-    extensions: [...CONTENT_SYNTAX, componentHighlighting],
+    extensions: [...syntaxOf(profile), componentHighlighting],
     completeHTMLTags: false,
   });
 }
@@ -82,6 +87,8 @@ const surfaceTheme = EditorView.theme(
     ".cm-content": { padding: "0", caretColor: "var(--text-accent)" },
     ".cm-line": { padding: "0" },
     ".cm-cursor": { borderLeftColor: "var(--text-accent)" },
+    // What an empty field shows takes the color a text field's placeholder takes.
+    ".cm-placeholder": { color: "var(--text-faint)" },
 
     // The bracket beside the cursor and the one it pairs with are outlined, and
     // one with no partner is marked as an error. Written with the focus selector
@@ -144,6 +151,15 @@ const surfaceTheme = EditorView.theme(
   { dark: true },
 );
 
+/** What a surface standing in for a field brings, read once when it is created. */
+interface SurfaceField {
+  profile: ContentProfile;
+  placeholder?: string;
+  maxLength?: number;
+  disabled?: boolean;
+  lang?: string;
+}
+
 /**
  * Everything the surface does, in one list.
  *
@@ -154,18 +170,24 @@ const surfaceTheme = EditorView.theme(
  * @param label - What the surface is called to assistive technology.
  * @param completionLabels - The words completion shows beside an option.
  * @param library - The media library completion offers files from, where there is one.
- * @param values - The named values completion offers after `{{`.
+ * @param values - The named values, or a mail's placeholders, which completion offers after `{{`.
+ * @param field - The profile, and the placeholder, length limit, lock and language of a surface used as a field.
  */
 function surfaceExtensions(
   label: string,
   completionLabels: CompletionLabels,
   library: MediaLibrary | undefined,
   values: () => readonly KnownValue[],
+  field: SurfaceField,
 ): Extension[] {
   return [
-    contentLanguage(),
+    contentLanguage(field.profile),
     contentHighlighting(),
-    contentAutocompletion(completionLabels, library, values),
+    contentAutocompletion(
+      field.profile === "entry" ? completionLabels : undefined,
+      library,
+      field.profile === "inline" ? undefined : values,
+    ),
     library ? contentFileDrop(library) : [],
     contentIndentation(),
     tableSync(),
@@ -176,7 +198,17 @@ function surfaceExtensions(
     highlightSelectionMatches(),
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ "aria-label": label, "aria-multiline": "true", spellcheck: "true" }),
+    EditorView.contentAttributes.of({
+      "aria-label": label,
+      "aria-multiline": "true",
+      spellcheck: "true",
+      ...(field.lang ? { lang: field.lang } : {}),
+    }),
+    field.placeholder ? placeholder(field.placeholder) : [],
+    field.maxLength === undefined
+      ? []
+      : EditorState.changeFilter.of((transaction) => transaction.newDoc.length <= (field.maxLength ?? 0)),
+    field.disabled ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : [],
     surfaceTheme,
   ];
 }
@@ -228,10 +260,25 @@ export interface ContentEditorProps {
   library?: MediaLibrary;
   /**
    * The named values, which complete a reference after `{{` and decide which
-   * names the validator accepts. Undefined while they are loading, when
-   * references are taken on trust.
+   * names the validator accepts. In a mail they are the template's
+   * placeholders. Undefined while they are loading, when references are taken
+   * on trust.
    */
   values?: readonly KnownValue[];
+  /**
+   * The part of the language the text may be written in, which decides what is
+   * parsed, completed and accepted. The whole language unless said otherwise.
+   * Read once, when the surface is created.
+   */
+  profile?: ContentProfile;
+  /** What the surface shows while it is empty. */
+  placeholder?: string;
+  /** The most characters the text may hold. A change that would exceed it is refused. */
+  maxLength?: number;
+  /** Shows the text without letting it be changed. */
+  disabled?: boolean;
+  /** The language the text is written in, for spelling and for assistive technology. */
+  lang?: string;
 }
 
 /**
@@ -251,6 +298,11 @@ export function ContentEditor({
   onValidation,
   library,
   values,
+  profile = "entry",
+  placeholder: emptyText,
+  maxLength,
+  disabled,
+  lang,
 }: ContentEditorProps) {
   const { text } = useDashboardLanguage();
   const host = useRef<HTMLDivElement>(null);
@@ -337,6 +389,9 @@ export function ContentEditor({
   const initialValue = useRef(value);
   const initialLabel = useRef(label);
   const hasLibrary = useRef(library !== undefined);
+  // Read once, like the label: a field whose placeholder, limit, lock or
+  // language changes is given a new surface by its key.
+  const initialField = useRef<SurfaceField>({ profile, placeholder: emptyText, maxLength, disabled, lang });
 
   useEffect(() => {
     if (!host.current) return;
@@ -357,11 +412,13 @@ export function ContentEditor({
                 }
               : undefined,
             () => knownValues(),
+            initialField.current,
           ),
           contentValidation(
             (checked) => validated(checked),
             (finding) => message(finding),
             () => knownValueNames(),
+            initialField.current.profile,
           ),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed(update.state.doc.toString());

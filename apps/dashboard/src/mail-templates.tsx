@@ -11,7 +11,7 @@ import {
 import { Button, Card, Field, Input } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createElement, type ReactNode, useEffect, useState } from "react";
+import { createElement, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -220,6 +220,12 @@ function MailTemplateCards({
   const { notifyError } = useNotify();
   const language = useTextLanguage();
   const [recipient, setRecipient] = useState("");
+  // The placeholders as the editor completes and checks them. Kept while the
+  // list is the same, because a new list makes the editor check the body again.
+  const placeholders = useMemo(
+    () => allowedVariables.map((name) => ({ name, value: "" })),
+    [allowedVariables],
+  );
   const preview = useMutation({
     mutationFn: (request: { value: SaveMailTemplateBody; language: ContentLanguage }) =>
       api.previewMailTemplate(kind, request.value, request.language),
@@ -253,8 +259,8 @@ function MailTemplateCards({
             id="mail-body"
             label={text("mailTemplateBody")}
             value={draft.body}
-            multiline
-            rows={8}
+            profile="mail"
+            values={placeholders}
             onChange={(value) => onChange("body", value)}
           />
           <p>

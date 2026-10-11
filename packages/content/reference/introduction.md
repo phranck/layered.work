@@ -45,3 +45,13 @@ A line that begins with a capitalized word followed by a reference, such as `Hel
 GitHub's flavor of it: tables, task lists, struck-out text and bare addresses all work as they do in a repository.
 
 HTML is not. A tag written in a document reaches the page as the characters that were typed, so `<script>alert(1)</script>` appears on the page as that text and runs nothing.
+
+## Texts shorter than a page
+
+A caption, a consent notice, a form's message and the description in the home page's hero are written in the same editor as an entry, but they stand where a sentence stands. So they hold emphasis, strong emphasis, links and line breaks, and nothing else. A heading, a list, a quote, code, a picture or a named value is refused there. A line shaped like a component is a sentence in these texts and needs no backslash.
+
+A caption written as an argument, such as `caption: "The *front*, before painting"`, is drawn the same way, and so are the caption and the cells of a `Table`. Emphasis, strong emphasis and links show as such, and anything else shows as its words.
+
+A mail template's body holds paragraphs, lists, emphasis, strong emphasis, links and the template's placeholders, because that is what a mail client draws. An address is written as a link there, not bare.
+
+A listing's introduction is written in the whole language, like an entry.

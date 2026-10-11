@@ -1,6 +1,7 @@
 import type { ContentLanguage, FormSubmissionValues, PublicForm } from "@layered/schemas";
 import { Button } from "./button.js";
 import { Card } from "./card.js";
+import { InlineContent } from "./content-renderer.js";
 import { FormControls } from "./form-controls.js";
 
 export type FormOutcome = {
@@ -35,7 +36,9 @@ export function FormEmbed({
     return (
       <div className="card form-embed" role="status" data-form-name={form.slug}>
         <Card.Body>
-          <p>{outcome.message}</p>
+          <p>
+            <InlineContent text={outcome.message} language={language} />
+          </p>
         </Card.Body>
       </div>
     );

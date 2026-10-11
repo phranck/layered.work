@@ -151,6 +151,21 @@
   font-size: var(--text-xl);
 }
 
+/* A surface standing in for a field, where a text area would stand: the writing
+   surface's face and edge at the height its text needs, from three lines up,
+   with the padding of a text field rather than of a page of writing, so its
+   text starts where the text of the fields around it starts. Two classes,
+   because the editor mounted inside states its padding with the weight of two. */
+.editor__surface--field {
+  min-height: 0;
+}
+
+.editor__surface.editor__surface--field .cm-scroller {
+  min-height: 3lh;
+  padding: var(--input-padding);
+  box-sizing: content-box;
+}
+
 /* Being written in looks like a text field being written in, whatever is
    mounted inside the surface. */
 .editor__surface:focus-within {

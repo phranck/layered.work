@@ -5,6 +5,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { useNamedValues } from "./named-values-query.js";
 import { queryKeys } from "./query-keys.js";
 import { SettingsCard } from "./settings.js";
 import { storedChoiceKey, useStoredChoice } from "./stored-choice.js";
@@ -37,6 +38,8 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
   const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
+  // The introduction is rendered as an entry's body is, named values included.
+  const values = useNamedValues();
   const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);
   const group = LISTING_GROUP[kind];
 
@@ -76,7 +79,8 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
               label={text("listingIntroduction")}
               hint={text("listingIntroductionHint")}
               value={draft.introduction}
-              multiline
+              profile="entry"
+              values={values.data}
               maxLength={MaxLength.Paragraph}
               disabled={!editable}
               onChange={(introduction) => update({ introduction })}

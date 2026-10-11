@@ -13,6 +13,8 @@
  * the document, which whoever shows the finding may no longer have.
  */
 
+import type { Construct } from "../profile.js";
+
 /** Whether something is refused or merely pointed out. */
 export type Severity = "error" | "warning";
 
@@ -59,6 +61,8 @@ export const FINDING = {
   UnexpectedCharacter: "unexpected-character",
   /** A component the parser marked and could not explain. */
   Unreadable: "unreadable",
+  /** A construct the text's profile does not admit, such as a heading in a caption. */
+  NotInProfile: "not-in-profile",
 } as const;
 
 /** One of the codes above. */
@@ -86,6 +90,8 @@ export type Finding = {
   value?: string;
   /** A name near enough to what was written to be worth offering instead. */
   suggestion?: string;
+  /** The kind of construct a profile refused, such as `heading`, for a sentence in any language. */
+  construct?: Construct;
 };
 
 /** What a document turned out to be. */

@@ -505,7 +505,7 @@ export function valueCompletions(values: () => readonly KnownValue[]) {
     );
     if (options.length === 0) return null;
     const typed = open[1] ?? "";
-    return { from: position - typed.length, options, validFor: /^[a-z0-9-]*$/ };
+    return { from: position - typed.length, options, validFor: /^[A-Za-z0-9-]*$/ };
   };
 }
 
@@ -528,20 +528,23 @@ function thumbnailOf(completion: Completion): Node | null {
  * Escape; Enter takes the highlighted entry, and Tab then moves between the
  * places a snippet leaves open.
  *
- * @param labels - The words shown beside an option, in the interface's language.
+ * @param labels - The words shown beside a component's option, in the
+ *   interface's language. Without them nothing completes components, which is
+ *   right for a text whose profile holds none: every paragraph there starts
+ *   with what looks like the start of a component's name.
  * @param library - The media library, which completes the quotes of a file
  *   parameter where it is given.
- * @param values - The named values, which complete a reference after `{{`
- *   where they are given.
+ * @param values - The named values, or a mail's placeholders, which complete a
+ *   reference after `{{` where they are given.
  */
 export function contentAutocompletion(
-  labels: CompletionLabels,
+  labels: CompletionLabels | undefined,
   library?: MediaLibrary,
   values?: () => readonly KnownValue[],
 ) {
   return autocompletion({
     override: [
-      contentCompletions(labels),
+      ...(labels ? [contentCompletions(labels)] : []),
       ...(library ? [libraryCompletions(library)] : []),
       ...(values ? [valueCompletions(values)] : []),
     ],

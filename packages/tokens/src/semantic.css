@@ -134,6 +134,11 @@
      where the field's curve gives way to its straight edge. */
   --control-text-inset: calc(var(--radius-control) / 2);
 
+  /* Where the text inside a text field starts, from its edge. A Markdown editor
+     standing in for a field takes the same, so its text lines up with the
+     text of the fields above and below it. */
+  --input-padding: 10px 13px;
+
   /* Ligatures are off by default in most browsers for monospace, so they are
      asked for explicitly. Stated once here and applied by whatever sets the
      monospace family, rather than repeated at every code block. */

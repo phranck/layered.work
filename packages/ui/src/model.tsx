@@ -4,6 +4,7 @@ import { ArrowsOutIcon } from "@phosphor-icons/react/dist/ssr/ArrowsOut";
 import { createElement } from "react";
 import { Button } from "./button.js";
 import { ContentPlaceholder } from "./content-placeholder.js";
+import { InlineContent } from "./content-renderer.js";
 import { contentUrl, type MediaProps } from "./content-shared.js";
 import { Figure } from "./figure.js";
 /** Model parameters and the library that resolves its source. */
@@ -14,6 +15,7 @@ export function Model({ slug, alt, caption, poster, media }: ModelProps) {
   const src = contentUrl(asset?.src, true);
   if (!asset || !src) return <ContentPlaceholder name={slug} />;
   const label = alt;
+  const captionText = caption ?? asset.caption;
   const posterUrl = contentUrl(poster ? media(poster)?.src : asset.poster, true);
   return (
     <Figure.Root className="content-model" id={slug}>
@@ -50,7 +52,11 @@ export function Model({ slug, alt, caption, poster, media }: ModelProps) {
           />
         </div>
       </div>
-      <Figure.Caption>{caption ?? asset.caption ?? alt ?? asset.alt}</Figure.Caption>
+      <Figure.Caption>
+        {/* A caption is written in Markdown and an alternative text is not, so
+            only the caption is read as Markdown. */}
+        {captionText ? <InlineContent text={captionText} /> : (alt ?? asset.alt)}
+      </Figure.Caption>
       {/* Focusable by script alone, so opening the viewer can rest the focus on
           the dialog rather than forcing it onto the close button, which would
           draw a keyboard focus ring nobody navigated to. */}

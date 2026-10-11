@@ -6,7 +6,7 @@ import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
-import { chooseTextLanguage } from "./test-support.js";
+import { chooseTextLanguage, writeInEditor } from "./test-support.js";
 
 let client: QueryClient;
 afterEach(() => {
@@ -91,7 +91,7 @@ it("saves a watermark position, and none as null", async () => {
 it("saves localized descriptions and an explicit decorative choice with the focal point", async () => {
   const { save, close } = openDialog(detail);
   fireEvent.change(await screen.findByLabelText("Alternativtext"), { target: { value: " Berge " } });
-  fireEvent.change(screen.getByLabelText("Bildunterschrift"), { target: { value: " Sonnenuntergang " } });
+  await writeInEditor("Bildunterschrift", " Sonnenuntergang ");
   chooseTextLanguage("en");
   fireEvent.click(screen.getByRole("switch", { name: "Dekorativ" }));
   fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
