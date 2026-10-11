@@ -151,7 +151,7 @@ describe("the blocks screen", () => {
     expect(await screen.findByText("9 Einträge · Nach Titel")).toBeTruthy();
   });
 
-  it("frees the clouds switch only while the block's sky is on, and saves both", async () => {
+  it("frees the clouds switch only on the first block whose sky is on, and saves both", async () => {
     const { requests } = renderScreen();
     // The hero is open first, and its sky is off on its defaults.
     const clouds = await screen.findByRole("switch", { name: "Wolken" });
@@ -162,6 +162,11 @@ describe("the blocks screen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(requests("PUT")).toHaveLength(1));
     expect(requests("PUT")[0]?.body.settings).toMatchObject({ sky: true, clouds: false });
+
+    // The sky has one top, so a block further down cannot have clouds of its own.
+    fireEvent.click(await screen.findByRole("row", { name: /Beitrags-Raster/ }));
+    fireEvent.click(await screen.findByRole("switch", { name: "Star-Background" }));
+    expect(screen.getByRole("switch", { name: "Wolken" })).toHaveProperty("disabled", true);
   });
 
   it("adds a block at the end and removes one after asking", async () => {

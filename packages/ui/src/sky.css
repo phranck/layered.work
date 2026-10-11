@@ -58,7 +58,8 @@
   background: var(--surface-page);
 }
 
-/* The clouds belong to the bands that ask for them, not to the layer. */
+/* The first band that shows the sky draws its clouds, because the band knows
+   where the sky's top is and the layer, which covers every band, does not. */
 .sky--bands::after {
   content: none;
 }
@@ -79,6 +80,13 @@
 
 .section--band.section--sky {
   border-image: none;
+}
+
+/* The sky has one top, so only the first band that shows it carries clouds,
+   whichever bands asked for them. Counted among the bands actually on the
+   page, so a block that renders nothing never takes the clouds with it. */
+.section--clouds:not(:nth-child(1 of .section--sky))::before {
+  content: none;
 }
 
 .section--clouds::before {

@@ -32,7 +32,11 @@ describe("the declarations", () => {
     for (const type of homeBlockTypes) {
       const settings = HOME_BLOCKS[type].settings;
       for (const setting of settings) {
-        if (setting.kind !== "flag" || !setting.requires) continue;
+        if (setting.kind !== "flag") continue;
+        // Only the first block with a flag on can be told apart, so a flag that
+        // is first-only has to name the flag it counts from.
+        if (setting.firstOnly) expect(setting.requires, `${type}.${setting.key}`).toBeTruthy();
+        if (!setting.requires) continue;
         const required = settings.find((candidate) => candidate.key === setting.requires);
         expect(required?.kind, `${type}.${setting.key}`).toBe("flag");
       }
