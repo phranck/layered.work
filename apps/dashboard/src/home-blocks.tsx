@@ -184,6 +184,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
                           <Button.Icon
                             label={text("homeBlockRemove", name)}
                             icon={<TrashIcon />}
+                            tone="danger"
                             disabled={!owner}
                             onClick={() => setRemoving(block)}
                           />

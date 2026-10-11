@@ -223,6 +223,7 @@ function TopicTable({
               <Button.Icon
                 label={text("deleteTopic")}
                 icon={<TrashIcon />}
+                tone="danger"
                 onClick={() => onOpen({ kind: "delete", topic })}
               />
             </Table.Actions>

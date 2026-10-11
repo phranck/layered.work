@@ -58,10 +58,14 @@ Button.link = ({ href, label, icon, tone = "secondary", size } = {}) => html`
  * can be pressed, and a filled square for every pencil in a table would turn
  * the table into a grid of buttons. The label goes to assistive technology and
  * to the tooltip.
+ *
+ * @param tone "danger" for an action that removes or destroys something, which
+ *             draws the glyph in the danger color. Left out, it takes the text
+ *             color.
  */
-Button.icon = ({ label, icon, attributes = {} } = {}) => html`
+Button.icon = ({ label, icon, tone, attributes = {} } = {}) => html`
   <button
-    class="button button--ghost button--icon"
+    class="button button--ghost button--icon${tone === "danger" ? " button--ghost-danger" : ""}"
     type="button"
     ${attrs({ "aria-label": label, title: label, ...attributes })}
   >

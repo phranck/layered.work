@@ -224,23 +224,33 @@
 }
 
 /* The remove button sits on the card's corner, shown while the card is
-   pointed at or anything in it has the focus, so the keyboard finds it too. */
-.forms-field__remove {
+   pointed at or anything in it has the focus, so the keyboard finds it too.
+   Shown and hidden by its visibility, so that the button's own opacity still
+   fades it while the form's last field cannot be removed. It stands over the
+   card's edge, so its face is opaque, and under the pointer the danger tint is
+   laid over that face rather than in place of it. Two classes, because the UI
+   package's button rules set the padding, the face, the edge and the corners
+   with the weight of one. */
+.button.forms-field__remove {
   --button-padding-block: 2px;
 
   position: absolute;
   top: calc(-1 * var(--space-2));
   right: calc(-1 * var(--space-2));
+  visibility: hidden;
   font-size: var(--text-xs);
   background: var(--surface-overlay);
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-pill);
-  opacity: 0;
+}
+
+.button.forms-field__remove:hover {
+  background: linear-gradient(var(--danger-tint), var(--danger-tint)), var(--surface-overlay);
 }
 
 .forms-field:hover .forms-field__remove,
 .forms-field:focus-within .forms-field__remove {
-  opacity: 1;
+  visibility: visible;
 }
 
 /* What a row has left, as its share of the columns. */

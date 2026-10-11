@@ -134,6 +134,7 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
                     <Button.Icon
                       label={text("navigationDelete", name)}
                       icon={<TrashIcon />}
+                      tone="danger"
                       disabled={!owner}
                       onClick={() => setDialog({ deleting: group })}
                     />
@@ -369,7 +370,12 @@ function NavigationItemFields({
           disabled={index === length - 1}
           onClick={() => onMove(index + 1)}
         />
-        <Button.Icon label={text("navigationLinkRemove", name)} icon={<TrashIcon />} onClick={onRemove} />
+        <Button.Icon
+          label={text("navigationLinkRemove", name)}
+          icon={<TrashIcon />}
+          tone="danger"
+          onClick={onRemove}
+        />
       </div>
     </div>
   );

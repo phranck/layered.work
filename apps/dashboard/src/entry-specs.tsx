@@ -82,6 +82,7 @@ export function SpecsField({
                   <Button.Icon
                     label={text("editorSpecRemove", name)}
                     icon={<TrashIcon />}
+                    tone="danger"
                     onClick={() => remove(index)}
                   />
                 </div>

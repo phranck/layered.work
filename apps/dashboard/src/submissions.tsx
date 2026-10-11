@@ -5,6 +5,7 @@ import {
   submittedValueText,
 } from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
+import { TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
@@ -227,7 +228,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                       {text("submissionMarkSpam")}
                     </Button>
                   )}
-                  <Button tone="danger" onClick={() => setConfirmDelete(true)}>
+                  <Button tone="danger" icon={<TrashIcon />} onClick={() => setConfirmDelete(true)}>
                     {text("submissionDelete")}
                   </Button>
                 </>
