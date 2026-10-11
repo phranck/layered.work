@@ -8,7 +8,7 @@ import {
   WATERMARK_ANCHORS,
   type WatermarkAnchor,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, MediaCredit, Select, Switch, Textarea } from "@layered/ui";
+import { Button, Card, Field, Input, MediaCredit, Select, Switch } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -16,6 +16,7 @@ import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MarkdownField } from "./markdown-field.js";
 import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
 import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { CardDialog } from "./modal.js";
@@ -123,15 +124,15 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
                   onCheckedChange={(decorative) => description(language, "altText", decorative ? "" : null)}
                 />
               </Field.Inline>
-              <Field label={text("mediaCaption")} htmlFor={`${prefix}-${language}-caption`}>
-                <Textarea
-                  id={`${prefix}-${language}-caption`}
-                  lang={language}
-                  value={translation.caption ?? ""}
-                  maxLength={MaxLength.Paragraph}
-                  onChange={(event) => description(language, "caption", event.target.value || null)}
-                />
-              </Field>
+              <MarkdownField
+                id={`${prefix}-${language}-caption`}
+                label={text("mediaCaption")}
+                lang={language}
+                profile="inline"
+                value={translation.caption ?? ""}
+                maxLength={MaxLength.Paragraph}
+                onChange={(caption) => description(language, "caption", caption || null)}
+              />
             </>
           )}
           {detail.kind === "image" && detail.url && (

@@ -231,7 +231,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
           label={text("formConsentNotice")}
           value={field.notice}
           onChange={(notice) => update({ ...field, notice })}
-          multiline
+          profile="inline"
         />
         <Field label={text("formConsentRevision")} htmlFor="form-revision">
           <Input
@@ -521,7 +521,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     label={text("formSuccess")}
                     value={draft.successMessage}
                     onChange={(successMessage) => change({ ...draft, successMessage })}
-                    multiline
+                    profile="inline"
                   />
                   <Field.Inline label={text("formStore")} htmlFor="form-store">
                     <Switch

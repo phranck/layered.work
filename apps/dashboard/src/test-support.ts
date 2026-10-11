@@ -1,5 +1,6 @@
+import { EditorView } from "@codemirror/view";
 import { type ContentLanguage, INTERFACE_LANGUAGES } from "@layered/schemas";
-import { fireEvent, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { dashboardText } from "./dashboard-i18n.js";
 import { contentLanguageOptions } from "./translated.js";
 
@@ -29,4 +30,18 @@ export function chooseTextLanguage(language: ContentLanguage, scope: HTMLElement
   const control = within(scope).getByRole("group", { name: (name) => SWITCH_NAMES.has(name) });
   const label = contentLanguageOptions().find((option) => option.value === language)?.label;
   fireEvent.click(within(control).getByRole("button", { name: String(label) }));
+}
+
+/**
+ * Replaces the text of a field written in the Markdown editor, as typing it
+ * would. The editor is loaded on demand, so it is waited for.
+ *
+ * @param label - What the field is called, which the editor's text area carries as its name.
+ * @param text - The whole new text.
+ */
+export async function writeInEditor(label: string, text: string) {
+  const content = await screen.findByRole("textbox", { name: label });
+  const view = EditorView.findFromDOM(content);
+  if (!view) throw new Error(`No editor is called ${label}.`);
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
 }

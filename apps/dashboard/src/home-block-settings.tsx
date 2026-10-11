@@ -112,7 +112,7 @@ function TextControl({ setting, value, onChange, editable, idPrefix }: ControlPr
       value={(value ?? { en: "", de: "" }) as BilingualText}
       onChange={onChange}
       placeholder={setting.fallback}
-      multiline={setting.kind === "paragraph"}
+      profile={setting.kind === "paragraph" ? "inline" : undefined}
       maxLength={setting.kind === "paragraph" ? MaxLength.Paragraph : MaxLength.Line}
       disabled={!editable}
     />

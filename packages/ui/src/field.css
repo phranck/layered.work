@@ -50,7 +50,7 @@
   width: 100%;
   min-width: 0;
   height: var(--input-height, auto);
-  padding: var(--input-padding, 10px 13px);
+  padding: var(--input-padding);
   font: inherit;
   font-size: var(--text-base);
   color: var(--text-primary);
