@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe("form builder", () => {
-  it("creates a form with bilingual fields in the order chosen by the keyboard drag handle", async () => {
+  it("creates a form with bilingual fields in the order and at the width chosen by the keyboard", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -76,12 +76,16 @@ describe("form builder", () => {
     mount(fetcher as typeof fetch);
 
     fireEvent.change(await screen.findByLabelText("Form name"), { target: { value: "Demo" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "Field" }), { target: { value: "email" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add field" }));
+    // A click on a palette tile adds its field at the end and selects it.
+    fireEvent.click(screen.getByRole("button", { name: "Email" }));
     fireEvent.change(screen.getByLabelText("Label"), { target: { value: "Email address" } });
     chooseTextLanguage("de");
     fireEvent.change(screen.getByLabelText("Label"), { target: { value: "E-Mail-Adresse" } });
-    fireEvent.keyDown(screen.getByRole("button", { name: /Move “Email address”/ }), { key: "ArrowUp" });
+    chooseTextLanguage("en");
+    fireEvent.keyDown(screen.getByRole("button", { name: /^Email address/, pressed: true }), {
+      key: "ArrowUp",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "6 of 12" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
@@ -90,10 +94,26 @@ describe("form builder", () => {
     const sent = requests.find(({ url, init }) => url.endsWith("/forms") && init?.method === "POST");
     const body = JSON.parse(String(sent?.init?.body));
     expect(body.name).toBe("Demo");
-    // Each field went into a row of its own, in the order the handle chose.
-    const sentRows = body.rows as { fields: { type: string; label: unknown }[] }[];
+    // The new field went into a row of its own above the first, at the width pressed.
+    const sentRows = body.rows as { fields: { type: string; label: unknown; span?: number }[] }[];
     expect(sentRows.map((row) => row.fields.map((field) => field.type))).toEqual([["email"], ["shortText"]]);
     expect(sentRows[0]?.fields[0]?.label).toEqual({ en: "Email address", de: "E-Mail-Adresse" });
+    expect(sentRows[0]?.fields[0]?.span).toBe(6);
+  });
+
+  it("hands the focus to a clicked field, so the arrow keys move it", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/me") || url.endsWith("/account")) return json(account);
+      if (url.endsWith("/dashboard/counts")) return json(counts);
+      if (url.endsWith("/forms")) return json([]);
+      return json(null);
+    });
+    mount(fetcher as typeof fetch);
+
+    const field = await screen.findByRole("button", { name: /^Short text/, pressed: false });
+    fireEvent.click(field);
+    expect(document.activeElement).toBe(field);
   });
 
   it("does not send a field whose German label is blank", async () => {
@@ -106,7 +126,7 @@ describe("form builder", () => {
     });
     mount(fetcher as typeof fetch);
 
-    fireEvent.click(await screen.findByRole("button", { name: /Short text · name/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Short text/, pressed: false }));
     chooseTextLanguage("de");
     fireEvent.change(screen.getByLabelText("Label"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));

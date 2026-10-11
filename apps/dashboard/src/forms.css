@@ -1,36 +1,281 @@
 .forms-editor .editor__main {
   min-height: 0;
 }
-.forms-fields {
+
+/* --- Builder -----------------------------------------------------------------
+   The palette beside the canvas while the builder is wide enough for both, and
+   above it once the builder is narrower than the two need. The builder's own
+   width decides, because the editor's panel takes a share of the window. */
+
+.forms-builder {
+  position: relative;
+  container: forms-builder / inline-size;
+}
+
+.forms-builder__layout {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--workbench-gutter);
+  align-items: start;
+}
+
+.forms-builder__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--workbench-gutter);
+  min-width: 0;
+}
+
+@container forms-builder (width < 40rem) {
+  .forms-builder__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .forms-palette__tiles {
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  }
+}
+
+/* --- Palette ------------------------------------------------------------------ */
+
+.forms-palette__hint {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.forms-palette__tiles {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* A tile is pressed to add its field and dragged to place it, so it takes the
+   pointer itself rather than letting a touch scroll the page. */
+.forms-palette__tile {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: start;
+  cursor: grab;
+  touch-action: none;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+}
+
+.forms-palette__tile:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--edge-strong);
+}
+
+.forms-palette__tile:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
+
+.forms-palette__tile svg {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+}
+
+/* --- Canvas ------------------------------------------------------------------- */
+
+.forms-canvas {
+  position: relative;
+}
+
+.forms-rows {
   display: grid;
   gap: var(--space-2);
 }
-.forms-fields__row {
+
+/* A row: its grip, and its fields on the form's columns, whose number the
+   builder sets as `--columns`. */
+.forms-row {
   display: flex;
+  gap: var(--space-2);
   align-items: stretch;
+  padding: var(--space-2);
+  background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
 }
-.forms-fields__row[data-selected] {
-  border-color: var(--focus-edge);
-}
-.forms-fields__select {
-  color: inherit;
-  background: transparent;
-  border: 0;
+
+.forms-row__grid {
   display: grid;
   flex: 1;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  text-align: left;
-  cursor: pointer;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: var(--space-2);
+  min-width: 0;
 }
-.forms-fields__select small {
+
+.forms-field {
+  position: relative;
+  grid-column: span var(--span);
+  min-width: 0;
+}
+
+.forms-field[data-dragged] {
+  opacity: 0.4;
+}
+
+/* The card is the field's handle as well as its selection, so like a tile it
+   keeps a touch for the drag. */
+.forms-field__select {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: grab;
+  touch-action: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-chip);
+}
+
+.forms-field__select:hover {
+  border-color: var(--edge-strong);
+}
+
+.forms-field[data-selected] .forms-field__select {
+  background: var(--accent-tint);
+  border-color: var(--focus-edge);
+}
+
+.forms-field__icon {
+  grid-row: span 2;
+  width: 1.3em;
+  height: 1.3em;
   color: var(--text-muted);
 }
-.forms-add {
-  display: flex;
+
+.forms-field__label,
+.forms-field__type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forms-field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.forms-field__required {
+  color: var(--state-danger);
+}
+
+.forms-field__type {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* The remove button sits on the card's corner, shown while the card is
+   pointed at or anything in it has the focus, so the keyboard finds it too. */
+.forms-field__remove {
+  --button-padding-block: 2px;
+
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  right: calc(-1 * var(--space-2));
+  font-size: var(--text-xs);
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+}
+
+.forms-field:hover .forms-field__remove,
+.forms-field:focus-within .forms-field__remove {
+  opacity: 1;
+}
+
+/* What a row has left, as its share of the columns. */
+.forms-row__free {
+  display: grid;
+  grid-column: span var(--span);
+  place-items: center;
+  min-height: 3rem;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-chip);
+}
+
+/* Where a drop lands: upright between two fields, or across between two rows. */
+.forms-canvas__marker {
+  position: absolute;
+  pointer-events: none;
+  background: var(--accent-500);
+  border-radius: var(--radius-pill);
+}
+
+/* The label under the pointer while something is dragged. */
+.forms-builder__ghost {
+  position: absolute;
+  z-index: 10;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--lift-3);
+  transform: translate(var(--space-3), var(--space-3));
+}
+
+/* --- Width -------------------------------------------------------------------
+   One step per column, filled up to the field's width. A step the row has no
+   room for cannot be pressed. */
+
+.forms-span {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 2px;
+}
+
+.forms-span__step {
+  height: 1.25rem;
+  padding: 0;
+  cursor: pointer;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-hairline);
+  border-radius: 4px;
+}
+
+.forms-span__step[data-filled] {
+  background: var(--accent-500);
+  border-color: var(--accent-600);
+}
+
+.forms-span__step:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
+
+/* --- Field settings ---------------------------------------------------------- */
+
+.forms-options,
+.forms-option {
+  display: grid;
   gap: var(--space-2);
+}
+
+.forms-option {
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--edge-hairline);
 }
 
 /* The preview at the width of the site's prose, which is where a form stands in
@@ -38,18 +283,4 @@
 .forms-preview {
   max-width: var(--reading-measure);
   margin-inline: auto;
-}
-.forms-options,
-.forms-option {
-  display: grid;
-  gap: var(--space-2);
-}
-.forms-option {
-  padding-block: var(--space-3);
-  border-block-start: 1px solid var(--edge-hairline);
-}
-@media (width < 700px) {
-  .forms-add {
-    flex-wrap: wrap;
-  }
 }
