@@ -1,6 +1,6 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SkyBackdrop, SkyBand } from "./sky-backdrop.js";
+import { SkyBackdrop, SkyBands } from "./sky-backdrop.js";
 
 afterEach(() => {
   cleanup();
@@ -18,7 +18,7 @@ describe("the sky behind a screen", () => {
     const { container } = render(<SkyBackdrop />);
     const layer = container.querySelector(".sky");
     expect(layer?.getAttribute("aria-hidden")).toBe("true");
-    expect(layer?.classList.contains("sky--band")).toBe(false);
+    expect(layer?.classList.contains("sky--bands")).toBe(false);
     expect(layer?.querySelector("canvas.sky__web")).toBeTruthy();
   });
 
@@ -37,10 +37,10 @@ describe("the sky behind a screen", () => {
   });
 });
 
-describe("the sky behind a band", () => {
-  it("is the same layer and canvas, marked as a band's", () => {
-    const { container } = render(<SkyBand />);
-    const layer = container.querySelector(".sky.sky--band");
+describe("the sky behind the bands of a page", () => {
+  it("is the same layer and canvas, marked as the bands'", () => {
+    const { container } = render(<SkyBands />);
+    const layer = container.querySelector(".sky.sky--bands");
     expect(layer?.getAttribute("aria-hidden")).toBe("true");
     expect(layer?.querySelector("canvas.sky__web")).toBeTruthy();
   });

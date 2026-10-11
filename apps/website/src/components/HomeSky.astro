@@ -1,0 +1,15 @@
+---
+import { SkyBands } from "@layered/ui";
+---
+
+<SkyBands />
+
+<script>
+  import { startSky } from "@layered/ui/sky";
+
+  // The layer is rendered to static markup, where no effect runs, so its web is
+  // started here. It is drawn while a band that shows it is in view, and rests
+  // while the bands in view all cover it.
+  const canvas = document.querySelector<HTMLCanvasElement>(".sky--bands canvas");
+  if (canvas) startSky(canvas, { watch: Array.from(document.querySelectorAll(".section--sky")) });
+</script>

@@ -59,7 +59,7 @@ export function HomeBlockSettingsFields({
       setting={setting}
       value={draft[setting.key]}
       onChange={(value) => onChange(setting.key, value)}
-      editable={editable}
+      editable={editable && requirementMet(setting, draft)}
       idPrefix={`home-${type}`}
     />
   );
@@ -72,6 +72,20 @@ export function HomeBlockSettingsFields({
       )}
     </>
   );
+}
+
+/**
+ * Whether the flag a setting requires is on in the draft, so its control can be
+ * changed. A setting that requires nothing always can.
+ *
+ * Read from the draft rather than from what is stored, so switching the sky on
+ * frees its clouds switch before anything is saved.
+ *
+ * @param setting - The declaration.
+ * @param draft - The values being edited.
+ */
+function requirementMet(setting: HomeBlockSetting, draft: HomeBlockSettings): boolean {
+  return setting.kind !== "flag" || !setting.requires || draft[setting.requires] === true;
 }
 
 /**
