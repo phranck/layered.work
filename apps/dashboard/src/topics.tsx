@@ -1,28 +1,19 @@
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  MaxLength,
-  type SaveTopicBody,
-  saveTopicBody,
-  type TopicListItem,
-} from "@layered/schemas";
+import { type ContentLanguage, MaxLength, type TopicListItem } from "@layered/schemas";
 import { Button, Card, Field, Input, Select } from "@layered/ui";
 import { ArrowsMergeIcon, FloppyDiskIcon, PencilSimpleIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useMemo, useState } from "react";
 import { DashboardApiError } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { Table, useTableSearch } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
+import { filterTopics, type NameDraft, nameDraftOf, topicBodyOf, topicLabel } from "./topics-model.js";
+import { useDeleteTopic, useMergeTopic, useSaveTopic, useTopics } from "./topics-query.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -34,50 +25,6 @@ import { Translated } from "./translated.js";
  * other language's name, because this is the screen where the gap gets filled.
  */
 
-/**
- * What a topic is called in one language, or in the other where it has no name
- * in that one, and whether the name is its own.
- *
- * @param topic - The topic.
- * @param language - The language wanted.
- */
-export function topicLabel(
-  topic: TopicListItem,
-  language: ContentLanguage,
-): { name: string; named: boolean } {
-  const own = topic[language];
-  if (own) return { name: own.name, named: true };
-  return { name: (topic.en ?? topic.de)?.name ?? "", named: false };
-}
-
-/**
- * The topics a search leaves: those with the text anywhere in either name or
- * address, ignoring case.
- *
- * @param topics - Every topic.
- * @param search - What the reader typed.
- */
-export function filterTopics(topics: readonly TopicListItem[], search: string): TopicListItem[] {
-  const needle = search.trim().toLocaleLowerCase();
-  if (!needle) return [...topics];
-  return topics.filter((topic) =>
-    CONTENT_LANGUAGES.some((language) => {
-      const named = topic[language];
-      return (
-        named !== null && (named.name.toLocaleLowerCase().includes(needle) || named.slug.includes(needle))
-      );
-    }),
-  );
-}
-
-/** Refreshes everything a change to a topic shows up in. */
-function refreshAfterTopicChange(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
-  void refreshCounts(queryClient);
-}
-
 /** Which dialog is open, and for which topic. */
 type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | null;
 
@@ -87,9 +34,8 @@ type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | 
  * @param area - The sidebar area, which names the screen.
  */
 export function TopicsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
+  const list = useTopics();
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const rows = useMemo(() => filterTopics(list.data ?? [], search), [list.data, search]);
@@ -234,54 +180,18 @@ function TopicTable({
   );
 }
 
-/** The two fields of one language, as typed. */
-type NameDraft = { name: string; slug: string };
-
-/**
- * The typed fields as the body a save sends, or the reason they cannot be.
- *
- * Both fields of a language empty means the topic has no name in it; one of the
- * two empty is a mistake rather than a choice. Everything else is checked by the
- * same schema the API validates with.
- *
- * @param draft - Both languages as typed.
- */
-export function topicBodyOf(
-  draft: Record<ContentLanguage, NameDraft>,
-): { value: SaveTopicBody } | { problem: DashboardStringKey } {
-  const sides: Partial<Record<ContentLanguage, NameDraft | null>> = {};
-  for (const language of CONTENT_LANGUAGES) {
-    const name = draft[language].name.trim();
-    const slug = draft[language].slug.trim();
-    if (!name && !slug) sides[language] = null;
-    else if (!name || !slug) return { problem: "topicIncomplete" };
-    else sides[language] = { name, slug };
-  }
-  const parsed = saveTopicBody.safeParse(sides);
-  if (parsed.success) return { value: parsed.data };
-  const onSlug = parsed.error.issues.some((issue) => issue.path.at(-1) === "slug");
-  return { problem: onSlug ? "topicSlugInvalid" : "topicNeedsName" };
-}
-
 /** A topic's names and addresses in both languages, with a save. */
 function TopicEditDialog({ topic, onClose }: { topic: TopicListItem; onClose: () => void }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
-  const [draft, setDraft] = useState<Record<ContentLanguage, NameDraft>>({
-    en: { name: topic.en?.name ?? "", slug: topic.en?.slug ?? "" },
-    de: { name: topic.de?.name ?? "", slug: topic.de?.slug ?? "" },
-  });
+  const [draft, setDraft] = useState(() => nameDraftOf(topic));
   const [problem, setProblem] = useState<DashboardStringKey>();
-  const save = useMutation({
-    mutationFn: (value: SaveTopicBody) => api.saveTopic(topic.id, value),
+  const save = useSaveTopic(topic, {
     onError: (error) => {
       if (error instanceof DashboardApiError && error.code === "conflict") setProblem("topicSlugTaken");
       else notifyError(error);
     },
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("saved") });
       onClose();
     },
@@ -387,17 +297,13 @@ function TopicMergeDialog({
   language: ContentLanguage;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [into, setInto] = useState(others[0]?.id ?? "");
   const name = topicLabel(topic, language).name;
-  const merge = useMutation({
-    mutationFn: () => api.mergeTopic(topic.id, into),
-    onError: (error) => notifyError(error),
+  const merge = useMergeTopic(topic, {
+    onError: notifyError,
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("topicMerged") });
       onClose();
     },
@@ -426,7 +332,7 @@ function TopicMergeDialog({
               tone="primary"
               icon={<ArrowsMergeIcon />}
               disabled={!into || merge.isPending}
-              onClick={() => merge.mutate()}
+              onClick={() => merge.mutate(into)}
             >
               {merge.isPending ? text("topicMergePending") : text("mergeTopic")}
             </Button>
@@ -447,14 +353,10 @@ function TopicDeleteDialog({
   name: string;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
-  const remove = useMutation({
-    mutationFn: () => api.deleteTopic(topic.id),
+  const remove = useDeleteTopic(topic, {
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("topicDeleted") });
       onClose();
     },

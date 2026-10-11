@@ -1,11 +1,5 @@
 import { validateContent } from "@layered/content";
-import {
-  type EntryDetail,
-  type EntryKind,
-  entrySpecs,
-  type SaveEntryBody,
-  saveEntryBody,
-} from "@layered/schemas";
+import type { EntryDetail, SaveEntryBody } from "@layered/schemas";
 import { Button, Card, Editor, Section } from "@layered/ui";
 import {
   ArrowCounterClockwiseIcon,
@@ -14,26 +8,38 @@ import {
   GlobeIcon,
   XIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useBlocker, useLocation, useNavigate, useParams } from "react-router";
-import { isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
 import { BackToList, HeaderEnd } from "./app-bar-slots.js";
 import type { ContentEditorHandle } from "./content-editor.js";
 import { type CheckedContent, contentIsPublishable } from "./content-validation.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
 import { useEditorTextSize } from "./editor-text-size.js";
-import { LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
+import {
+  AUTOSAVE_DELAY_MS,
+  asStored,
+  draftAbilities,
+  draftOf,
+  sameDraft,
+  savesItself,
+} from "./entry-draft.js";
+import { LANGUAGE_TEXT, otherLanguage } from "./entry-model.js";
 import { EntryProperties } from "./entry-properties.js";
+import {
+  useCreateTranslation,
+  useEntry,
+  useEntryPreview,
+  useRestoreEntry,
+  useSaveEntry,
+  useTrashEntry,
+  useTrashImpact,
+} from "./entry-query.js";
 import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
 import { TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 
@@ -46,73 +52,16 @@ import { useSaveShortcut } from "./save-shortcut.js";
  * dashboard's bar, and the state and the saving at its end.
  */
 
-/** How long typing has to pause before a draft is saved by itself, in milliseconds. */
-const AUTOSAVE_DELAY_MS = 2000;
-
-/** What the editor changes, taken out of what it opened. */
-function draftOf(entry: EntryDetail): SaveEntryBody {
-  return {
-    title: entry.title,
-    summary: entry.summary,
-    body: entry.body,
-    state: entry.state,
-    readingWidth: entry.readingWidth,
-    showInOtherLanguage: entry.showInOtherLanguage,
-    topicIds: entry.topics.map((topic) => topic.id),
-    specs: entry.specs,
-    slug: entry.slug,
-  };
-}
-
-/**
- * Whether two drafts say the same thing. Compared field by field, never by
- * serialising: the topics as a set, because their order means nothing, and the
- * specification pair by pair, because its order is what the page shows.
- */
-function sameDraft(first: SaveEntryBody, second: SaveEntryBody): boolean {
-  const { topicIds: firstTopics, specs: firstSpecs, ...firstFields } = first;
-  const { topicIds: secondTopics, specs: secondSpecs, ...secondFields } = second;
-  const secondTopicIds = new Set(secondTopics);
-  return (
-    (Object.keys(firstFields) as (keyof typeof firstFields)[]).every(
-      (key) => firstFields[key] === secondFields[key],
-    ) &&
-    firstTopics.length === secondTopics.length &&
-    firstTopics.every((id) => secondTopicIds.has(id)) &&
-    firstSpecs.length === secondSpecs.length &&
-    firstSpecs.every(
-      (pair, index) => pair.label === secondSpecs[index]?.label && pair.value === secondSpecs[index]?.value,
-    )
-  );
-}
-
-/**
- * The draft as a save would store it.
- *
- * The API trims a title, a summary, an address and every specification pair,
- * so a draft holding a trailing space differs from what its own save returns.
- * Compared as written, it would stay unsaved after every save, and a draft
- * would save itself again every two seconds for as long as it stays open. The
- * schema the API reads is applied here as well. A draft it refuses stays as it
- * is, which differs from anything stored.
- */
-function asStored(draft: SaveEntryBody): SaveEntryBody {
-  const parsed = saveEntryBody.safeParse(draft);
-  return parsed.success ? parsed.data : draft;
-}
-
 /**
  * The entry an address names, once it has loaded.
  *
  * @param area - The list this entry belongs to, for the way back.
- * @param kind - Which kind of entry the list holds, so a save refreshes it.
  */
-export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
+export function EntryEditorScreen({ area }: { area: DashboardArea }) {
   const { id = "" } = useParams();
   const location = useLocation();
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const entry = useQuery({ queryKey: queryKeys.entryDetail(id), queryFn: () => api.fetchEntry(id) });
+  const entry = useEntry(id);
   if (entry.isError) {
     return (
       <Section>
@@ -127,7 +76,6 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
     <EntryEditor
       key={entry.data.id}
       area={area}
-      kind={kind}
       entry={entry.data}
       focusTitle={location.state?.focusTitle === true}
     />
@@ -145,17 +93,13 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
  */
 function EntryEditor({
   area,
-  kind,
   entry,
   focusTitle = false,
 }: {
   area: DashboardArea;
-  kind: EntryKind;
   entry: EntryDetail;
   focusTitle?: boolean;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const editor = useRef<ContentEditorHandle>(null);
@@ -171,8 +115,7 @@ function EntryEditor({
   const [savedAt, setSavedAt] = useState<{ at: Date; automatic: boolean }>();
   const dirty = !sameDraft(asStored(draft), saved);
 
-  const save = useMutation({
-    mutationFn: ({ value }: { value: SaveEntryBody; automatic: boolean }) => api.saveEntry(entry.id, value),
+  const save = useSaveEntry(entry, {
     // A save by hand is news; one the editor made by itself is not, and the
     // state beside the Save button already says when it happened. The one
     // conflict a save can meet here is an address another entry holds.
@@ -182,27 +125,13 @@ function EntryEditor({
         : notifyError(error),
     onSuccess: (stored, { automatic }) => {
       if (!automatic) notify({ tone: "success", message: text("saved") });
-      const now = draftOf(stored);
-      setSaved(now);
+      setSaved(draftOf(stored));
       setSavedAt({ at: new Date(), automatic });
-      queryClient.setQueryData(queryKeys.entryDetail(entry.id), stored);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
-      // The topics screen counts the entries of each topic.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
     },
   });
 
-  // A draft saves itself once typing pauses. Only when both what is stored and
-  // what is being written are drafts, so choosing "public" is never saved by
-  // waiting.
-  // An address still being typed, such as one ending in a hyphen, is not saved
-  // by any of the ways a save starts, and neither is a specification pair still
-  // missing its label or its value.
-  const writable = !entry.trashed && isSavableSlug(draft.slug) && entrySpecs.safeParse(draft.specs).success;
-  const savable = writable && (draft.state === "draft" || publishable);
-  const publishReady = writable && publishable;
-  const autosaving =
-    savable && saved.state === "draft" && draft.state === "draft" && dirty && !save.isPending;
+  const { savable, publishReady } = draftAbilities(entry, draft, publishable);
+  const autosaving = savesItself(saved, draft, savable, dirty) && !save.isPending;
   useEffect(() => {
     if (!autosaving) return;
     const timer = setTimeout(() => save.mutate({ value: draft, automatic: true }), AUTOSAVE_DELAY_MS);
@@ -232,72 +161,32 @@ function EntryEditor({
   );
 
   const [askingToTrash, setAskingToTrash] = useState(false);
-  const refreshLists = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
-    void refreshCounts(queryClient);
-  };
-  const trash = useMutation({
-    mutationFn: () => api.setTrashed(entry.id, true),
+  const trash = useTrashEntry(entry.id, {
     onSuccess: () => {
       trashedHere.current = true;
-      refreshLists();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
       notify({ tone: "success", message: text("trashedNotice") });
       navigate(`/${area.path}`);
     },
   });
-  const restore = useMutation({
-    mutationFn: () => api.setTrashed(entry.id, false),
-    onError: (error) => notifyError(error),
-    onSuccess: (stored) => {
-      queryClient.setQueryData(queryKeys.entryDetail(entry.id), stored);
-      refreshLists();
-      notify({ tone: "success", message: text("restored") });
-    },
+  const restore = useRestoreEntry({
+    onError: notifyError,
+    onSuccess: () => notify({ tone: "success", message: text("restored") }),
   });
 
   // The other language is created as a draft and opened at once, because that
   // is where its writing happens. Leaving with unsaved changes still asks first.
-  const translate = useMutation({
-    mutationFn: () => api.createTranslation(entry.id),
-    onError: (error) => notifyError(error),
+  const translate = useCreateTranslation(entry, {
+    onError: notifyError,
     onSuccess: (created) => {
       notify({
         tone: "success",
         message: text("translationCreated", text(LANGUAGE_TEXT[otherLanguage(entry.language)])),
       });
-      queryClient.setQueryData(queryKeys.entryDetail(created.id), created);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.entryDetail(entry.id) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.entryList(kind) });
       navigate(`/${area.path}/${created.id}`);
     },
   });
 
-  // The preview shows what the editor holds, saved or not. The window opens on
-  // the click itself, because Safari blocks one opened after a request returns,
-  // and is sent to the preview's address once the API has made it. It is cut
-  // loose from this page, so the preview cannot reach back into the dashboard.
-  const preview = useMutation({
-    mutationFn: ({ value }: { value: SaveEntryBody; target: Window | null }) =>
-      api.createPreview(entry.id, {
-        title: value.title,
-        summary: value.summary,
-        body: value.body,
-        readingWidth: value.readingWidth,
-      }),
-    onSuccess: ({ url }, { target }) => {
-      if (target) {
-        target.opener = null;
-        target.location.href = url;
-      } else {
-        window.open(url, "_blank", "noopener");
-      }
-    },
-    onError: (error, { target }) => {
-      target?.close();
-      notifyError(error);
-    },
-  });
+  const preview = useEntryPreview(entry, { onError: notifyError });
   const openPreview = () => preview.mutate({ value: draft, target: window.open("", "_blank") });
 
   const update = (change: Partial<SaveEntryBody>) => setDraft((current) => ({ ...current, ...change }));
@@ -328,7 +217,7 @@ function EntryEditor({
             tone="primary"
             icon={<ArrowCounterClockwiseIcon />}
             disabled={restore.isPending}
-            onClick={() => restore.mutate()}
+            onClick={() => restore.mutate(entry.id)}
           >
             {restore.isPending ? text("restorePending") : text("restore")}
           </Button>
@@ -455,12 +344,8 @@ function TrashDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const impact = useQuery({
-    queryKey: queryKeys.trashImpact(entry.id),
-    queryFn: () => api.fetchTrashImpact(entry.id),
-  });
+  const impact = useTrashImpact(entry.id);
   return (
     <ConfirmDialog
       title={text("trashTitle", title)}

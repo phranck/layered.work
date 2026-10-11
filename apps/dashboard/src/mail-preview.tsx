@@ -3,27 +3,18 @@ import {
   type MailTemplateKind,
   mailSenderLine,
   type SaveMailTemplateBody,
-  saveMailTemplateBody,
 } from "@layered/schemas";
 import { Segmented } from "@layered/ui";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { queryKeys } from "./query-keys.js";
+import { RECIPIENT_TEXT, useMailPreview } from "./mail-templates-query.js";
+import { useSettings } from "./settings-query.js";
 import { useSettledValue } from "./settled-value.js";
 import "./mail-preview.css";
 
 /** How long the template has to stay unchanged before the preview asks for it again, in milliseconds. */
 const PREVIEW_DELAY = 400;
-
-/** Who receives each template's mail, as the preview's To line names it. */
-const RECIPIENT: Record<MailTemplateKind, DashboardStringKey> = {
-  submission_notification: "mailRecipientNotification",
-  submission_confirmation: "mailRecipientConfirmation",
-};
 
 /** Which of a mail's two parts the preview shows. */
 type MailPart = "html" | "text";
@@ -60,21 +51,11 @@ export interface MailPreviewProps {
  * @returns The head and the selected part, or why the template cannot be rendered yet.
  */
 export function MailPreview({ kind, draft, language }: MailPreviewProps) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const [part, setPart] = useState<MailPart>("html");
   const settled = useSettledValue(draft, PREVIEW_DELAY);
-  const checked = saveMailTemplateBody.safeParse(settled);
-  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
-  const preview = useQuery({
-    queryKey: [...queryKeys.mailTemplate(kind), "preview", language, settled],
-    queryFn: async () => ({ language, mail: await api.previewMailTemplate(kind, settled, language) }),
-    enabled: checked.success,
-    // The last mail stays while the next one is asked for, so the preview
-    // does not blank out at every pause in the typing.
-    placeholderData: keepPreviousData,
-    retry: false,
-  });
+  const settings = useSettings();
+  const preview = useMailPreview(kind, settled, language);
   // A mail in the other language is not shown, so what stands under the
   // fields is always the language they are in.
   const shown = preview.data?.language === language ? preview.data.mail : undefined;
@@ -86,7 +67,7 @@ export function MailPreview({ kind, draft, language }: MailPreviewProps) {
           <dt>{text("mailPreviewFrom")}</dt>
           <dd>{sender ?? text("mailSenderMissing")}</dd>
           <dt>{text("mailPreviewTo")}</dt>
-          <dd>{text(RECIPIENT[kind])}</dd>
+          <dd>{text(RECIPIENT_TEXT[kind])}</dd>
           <dt>{text("mailTemplateSubject")}</dt>
           <dd>{shown?.subject}</dd>
         </dl>

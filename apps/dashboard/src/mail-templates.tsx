@@ -1,21 +1,22 @@
-import {
-  type BilingualText,
-  type MailTemplateKind,
-  type SaveMailTemplateBody,
-  saveMailTemplateBody,
-} from "@layered/schemas";
+import type { BilingualText, MailTemplateKind, SaveMailTemplateBody } from "@layered/schemas";
 import { Button, Card, Field, Input } from "@layered/ui";
 import { FloppyDiskIcon, PaperPlaneTiltIcon, PencilSimpleIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
+import { issueLine } from "./checked-draft.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MailPreview } from "./mail-preview.js";
+import {
+  checkedTemplate,
+  templateDraftOf,
+  useMailTemplate,
+  useMailTemplates,
+  useSaveMailTemplate,
+  useTestMailTemplate,
+} from "./mail-templates-query.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
@@ -27,10 +28,9 @@ import { Translated } from "./translated.js";
  * @param area - The templates' list, whose address each template opens under.
  */
 export function MailTemplatesScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const navigate = useNavigate();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: queryKeys.mailTemplates, queryFn: api.fetchMailTemplates });
+  const list = useMailTemplates();
   return (
     <>
       <ScreenTitle title={text("emailTemplates")} />
@@ -82,43 +82,29 @@ export function MailTemplatesScreen({ area }: { area: DashboardArea }) {
 export function MailTemplateEditorScreen({ area }: { area: DashboardArea }) {
   const { kind } = useParams();
   const templateKind = kind as MailTemplateKind;
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { language: interfaceLanguage, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
-  const loaded = useQuery({
-    queryKey: queryKeys.mailTemplate(templateKind),
-    queryFn: async () => (await api.fetchMailTemplates()).find((item) => item.kind === templateKind),
-    enabled: Boolean(kind),
-  });
+  const loaded = useMailTemplate(templateKind);
   const [draft, setDraft] = useState<SaveMailTemplateBody | null>(null);
   const [problem, setProblem] = useState("");
 
   useEffect(() => {
-    if (loaded.data)
-      setDraft({ name: loaded.data.name, subject: loaded.data.subject, body: loaded.data.body });
+    if (loaded.data) setDraft(templateDraftOf(loaded.data));
   }, [loaded.data]);
 
-  const save = useMutation({
-    mutationFn: (value: SaveMailTemplateBody) => api.saveMailTemplate(templateKind, value),
-    onError: (error) => notifyError(error),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(queryKeys.mailTemplate(templateKind), saved);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.mailTemplates });
-      notify({ tone: "success", message: text("saved") });
-    },
+  const save = useSaveMailTemplate(templateKind, {
+    onError: notifyError,
+    onSuccess: () => notify({ tone: "success", message: text("saved") }),
   });
 
   const checked = () => {
-    const parsed = saveMailTemplateBody.safeParse(draft);
-    if (!parsed.success) {
-      setProblem(
-        `${text("mailTemplateInvalid")} ${parsed.error.issues[0]?.path.join(".")}: ${parsed.error.issues[0]?.message}`,
-      );
+    const outcome = checkedTemplate(draft);
+    if ("issue" in outcome) {
+      setProblem(issueLine(text("mailTemplateInvalid"), outcome.issue));
       return null;
     }
     setProblem("");
-    return parsed.data;
+    return outcome.value;
   };
 
   const change = (field: keyof SaveMailTemplateBody, value: BilingualText) => {
@@ -194,7 +180,6 @@ function MailTemplateCards({
   onChange: (field: keyof SaveMailTemplateBody, value: BilingualText) => void;
   checked: () => SaveMailTemplateBody | null;
 }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const language = useTextLanguage();
@@ -205,10 +190,7 @@ function MailTemplateCards({
     () => allowedVariables.map((name) => ({ name, value: "" })),
     [allowedVariables],
   );
-  const test = useMutation({
-    mutationFn: (value: SaveMailTemplateBody) => api.testMailTemplate(kind, value, language, recipient),
-    onError: (error) => notifyError(error),
-  });
+  const test = useTestMailTemplate(kind, { onError: notifyError });
   return (
     <>
       <Card>
@@ -259,7 +241,7 @@ function MailTemplateCards({
             disabled={!recipient || test.isPending}
             onClick={() => {
               const value = checked();
-              if (value) test.mutate(value);
+              if (value) test.mutate({ value, language, recipient });
             }}
           >
             {text("mailTemplateTest")}

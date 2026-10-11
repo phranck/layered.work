@@ -3,8 +3,6 @@ import {
   MaxLength,
   NAVIGATION_ITEMS_MAX,
   type NavigationPlacement,
-  type SaveFooterNavigationBody,
-  saveFooterNavigationBody,
 } from "@layered/schemas";
 import { Button, Card, Field, Select, Switch } from "@layered/ui";
 import {
@@ -16,51 +14,54 @@ import {
   TrashIcon,
   XIcon,
 } from "@layered/ui/icons";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { moveItem, nextSortOrder, reorderedPositions } from "./list-order.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
+import {
+  type DraftItem,
+  draftItemsOf,
+  hasBrokenLink,
+  navigationBodyOf,
+  newNavigationItem,
+  placementOf,
+  useDeleteNavigation,
+  useNavigation,
+  useReorderNavigation,
+  useSaveNavigation,
+  withoutItem,
+} from "./navigation-query.js";
 import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
-import { moveItem } from "./sidebar-order.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./footer-navigation.css";
 
-function refresh(client: QueryClient, placement: NavigationPlacement) {
-  void client.invalidateQueries({ queryKey: queryKeys.navigation(placement) });
-  void refreshCounts(client);
-}
+/** Which dialog is open: the editor for a group or a new one, or the question before one is deleted. */
 type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavigation } | null;
 
+/**
+ * One of the site's navigations, main or footer, as a table of its groups of
+ * links: dragged into order, opened for editing, deleted. Every account sees
+ * them; only the owner changes them.
+ *
+ * @param area - The sidebar area, which names the screen and decides the navigation.
+ */
 export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
-  const placement: NavigationPlacement = area.id === "main-nav" ? "main" : "footer";
-  const api = useDashboardApi();
-  const client = useQueryClient();
+  const placement = placementOf(area);
   const { text, language } = useDashboardLanguage();
   const session = useSession();
   const owner = session.data?.role === "owner";
-  const list = useQuery({
-    queryKey: queryKeys.navigation(placement),
-    queryFn: () => api.fetchFooterNavigations(placement),
-  });
+  const list = useNavigation(placement);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const { notifyError } = useNotify();
-  const reorder = useMutation({
-    mutationFn: (positions: { id: string; sortOrder: number }[]) =>
-      api.reorderFooterNavigations(positions, placement),
-    onSuccess: () => refresh(client, placement),
-    onError: (error) => notifyError(error),
-  });
+  const reorder = useReorderNavigation(placement, { onError: notifyError });
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
@@ -96,15 +97,12 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
               { kind: "action", label: text("columnAction"), actions: 2 },
             ]}
             onMove={(from, to) => {
-              if (from !== to)
-                reorder.mutate(
-                  moveItem(list.data, from, to).map((item, sortOrder) => ({ id: item.id, sortOrder })),
-                );
+              if (from !== to) reorder.mutate(reorderedPositions(list.data, from, to));
             }}
           >
             {list.data.map((group, index) => {
               const name = group.title[language];
-              const broken = group.items.some((item) => !item.entryId && !item.topicId && !item.href);
+              const broken = hasBrokenLink(group);
               return (
                 <Table.Row
                   key={group.id}
@@ -149,7 +147,7 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
         <NavigationEditor
           placement={placement}
           group={dialog.editing}
-          sortOrder={Math.max(-1, ...(list.data?.map((group) => group.sortOrder) ?? [])) + 1}
+          sortOrder={nextSortOrder(list.data ?? [])}
           onClose={() => setDialog(null)}
         />
       )}
@@ -160,7 +158,16 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
   );
 }
 
-type DraftItem = SaveFooterNavigationBody["items"][number] & { key: string };
+/**
+ * A group of links in a dialog: its title in both languages, and its links,
+ * each with its label, its target, its parent and whether it shows in the
+ * language the dialog's switch has chosen.
+ *
+ * @param placement - Which navigation the group belongs to.
+ * @param group - The group, or null for a new one.
+ * @param sortOrder - The place a new group takes.
+ * @param onClose - Closes the dialog, after a save as well.
+ */
 function NavigationEditor({
   placement,
   group,
@@ -172,36 +179,23 @@ function NavigationEditor({
   sortOrder: number;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [title, setTitle] = useState(group?.title ?? { en: "", de: "" });
-  const [items, setItems] = useState<DraftItem[]>(
-    () => group?.items.map((item) => ({ ...item, key: item.id })) ?? [],
-  );
+  const [items, setItems] = useState(() => draftItemsOf(group));
   const [invalid, setInvalid] = useState(false);
-  const save = useMutation({
-    mutationFn: (value: SaveFooterNavigationBody) =>
-      group
-        ? api.saveFooterNavigation(group.id, value, placement)
-        : api.createFooterNavigation(value, placement),
+  const save = useSaveNavigation(placement, group, {
+    onError: notifyError,
     onSuccess: () => {
-      refresh(client, placement);
       notify({ tone: "success", message: text("saved") });
       onClose();
     },
-    onError: (error) => notifyError(error),
   });
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const parsed = saveFooterNavigationBody.safeParse({
-      title,
-      sortOrder: group?.sortOrder ?? sortOrder,
-      items: items.map(({ key: _key, ...item }) => item),
-    });
-    setInvalid(!parsed.success);
-    if (parsed.success) save.mutate(parsed.data);
+    const body = navigationBodyOf(title, group?.sortOrder ?? sortOrder, items);
+    setInvalid(body === null);
+    if (body) save.mutate(body);
   };
   const updateItem = (key: string, change: Partial<DraftItem>) =>
     setItems((current) => current.map((item) => (item.key === key ? { ...item, ...change } : item)));
@@ -234,15 +228,7 @@ function NavigationEditor({
                     length={items.length}
                     onChange={(change) => updateItem(item.key, change)}
                     onMove={(to) => setItems((current) => moveItem(current, index, to))}
-                    onRemove={() =>
-                      setItems((current) =>
-                        current
-                          .filter((candidate) => candidate.key !== item.key)
-                          .map((candidate) =>
-                            candidate.parentId === item.id ? { ...candidate, parentId: null } : candidate,
-                          ),
-                      )
-                    }
+                    onRemove={() => setItems((current) => withoutItem(current, item))}
                   />
                 </Reorder.Item>
               ))}
@@ -250,21 +236,7 @@ function NavigationEditor({
             <Button
               icon={<PlusIcon />}
               disabled={items.length >= NAVIGATION_ITEMS_MAX}
-              onClick={() =>
-                setItems((current) => [
-                  ...current,
-                  {
-                    key: crypto.randomUUID(),
-                    id: crypto.randomUUID(),
-                    label: { en: "", de: "" },
-                    visible: { en: true, de: true },
-                    href: null,
-                    entryId: null,
-                    topicId: null,
-                    parentId: null,
-                  },
-                ])
-              }
+              onClick={() => setItems((current) => [...current, newNavigationItem()])}
             >
               {text("navigationAddLink")}
             </Button>
@@ -390,16 +362,8 @@ function NavigationDelete({
   group: FooterNavigation;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
-  const remove = useMutation({
-    mutationFn: () => api.deleteFooterNavigation(group.id, placement),
-    onSuccess: () => {
-      refresh(client, placement);
-      onClose();
-    },
-  });
+  const remove = useDeleteNavigation(placement, group, { onSuccess: () => onClose() });
   return (
     <ConfirmDialog
       title={text("navigationDelete", group.title[language])}

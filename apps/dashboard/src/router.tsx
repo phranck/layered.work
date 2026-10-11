@@ -112,7 +112,7 @@ export function dashboardRouteObjects({
             path: area.path,
             children: [
               { index: true, element: <EntryListScreen area={area} kind={kind} /> },
-              { path: ":id", element: <EntryEditorScreen area={area} kind={kind} /> },
+              { path: ":id", element: <EntryEditorScreen area={area} /> },
             ],
           };
         }),

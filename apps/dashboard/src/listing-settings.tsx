@@ -1,13 +1,11 @@
 import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLength } from "@layered/schemas";
 import { Field, Input, Segmented } from "@layered/ui";
-import { useQuery } from "@tanstack/react-query";
-import { useDashboardApi } from "./dashboard-context.js";
 import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNamedValues } from "./named-values-query.js";
-import { queryKeys } from "./query-keys.js";
 import { SettingsCard } from "./settings.js";
+import { useSettings } from "./settings-query.js";
 import { storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
@@ -35,9 +33,8 @@ const typedNumber = (value: string) => Number.parseInt(value, 10);
  * @param kind - Which overview: posts or projects.
  */
 export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
+  const settings = useSettings();
   // The introduction is rendered as an entry's body is, named values included.
   const values = useNamedValues();
   const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);

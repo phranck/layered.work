@@ -1,4 +1,10 @@
-import type { EntryKind, MailTemplateKind, NavigationPlacement } from "@layered/schemas";
+import type {
+  ContentLanguage,
+  EntryKind,
+  MailTemplateKind,
+  NavigationPlacement,
+  SaveMailTemplateBody,
+} from "@layered/schemas";
 
 /**
  * Every key the dashboard caches an answer of the API under.
@@ -81,6 +87,9 @@ export const queryKeys = {
   mailTemplates: ["mail-templates"] as const,
   /** One mail template, keyed by its kind. */
   mailTemplate: (kind: MailTemplateKind) => ["mail-template", kind] as const,
+  /** One template's mail as the API renders it, for one language and one draft. */
+  mailPreview: (kind: MailTemplateKind, language: ContentLanguage, draft: SaveMailTemplateBody) =>
+    ["mail-template", kind, "preview", language, draft] as const,
 
   /** The groups of one navigation of the site. */
   navigation: (placement: NavigationPlacement) => [`${placement}-navigation`] as const,

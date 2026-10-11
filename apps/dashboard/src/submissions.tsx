@@ -1,9 +1,4 @@
-import {
-  type FormSubmission,
-  type FormSubmissionStatus,
-  formFields,
-  submittedValueText,
-} from "@layered/schemas";
+import { formFields, submittedValueText } from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
 import {
   DownloadSimpleIcon,
@@ -12,53 +7,29 @@ import {
   TrashIcon,
   WarningOctagonIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT, DATE_TIME_FORMAT } from "./format.js";
+import { useForms } from "./forms-query.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
-import { type BadgeTone, Table, useTableSearch } from "./table.js";
+import {
+  filterSubmissions,
+  SUBMISSION_STATUS_TEXT,
+  SUBMISSION_STATUS_TONE,
+  submissionPreview,
+  useDeleteSubmission,
+  useFormSubmissions,
+  useSetSubmissionStatus,
+} from "./submissions-query.js";
+import { Table, useTableSearch } from "./table.js";
 import "./submissions.css";
-
-/** What each status of a submission is called in the catalogue. */
-const STATUS_TEXT: Record<FormSubmissionStatus, DashboardStringKey> = {
-  unread: "submissionUnread",
-  read: "submissionRead",
-  spam: "submissionSpam",
-};
-
-/**
- * The tone each status is shown in: an unread submission asks to be read, a
- * read one asks nothing, and spam is what was refused.
- */
-const STATUS_TONE: Record<FormSubmissionStatus, BadgeTone> = {
-  unread: "info",
-  read: "neutral",
-  spam: "danger",
-};
-
-/** How many characters of a submission's first answer its row shows. */
-const PREVIEW_LENGTH = 120;
-
-/** The first answer of a submission that is not empty, shortened to what its row shows. */
-const preview = (submission: FormSubmission): string =>
-  Object.values(submission.values)
-    .map((value) => submittedValueText(value))
-    .find(Boolean)
-    ?.slice(0, PREVIEW_LENGTH) ?? "";
 
 /** An inbox for one form at a time, using the dashboard's card and row compounds. */
 export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const [selectedFormId, setSelectedFormId] = useState("");
@@ -66,42 +37,17 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const field = useTableSearch();
-  const forms = useQuery({ queryKey: queryKeys.forms, queryFn: api.fetchForms });
+  const forms = useForms();
   const formId = selectedFormId || forms.data?.[0]?.id || "";
   const form = forms.data?.find((item) => item.id === formId);
-  const submissions = useQuery({
-    queryKey: queryKeys.formSubmissions(formId),
-    queryFn: () => api.fetchFormSubmissions(formId),
-    enabled: Boolean(formId),
-    refetchInterval: 1000,
-  });
+  const submissions = useFormSubmissions(formId);
   const selected = submissions.data?.find((item) => item.id === selectedId);
-  const matches = submissions.data?.filter((submission) => {
-    const needle = search.trim().toLocaleLowerCase(language);
-    if (!needle) return true;
-    return [submission.status, submission.sourceHash ?? "", ...Object.values(submission.values).flat()]
-      .join(" ")
-      .toLocaleLowerCase(language)
-      .includes(needle);
-  });
-  const refresh = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.formSubmissions(formId) }),
-      refreshCounts(queryClient),
-    ]);
-  };
-  const changeStatus = useMutation({
-    mutationFn: (status: FormSubmissionStatus) =>
-      api.setFormSubmissionStatus(formId, selectedId ?? "", status),
-    onSuccess: refresh,
-    onError: (error) => notifyError(error),
-  });
-  const remove = useMutation({
-    mutationFn: () => api.deleteFormSubmission(formId, selectedId ?? ""),
-    onSuccess: async () => {
+  const matches = submissions.data && filterSubmissions(submissions.data, search, language);
+  const changeStatus = useSetSubmissionStatus(formId, { onError: notifyError });
+  const remove = useDeleteSubmission(formId, {
+    onSuccess: () => {
       setSelectedId(null);
       setConfirmDelete(false);
-      await refresh();
     },
   });
 
@@ -173,11 +119,11 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                   onOpen={() => setSelectedId(submission.id)}
                 >
                   <Table.Cell kind="title">
-                    <Table.Title title={preview(submission)} />
+                    <Table.Title title={submissionPreview(submission)} />
                   </Table.Cell>
                   <Table.Cell kind="state">
-                    <Table.Badge tone={STATUS_TONE[submission.status]}>
-                      {text(STATUS_TEXT[submission.status])}
+                    <Table.Badge tone={SUBMISSION_STATUS_TONE[submission.status]}>
+                      {text(SUBMISSION_STATUS_TEXT[submission.status])}
                     </Table.Badge>
                   </Table.Cell>
                   <Table.Cell kind="date">
@@ -192,7 +138,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
         </Card>
         {selected && form && (
           <Card>
-            <Card.Header title={text("submission")} meta={text(STATUS_TEXT[selected.status])} />
+            <Card.Header title={text("submission")} meta={text(SUBMISSION_STATUS_TEXT[selected.status])} />
             <Card.Body>
               <dl className="submissions-detail">
                 <dt>{text("submissionSubmitted")}</dt>
@@ -228,7 +174,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     <Button
                       icon={<EnvelopeOpenIcon />}
                       disabled={changeStatus.isPending}
-                      onClick={() => changeStatus.mutate("read")}
+                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "read" })}
                     >
                       {text("submissionMarkRead")}
                     </Button>
@@ -236,7 +182,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     <Button
                       icon={<EnvelopeSimpleIcon />}
                       disabled={changeStatus.isPending}
-                      onClick={() => changeStatus.mutate("unread")}
+                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "unread" })}
                     >
                       {text("submissionMarkUnread")}
                     </Button>
@@ -245,7 +191,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     <Button
                       icon={<WarningOctagonIcon />}
                       disabled={changeStatus.isPending}
-                      onClick={() => changeStatus.mutate("spam")}
+                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "spam" })}
                     >
                       {text("submissionMarkSpam")}
                     </Button>
@@ -265,7 +211,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
           confirm={text("submissionDeleteConfirm")}
           busy={remove.isPending}
           error={remove.error}
-          onConfirm={() => remove.mutate()}
+          onConfirm={() => remove.mutate(selected.id)}
           onClose={() => setConfirmDelete(false)}
         >
           <p>{text("submissionDeleteBody")}</p>

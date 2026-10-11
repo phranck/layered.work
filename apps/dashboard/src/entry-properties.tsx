@@ -14,7 +14,7 @@ import { AddressField } from "./address-field.js";
 import { ContentFindings } from "./content-findings.js";
 import type { CheckedContent } from "./content-validation.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
+import { LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-model.js";
 import { SpecsField } from "./entry-specs.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { DashboardArea } from "./routes.js";

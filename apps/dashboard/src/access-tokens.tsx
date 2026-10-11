@@ -1,25 +1,20 @@
-import { type IssueTokenBody, TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
+import { TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
 import { Button, Card, Field, Input, Switch } from "@layered/ui";
 import { KeyIcon, TrashIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import { Table } from "./table.js";
-
-/** What each permission is called in the catalogue. */
-const SCOPE_TEXT: Record<TokenScope, DashboardStringKey> = {
-  "content:read": "tokenScopeRead",
-  "content:write": "tokenScopeWrite",
-  "content:publish": "tokenScopePublish",
-  "media:write": "tokenScopeUpload",
-};
+import {
+  issueBodyOf,
+  SCOPE_TEXT,
+  useAccessTokens,
+  useIssueAccessToken,
+  useRevokeAccessToken,
+} from "./tokens-query.js";
 
 /**
  * The personal access tokens an agent writes with, as a card on the Settings
@@ -30,32 +25,26 @@ const SCOPE_TEXT: Record<TokenScope, DashboardStringKey> = {
  * this card's state and nowhere else, so it is shown once, until the card goes.
  */
 export function AccessTokensCard() {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<TokenScope[]>([]);
   const [expiry, setExpiry] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
-  const tokens = useQuery({ queryKey: queryKeys.accessTokens, queryFn: api.fetchAccessTokens });
-  const issue = useMutation({
-    mutationFn: (value: IssueTokenBody) => api.issueAccessToken(value),
-    onError: (error) => notifyError(error),
+  const tokens = useAccessTokens();
+  const issue = useIssueAccessToken({
+    onError: notifyError,
     onSuccess: (created) => {
       setRevealed(created.value);
       setName("");
       setScopes([]);
       setExpiry("");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       notify({ tone: "success", message: text("tokenCreated") });
     },
   });
   const [revoking, setRevoking] = useState<TokenSummary | null>(null);
-  const revoke = useMutation({
-    mutationFn: (id: string) => api.revokeAccessToken(id),
+  const revoke = useRevokeAccessToken({
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.accessTokens });
       setRevoking(null);
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
@@ -162,13 +151,7 @@ export function AccessTokensCard() {
             tone="primary"
             icon={<KeyIcon />}
             disabled={!name.trim() || issue.isPending}
-            onClick={() =>
-              issue.mutate({
-                name: name.trim(),
-                scopes,
-                expiresAt: expiry ? new Date(expiry).toISOString() : null,
-              })
-            }
+            onClick={() => issue.mutate(issueBodyOf(name, scopes, expiry))}
           >
             {text("tokenCreate")}
           </Button>

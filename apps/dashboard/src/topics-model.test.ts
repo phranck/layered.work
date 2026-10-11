@@ -1,7 +1,6 @@
 import type { TopicListItem } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
-import { topicSuggestions } from "./topic-field.js";
-import { filterTopics, topicBodyOf, topicLabel } from "./topics.js";
+import { filterTopics, topicBodyOf, topicLabel, topicSuggestions } from "./topics-model.js";
 
 function topic(overrides: Partial<TopicListItem>): TopicListItem {
   return { id: crypto.randomUUID(), en: null, de: null, entryCount: 0, ...overrides };

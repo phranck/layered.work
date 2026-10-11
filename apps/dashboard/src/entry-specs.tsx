@@ -3,8 +3,8 @@ import { Button, Field, Input } from "@layered/ui";
 import { PlusIcon, TrashIcon } from "@layered/ui/icons";
 import { useRef, useState } from "react";
 import { useDashboardLanguage } from "./language-context.js";
+import { moveItem } from "./list-order.js";
 import { Reorder } from "./reorder.js";
-import { moveItem } from "./sidebar-order.js";
 import "./entry-specs.css";
 
 /**
