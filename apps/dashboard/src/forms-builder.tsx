@@ -22,7 +22,7 @@ import {
   ShieldCheckIcon,
   TextAaIcon,
   TextAlignLeftIcon,
-  XIcon,
+  TrashIcon,
 } from "@layered/ui/icons";
 import {
   type ComponentType,
@@ -604,7 +604,8 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                               <Button.Icon
                                 className="forms-field__remove"
                                 label={text("formFieldRemove")}
-                                icon={<XIcon />}
+                                icon={<TrashIcon />}
+                                tone="danger"
                                 disabled={fieldCount <= FORM_FIELD_COUNT.min}
                                 onClick={() => onChange(removeField(form, place), null)}
                               />

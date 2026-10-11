@@ -105,6 +105,7 @@ export function AccessTokensCard() {
                   <Button.Icon
                     label={text("tokenRevoke")}
                     icon={<TrashIcon />}
+                    tone="danger"
                     onClick={() => setRevoking(token)}
                   />
                 )}

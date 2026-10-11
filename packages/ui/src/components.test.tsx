@@ -150,6 +150,17 @@ describe("static compounds", () => {
     expect(ref.current?.getAttribute("name")).toBe("save");
   });
 
+  it("draws an icon alone in the danger tone only for a destructive action", () => {
+    render(
+      <>
+        <Button.Icon label="Delete" icon={<i />} tone="danger" />
+        <Button.Icon label="Edit" icon={<i />} />
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Delete" }).classList).toContain("button--ghost-danger");
+    expect(screen.getByRole("button", { name: "Edit" }).classList).not.toContain("button--ghost-danger");
+  });
+
   it("shows a collapsible card's header actions only while it is open", () => {
     const { rerender } = render(
       <Card.Collapsible title="Overview" open={false} onOpenChange={() => undefined} actions={<b>Switch</b>}>

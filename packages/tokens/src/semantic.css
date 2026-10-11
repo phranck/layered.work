@@ -60,6 +60,11 @@
   --accent-tint-strong: color-mix(in oklab, var(--accent-500) 22%, transparent);
   --accent-line: color-mix(in oklab, var(--accent-500) 60%, transparent);
 
+  /* The danger color at low strength, behind an action that removes or
+     destroys something: a danger button at rest, and an icon alone that does
+     so under the pointer. */
+  --danger-tint: color-mix(in oklab, var(--state-danger) 12%, transparent);
+
   /* The two places light appears to come off the accent: the glow beneath a
      filled control and the wash behind the page. */
   --accent-glow: color-mix(in oklab, var(--accent-500) 68%, transparent);

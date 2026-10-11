@@ -11,7 +11,7 @@ import {
   formFields,
 } from "@layered/schemas";
 import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -219,6 +219,8 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
               }
             />
             <Button
+              tone="danger"
+              icon={<TrashIcon />}
               disabled={field.options.length <= FORM_OPTION_COUNT.min}
               onClick={() =>
                 update({ ...field, options: field.options.filter((_, position) => position !== index) })
@@ -229,6 +231,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
           </div>
         ))}
         <Button
+          icon={<PlusIcon />}
           disabled={field.options.length >= FORM_OPTION_COUNT.max}
           onClick={() => update({ ...field, options: [...field.options, newOption(field.options)] })}
         >
@@ -487,6 +490,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   </Field.Inline>
                   <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
                   <Button
+                    tone="danger"
+                    icon={<TrashIcon />}
                     disabled={fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
                       change(removeField(draft, selected));

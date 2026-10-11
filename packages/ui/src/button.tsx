@@ -29,6 +29,12 @@ export interface ButtonIconProps extends Omit<ComponentPropsWithoutRef<"button">
   label: string;
   /** Icon content hidden from assistive technology. */
   icon: ReactNode;
+  /**
+   * `danger` for an action that removes or destroys something, which draws the
+   * glyph in the danger color and the danger tint behind it on hover. Left
+   * out, the glyph takes the text color.
+   */
+  tone?: "danger";
 }
 
 /** Props for a non-interactive button-shaped mark. */
@@ -67,10 +73,14 @@ const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
 );
 /** An icon-only action button. */
 const ButtonIcon = forwardRef<HTMLButtonElement, ButtonIconProps>(
-  ({ className, icon, label, title = label, type = "button", ...props }, ref) => (
+  ({ className, icon, label, title = label, tone, type = "button", ...props }, ref) => (
     <button
       ref={ref}
-      className={join("button button--ghost button--icon", className)}
+      className={join(
+        "button button--ghost button--icon",
+        tone === "danger" && "button--ghost-danger",
+        className,
+      )}
       type={type}
       aria-label={label}
       title={title}
