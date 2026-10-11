@@ -2,8 +2,8 @@
  * The editor.
  *
  * Two columns: the thing being worked on, and its properties beside it. The
- * panel column has a fixed width, because a column of fields does not improve by
- * being wider, and the main column takes everything else.
+ * panel column is `--panel-width`, the width every panel of the workbench
+ * takes, and the main column takes everything else.
  *
  * The syntax colours of the writing surface are drawn by the editor that is
  * mounted in it, from the `--md-*` properties of the workbench scope, where the
@@ -12,7 +12,7 @@
 
 .editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) var(--panel-width);
   /* The workbench's one step, between the columns and between the parts of
      each, so no two distances on the screen differ. */
   gap: var(--workbench-gutter, var(--space-4));

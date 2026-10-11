@@ -8,13 +8,14 @@
 
 .shortcut {
   flex: none;
-  /* One pixel more above than below, and one more on the left than the right.
-     Fira Code's ascent outweighs its descent, so a line box centred on the em
-     box hangs the caps a pixel high; measured at 0.8px on 13px. And the ink
-     mass of the pair sits 0.9px left of its advance box, because the command
-     sign is dense and the K carries its stem on the left, so a box centred on
-     the advance reads as holding the cap too far left. */
-  padding: 3px 6px 1px 8px;
+  /* A pixel more above than below, and two more on the left than the right.
+     Fira Code's ascent outweighs its descent, so a line box centered on the em
+     box hangs the caps high; the difference that centers them was measured in
+     Safari Technology Preview on "⌘K", where a two-pixel one left the ink half a
+     pixel low. And the ink mass of the pair sits 0.9px left of its advance box,
+     because the command sign is dense and the K carries its stem on the left,
+     so a box centered on the advance reads as holding the cap too far left. */
+  padding: 2.5px 6px 1.5px 8px;
   font-family: var(--font-mono);
   font-size: var(--text-shortcut);
   line-height: var(--leading-snug);
