@@ -14,6 +14,7 @@ import {
   READABLE_STATES,
   RESERVED_PATHS,
   type ReadableState,
+  withFormRows,
 } from "@layered/schemas";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { Database } from "../db/connect.js";
@@ -266,8 +267,9 @@ export async function publicForms(database: Database, bodies: readonly string[])
     .from(forms)
     .where(inArray(forms.slug, [...names]));
   return rows.map((row) => {
-    const { slug, name, successMessage, fields } = row.declaration;
-    return publicForm.parse({ slug, name, successMessage, fields });
+    // A declaration stored before forms had rows reads with one field in each.
+    const { slug, name, successMessage, rows } = withFormRows(row.declaration);
+    return publicForm.parse({ slug, name, successMessage, rows });
   });
 }
 

@@ -100,27 +100,32 @@ runs("the public snapshot", () => {
 
   it("publishes only forms referenced by reachable entries and omits editor settings", async () => {
     const database = await testDatabase();
+    const field = {
+      key: "name",
+      type: "shortText" as const,
+      label: { en: "Name", de: "Name" },
+      hint: { en: "", de: "" },
+      required: true,
+      minLength: 1,
+      maxLength: 80,
+      pattern: null,
+    };
     const declaration = (slug: string) => ({
       slug,
       name: slug,
       notificationEmail: "private@example.test",
       successMessage: { en: "Thanks", de: "Danke" },
       storeSubmissions: true,
-      fields: [
-        {
-          key: "name",
-          type: "shortText" as const,
-          label: { en: "Name", de: "Name" },
-          hint: { en: "", de: "" },
-          required: true,
-          minLength: 1,
-          maxLength: 80,
-          pattern: null,
-        },
-      ],
+      rows: [{ fields: [field] }],
     });
+    // The published one is stored as forms were before they had rows.
+    const { rows: _rows, ...withoutRows } = declaration("published-form");
     await database.insert(forms).values([
-      { slug: "published-form", name: "Published", declaration: declaration("published-form") },
+      {
+        slug: "published-form",
+        name: "Published",
+        declaration: { ...withoutRows, fields: [field] } as never,
+      },
       { slug: "draft-form", name: "Draft", declaration: declaration("draft-form") },
     ]);
     await writeEntry(database, {
@@ -138,6 +143,7 @@ runs("the public snapshot", () => {
 
     const snapshot = await readPublicSnapshot(database);
     expect(snapshot.forms.map((form) => form.slug)).toEqual(["published-form"]);
+    expect(snapshot.forms[0]?.rows.map((row) => row.fields.map((item) => item.key))).toEqual([["name"]]);
     expect(JSON.stringify(snapshot.forms)).not.toContain("private@example.test");
     expect(JSON.stringify(snapshot.forms)).not.toContain("draft-form");
   });

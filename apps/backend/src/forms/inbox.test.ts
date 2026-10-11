@@ -37,16 +37,20 @@ runs("form submissions inbox", () => {
           notificationEmail: null,
           storeSubmissions: true,
           successMessage: { en: "Thanks", de: "Danke" },
-          fields: [
+          rows: [
             {
-              key: "message",
-              type: "longText",
-              label: { en: "Message", de: "Nachricht" },
-              hint: { en: "", de: "" },
-              required: true,
-              minLength: 1,
-              maxLength: 2000,
-              pattern: null,
+              fields: [
+                {
+                  key: "message",
+                  type: "longText",
+                  label: { en: "Message", de: "Nachricht" },
+                  hint: { en: "", de: "" },
+                  required: true,
+                  minLength: 1,
+                  maxLength: 2000,
+                  pattern: null,
+                },
+              ],
             },
           ],
         },

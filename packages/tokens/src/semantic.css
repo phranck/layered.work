@@ -117,21 +117,10 @@
   --emboss-shade: rgb(0 0 0 / 42%);
   --text-emboss: 0 -1px 0 var(--emboss-shade);
 
-  /* --- Card geometry ------------------------------------------------------
-     A nested radius is the outer radius less the distance to that element, never
-     less whatever the page's cards happen to use, so media and content derive
-     from their own insets. Clamped at zero, because an element further in than
-     the radius sits past the curve entirely and is square. */
-  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
-  --card-media-radius: max(calc(var(--card-radius) - var(--card-media-inset)), 0px);
-
-  /* Half the radius, for text that meets a curve with no padding in between. A
-     card's own padding already holds text away from the curve, so text inside a
-     padded card does not take this as well. */
-  --card-text-inset: calc(var(--card-radius) / 2);
-
-  /* The same rule for a control: a label standing over a text field begins
-     where the field's curve gives way to its straight edge. */
+  /* --- Controls -----------------------------------------------------------
+     Half a control's radius, for a label standing over a text field: it begins
+     where the field's curve gives way to its straight edge, as text meeting a
+     card's curve does with `--card-text-inset` below. */
   --control-text-inset: calc(var(--radius-control) / 2);
 
   /* Where the text inside a text field starts, from its edge. A Markdown editor
@@ -204,10 +193,33 @@
      one statement about how high a surface sits. */
   --lift-1:
     inset 0 1px 0 0 var(--edge-lit), 0 1px 2px -1px rgb(0 0 0 / 55%), 0 4px 10px -6px rgb(0 0 0 / 50%);
+  --lift-4:
+    inset 0 1px 0 0 var(--edge-strong), 0 8px 16px -8px rgb(0 0 0 / 60%), 0 40px 80px -28px rgb(0 0 0 / 80%);
+}
+
+/*
+ * What derives from the density the workbench tightens, declared on
+ * `.site-scope` as well for the reason scale.css gives: a piece of the site
+ * inside the workbench derives these again from the site's own values.
+ */
+:root,
+.site-scope {
+  /* --- Card geometry ------------------------------------------------------
+     A nested radius is the outer radius less the distance to that element, never
+     less whatever the page's cards happen to use, so media and content derive
+     from their own insets. Clamped at zero, because an element further in than
+     the radius sits past the curve entirely and is square. */
+  --card-inner-radius: max(calc(var(--card-radius) - var(--card-padding)), 0px);
+  --card-media-radius: max(calc(var(--card-radius) - var(--card-media-inset)), 0px);
+
+  /* Half the radius, for text that meets a curve with no padding in between. A
+     card's own padding already holds text away from the curve, so text inside a
+     padded card does not take this as well. */
+  --card-text-inset: calc(var(--card-radius) / 2);
+
+  /* The two middle heights, which the workbench flattens. */
   --lift-2:
     inset 0 1px 0 0 var(--edge-lit), 0 2px 4px -2px rgb(0 0 0 / 55%), 0 12px 24px -12px rgb(0 0 0 / 60%);
   --lift-3:
     inset 0 1px 0 0 var(--edge-strong), 0 4px 8px -4px rgb(0 0 0 / 55%), 0 24px 48px -20px rgb(0 0 0 / 70%);
-  --lift-4:
-    inset 0 1px 0 0 var(--edge-strong), 0 8px 16px -8px rgb(0 0 0 / 60%), 0 40px 80px -28px rgb(0 0 0 / 80%);
 }

@@ -23,16 +23,20 @@ describe("content renderer", () => {
       slug: "interest",
       name: "Interest",
       successMessage: { en: "Thanks", de: "Danke" },
-      fields: [
+      rows: [
         {
-          key: "email",
-          type: "email" as const,
-          label: { en: "Email", de: "E-Mail" },
-          hint: { en: "", de: "" },
-          required: true,
-          minLength: 3,
-          maxLength: 254,
-          pattern: null,
+          fields: [
+            {
+              key: "email",
+              type: "email" as const,
+              label: { en: "Email", de: "E-Mail" },
+              hint: { en: "", de: "" },
+              required: true,
+              minLength: 3,
+              maxLength: 254,
+              pattern: null,
+            },
+          ],
         },
       ],
     };
@@ -311,15 +315,19 @@ describe("content renderer", () => {
     const consent = renderToStaticMarkup(
       <ui.FormControls
         language="de"
-        fields={[
+        rows={[
           {
-            key: "privacy",
-            type: "consent",
-            label: { en: "Privacy", de: "Datenschutz" },
-            hint: { en: "", de: "" },
-            notice: { en: "", de: "Ich habe die [Erklärung](/de/datenschutz/) gelesen." },
-            revision: "1",
-            required: true,
+            fields: [
+              {
+                key: "privacy",
+                type: "consent",
+                label: { en: "Privacy", de: "Datenschutz" },
+                hint: { en: "", de: "" },
+                notice: { en: "", de: "Ich habe die [Erklärung](/de/datenschutz/) gelesen." },
+                revision: "1",
+                required: true,
+              },
+            ],
           },
         ]}
       />,
@@ -328,7 +336,7 @@ describe("content renderer", () => {
 
     const success = renderToStaticMarkup(
       <ui.FormEmbed
-        form={{ slug: "interest", name: "Interest", successMessage: { en: "", de: "" }, fields: [] }}
+        form={{ slug: "interest", name: "Interest", successMessage: { en: "", de: "" }, rows: [] }}
         language="de"
         outcome={{ status: "success", message: "**Danke!** Wir melden uns." }}
       />,

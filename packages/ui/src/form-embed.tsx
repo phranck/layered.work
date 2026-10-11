@@ -60,7 +60,7 @@ export function FormEmbed({
       </div>
       <Card.Stack>
         <FormControls
-          fields={form.fields}
+          rows={form.rows}
           language={language}
           values={outcome?.values}
           errors={outcome?.errors}

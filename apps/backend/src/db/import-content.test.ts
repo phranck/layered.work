@@ -410,13 +410,17 @@ runs("importing a snapshot", () => {
             slug: "stored-form",
             name: "Stored form",
             successMessage: { en: "Thanks.", de: "Danke." },
-            fields: [
+            rows: [
               {
-                key: "agree",
-                label: { en: "Agree", de: "Zustimmen" },
-                hint: { en: "", de: "" },
-                required: false,
-                type: "checkbox",
+                fields: [
+                  {
+                    key: "agree",
+                    label: { en: "Agree", de: "Zustimmen" },
+                    hint: { en: "", de: "" },
+                    required: false,
+                    type: "checkbox",
+                  },
+                ],
               },
             ],
           },

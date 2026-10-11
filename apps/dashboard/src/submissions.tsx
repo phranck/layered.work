@@ -1,4 +1,9 @@
-import { type FormSubmission, type FormSubmissionStatus, submittedValueText } from "@layered/schemas";
+import {
+  type FormSubmission,
+  type FormSubmissionStatus,
+  formFields,
+  submittedValueText,
+} from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -191,7 +196,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                 </dd>
                 {Object.entries(selected.values).map(([key, value]) => (
                   <div key={key} className="submissions-detail__field">
-                    <dt>{form.fields.find((field) => field.key === key)?.label[language] ?? key}</dt>
+                    <dt>{formFields(form).find((field) => field.key === key)?.label[language] ?? key}</dt>
                     <dd>{submittedValueText(value)}</dd>
                   </div>
                 ))}

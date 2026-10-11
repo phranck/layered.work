@@ -90,8 +90,10 @@ describe("form builder", () => {
     const sent = requests.find(({ url, init }) => url.endsWith("/forms") && init?.method === "POST");
     const body = JSON.parse(String(sent?.init?.body));
     expect(body.name).toBe("Demo");
-    expect(body.fields.map((field: { type: string }) => field.type)).toEqual(["email", "shortText"]);
-    expect(body.fields[0].label).toEqual({ en: "Email address", de: "E-Mail-Adresse" });
+    // Each field went into a row of its own, in the order the handle chose.
+    const sentRows = body.rows as { fields: { type: string; label: unknown }[] }[];
+    expect(sentRows.map((row) => row.fields.map((field) => field.type))).toEqual([["email"], ["shortText"]]);
+    expect(sentRows[0]?.fields[0]?.label).toEqual({ en: "Email address", de: "E-Mail-Adresse" });
   });
 
   it("does not send a field whose German label is blank", async () => {
