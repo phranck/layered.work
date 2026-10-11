@@ -177,10 +177,23 @@ test("the production proxy uses the complete Zerops service name for runtime DNS
 test("development and production bundles use the same-origin API transport", () => {
   for (const command of ["serve", "build"]) {
     const config = viteConfig({ command });
+    const [api] = Object.values(config.server.proxy);
     assert.equal(JSON.parse(config.define.__API_BASE__), "/api");
-    assert.equal(config.server.proxy["/api"].rewrite("/api/auth/me"), "/auth/me");
-    assert.equal(config.server.proxy["/api"].rewrite("/api/dashboard/counts"), "/dashboard/counts");
+    assert.equal(api.rewrite("/api/auth/me"), "/auth/me");
+    assert.equal(api.rewrite("/api/dashboard/counts"), "/dashboard/counts");
   }
+});
+
+test("the development proxy takes /api only as a whole segment", () => {
+  const proxyKeys = Object.keys(viteConfig({ command: "serve" }).server.proxy);
+  // Vite's own rule (createProxyContextMatcher in vite 8): a key beginning with
+  // `^` is a regular expression, any other key a prefix of the request path.
+  const reachesApi = (path) =>
+    proxyKeys.some((key) => (key[0] === "^" ? new RegExp(key).test(path) : path.startsWith(key)));
+  assert.ok(reachesApi("/api"));
+  assert.ok(reachesApi("/api/auth/me"));
+  assert.ok(!reachesApi("/api-tokens"));
+  assert.ok(!reachesApi("/apis"));
 });
 
 test("the local login alias reaches a development server and no built bundle", () => {
