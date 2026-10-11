@@ -534,15 +534,17 @@ export function countdownPage(nonce: string): string {
         border-block-start: 1px solid var(--edge);
       }
       /* Undecorated until it is pointed at. The address reads as part of the
-         sentence, and the color already says it is a link. */
+         sentence, and the color already says it is a link. The underline is
+         always there in a transparent color, so pointing at it fades it in
+         rather than drawing it at once. */
       a {
         color: var(--accent);
-        text-decoration: none;
+        text-decoration: underline transparent;
         text-underline-offset: 3px;
         transition: text-decoration-color var(--duration, 160ms) var(--ease);
       }
       a:hover, a:focus-visible {
-        text-decoration: underline;
+        text-decoration-color: currentcolor;
       }
       .open {
         margin-block-start: 28px;

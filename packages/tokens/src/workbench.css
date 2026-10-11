@@ -67,6 +67,10 @@
   --duration-slow: var(--duration);
   --travel: 6px;
 
+  /* What a pointer changes appears and goes at once in the dashboard. The site
+     lets it travel. */
+  --hover-duration: 0s;
+
   /* --- Markdown editor ----------------------------------------------------
      The editor's roles, carried over from lmaa and musiccloud unchanged, so an
      author who works in more than one of these projects does not have to
