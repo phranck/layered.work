@@ -1,11 +1,10 @@
-import type { EntryKind, SearchResults } from "@layered/schemas";
-import { Card, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
+import { Card, FieldLabel, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
 import { ArticleIcon, ImagesIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
 import {
+  type ComponentPropsWithoutRef,
   createContext,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type Ref,
   use,
   useCallback,
   useEffect,
@@ -14,13 +13,12 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router";
-import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { useListbox } from "./listbox.js";
 import { CardDialog } from "./modal.js";
-import { queryKeys } from "./query-keys.js";
-import { entryPath, MEDIA_PATH } from "./routes.js";
+import { ENTRY_KIND_TEXT, type Hit, hitsOf, useSearchResults } from "./search-query.js";
+import { isSearchShortcut, takesText } from "./shortcuts.js";
 
 /**
  * Search, on the same shortcut everywhere.
@@ -34,59 +32,6 @@ import { entryPath, MEDIA_PATH } from "./routes.js";
  * be the reader's own keystroke. The one exception is a search field, where the
  * shortcut simply puts the caret back.
  */
-
-/** How long typing has to pause before the dialog asks the API, in milliseconds. */
-const SEARCH_DELAY_MS = 150;
-
-/** Input types that take no typed text, where the shortcut is free to act. */
-const NON_TEXT_INPUTS = new Set([
-  "button",
-  "checkbox",
-  "color",
-  "file",
-  "image",
-  "radio",
-  "range",
-  "reset",
-  "submit",
-]);
-
-/**
- * Whether a key event is the search shortcut on this platform.
- *
- * @param event - The keystroke.
- * @param apple - Whether the modifier is Command rather than Control.
- */
-export function isSearchShortcut(event: ShortcutEvent, apple: boolean): boolean {
-  return isModifierShortcut(event, "k", apple);
-}
-
-/** What a shortcut is read from. */
-export type ShortcutEvent = Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">;
-
-/**
- * Whether a key event is the platform's modifier with one letter and nothing
- * else: Command on an Apple platform, Control elsewhere.
- *
- * @param event - The keystroke.
- * @param letter - The letter, in lower case.
- * @param apple - Whether the modifier is Command rather than Control.
- */
-export function isModifierShortcut(event: ShortcutEvent, letter: string, apple: boolean): boolean {
-  const modifier = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  return modifier && !event.altKey && !event.shiftKey && event.key.toLowerCase() === letter;
-}
-
-/**
- * Whether an element takes typed text, so a shortcut must not take its keys.
- *
- * @param element - Whatever has focus.
- */
-export function takesText(element: Element | null): boolean {
-  if (!(element instanceof HTMLElement)) return false;
-  if (element.isContentEditable || element instanceof HTMLTextAreaElement) return true;
-  return element instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(element.type);
-}
 
 /** What a screen and the shortcut share. */
 interface SearchContextValue {
@@ -179,56 +124,53 @@ export function SearchShortcutCap() {
   );
 }
 
-/** The catalogue word for each kind of entry, as a hit's note. */
-const KIND_TEXT: Record<EntryKind, DashboardStringKey> = {
-  post: "kindPost",
-  page: "kindPage",
-  project: "kindProject",
-};
-
-/** One hit, whichever kind it is, flattened so the arrow keys can move across both kinds. */
-interface Hit {
-  key: string;
-  path: string;
-  title: string;
-  note: string;
-  thumbnailUrl: string | null;
-  language?: string;
-  group: "entries" | "media";
+/** Props for a search field. */
+export interface SearchFieldProps
+  extends Omit<ComponentPropsWithoutRef<"input">, "value" | "onChange" | "type" | "className"> {
+  /** What the field searches, which is its accessible name and its placeholder. */
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  /** The ref of the input itself, such as the one that registers it with the shortcut. */
+  inputRef?: Ref<HTMLInputElement>;
+  /** Whether the key cap of the search shortcut stands at its end, for the field the shortcut focuses. */
+  shortcut?: boolean;
+  /** Whether it takes the width it stands in, as the search dialog's field does, rather than a header's corner. */
+  wide?: boolean;
 }
 
-function hitsOf(results: SearchResults | undefined, kindText: (kind: EntryKind) => string): Hit[] {
-  if (!results) return [];
-  return [
-    ...results.entries.map((hit) => ({
-      key: `entry-${hit.id}`,
-      path: entryPath(hit.kind, hit.id),
-      title: hit.title,
-      note: kindText(hit.kind),
-      thumbnailUrl: null,
-      language: hit.language,
-      group: "entries" as const,
-    })),
-    ...results.media.map((hit) => ({
-      key: `media-${hit.id}`,
-      // A file has no screen of its own; it opens in the library.
-      path: MEDIA_PATH,
-      title: hit.slug,
-      note: hit.altText ?? "",
-      thumbnailUrl: hit.thumbnailUrl,
-      group: "media" as const,
-    })),
-  ];
-}
-
-/** The value it was given, once it has stopped changing for the delay. */
-function useSettled<Value>(value: Value, delay: number): Value {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return settled;
+/**
+ * The dashboard's one search field: the magnifier, the field, and the key cap
+ * of the search shortcut where the shortcut reaches it, on one surface. Every
+ * search in the dashboard is this field, whether it narrows a table, searches
+ * the media library or Unsplash, or searches everything in the dialog.
+ */
+export function SearchField({
+  label,
+  value,
+  onChange,
+  inputRef,
+  shortcut,
+  wide,
+  ...props
+}: SearchFieldProps) {
+  return (
+    <label className="search-field" data-wide={wide || undefined}>
+      <MagnifyingGlassIcon aria-hidden="true" />
+      <input
+        ref={inputRef}
+        className="input"
+        type="search"
+        aria-label={label}
+        placeholder={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        data-search-field={shortcut ? "" : undefined}
+        {...props}
+      />
+      {shortcut && <SearchShortcutCap />}
+    </label>
+  );
 }
 
 /**
@@ -242,20 +184,17 @@ function useSettled<Value>(value: Value, delay: number): Value {
  * @param onClose - Closes the dialog.
  */
 export function SearchDialog({ onClose }: { onClose: () => void }) {
-  const api = useDashboardApi();
   const navigate = useNavigate();
   const { text } = useDashboardLanguage();
   const [query, setQuery] = useState("");
-  const settled = useSettled(query.trim(), SEARCH_DELAY_MS);
-  const [active, setActive] = useState(0);
-  const results = useQuery({
-    queryKey: queryKeys.search(settled),
-    queryFn: () => api.search(settled),
-    enabled: settled.length > 0,
-  });
-  const hits = settled ? hitsOf(results.data, (kind) => text(KIND_TEXT[kind])) : [];
-  const activeHit = hits[Math.min(active, hits.length - 1)];
-  const activeKey = activeHit?.key;
+  const { settled, results } = useSearchResults(query);
+  const hits = settled ? hitsOf(results.data, (kind) => text(ENTRY_KIND_TEXT[kind])) : [];
+  const open = (hit: Hit) => {
+    onClose();
+    navigate(hit.path);
+  };
+  const listbox = useListbox(hits, open);
+  const activeKey = listbox.activeOption?.key;
 
   // The list scrolls inside the dialog, so a hit reached with the arrow keys is
   // brought into view rather than left below the edge.
@@ -263,51 +202,31 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
     if (activeKey) document.getElementById(activeKey)?.scrollIntoView?.({ block: "nearest" });
   }, [activeKey]);
 
-  const open = (hit: Hit) => {
-    onClose();
-    navigate(hit.path);
-  };
-
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      if (hits.length === 0) return;
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((current) => (Math.min(current, hits.length - 1) + step + hits.length) % hits.length);
-    } else if (event.key === "Enter" && activeHit) {
-      event.preventDefault();
-      open(activeHit);
-    }
-  };
-
   const group = (name: Hit["group"], label: string) => {
     const members = hits.filter((hit) => hit.group === name);
     if (members.length === 0) return null;
     return (
       // biome-ignore lint/a11y/useSemanticElements: An option group inside a listbox is a role, and fieldset would add browser layout.
       <div role="group" aria-label={label} className="search-results__group">
-        <p className="search-results__label" aria-hidden="true">
+        <FieldLabel as="p" aria-hidden="true">
           {label}
-        </p>
+        </FieldLabel>
         <RowList>
           {members.map((hit) => (
             <Row
               key={hit.key}
               id={hit.key}
-              role="option"
-              aria-selected={hit === activeHit}
-              data-active={hit === activeHit ? "" : undefined}
               className="row--interactive"
               onClick={() => open(hit)}
-              onMouseMove={() => setActive(hits.indexOf(hit))}
+              {...listbox.optionProps(hits.indexOf(hit))}
             >
               <Row.Tile aria-hidden="true">
                 {hit.thumbnailUrl ? (
                   <img src={hit.thumbnailUrl} alt="" loading="lazy" />
                 ) : name === "entries" ? (
-                  <ArticleIcon weight="duotone" />
+                  <ArticleIcon />
                 ) : (
-                  <ImagesIcon weight="duotone" />
+                  <ImagesIcon />
                 )}
               </Row.Tile>
               <Row.Text title={hit.title} note={hit.note || undefined} />
@@ -329,36 +248,31 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
     <CardDialog labelId="search-dialog-title" onClose={onClose}>
       <Card.Header id="search-dialog-title" title={text("search")} />
       <Card.Body className="search-dialog">
-        <label className="search-field search-field--wide">
-          <MagnifyingGlassIcon aria-hidden="true" />
-          <input
-            className="input"
-            type="search"
-            role="combobox"
-            aria-label={text("searchEverything")}
-            aria-expanded={hits.length > 0}
-            aria-controls="search-results"
-            aria-activedescendant={activeHit?.key}
-            aria-autocomplete="list"
-            placeholder={text("searchEverything")}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActive(0);
-            }}
-            onKeyDown={onKeyDown}
-            data-search-field=""
-            // biome-ignore lint/a11y/noAutofocus: The dialog exists to be typed into, and it was opened from the keyboard.
-            autoFocus
-          />
-          <SearchShortcutCap />
-        </label>
+        <SearchField
+          label={text("searchEverything")}
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            listbox.reset();
+          }}
+          shortcut
+          wide
+          role="combobox"
+          aria-expanded={hits.length > 0}
+          aria-controls="search-results"
+          aria-activedescendant={activeKey}
+          aria-autocomplete="list"
+          onKeyDown={(event) => {
+            listbox.onKeyDown(event);
+          }}
+          // The dialog exists to be typed into, and it was opened from the keyboard.
+          autoFocus
+        />
         {results.isError && <ErrorNotice error={results.error} />}
         <div id="search-results" role="listbox" aria-label={text("searchResults")} className="search-results">
           {group("entries", text("searchEntries"))}
           {group("media", text("media"))}
         </div>
-        {!settled && <p className="unfinished">{text("searchHint")}</p>}
         {settled && results.isSuccess && hits.length === 0 && (
           <p className="unfinished">{text("searchNothing")}</p>
         )}

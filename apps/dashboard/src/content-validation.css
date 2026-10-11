@@ -22,10 +22,6 @@
 .content-findings .button__icon {
   grid-row: span 2;
 }
-.content-findings small {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
 .content-findings [data-severity="error"] .button {
   color: var(--state-danger);
 }

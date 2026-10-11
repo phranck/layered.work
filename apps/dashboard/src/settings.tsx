@@ -9,22 +9,29 @@ import {
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import { Badge, Card, Field, FieldHint, Input, Segmented } from "@layered/ui";
+import { type ReactNode, useRef, useState } from "react";
 import { AccessTokensCard } from "./access-tokens.js";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
+import type { DraftSchema } from "./checked-draft.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaField } from "./media-field.js";
+import { MailTestOutcome } from "./mail-test-outcome.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
+import { PictureField } from "./picture-field.js";
+import { QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
+import {
+  checkedSettings,
+  testMailBlocker,
+  useSaveSettings,
+  useSendTestMail,
+  useSettings,
+} from "./settings-query.js";
 import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { contentLanguageOptions, Translated } from "./translated.js";
 
@@ -36,13 +43,6 @@ import { contentLanguageOptions, Translated } from "./translated.js";
  * change to the mail sender cannot be lost to an unrelated mistake in the site
  * title. Every author can read them; only the owner can change them.
  */
-
-/** Anything that checks a draft and says which fields failed. */
-interface DraftSchema<Value> {
-  safeParse(
-    value: unknown,
-  ): { success: true; data: Value } | { success: false; error: { issues: { path: PropertyKey[] }[] } };
-}
 
 /** Props for one group's card. */
 interface SettingsCardProps<Group extends SettingsGroup> {
@@ -102,19 +102,16 @@ function SettingsCardDraft<Group extends SettingsGroup>({
   collapse,
   headerActions,
 }: SettingsCardProps<Group>) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const account = useAccount();
   const editable = account.data?.role === "owner";
   const [draft, setDraft] = useState(saved);
   const [problems, setProblems] = useState<DashboardStringKey[]>([]);
   const { notify, notifyError } = useNotify();
-  const save = useMutation({
-    mutationFn: (value: SettingsValues[Group]) => api.saveSettings(group, value),
-    onError: (error) => notifyError(error),
-    onSuccess: (view) => {
-      queryClient.setQueryData(queryKeys.settings, view);
+  const save = useSaveSettings(group, {
+    onError: notifyError,
+    onSuccess: (_view, value) => {
+      setDraft(value);
       notify({ tone: "success", message: text("saved") });
     },
   });
@@ -123,7 +120,7 @@ function SettingsCardDraft<Group extends SettingsGroup>({
   const form = useRef<HTMLFormElement>(null);
 
   // Command-S submits the form exactly as the Save button does, checks included,
-  // and does nothing whilst that button is disabled.
+  // and does nothing while that button is disabled.
   useSaveShortcut(() => {
     if (editable && dirty && !save.isPending) form.current?.requestSubmit();
   });
@@ -133,47 +130,39 @@ function SettingsCardDraft<Group extends SettingsGroup>({
     setProblems([]);
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const parsed = schema.safeParse(draft);
-    if (!parsed.success) {
-      const keys = parsed.error.issues.map(
-        (issue) => reasons[String(issue.path[0])] ?? "errorInvalidRequest",
-      );
-      setProblems([...new Set(keys)]);
-      return;
-    }
-    save.mutate(parsed.data, { onSuccess: () => setDraft(parsed.data) });
-  };
-
   const content = (
     <>
-      <Card.Body>
-        <form ref={form} id={formId} className="settings-form" onSubmit={submit} noValidate>
+      <form
+        ref={form}
+        id={formId}
+        className="dialog-form"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const checked = checkedSettings(schema, draft, reasons);
+          if ("problems" in checked) setProblems(checked.problems);
+          else save.mutate(checked.value);
+        }}
+      >
+        <Card.Stack>
           {children(draft, update, editable)}
-          {problems.length > 0 && (
-            <ul className="dashboard-error settings-form__problems" role="alert">
-              {problems.map((key) => (
-                <li key={key}>{text(key)}</li>
-              ))}
-            </ul>
-          )}
-        </form>
-      </Card.Body>
+          {problems.length > 0 && <ErrorNotice message={problems.map((key) => text(key))} />}
+        </Card.Stack>
+      </form>
       <Card.Footer
         note={editable ? note?.(dirty) : text("ownerOnly")}
         actions={
           <>
             {actions?.(dirty)}
-            <Button
+            <ActionButton
+              action="save"
               type="submit"
               form={formId}
               tone="primary"
               disabled={!editable || !dirty || save.isPending}
-              icon={<FloppyDiskIcon weight="duotone" />}
             >
               {save.isPending ? text("savePending") : text("save")}
-            </Button>
+            </ActionButton>
           </>
         }
       />
@@ -197,7 +186,8 @@ function SettingsCardDraft<Group extends SettingsGroup>({
 }
 
 /**
- * The settings once they have loaded, or the failure that stopped them.
+ * The settings once they have loaded, or a card saying they are loading or
+ * what stopped them.
  *
  * A settings screen is a form standing alone, so its cards stop at the form
  * measure rather than stretching across the content area.
@@ -205,15 +195,19 @@ function SettingsCardDraft<Group extends SettingsGroup>({
  * @param render - Draws the screen from the loaded settings.
  */
 function WithSettings({ area, render }: { area: DashboardArea; render: (view: SettingsView) => ReactNode }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
+  const settings = useSettings();
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
       <div className="settings-screen">
-        {settings.isError && <ErrorNotice error={settings.error} />}
-        {settings.data && render(settings.data)}
+        {settings.data ? (
+          render(settings.data)
+        ) : (
+          <Card>
+            <QueryStates query={settings}>{() => null}</QueryStates>
+          </Card>
+        )}
       </div>
     </>
   );
@@ -253,13 +247,12 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                   <Translated.Field
                     id="footer-line"
                     label={text("footerLine")}
-                    hint={text("footerLineHint")}
                     value={draft.footerLine}
                     maxLength={MaxLength.Paragraph}
                     disabled={!editable}
                     onChange={(footerLine) => update({ footerLine })}
                   />
-                  <Field label={text("defaultLanguage")} hint={text("defaultLanguageHint")}>
+                  <Field label={text("defaultLanguage")}>
                     <Segmented
                       aria-label={text("defaultLanguage")}
                       value={draft.defaultLanguage}
@@ -269,18 +262,16 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                       }
                     />
                   </Field>
-                  <MediaField
+                  <PictureField
                     label={text("socialImage")}
-                    hint={text("socialImageHint")}
                     none={text("socialImageNone")}
                     mediaId={draft.socialImageMediaId}
                     shape="sharing"
                     editable={editable}
                     onChange={(socialImageMediaId) => update({ socialImageMediaId })}
                   />
-                  <MediaField
+                  <PictureField
                     label={text("watermark")}
-                    hint={text("watermarkHint")}
                     none={text("watermarkWordmark")}
                     mediaId={draft.watermarkMediaId}
                     shape="whole"
@@ -300,9 +291,8 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
 
 /** Who mail comes from, whether a key is there to send it, and a test message. */
 export function MailSettingsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const test = useMutation({ mutationFn: api.sendTestMail });
+  const test = useSendTestMail();
   return (
     <WithSettings
       area={area}
@@ -315,33 +305,31 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
             saved={saved}
             schema={mailSettings}
             reasons={{ senderAddress: "invalidSenderAddress", senderName: "invalidSenderName" }}
-            note={(dirty) =>
-              !apiKeyConfigured
-                ? text("testMailNeedsKey")
-                : dirty
-                  ? text("testMailNeedsSave")
-                  : !saved.senderAddress
-                    ? text("testMailNeedsSender")
-                    : undefined
-            }
+            note={(dirty) => {
+              const blocker = testMailBlocker(apiKeyConfigured, dirty, saved.senderAddress);
+              return blocker && text(blocker);
+            }}
             actions={(dirty) => (
-              <Button
-                disabled={!apiKeyConfigured || dirty || !saved.senderAddress || test.isPending}
-                icon={<PaperPlaneTiltIcon weight="duotone" />}
+              <ActionButton
+                action="send"
+                disabled={
+                  testMailBlocker(apiKeyConfigured, dirty, saved.senderAddress) !== undefined ||
+                  test.isPending
+                }
                 onClick={() => test.mutate()}
               >
                 {test.isPending ? text("testMailPending") : text("testMail")}
-              </Button>
+              </ActionButton>
             )}
           >
             {(draft, update, editable) => (
               <>
-                <Field label={text("mailKey")} hint={text("mailKeyHint")}>
-                  <span className="badge" data-status={apiKeyConfigured ? "public" : "draft"}>
+                <Field label={text("mailKey")}>
+                  <Badge tone={apiKeyConfigured ? "success" : "warning"}>
                     {apiKeyConfigured ? text("mailKeySet") : text("mailKeyMissing")}
-                  </span>
+                  </Badge>
                 </Field>
-                <div className="settings-form__pair">
+                <div className="field-row">
                   <Field label={text("senderAddress")} htmlFor="sender-address">
                     <Input
                       id="sender-address"
@@ -362,20 +350,8 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                     />
                   </Field>
                 </div>
-                <p className="settings-form__note">{text("mailDomainHint")}</p>
                 {test.isError && <ErrorNotice error={test.error} />}
-                {test.data && (
-                  <div className="settings-form__outcome" role="status" data-accepted={test.data.accepted}>
-                    <p>
-                      {test.data.accepted
-                        ? text("testMailAccepted", test.data.recipient)
-                        : text("testMailRefused", test.data.recipient)}
-                    </p>
-                    <p className="settings-form__answer">
-                      {text("testMailAnswer")}: <q>{test.data.answer}</q>
-                    </p>
-                  </div>
-                )}
+                {test.data && <MailTestOutcome result={test.data} />}
               </>
             )}
           </SettingsCard>
@@ -402,16 +378,14 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
           {(draft, update, editable) => (
             <>
               <Field label={text("umamiInstance")}>
-                <code className="settings-form__value">{ANALYTICS_ORIGIN}</code>
+                <FieldHint>
+                  <code>{ANALYTICS_ORIGIN}</code>
+                </FieldHint>
               </Field>
-              <Field
-                label={text("umamiWebsiteId")}
-                htmlFor="umami-website-id"
-                hint={text("umamiWebsiteIdHint")}
-              >
+              <Field label={text("umamiWebsiteId")} htmlFor="umami-website-id">
                 <Input
                   id="umami-website-id"
-                  className="settings-form__code"
+                  className="input--code"
                   value={draft.umamiWebsiteId ?? ""}
                   spellCheck={false}
                   disabled={!editable}

@@ -8,3 +8,19 @@
 .button.reorder-handle:active {
   cursor: grabbing;
 }
+
+/* An item travels into its new place when the order changes, and makes room
+   the same way while another one is dragged past it. The dragged item follows
+   the pointer without a transition, which would leave it lagging behind, and
+   stands above the others in the lift of something picked up. */
+[data-reorder-item] {
+  position: relative;
+  transition: transform var(--duration) var(--ease);
+}
+
+[data-reorder-item][data-dragging] {
+  z-index: 10;
+  background: var(--surface-floating);
+  box-shadow: var(--lift-4);
+  transition: none;
+}

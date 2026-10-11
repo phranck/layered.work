@@ -9,7 +9,7 @@ import {
   fieldSpan,
   formFields,
 } from "@layered/schemas";
-import { Button, Card } from "@layered/ui";
+import { Card, FieldHint } from "@layered/ui";
 import {
   CalendarBlankIcon,
   CaretCircleDownIcon,
@@ -22,7 +22,6 @@ import {
   ShieldCheckIcon,
   TextAaIcon,
   TextAlignLeftIcon,
-  TrashIcon,
 } from "@layered/ui/icons";
 import {
   type ComponentType,
@@ -37,6 +36,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { ActionButton } from "./action-button.js";
 import {
   type DragSource,
   dropTarget,
@@ -60,6 +60,7 @@ import {
 } from "./forms-model.js";
 import { zoomOf } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MoveKeysDescription } from "./reorder.js";
 import { useTextLanguage } from "./text-language.js";
 
 /** The mark each kind of field is shown with, in the palette and on the canvas. */
@@ -158,7 +159,7 @@ function FieldFace({ field, language }: { field: FormField; language: ContentLan
           </span>
         )}
       </span>
-      <small className="forms-field__type">{text(FIELD_TYPE_TEXT[field.type])}</small>
+      <FieldHint className="forms-field__type">{text(FIELD_TYPE_TEXT[field.type])}</FieldHint>
     </>
   );
 }
@@ -240,6 +241,8 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
   // The labels show in the language the panel's switch has chosen, as the preview does.
   const language = useTextLanguage();
   const hintId = useId();
+  const rowKeysId = useId();
+  const paletteHintId = useId();
   const builder = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
   const rowElements = useRef(new Map<number, HTMLElement>());
@@ -500,7 +503,9 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
         <Card className="forms-palette">
           <Card.Header title={text("formPalette")} />
           <Card.Body>
-            <p className="forms-palette__hint">{text("formPaletteHint")}</p>
+            <p id={paletteHintId} hidden>
+              {text("formPaletteHint")}
+            </p>
             <div className="forms-palette__tiles">
               {FORM_FIELD_TYPES.map((type) => {
                 const Icon = FIELD_TYPE_ICON[type];
@@ -509,6 +514,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                     key={type}
                     type="button"
                     className="forms-palette__tile"
+                    aria-describedby={paletteHintId}
                     disabled={full}
                     onPointerDown={pressed({ kind: "palette", type })}
                     onClick={clicked(() => {
@@ -531,6 +537,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
               <p id={hintId} hidden>
                 {text("formFieldMoveHint")}
               </p>
+              <MoveKeysDescription id={rowKeysId} />
               <div ref={canvas} className="forms-rows">
                 {shown.rows.map((row, rowIndex) => {
                   const free = freeColumns(row);
@@ -545,10 +552,11 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                       data-landing={landingRow === rowIndex || undefined}
                       data-target={landingField?.row === rowIndex || undefined}
                     >
-                      <Button.Icon
+                      <ActionButton.Icon
+                        action="move"
                         className="forms-row__grip"
                         label={text("formRowMove", rowIndex + 1)}
-                        icon={<DotsSixVerticalIcon />}
+                        aria-describedby={rowKeysId}
                         onPointerDown={pressed(gripSource(form, rowIndex))}
                         onKeyDown={(event) => moveRowByKey(event, rowIndex)}
                       />
@@ -601,11 +609,10 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                               >
                                 <FieldFace field={field} language={language} />
                               </button>
-                              <Button.Icon
+                              <ActionButton.Icon
+                                action="remove"
                                 className="forms-field__remove"
                                 label={text("formFieldRemove")}
-                                icon={<TrashIcon />}
-                                tone="danger"
                                 disabled={fieldCount <= FORM_FIELD_COUNT.min}
                                 onClick={() => onChange(removeField(form, place), null)}
                               />

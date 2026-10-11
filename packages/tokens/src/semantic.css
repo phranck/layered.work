@@ -79,6 +79,9 @@
   --hover-tint: rgb(255 255 255 / 4%);
   --press-tint: rgb(0 0 0 / 18%);
 
+  /* A chip's own fill at rest: the faintest lift off whatever it stands on. */
+  --chip-fill: rgb(255 255 255 / 4%);
+
   /* A control that cannot be used right now: faded far enough to read as out
      of reach, not so far that its label stops being legible. */
   --disabled-opacity: 0.45;
@@ -165,10 +168,8 @@
   --content-note-edge: var(--space-1);
   --content-media-ratio: 16 / 10;
   --content-icon-size: var(--text-xl);
-  --content-note-info: var(--state-info);
   --content-note-success: var(--state-success);
   --content-note-warning: var(--state-warning);
-  --content-note-danger: var(--state-danger);
 
   /* --- Code ---------------------------------------------------------------
      What each part of a highlighted code block is drawn in. The names are the

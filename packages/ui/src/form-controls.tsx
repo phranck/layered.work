@@ -181,14 +181,14 @@ function FormFieldControl({ field, language, value, error }: FormFieldControlPro
   return (
     <div className="form-controls__field" style={{ "--span": fieldSpan(field) } as CSSProperties}>
       {field.type === "consent" || field.type === "multipleChoice" ? (
-        <fieldset
+        <Field.Set
+          label={label}
+          hint={hint}
           aria-describedby={error ? errorId : undefined}
           data-required-choice={field.type === "multipleChoice" && field.required ? "true" : undefined}
         >
-          <legend>{label}</legend>
           {control}
-          {hint && <small>{hint}</small>}
-        </fieldset>
+        </Field.Set>
       ) : (
         <Field label={label} htmlFor={id} hint={hint}>
           {control}

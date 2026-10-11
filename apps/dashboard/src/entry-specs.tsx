@@ -1,10 +1,10 @@
 import { ENTRY_SPEC_LENGTH, type EntrySpec, entrySpecs, MAX_ENTRY_SPECS } from "@layered/schemas";
-import { Button, Field, Input } from "@layered/ui";
-import { PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Field, FieldHint, Input } from "@layered/ui";
 import { useRef, useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { moveItem } from "./list-order.js";
 import { Reorder } from "./reorder.js";
-import { moveItem } from "./sidebar-order.js";
 import "./entry-specs.css";
 
 /**
@@ -52,7 +52,7 @@ export function SpecsField({
   };
 
   return (
-    <Field label={text("editorSpecs")} hint={text("editorSpecsHint", MAX_ENTRY_SPECS)}>
+    <Field label={text("editorSpecs")}>
       <Reorder.List className="spec-pairs" onMove={move}>
         {specs.map((pair, index) => {
           const key = keys.current[index] ?? String(index);
@@ -60,6 +60,7 @@ export function SpecsField({
           return (
             <Reorder.Item key={key} index={index}>
               <div className="spec-pair">
+                <Reorder.Handle index={index} label={text("moveGroup", name)} />
                 <div className="spec-pair__fields">
                   <Input
                     aria-label={`${text("editorSpecLabel")} ${index + 1}`}
@@ -77,28 +78,24 @@ export function SpecsField({
                     onChange={(event) => change(index, "value", event.target.value)}
                   />
                 </div>
-                <div className="spec-pair__actions">
-                  <Reorder.Handle index={index} label={text("moveGroup", name)} />
-                  <Button.Icon
-                    label={text("editorSpecRemove", name)}
-                    icon={<TrashIcon />}
-                    tone="danger"
-                    onClick={() => remove(index)}
-                  />
-                </div>
+                <ActionButton.Icon
+                  action="remove"
+                  label={text("editorSpecRemove", name)}
+                  onClick={() => remove(index)}
+                />
               </div>
             </Reorder.Item>
           );
         })}
       </Reorder.List>
       {!entrySpecs.safeParse(specs).success && (
-        <p className="spec-pairs__problem" role="status">
+        <FieldHint as="p" role="status" data-tone="warning">
           {text("editorSpecsIncomplete")}
-        </p>
+        </FieldHint>
       )}
-      <Button icon={<PlusIcon />} disabled={specs.length >= MAX_ENTRY_SPECS} onClick={add}>
+      <ActionButton action="new" disabled={specs.length >= MAX_ENTRY_SPECS} onClick={add}>
         {text("editorSpecAdd")}
-      </Button>
+      </ActionButton>
     </Field>
   );
 }

@@ -1,8 +1,10 @@
 /*
- * A status: a dot plus a word, never colour alone, so the meaning survives a
+ * A status: a dot plus a word, never color alone, so the meaning survives a
  * reader who cannot tell the two greens apart.
  *
- * Shared by the site and the dashboard, which name the same states.
+ * Shared by the site and the dashboard. The color is the `--tone` that
+ * `tone.css` binds for the badge's `data-tone`, so a state looks the same
+ * wherever it stands, and a badge without a tone stays neutral.
  */
 
 .badge {
@@ -18,9 +20,9 @@
   line-height: 1;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--badge-colour, var(--text-muted));
-  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
-  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
+  color: var(--tone, var(--text-muted));
+  background: color-mix(in oklab, var(--tone, var(--ink-500)) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--tone, var(--ink-500)) 30%, transparent);
   border-radius: var(--radius-chip);
 }
 
@@ -30,31 +32,4 @@
   content: "";
   background: currentcolor;
   border-radius: 50%;
-}
-
-/* The site names a publication state; the dashboard names the tone of any state
-   it shows. Both reach the same colors here, so a state looks the same
-   wherever it stands, and a badge without either stays neutral. */
-.badge[data-status="public"],
-.badge[data-tone="success"] {
-  --badge-colour: var(--state-success);
-}
-
-.badge[data-status="draft"],
-.badge[data-tone="warning"] {
-  --badge-colour: var(--state-warning);
-}
-
-.badge[data-status="hidden"],
-.badge[data-tone="info"] {
-  --badge-colour: var(--state-info);
-}
-
-.badge[data-status="secret"] {
-  --badge-colour: var(--accent-400);
-}
-
-.badge[data-status="trashed"],
-.badge[data-tone="danger"] {
-  --badge-colour: var(--state-danger);
 }

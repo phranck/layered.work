@@ -48,10 +48,9 @@ it("blocks publishing an unknown component, names the reason, and still saves th
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const area = dashboardAreas.find((row) => row.id === "posts");
   if (!area) throw new Error("Missing posts area");
-  const router = createMemoryRouter(
-    [{ path: "/posts/:id", element: <EntryEditorScreen area={area} kind="post" /> }],
-    { initialEntries: [`/posts/${entry.id}`] },
-  );
+  const router = createMemoryRouter([{ path: "/posts/:id", element: <EntryEditorScreen area={area} /> }], {
+    initialEntries: [`/posts/${entry.id}`],
+  });
   render(
     <QueryClientProvider client={client}>
       <DashboardApiProvider api={createDashboardApi(client, () => {})}>

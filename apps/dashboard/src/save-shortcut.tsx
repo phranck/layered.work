@@ -1,6 +1,6 @@
 import { isApplePlatform } from "@layered/ui";
 import { createContext, type ReactNode, use, useEffect, useEffectEvent, useMemo, useRef } from "react";
-import { isModifierShortcut } from "./search.js";
+import { isModifierShortcut } from "./shortcuts.js";
 
 /**
  * Saving on the same shortcut everywhere.

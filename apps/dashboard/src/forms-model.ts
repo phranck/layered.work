@@ -1,6 +1,7 @@
 import {
   type CreateFormBody,
   FORM_COLUMNS,
+  type FormDetail,
   type FormField,
   type FormFieldType,
   type FormRow,
@@ -98,6 +99,68 @@ export function newForm(name: string): CreateFormBody {
     storeSubmissions: true,
     rows: [{ fields: [newField("shortText", "name")] }],
   };
+}
+
+/**
+ * What the form editor changes, taken out of a stored form.
+ *
+ * @param form - The form as the API returned it.
+ */
+export function formDraftOf(form: FormDetail): CreateFormBody {
+  return {
+    slug: form.slug,
+    name: form.name,
+    notificationEmail: form.notificationEmail,
+    confirmationEmailField: form.confirmationEmailField ?? null,
+    successMessage: form.successMessage,
+    storeSubmissions: form.storeSubmissions,
+    rows: form.rows,
+  };
+}
+
+/**
+ * A field given another type: the new type's defaults, under the same key and
+ * keeping what the author already wrote for every type alike, its label, its
+ * hint and whether it is required.
+ *
+ * @param field - The field as it stands.
+ * @param type - The type it becomes.
+ */
+export function retypedField(field: FormField, type: FormFieldType): FormField {
+  return { ...newField(type, field.key), label: field.label, hint: field.hint, required: field.required };
+}
+
+/**
+ * A choice field with one of its options changed.
+ *
+ * @param field - The choice field.
+ * @param index - The option's position.
+ * @param change - What replaces part of it.
+ */
+export function withOption<Field extends Extract<FormField, { options: unknown }>>(
+  field: Field,
+  index: number,
+  change: Partial<ChoiceOption>,
+): Field {
+  return {
+    ...field,
+    options: field.options.map((option, position) =>
+      position === index ? { ...option, ...change } : option,
+    ),
+  };
+}
+
+/**
+ * A choice field without one of its options.
+ *
+ * @param field - The choice field.
+ * @param index - The option's position.
+ */
+export function withoutOption<Field extends Extract<FormField, { options: unknown }>>(
+  field: Field,
+  index: number,
+): Field {
+  return { ...field, options: field.options.filter((_, position) => position !== index) };
 }
 
 /** Where a field stands: its row, and its place among that row's fields. */

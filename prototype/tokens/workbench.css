@@ -93,6 +93,15 @@
   --sidebar-min: 190px;
   --sidebar-max: 420px;
 
+  /* --- Frame --------------------------------------------------------------
+     The gutter is the sidebar's padding and the space above and below what the
+     bar holds. The content area is padded by the content gutter, and the bar's
+     sides take it as well, so what the bar holds starts where the content
+     beneath it starts. */
+  --workbench-gutter: var(--space-4);
+  --content-gutter: var(--space-6);
+  --app-bar-height: calc(var(--control-height) + 2 * var(--workbench-gutter));
+
   /* Entries sit a shade under the workbench's own text: a navigation column is
      scanned rather than read, and at reading size the list starts to compete
      with what it points at. The icon is sized separately, because an icon size

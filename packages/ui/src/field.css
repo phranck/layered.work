@@ -36,12 +36,49 @@
   text-wrap: pretty;
 }
 
+/* A hint that says why something cannot be done, such as a pair that cannot
+   be saved, in the tone `tone.css` binds for its `data-tone`. */
+.field__hint[data-tone] {
+  color: var(--tone);
+}
+
+/* A code in a label or a hint, such as an address, a file name or a
+   placeholder, in the face a code field is set in. */
+:where(.field__label, .field__hint) code {
+  font-family: var(--font-mono);
+}
+
+/* A link in a hint, such as the other language of an entry or the author of a
+   picture, reads as a link in the accent and underlines under the pointer. */
+.field__hint a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.field__hint a:hover {
+  text-decoration: underline;
+}
+
 /* In a stacked field the label stands over a rounded control and the hint
    under it, so both begin where the control's curve gives way to its straight
-   edge. An inline field's label stands beside its control and meets no curve,
-   so it keeps the edge. */
-.field:not(.field--inline) > :where(.field__label, .field__hint) {
+   edge. A hint standing on its own in a card's stack of fields lines up with
+   their labels the same way. An inline field's label stands beside its
+   control and meets no curve, so it keeps the edge. */
+:is(.field:not(.field--inline), .card__body--stack) > :where(.field__label, .field__hint) {
   padding-inline-start: var(--control-text-inset);
+}
+
+/* A fieldset loses the browser's frame and indent. Its legend is laid out
+   apart from the children that share the field's gap, so its margin keeps the
+   same distance to the first of them. */
+.field--set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field--set > legend {
+  margin-block-end: var(--space-2);
 }
 
 /* Inline fields one under another share two columns, the labels as wide as the
@@ -91,6 +128,12 @@
 .input:focus {
   border-color: var(--focus-edge);
   box-shadow: var(--focus-halo);
+}
+
+/* A field holding a code rather than words, such as an address or an id, set
+   in the face code is set in. */
+.input--code {
+  font-family: var(--font-mono);
 }
 
 /* --- Check ------------------------------------------------------------------
@@ -202,6 +245,12 @@
    option is as wide as the longest label and none is shortened, whereas equal
    flex items share the width of the sum and cut the longest one. */
 .segmented {
+  /* How far the pill stands in from the control's edge, and the radius that
+     keeps it concentric with the control: the control's radius less its
+     hairline and the inset. The options share the pill's corners. */
+  --segment-inset: 2px;
+  --segment-radius: max(calc(var(--radius-control) - 1px - var(--segment-inset)), 0px);
+
   position: relative;
   display: grid;
   grid-auto-columns: 1fr;
@@ -209,7 +258,7 @@
   /* As high as every other control, so a row of them lines up and the control
      takes no more room than a button beside it. */
   height: var(--control-height, auto);
-  padding: 2px;
+  padding: var(--segment-inset);
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -226,13 +275,13 @@
  */
 .segmented::before {
   position: absolute;
-  inset-block: 2px;
-  inset-inline-start: 2px;
-  width: calc((100% - 4px) / var(--segment-count, 1));
+  inset-block: var(--segment-inset);
+  inset-inline-start: var(--segment-inset);
+  width: calc((100% - 2 * var(--segment-inset)) / var(--segment-count, 1));
   content: "";
   background: var(--accent-tint);
   border: 1px solid var(--accent-line);
-  border-radius: var(--radius-chip);
+  border-radius: var(--segment-radius);
   transform: translateX(calc(var(--segment-index, 0) * 100%));
   transition: transform var(--duration) var(--ease);
 }
@@ -262,7 +311,7 @@
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: var(--radius-chip);
+  border-radius: var(--segment-radius);
 }
 
 .segmented button:hover {

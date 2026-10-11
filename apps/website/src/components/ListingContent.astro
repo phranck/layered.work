@@ -59,17 +59,17 @@ const introduction = introductionText ? renderContent(introductionText, { langua
       <label for="site-search">{de ? "Suchbegriff" : "Search for"}</label>
       <div class="search-form__row">
         <input id="site-search" class="field" type="search" name="q" maxlength="120" value={query} />
-        <Button type="submit" icon={createElement(MagnifyingGlassIcon, { weight: "duotone" })}>
+        <Button type="submit" icon={createElement(MagnifyingGlassIcon)}>
           {de ? "Suchen" : "Search"}
         </Button>
       </div>
     </form>
   )}
   <div class="listing-toolbar" hidden data-view-toolbar>
-    <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon, { weight: "duotone" })}>
+    <Button data-view="grid" aria-pressed="true" icon={createElement(SquaresFourIcon)}>
       {de ? "Raster" : "Grid"}
     </Button>
-    <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon, { weight: "duotone" })}>
+    <Button data-view="list" aria-pressed="false" icon={createElement(ListIcon)}>
       {de ? "Liste" : "List"}
     </Button>
   </div>

@@ -1,13 +1,11 @@
 import { LISTING_BOUNDS, LISTING_GROUP, type ListedKind, listingSettings, MaxLength } from "@layered/schemas";
 import { Field, Input, Segmented } from "@layered/ui";
-import { useQuery } from "@tanstack/react-query";
-import { useDashboardApi } from "./dashboard-context.js";
 import { bilingualText, type DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNamedValues } from "./named-values-query.js";
-import { queryKeys } from "./query-keys.js";
 import { SettingsCard } from "./settings.js";
+import { useSettings } from "./settings-query.js";
 import { storedChoiceKey, useStoredChoice } from "./stored-choice.js";
 import { Translated } from "./translated.js";
 
@@ -35,9 +33,8 @@ const typedNumber = (value: string) => Number.parseInt(value, 10);
  * @param kind - Which overview: posts or projects.
  */
 export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
+  const settings = useSettings();
   // The introduction is rendered as an entry's body is, named values included.
   const values = useNamedValues();
   const [open, setOpen] = useStoredChoice(LISTING_SETTINGS_OPEN_KEY, restoredOpen);
@@ -67,7 +64,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
             <Translated.Field
               id={`${group}-headline`}
               label={text("listingHeadline")}
-              hint={text("listingHeadlineHint")}
               value={draft.headline}
               placeholder={bilingualText(DEFAULT_HEADLINE[kind])}
               maxLength={MaxLength.Line}
@@ -77,7 +73,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
             <Translated.Field
               id={`${group}-introduction`}
               label={text("listingIntroduction")}
-              hint={text("listingIntroductionHint")}
               value={draft.introduction}
               profile="entry"
               values={values.data}
@@ -85,7 +80,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
               disabled={!editable}
               onChange={(introduction) => update({ introduction })}
             />
-            <div className="settings-form__trio">
+            <div className="field-row" data-fields="3">
               <Field
                 label={text("listingPageSize")}
                 htmlFor={`${group}-page-size`}
@@ -102,7 +97,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
                   onChange={(event) => update({ pageSize: typedNumber(event.target.value) })}
                 />
               </Field>
-              <Field label={text("listingColumns")} hint={text("listingColumnsHint")}>
+              <Field label={text("listingColumns")}>
                 <Segmented
                   aria-label={text("listingColumns")}
                   value={String(draft.columns)}

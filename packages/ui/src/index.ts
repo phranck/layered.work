@@ -1,5 +1,6 @@
 /** Shared UI components and their documented public prop types. */
 export { AppBar } from "./app-bar.js";
+export { Badge, type BadgeProps, type BadgeTone } from "./badge.js";
 export { BrandMark, type BrandMarkProps, type BrandName } from "./brand-mark.js";
 export {
   Button,
@@ -31,6 +32,7 @@ export { Divider } from "./divider.js";
 export { Document, type DocumentProps } from "./document.js";
 export {
   Editor,
+  type EditorActionsProps,
   type EditorPanelProps,
   type EditorToolbarProps,
   type EditorToolProps,
@@ -38,7 +40,12 @@ export {
 export {
   type ControlOption,
   Field,
+  FieldHint,
+  type FieldHintProps,
+  FieldLabel,
+  type FieldLabelProps,
   type FieldProps,
+  type FieldSetProps,
   Input,
   Segmented,
   type SegmentedProps,
@@ -55,7 +62,7 @@ export { FormEmbed, FormEmbed as Form, type FormEmbedProps, type FormOutcome } f
 export { Gallery } from "./gallery.js";
 export { Grid } from "./grid.js";
 export { Logo, type LogoProps } from "./logo.js";
-export { MediaCredit, type MediaCreditProps } from "./media-credit.js";
+export { MediaCredit, type MediaCreditProps, type MediaCreditTextProps } from "./media-credit.js";
 export { Model, type ModelProps } from "./model.js";
 export { Note } from "./note.js";
 export { Row, RowList, type RowTextProps } from "./row.js";

@@ -262,11 +262,11 @@ const leadImage =
       {errorId && <p class="meta">{errorId}</p>}
       <div class="actions">
         {gone && (
-          <Button.Link href={root} icon={createElement(HouseIcon, { weight: "duotone" })}>
+          <Button.Link href={root} icon={createElement(HouseIcon)}>
             {de ? "Zur Startseite" : "Home page"}
           </Button.Link>
         )}
-        <Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon, { weight: "duotone" })}>
+        <Button.Link href={`${root}search/`} icon={createElement(MagnifyingGlassIcon)}>
           {de ? "Zur Suche" : "Search the site"}
         </Button.Link>
       </div>

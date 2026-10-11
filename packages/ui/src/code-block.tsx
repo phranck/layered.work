@@ -1,9 +1,8 @@
 import type { CodeNode } from "@layered/content";
-import { CodeIcon } from "@phosphor-icons/react/dist/ssr/Code";
-import { CopyIcon } from "@phosphor-icons/react/dist/ssr/Copy";
 import { BrandMark, type BrandName } from "./brand-mark.js";
 import { Button } from "./button.js";
 import { highlightCode } from "./code-highlight.js";
+import { CodeIcon, CopyIcon } from "./icons.js";
 
 /** Exact code source and the optional language from the shared render model. */
 export type CodeBlockProps = Omit<CodeNode, "kind">;
@@ -57,7 +56,7 @@ function CodeBlockCopy() {
       label="Copy code"
       data-copy-code=""
       disabled
-      icon={<CopyIcon weight="duotone" />}
+      icon={<CopyIcon />}
     />
   );
 }
@@ -69,7 +68,7 @@ function CodeBlockRoot({ source, language }: CodeBlockProps) {
         {brand ? (
           <BrandMark className="content-code__mark" brand={brand} />
         ) : (
-          <CodeIcon className="content-code__mark" weight="duotone" aria-hidden="true" />
+          <CodeIcon className="content-code__mark" aria-hidden="true" />
         )}
         <span>{language ?? "Code"}</span>
         <CodeBlockCopy />

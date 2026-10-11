@@ -146,7 +146,7 @@ describe("form builder", () => {
     placeAt(shortText, { left: 0, top: 0, width: 600, height: 40 });
     placeAt(email, { left: 0, top: 60, width: 295, height: 40 });
 
-    const grip = screen.getByRole("button", { name: "Move row 1 up or down with the arrow keys" });
+    const grip = screen.getByRole("button", { name: "Move row 1" });
     fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientX: -20, clientY: 20 });
     fireEvent.pointerMove(window, { pointerId: 1, buttons: 1, clientX: 450, clientY: 80 });
     expect(document.querySelector(".forms-builder__carried")).not.toBeNull();
@@ -166,7 +166,7 @@ describe("form builder", () => {
   it("moves a row with the arrow keys on its grip", async () => {
     const save = mountRecording();
     fireEvent.click(await screen.findByRole("button", { name: "Email" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "Move row 1 up or down with the arrow keys" }), {
+    fireEvent.keyDown(screen.getByRole("button", { name: "Move row 1" }), {
       key: "ArrowDown",
     });
 

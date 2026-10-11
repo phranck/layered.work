@@ -171,7 +171,7 @@
 
 .actions {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   align-items: center;
   justify-content: flex-end;
 }
@@ -186,6 +186,10 @@
  * The one place a button is full width. It is a rule about the phone breakpoint
  * rather than a property of the button, so no call site can stretch one
  * anywhere else.
+ *
+ * This is the phone breakpoint, and every query that means a phone writes it
+ * the same way, `width < 720px`. It is a number in each query because a media
+ * query cannot read a custom property.
  */
 @media (width < 720px) {
   /* The row takes the whole line as well. Where it is itself an item of a

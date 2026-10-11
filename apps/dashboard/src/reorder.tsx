@@ -1,7 +1,17 @@
-import { Button } from "@layered/ui";
-import { DotsSixVerticalIcon } from "@layered/ui/icons";
-import { createContext, type PointerEvent, type ReactNode, useContext, useMemo, useRef } from "react";
-import { dropIndex, type GroupBox } from "./sidebar-order.js";
+import {
+  createContext,
+  type PointerEvent,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
+import { ActionButton } from "./action-button.js";
+import { beginDrag, type DragState, endDrag, followPointer, positionsOf, travelHome } from "./drag-order.js";
+import { useDashboardLanguage } from "./language-context.js";
 import "./reorder.css";
 
 /**
@@ -10,7 +20,13 @@ import "./reorder.css";
  * The items register their element under their position, and a handle reads
  * every registered element's box when a drag starts, so the list never has to
  * be told how long it is and an item can be any element, a table row as much as
- * a block.
+ * a block. While a drag runs the item follows the pointer and the others make
+ * room for it, and once the list stands in its new order every item travels
+ * into its new place, with the engine the sidebar's groups move with.
+ *
+ * The travel needs the new order in the document by the render after the move,
+ * so a list whose order is stored by the API writes the new order into its
+ * cache before the request returns.
  */
 
 type Order = {
@@ -32,7 +48,24 @@ function useOrder() {
  */
 function Scope({ children, onMove }: { children: ReactNode; onMove: Order["move"] }) {
   const elements = useRef(new Map<number, HTMLElement>());
-  const value = useMemo(() => ({ move: onMove, elements: elements.current }), [onMove]);
+  /** Where each item stood when it last moved, for the travel into its new place. */
+  const before = useRef<Map<HTMLElement, number> | undefined>(undefined);
+  const move = useCallback(
+    (from: number, to: number) => {
+      before.current = positionsOf(elements.current.values());
+      onMove(from, to);
+    },
+    [onMove],
+  );
+  // After every render, so the travel starts in the first one that shows the
+  // new order, and before the browser paints it.
+  useLayoutEffect(() => {
+    const previous = before.current;
+    if (!previous) return;
+    before.current = undefined;
+    travelHome(previous);
+  });
+  const value = useMemo(() => ({ move, elements: elements.current }), [move]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
@@ -56,7 +89,8 @@ function List({
 /**
  * The ref that registers an element as the item at a position, or nothing
  * outside an order, so a component used in ordered and unordered lists alike
- * can always ask for it.
+ * can always ask for it. A registered element is marked, so its stylesheet can
+ * give it the transition it travels with.
  *
  * @param index - The item's position. Undefined registers nothing.
  */
@@ -64,8 +98,12 @@ export function useReorderItem(index: number | undefined) {
   const order = useContext(Context);
   if (!order || index === undefined) return undefined;
   return (element: HTMLElement | null) => {
-    if (element) order.elements.set(index, element);
-    else order.elements.delete(index);
+    if (element) {
+      element.setAttribute("data-reorder-item", "");
+      order.elements.set(index, element);
+    } else {
+      order.elements.delete(index);
+    }
   };
 }
 
@@ -75,48 +113,72 @@ function Item({ index, children }: { index: number; children: ReactNode }) {
 }
 
 /**
- * The handle an item is moved by: dragged with the pointer, or moved one place
- * with the arrow keys.
+ * What the arrow keys do on a grip, for a screen reader, which reads it as the
+ * grip's description. It is hidden, because the interface explains nothing it
+ * shows: the grip's tooltip names only what it moves.
+ *
+ * @param id - The id the grip's `aria-describedby` names.
+ */
+export function MoveKeysDescription({ id }: { id: string }) {
+  const { text } = useDashboardLanguage();
+  return (
+    <span id={id} hidden>
+      {text("moveKeys")}
+    </span>
+  );
+}
+
+/**
+ * The handle an item is moved by, at the item's start: dragged with the
+ * pointer, or moved one place with the arrow keys.
  */
 function Handle({ index, label, disabled }: { index: number; label: string; disabled?: boolean }) {
   const order = useOrder();
-  const drag = useRef<{ pointer: number; y: number; boxes: GroupBox[] } | null>(null);
+  const drag = useRef<DragState | null>(null);
+  const keysId = useId();
   const finish = (event: PointerEvent<HTMLButtonElement>) => {
     const state = drag.current;
     drag.current = null;
-    if (!state || state.pointer !== event.pointerId) return;
+    if (!state || state.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
-    order.move(index, dropIndex(state.boxes, index, event.clientY - state.y));
+    const to = endDrag(state);
+    if (to !== index) order.move(index, to);
   };
   return (
-    <Button.Icon
-      className="reorder-handle"
-      label={label}
-      icon={<DotsSixVerticalIcon />}
-      disabled={disabled}
-      onPointerDown={(event) => {
-        if (event.button !== 0 || disabled) return;
-        event.preventDefault();
-        event.currentTarget.focus();
-        const boxes = Array.from({ length: order.elements.size }, (_, position) => {
-          const box = order.elements.get(position)?.getBoundingClientRect();
-          return { top: box?.top ?? 0, height: box?.height ?? 0 };
-        });
-        drag.current = { pointer: event.pointerId, y: event.clientY, boxes };
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerUp={finish}
-      onPointerCancel={() => {
-        drag.current = null;
-      }}
-      onKeyDown={(event) => {
-        const to = event.key === "ArrowUp" ? index - 1 : event.key === "ArrowDown" ? index + 1 : -1;
-        if (to < 0 || to >= order.elements.size) return;
-        event.preventDefault();
-        order.move(index, to);
-      }}
-    />
+    <>
+      <ActionButton.Icon
+        action="move"
+        className="reorder-handle"
+        label={label}
+        aria-describedby={keysId}
+        disabled={disabled}
+        onPointerDown={(event) => {
+          if (event.button !== 0 || disabled) return;
+          const elements = Array.from({ length: order.elements.size }, (_, position) =>
+            order.elements.get(position),
+          );
+          if (elements.some((element) => !element)) return;
+          event.preventDefault();
+          event.currentTarget.focus();
+          drag.current = beginDrag(elements as HTMLElement[], index, event.pointerId, event.clientY);
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const state = drag.current;
+          if (state && state.pointerId === event.pointerId) followPointer(state, event.clientY);
+        }}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+        onKeyDown={(event) => {
+          const to = event.key === "ArrowUp" ? index - 1 : event.key === "ArrowDown" ? index + 1 : -1;
+          if (to < 0 || to >= order.elements.size) return;
+          event.preventDefault();
+          order.move(index, to);
+        }}
+      />
+      <MoveKeysDescription id={keysId} />
+    </>
   );
 }
 export const Reorder = Object.assign(List, { List, Scope, Item, Handle });

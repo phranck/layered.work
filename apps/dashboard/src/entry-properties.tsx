@@ -7,14 +7,14 @@ import {
   type ReadingWidth,
   type SaveEntryBody,
 } from "@layered/schemas";
-import { Button, Choice, Editor, Field, Segmented, Switch } from "@layered/ui";
-import { EyeIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Choice, Editor, Field, FieldHint, Segmented, Switch } from "@layered/ui";
 import { useLinkClickHandler } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { AddressField } from "./address-field.js";
 import { ContentFindings } from "./content-findings.js";
 import type { CheckedContent } from "./content-validation.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-list.js";
+import { LANGUAGE_TEXT, otherLanguage, STATE_TONE } from "./entry-model.js";
 import { SpecsField } from "./entry-specs.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { DashboardArea } from "./routes.js";
@@ -46,17 +46,33 @@ const STATE_OPTIONS: Record<PublicationState, { label: DashboardStringKey; note:
   hidden: { label: "stateHidden", note: "stateHiddenNote" },
 };
 
+/**
+ * The panel beside the writing surface: what the validator found, the state,
+ * the address, the language and its counterpart, the reading width, the
+ * topics and a project's specification.
+ *
+ * Everything here is decided about the entry rather than written into it, so
+ * an author never leaves the text to change how it is published. A change goes
+ * into the draft through `update` and is saved with the text. The preview and
+ * the move to the trash act on the text, so they stand under it instead.
+ *
+ * @param entry - The translation as it is stored.
+ * @param draft - What the editor holds.
+ * @param checked - The validator's findings for the body.
+ * @param area - The list the entry belongs to, for the counterpart's address.
+ * @param update - Replaces part of the draft.
+ * @param translationPending - Whether the other language is being created.
+ * @param onTranslate - Creates the other language.
+ * @param onSelectFinding - Selects a finding's place in the text.
+ */
 export function EntryProperties({
   entry,
   draft,
   checked,
   area,
   update,
-  previewPending,
-  openPreview,
   translationPending,
   onTranslate,
-  onTrash,
   onSelectFinding,
 }: {
   entry: EntryDetail;
@@ -64,11 +80,8 @@ export function EntryProperties({
   checked: CheckedContent;
   area: DashboardArea;
   update: (change: Partial<SaveEntryBody>) => void;
-  previewPending: boolean;
-  openPreview: () => void;
   translationPending: boolean;
   onTranslate: () => void;
-  onTrash: () => void;
   onSelectFinding: (finding: Finding) => void;
 }) {
   const { text } = useDashboardLanguage();
@@ -98,13 +111,6 @@ export function EntryProperties({
           ))}
         </Choice>
       </Field>
-      {/* Under the state, because what a reader would see is the question the
-              state raises, whichever state it is. */}
-      <div className="entry-editor__action">
-        <Button icon={<EyeIcon weight="duotone" />} disabled={previewPending} onClick={openPreview}>
-          {previewPending ? text("previewPending") : text("preview")}
-        </Button>
-      </div>
       <Field label={text("editorSlug")} htmlFor="entry-address">
         <AddressField
           inputId="entry-address"
@@ -116,47 +122,43 @@ export function EntryProperties({
         />
       </Field>
       <Field label={text("editorLanguage")}>
-        <span className="entry-editor__value">
+        <FieldHint>
           <span className="lang-tag" data-language={entry.language}>
             {entry.language}
-          </span>
+          </span>{" "}
           {text(LANGUAGE_TEXT[entry.language])}
-        </span>
+        </FieldHint>
       </Field>
       <Field label={text("editorTranslation")}>
         {entry.counterpart && counterpartPath ? (
-          <a
-            className="entry-editor__link"
-            href={counterpartPath}
-            onClick={openCounterpart}
-            lang={entry.counterpart.language}
-          >
-            <span className="lang-tag" data-language={entry.counterpart.language}>
-              {entry.counterpart.language}
-            </span>
-            {text("editorOpenCounterpart", entry.counterpart.title)}
-          </a>
+          <FieldHint>
+            <a href={counterpartPath} onClick={openCounterpart} lang={entry.counterpart.language}>
+              <span className="lang-tag" data-language={entry.counterpart.language}>
+                {entry.counterpart.language}
+              </span>{" "}
+              {text("editorOpenCounterpart", entry.counterpart.title)}
+            </a>
+          </FieldHint>
         ) : entry.counterpartTrashed ? (
-          <span className="entry-editor__note">
+          <FieldHint>
             {text("editorTranslationInTrash", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-          </span>
+          </FieldHint>
         ) : (
           <>
-            <span className="entry-editor__note">{text("editorTranslationNone")}</span>
-            <Button icon={<PlusIcon weight="duotone" />} disabled={translationPending} onClick={onTranslate}>
+            <FieldHint>{text("editorTranslationNone")}</FieldHint>
+            <ActionButton action="new" disabled={translationPending} onClick={onTranslate}>
               {translationPending
                 ? text("editorCreateCounterpartPending")
                 : text("editorCreateCounterpart", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-            </Button>
+            </ActionButton>
           </>
         )}
       </Field>
-      {/* Only whilst there is no other language to show instead. */}
+      {/* Only while there is no other language to show instead. */}
       {!entry.counterpart && (
         <Field
           label={text("editorShowInOtherLanguage", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
           htmlFor="entry-show-in-other-language"
-          hint={text("editorShowInOtherLanguageHint", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
         >
           <Switch
             id="entry-show-in-other-language"
@@ -187,13 +189,6 @@ export function EntryProperties({
       </Field>
       {/* Only a project page shows the pairs, so nothing else is offered them. */}
       {entry.kind === "project" && <SpecsField specs={draft.specs} onChange={(specs) => update({ specs })} />}
-      {!entry.trashed && (
-        <div className="entry-editor__action entry-editor__action--apart">
-          <Button tone="danger" icon={<TrashIcon />} onClick={onTrash}>
-            {text("trash")}
-          </Button>
-        </div>
-      )}
     </Editor.Panel>
   );
 }

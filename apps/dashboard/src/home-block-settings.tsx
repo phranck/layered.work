@@ -9,7 +9,7 @@ import {
 import { Field, Input, Segmented, Select, Switch } from "@layered/ui";
 import { optionKey, segmentsFit, settingKey } from "./home-block-labels.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaField } from "./media-field.js";
+import { PictureField } from "./picture-field.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -123,7 +123,6 @@ function TextControl({ setting, value, onChange, editable, idPrefix }: ControlPr
     <Translated.Field
       id={`${idPrefix}-${setting.key}`}
       label={text(settingKey(setting.key))}
-      hint={text("homeSettingFallback")}
       value={(value ?? { en: "", de: "" }) as BilingualText}
       onChange={onChange}
       placeholder={setting.fallback}
@@ -210,9 +209,8 @@ function PictureControl({ setting, value, onChange, editable }: ControlProps) {
   const { text } = useDashboardLanguage();
   if (setting.kind !== "picture") return null;
   return (
-    <MediaField
+    <PictureField
       label={text(settingKey(setting.key))}
-      hint={text("homeSettingPictureHint")}
       none={text("homeSettingPictureNone")}
       mediaId={typeof value === "string" ? value : null}
       shape={setting.shape}

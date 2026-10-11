@@ -2,39 +2,43 @@ import {
   HOME_BLOCKS,
   type HomeBlockSettings,
   type HomeBlockType,
-  homeBlockSettingsSchema,
-  homeBlockTypes,
   type StoredHomeBlock,
 } from "@layered/schemas";
-import { Button, Card, Editor, Switch } from "@layered/ui";
+import { Card, Editor, Switch } from "@layered/ui";
 import {
   CardsIcon,
   CropIcon,
-  FloppyDiskIcon,
   type IconProps,
   LockSimpleIcon,
-  PlusIcon,
   SquaresFourIcon,
   StarIcon,
   TagIcon,
-  TrashIcon,
 } from "@layered/ui/icons";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentType, useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { blockSummary, blockTypeKey, settingKey } from "./home-block-labels.js";
 import { HomeBlockSettingsFields } from "./home-block-settings.js";
+import {
+  ADDABLE_BLOCKS,
+  allowedTarget,
+  checkedBlockSettings,
+  useAddHomeBlock,
+  useDeleteHomeBlock,
+  useHomeBlocks,
+  useReorderHomeBlocks,
+  useSaveHomeBlock,
+  useToggleHomeBlock,
+} from "./home-blocks-query.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { reorderedPositions } from "./list-order.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
+import { QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
-import { moveItem } from "./sidebar-order.js";
 import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { Table } from "./table.js";
 import { Translated } from "./translated.js";
@@ -59,35 +63,12 @@ const BLOCK_ICONS: Record<HomeBlockType, ComponentType<IconProps>> = {
   topic_bar: TagIcon,
 };
 
-/** The types a block can be added as. A locked block exists once and is already there. */
-const ADDABLE = homeBlockTypes.filter((type) => !HOME_BLOCKS[type].locked);
-
-/**
- * Where a block dragged to `to` may actually go: never above a locked block,
- * which opens the page.
- *
- * @param blocks - The list in its current order.
- * @param to - Where the block was dropped.
- */
-function allowedTarget(blocks: readonly StoredHomeBlock[], to: number): number {
-  const firstMovable = blocks.findIndex((block) => !HOME_BLOCKS[block.type].locked);
-  return Math.max(to, firstMovable === -1 ? 0 : firstMovable);
-}
-
-/** Fetches the blocks and the sidebar's count again after one was added, switched or removed. */
-function refreshBlocks(client: QueryClient) {
-  void client.invalidateQueries({ queryKey: queryKeys.homeBlocks });
-  void refreshCounts(client);
-}
-
 /** The blocks screen. */
 export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text, language } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const owner = useSession().data?.role === "owner";
-  const blocks = useQuery({ queryKey: queryKeys.homeBlocks, queryFn: api.fetchHomeBlocks });
+  const blocks = useHomeBlocks();
   const [openId, setOpenId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<StoredHomeBlock | null>(null);
   const list = blocks.data ?? [];
@@ -96,26 +77,9 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   // stored changes, and keeps its draft whilst the blocks are only reordered.
   const revision = useStoredRevision(open?.settings);
 
-  const refresh = () => refreshBlocks(client);
-  const toggle = useMutation({
-    mutationFn: (block: StoredHomeBlock) =>
-      api.saveHomeBlock(block.id, { enabled: !block.enabled, settings: block.settings }),
-    onSuccess: refresh,
-    onError: (error) => notifyError(error),
-  });
-  const reorder = useMutation({
-    mutationFn: api.reorderHomeBlocks,
-    onSuccess: (ordered) => client.setQueryData(queryKeys.homeBlocks, ordered),
-    onError: (error) => notifyError(error),
-  });
-  const add = useMutation({
-    mutationFn: (type: HomeBlockType) => api.addHomeBlock({ type }),
-    onSuccess: (added) => {
-      setOpenId(added.id);
-      refresh();
-    },
-    onError: (error) => notifyError(error),
-  });
+  const toggle = useToggleHomeBlock({ onError: notifyError });
+  const reorder = useReorderHomeBlocks({ onError: notifyError });
+  const add = useAddHomeBlock({ onError: notifyError, onSuccess: (added) => setOpenId(added.id) });
 
   return (
     <>
@@ -124,92 +88,89 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
         <Editor.Main>
           <Card>
             <Card.Header title={text("homeBlocksTitle")} meta={list.length} />
-            {(blocks.isError || blocks.isPending) && (
-              <Card.Body>
-                {blocks.isError && <ErrorNotice error={blocks.error} />}
-                {blocks.isPending && <p>{text("loading")}</p>}
-              </Card.Body>
-            )}
-            {list.length > 0 && (
-              <Table
-                columns={[
-                  { kind: "grip", label: "" },
-                  { kind: "title", label: text("columnName") },
-                  { kind: "text", label: text("columnContent") },
-                  { kind: "switch", label: text("navigationVisible") },
-                  { kind: "action", label: text("columnAction") },
-                ]}
-                onMove={(from, to) => {
-                  const target = allowedTarget(list, to);
-                  if (from !== target)
-                    reorder.mutate(
-                      moveItem(list, from, target).map((block, sortOrder) => ({ id: block.id, sortOrder })),
-                    );
-                }}
-              >
-                {list.map((block, index) => {
-                  const name = text(blockTypeKey(block.type));
-                  const locked = HOME_BLOCKS[block.type].locked;
-                  const Icon = BLOCK_ICONS[block.type];
-                  return (
-                    <Table.Row
-                      key={block.id}
-                      index={index}
-                      active={block.id === open?.id}
-                      onOpen={() => setOpenId(block.id)}
-                    >
-                      <Table.Grip
+            <QueryStates query={blocks}>
+              {() => (
+                <Table
+                  columns={[
+                    { kind: "grip", label: "" },
+                    { kind: "title", label: text("columnName") },
+                    { kind: "text", label: text("columnContent") },
+                    { kind: "switch", label: text("navigationVisible") },
+                    { kind: "action", label: text("columnAction") },
+                  ]}
+                  onMove={(from, to) => {
+                    const target = allowedTarget(list, to);
+                    if (from !== target) reorder.mutate(reorderedPositions(list, from, target));
+                  }}
+                >
+                  {list.map((block, index) => {
+                    const name = text(blockTypeKey(block.type));
+                    const locked = HOME_BLOCKS[block.type].locked;
+                    const Icon = BLOCK_ICONS[block.type];
+                    return (
+                      <Table.Row
+                        key={block.id}
                         index={index}
-                        label={text("moveGroup", name)}
-                        disabled={!owner || locked || reorder.isPending}
-                      />
-                      <Table.Cell kind="title">
-                        <Table.Title title={name} tile={<Icon aria-hidden="true" />} />
-                      </Table.Cell>
-                      <Table.Cell>{blockSummary(text, block, language)}</Table.Cell>
-                      <Table.Control kind="switch">
-                        <Switch
-                          aria-label={text("homeBlockEnabled", name)}
-                          checked={block.enabled}
-                          disabled={!owner || toggle.isPending}
-                          onCheckedChange={() => toggle.mutate(block)}
+                        active={block.id === open?.id}
+                        onOpen={() => setOpenId(block.id)}
+                      >
+                        <Table.Grip
+                          index={index}
+                          label={text("moveGroup", name)}
+                          disabled={!owner || locked || reorder.isPending}
                         />
-                      </Table.Control>
-                      <Table.Actions>
-                        {locked ? (
-                          <Table.Mark label={text("homeBlockLocked")}>
-                            <LockSimpleIcon />
-                          </Table.Mark>
-                        ) : (
-                          <Button.Icon
-                            label={text("homeBlockRemove", name)}
-                            icon={<TrashIcon />}
-                            tone="danger"
-                            disabled={!owner}
-                            onClick={() => setRemoving(block)}
+                        <Table.Cell kind="title">
+                          <Table.Title title={name} tile={<Icon aria-hidden="true" />} />
+                        </Table.Cell>
+                        <Table.Cell>{blockSummary(text, block, language)}</Table.Cell>
+                        <Table.Control kind="switch">
+                          <Switch
+                            aria-label={text("homeBlockEnabled", name)}
+                            checked={block.enabled}
+                            disabled={!owner || toggle.isPending}
+                            onCheckedChange={() => toggle.mutate(block)}
                           />
-                        )}
-                      </Table.Actions>
-                    </Table.Row>
-                  );
-                })}
-              </Table>
-            )}
+                        </Table.Control>
+                        <Table.Actions>
+                          {locked ? (
+                            <Table.Mark label={text("homeBlockLocked")}>
+                              <LockSimpleIcon />
+                            </Table.Mark>
+                          ) : (
+                            <ActionButton.Icon
+                              action="remove"
+                              label={text("homeBlockRemove", name)}
+                              disabled={!owner}
+                              onClick={() => setRemoving(block)}
+                            />
+                          )}
+                        </Table.Actions>
+                      </Table.Row>
+                    );
+                  })}
+                </Table>
+              )}
+            </QueryStates>
             <Card.Footer
               note={text("homeBlockPickHint")}
               actions={
                 <div className="home-block__add">
-                  {ADDABLE.map((type) => (
-                    <Button
-                      key={type}
-                      icon={<PlusIcon />}
-                      aria-label={text("homeBlockAdd", text(blockTypeKey(type)))}
-                      disabled={!owner || add.isPending}
-                      onClick={() => add.mutate(type)}
-                    >
-                      {text(blockTypeKey(type))}
-                    </Button>
-                  ))}
+                  {ADDABLE_BLOCKS.map((type) => {
+                    const Icon = BLOCK_ICONS[type];
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        className="chip"
+                        aria-label={text("homeBlockAdd", text(blockTypeKey(type)))}
+                        disabled={!owner || add.isPending}
+                        onClick={() => add.mutate(type)}
+                      >
+                        <Icon aria-hidden="true" />
+                        {text(blockTypeKey(type))}
+                      </button>
+                    );
+                  })}
                 </div>
               }
             />
@@ -237,41 +198,29 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
  * sent, and the setting that fails is named. The API checks it again.
  */
 function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boolean }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [draft, setDraft] = useState<HomeBlockSettings>(block.settings);
   const [problem, setProblem] = useState<string | null>(null);
   const dirty = !sameValue(draft, block.settings);
-  const save = useMutation({
-    mutationFn: (settings: HomeBlockSettings) =>
-      api.saveHomeBlock(block.id, { enabled: block.enabled, settings }),
-    onSuccess: (saved) => {
-      client.setQueryData<StoredHomeBlock[]>(queryKeys.homeBlocks, (current) =>
-        current?.map((item) => (item.id === saved.id ? saved : item)),
-      );
-      notify({ tone: "success", message: text("saved") });
-    },
-    onError: (error) => notifyError(error),
+  const save = useSaveHomeBlock(block, {
+    onError: notifyError,
+    onSuccess: () => notify({ tone: "success", message: text("saved") }),
   });
   const canSave = editable && dirty && !save.isPending;
 
   const submit = () => {
     if (!canSave) return;
-    const parsed = homeBlockSettingsSchema(block.type).safeParse(draft);
-    if (!parsed.success) {
-      const key = String(parsed.error.issues[0]?.path[0] ?? "");
-      setProblem(text("homeBlockInvalid", text(settingKey(key))));
+    const checked = checkedBlockSettings(block.type, draft);
+    if ("invalidKey" in checked) {
+      setProblem(text("homeBlockInvalid", text(settingKey(checked.invalidKey))));
       return;
     }
-    save.mutate(parsed.data);
+    save.mutate(checked.value);
   };
 
   useSaveShortcut(submit);
 
-  // No form element around the fields: each field has to be a direct child of
-  // the panel's stack, where `editor.css` gives it the band across the card.
   return (
     <Translated>
       <Editor.Panel
@@ -280,9 +229,9 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
         headerActions={<Translated.Switch />}
         note={editable ? undefined : text("ownerOnly")}
         actions={
-          <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
+          <ActionButton action="save" tone="primary" disabled={!canSave} onClick={submit}>
             {save.isPending ? text("savePending") : text("save")}
-          </Button>
+          </ActionButton>
         }
       >
         <HomeBlockSettingsFields
@@ -294,11 +243,7 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
             setProblem(null);
           }}
         />
-        {problem && (
-          <p role="alert" className="dashboard-error">
-            {problem}
-          </p>
-        )}
+        {problem && <ErrorNotice message={problem} />}
       </Editor.Panel>
     </Translated>
   );
@@ -306,16 +251,8 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
 
 /** Asks before a block and its settings are deleted, and says that switching it off keeps both. */
 function RemoveBlock({ block, onClose }: { block: StoredHomeBlock; onClose: (removed: boolean) => void }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const remove = useMutation({
-    mutationFn: () => api.deleteHomeBlock(block.id),
-    onSuccess: () => {
-      refreshBlocks(client);
-      onClose(true);
-    },
-  });
+  const remove = useDeleteHomeBlock(block, { onSuccess: () => onClose(true) });
   return (
     <ConfirmDialog
       title={text("homeBlockRemove", text(blockTypeKey(block.type)))}

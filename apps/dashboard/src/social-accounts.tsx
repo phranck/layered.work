@@ -1,88 +1,59 @@
 import {
   MaxLength,
   NAVIGATION_HREF_MAX_LENGTH,
-  type SaveSocialAccountBody,
   SOCIAL_PLATFORM_NAMES,
   SOCIAL_PLATFORMS,
   type SocialAccount,
-  saveSocialAccountBody,
 } from "@layered/schemas";
-import { BrandMark, Button, Card, Field, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { BrandMark, Field, Input, Select, Switch } from "@layered/ui";
+import { useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
-import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog, ConfirmDialog } from "./modal.js";
+import { ListCard } from "./list-card.js";
+import { nextSortOrder, reorderedPositions } from "./list-order.js";
+import { ConfirmDialog, FormDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
-import { useSession } from "./session-queries.js";
-import { moveItem } from "./sidebar-order.js";
+import {
+  accountDraftOf,
+  checkedAccount,
+  PLATFORM_OPTIONS,
+  useDeleteSocialAccount,
+  useReorderSocialAccounts,
+  useSaveSocialAccount,
+  useSocialAccounts,
+} from "./social-accounts-query.js";
 import { Table } from "./table.js";
 
+/** Which dialog is open: the editor for an account or a new one, or the question before one is deleted. */
 type Dialog = { editing: SocialAccount | null } | { deleting: SocialAccount } | null;
-const platformOptions = SOCIAL_PLATFORMS.map((value) => ({ value, label: SOCIAL_PLATFORM_NAMES[value] }));
 
-/** Fetches the accounts and the sidebar's count again after one was added, changed, moved or deleted. */
-function refreshAccounts(client: QueryClient) {
-  void client.invalidateQueries({ queryKey: queryKeys.socialAccounts });
-  void refreshCounts(client);
-}
-
+/**
+ * The site's social accounts as a table: dragged into order, switched on and
+ * off, opened for editing, deleted. Every account sees them; only the owner
+ * changes them.
+ *
+ * @param area - The sidebar area, which names the screen.
+ */
 export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
-  const owner = useSession().data?.role === "owner";
-  const accounts = useQuery({ queryKey: queryKeys.socialAccounts, queryFn: api.fetchSocialAccounts });
+  const accounts = useSocialAccounts();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const refresh = () => refreshAccounts(client);
-  const save = useMutation({
-    mutationFn: (account: SocialAccount) => {
-      const { id, ...value } = account;
-      return api.saveSocialAccount(id, value);
-    },
-    onSuccess: refresh,
-    onError: (error) => notifyError(error),
-  });
-  const reorder = useMutation({
-    mutationFn: api.reorderSocialAccounts,
-    onSuccess: refresh,
-    onError: (error) => notifyError(error),
-  });
-  const list = accounts.data ?? [];
+  const save = useSaveSocialAccount({ onError: notifyError });
+  const reorder = useReorderSocialAccounts({ onError: notifyError });
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
-      <Card>
-        <Card.Header
-          title={text(area.labelKey)}
-          meta={list.length}
-          actions={
-            <Button
-              tone="primary"
-              icon={<PlusIcon />}
-              disabled={!owner}
-              onClick={() => setDialog({ editing: null })}
-            >
-              {text("socialNew")}
-            </Button>
-          }
-        />
-        {(accounts.isError || accounts.isPending || !owner) && (
-          <Card.Body>
-            {accounts.isError && <ErrorNotice error={accounts.error} />}
-            {accounts.isPending && <p>{text("loading")}</p>}
-            {!owner && <p>{text("ownerOnly")}</p>}
-          </Card.Body>
-        )}
-        {accounts.isSuccess && !list.length && <Table.Empty>{text("socialEmpty")}</Table.Empty>}
-        {list.length > 0 && (
+      <ListCard
+        title={text(area.labelKey)}
+        query={accounts}
+        newLabel={text("socialNew")}
+        onNew={() => setDialog({ editing: null })}
+        empty={text("socialEmpty")}
+      >
+        {(list, owner) => (
           <Table
             columns={[
               { kind: "grip", label: "" },
@@ -92,10 +63,7 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
               { kind: "action", label: text("columnAction"), actions: 2 },
             ]}
             onMove={(from, to) => {
-              if (from !== to)
-                reorder.mutate(
-                  moveItem(list, from, to).map((account, sortOrder) => ({ id: account.id, sortOrder })),
-                );
+              if (from !== to) reorder.mutate(reorderedPositions(list, from, to));
             }}
           >
             {list.map((account, index) => (
@@ -121,21 +89,25 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
                     aria-label={`${text("socialEnabled")}: ${account.handle}`}
                     checked={account.enabled}
                     disabled={!owner || save.isPending}
-                    onCheckedChange={(enabled) => save.mutate({ ...account, enabled })}
+                    onCheckedChange={(enabled) =>
+                      save.mutate({
+                        id: account.id,
+                        value: { ...accountDraftOf(account, account.sortOrder), enabled },
+                      })
+                    }
                   />
                 </Table.Control>
                 <Table.Actions>
-                  <Button.Icon
+                  <ActionButton.Icon
+                    action="edit"
                     label={text("navigationEdit", account.handle)}
-                    icon={<PencilSimpleIcon />}
                     disabled={!owner}
                     tabIndex={-1}
                     onClick={() => setDialog({ editing: account })}
                   />
-                  <Button.Icon
+                  <ActionButton.Icon
+                    action="delete"
                     label={text("navigationDelete", account.handle)}
-                    icon={<TrashIcon />}
-                    tone="danger"
                     disabled={!owner}
                     onClick={() => setDialog({ deleting: account })}
                   />
@@ -144,11 +116,11 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
             ))}
           </Table>
         )}
-      </Card>
+      </ListCard>
       {dialog && "editing" in dialog && (
         <SocialEditor
           account={dialog.editing}
-          sortOrder={Math.max(-1, ...list.map((row) => row.sortOrder)) + 1}
+          sortOrder={nextSortOrder(accounts.data ?? [])}
           onClose={() => setDialog(null)}
         />
       )}
@@ -158,6 +130,15 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
     </>
   );
 }
+
+/**
+ * One social account in a dialog: its platform, with the platform's mark, its
+ * handle, its address and whether the site shows it.
+ *
+ * @param account - The account, or null for a new one.
+ * @param sortOrder - The place a new account takes.
+ * @param onClose - Closes the dialog, after a save as well.
+ */
 function SocialEditor({
   account,
   sortOrder,
@@ -167,121 +148,69 @@ function SocialEditor({
   sortOrder: number;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notifyError } = useNotify();
-  const [value, setValue] = useState<SaveSocialAccountBody>(() =>
-    account
-      ? {
-          platform: account.platform,
-          handle: account.handle,
-          href: account.href,
-          enabled: account.enabled,
-          sortOrder: account.sortOrder,
-        }
-      : { platform: "mastodon", handle: "", href: "", enabled: true, sortOrder },
-  );
+  const [value, setValue] = useState(() => accountDraftOf(account, sortOrder));
   const [invalid, setInvalid] = useState(false);
-  const save = useMutation({
-    mutationFn: (value: SaveSocialAccountBody) => api.saveSocialAccount(account?.id ?? null, value),
-    onSuccess: () => {
-      refreshAccounts(client);
-      onClose();
-    },
-    onError: (error) => notifyError(error),
-  });
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const parsed = saveSocialAccountBody.safeParse(value);
-    setInvalid(!parsed.success);
-    if (parsed.success) save.mutate(parsed.data);
+  const save = useSaveSocialAccount({ onSuccess: () => onClose() });
+  const submit = () => {
+    const body = checkedAccount(value);
+    setInvalid(body === null);
+    if (body) save.mutate({ id: account?.id ?? null, value: body });
   };
   return (
-    <CardDialog labelId="social-edit-title" onClose={onClose}>
-      <Card.Header
-        id="social-edit-title"
-        title={account ? text("navigationEdit", account.handle) : text("socialNew")}
-      />
-      <Card.Body>
-        <form id="social-edit" className="settings-form" onSubmit={submit} noValidate>
-          <Field label={text("socialPlatform")} htmlFor="social-platform">
-            <Select
-              id="social-platform"
-              value={value.platform}
-              options={platformOptions}
-              onChange={(event) => {
-                const platform = SOCIAL_PLATFORMS.find((item) => item === event.target.value);
-                if (platform) setValue((current) => ({ ...current, platform }));
-              }}
-            />
-          </Field>
-          <BrandMark brand={value.platform} />
-          <Field label={text("socialHandle")} htmlFor="social-handle">
-            <Input
-              id="social-handle"
-              value={value.handle}
-              maxLength={MaxLength.Line}
-              onChange={(event) => setValue((current) => ({ ...current, handle: event.target.value }))}
-            />
-          </Field>
-          <Field label={text("navigationAddress")} htmlFor="social-href">
-            <Input
-              id="social-href"
-              type="url"
-              value={value.href}
-              maxLength={NAVIGATION_HREF_MAX_LENGTH}
-              onChange={(event) => setValue((current) => ({ ...current, href: event.target.value }))}
-            />
-          </Field>
-          <Field.Inline label={text("socialEnabled")} htmlFor="social-enabled">
-            <Switch
-              id="social-enabled"
-              aria-label={text("socialEnabled")}
-              checked={value.enabled}
-              onCheckedChange={(enabled) => setValue((current) => ({ ...current, enabled }))}
-            />
-          </Field.Inline>
-          {invalid && (
-            <p role="alert" className="dashboard-error">
-              {text("socialInvalid")}
-            </p>
-          )}
-          {save.isError && <ErrorNotice error={save.error} />}
-        </form>
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose}>
-              {text("cancel")}
-            </Button>
-            <Button
-              form="social-edit"
-              type="submit"
-              tone="primary"
-              icon={<FloppyDiskIcon />}
-              disabled={save.isPending}
-            >
-              {text("save")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <FormDialog
+      title={account ? text("navigationEdit", account.handle) : text("socialNew")}
+      onSubmit={submit}
+      onClose={onClose}
+      busy={save.isPending}
+      problem={invalid ? text("socialInvalid") : null}
+      error={save.error}
+    >
+      <Field label={text("socialPlatform")} htmlFor="social-platform">
+        <Select
+          id="social-platform"
+          value={value.platform}
+          options={PLATFORM_OPTIONS}
+          onChange={(event) => {
+            const platform = SOCIAL_PLATFORMS.find((item) => item === event.target.value);
+            if (platform) setValue((current) => ({ ...current, platform }));
+          }}
+        />
+      </Field>
+      <BrandMark brand={value.platform} />
+      <Field label={text("socialHandle")} htmlFor="social-handle">
+        <Input
+          id="social-handle"
+          value={value.handle}
+          maxLength={MaxLength.Line}
+          onChange={(event) => setValue((current) => ({ ...current, handle: event.target.value }))}
+        />
+      </Field>
+      <Field label={text("navigationAddress")} htmlFor="social-href">
+        <Input
+          id="social-href"
+          type="url"
+          value={value.href}
+          maxLength={NAVIGATION_HREF_MAX_LENGTH}
+          onChange={(event) => setValue((current) => ({ ...current, href: event.target.value }))}
+        />
+      </Field>
+      <Field.Inline label={text("socialEnabled")} htmlFor="social-enabled">
+        <Switch
+          id="social-enabled"
+          aria-label={text("socialEnabled")}
+          checked={value.enabled}
+          onCheckedChange={(enabled) => setValue((current) => ({ ...current, enabled }))}
+        />
+      </Field.Inline>
+    </FormDialog>
   );
 }
+
+/** The question before a social account is deleted. */
 function SocialDelete({ account, onClose }: { account: SocialAccount; onClose: () => void }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
-  const remove = useMutation({
-    mutationFn: () => api.deleteSocialAccount(account.id),
-    onSuccess: () => {
-      refreshAccounts(client);
-      onClose();
-    },
-  });
+  const remove = useDeleteSocialAccount(account, { onSuccess: () => onClose() });
   return (
     <ConfirmDialog
       title={text("navigationDelete", account.handle)}

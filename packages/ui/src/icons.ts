@@ -14,22 +14,27 @@ import type { IconProps as PhosphorIconProps } from "@phosphor-icons/react";
 import { ArrowCounterClockwiseIcon as ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { ArrowDownIcon as ArrowDown } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
+import { ArrowsInIcon as ArrowsIn } from "@phosphor-icons/react/dist/ssr/ArrowsIn";
 import { ArrowsMergeIcon as ArrowsMerge } from "@phosphor-icons/react/dist/ssr/ArrowsMerge";
+import { ArrowsOutIcon as ArrowsOut } from "@phosphor-icons/react/dist/ssr/ArrowsOut";
 import { ArrowsOutLineVerticalIcon as ArrowsOutLineVertical } from "@phosphor-icons/react/dist/ssr/ArrowsOutLineVertical";
 import { ArrowUpIcon as ArrowUp } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { ArticleIcon as Article } from "@phosphor-icons/react/dist/ssr/Article";
 import { BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react/dist/ssr/BracketsCurly";
 import { CalendarBlankIcon as CalendarBlank } from "@phosphor-icons/react/dist/ssr/CalendarBlank";
+import { CameraIcon as Camera } from "@phosphor-icons/react/dist/ssr/Camera";
 import { CardsIcon as Cards } from "@phosphor-icons/react/dist/ssr/Cards";
 import { CaretCircleDownIcon as CaretCircleDown } from "@phosphor-icons/react/dist/ssr/CaretCircleDown";
 import { CaretDownIcon as CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";
 import { CaretLeftIcon as CaretLeft } from "@phosphor-icons/react/dist/ssr/CaretLeft";
 import { CaretRightIcon as CaretRight } from "@phosphor-icons/react/dist/ssr/CaretRight";
+import { CaretUpDownIcon as CaretUpDown } from "@phosphor-icons/react/dist/ssr/CaretUpDown";
 import { ChartLineIcon as ChartLine } from "@phosphor-icons/react/dist/ssr/ChartLine";
 import { CheckCircleIcon as CheckCircle } from "@phosphor-icons/react/dist/ssr/CheckCircle";
 import { CheckSquareIcon as CheckSquare } from "@phosphor-icons/react/dist/ssr/CheckSquare";
 import { CodeIcon as Code } from "@phosphor-icons/react/dist/ssr/Code";
 import { ColumnsIcon as Columns } from "@phosphor-icons/react/dist/ssr/Columns";
+import { CopyIcon as Copy } from "@phosphor-icons/react/dist/ssr/Copy";
 import { CropIcon as Crop } from "@phosphor-icons/react/dist/ssr/Crop";
 import { CubeIcon as Cube } from "@phosphor-icons/react/dist/ssr/Cube";
 import { CursorClickIcon as CursorClick } from "@phosphor-icons/react/dist/ssr/CursorClick";
@@ -41,6 +46,7 @@ import { EyeIcon as Eye } from "@phosphor-icons/react/dist/ssr/Eye";
 import { FilePdfIcon as FilePdf } from "@phosphor-icons/react/dist/ssr/FilePdf";
 import { FilesIcon as Files } from "@phosphor-icons/react/dist/ssr/Files";
 import { FloppyDiskIcon as FloppyDisk } from "@phosphor-icons/react/dist/ssr/FloppyDisk";
+import { FunnelIcon as Funnel } from "@phosphor-icons/react/dist/ssr/Funnel";
 import { GearIcon as Gear } from "@phosphor-icons/react/dist/ssr/Gear";
 import { GlobeIcon as Globe } from "@phosphor-icons/react/dist/ssr/Globe";
 import { GridFourIcon as GridFour } from "@phosphor-icons/react/dist/ssr/GridFour";
@@ -93,8 +99,11 @@ import { WrenchIcon as Wrench } from "@phosphor-icons/react/dist/ssr/Wrench";
 import { XIcon as X } from "@phosphor-icons/react/dist/ssr/X";
 import { type ComponentType, createElement, forwardRef } from "react";
 
-/** What an interface icon takes: everything Phosphor does, with the weight fixed. */
-export type IconProps = Omit<PhosphorIconProps, "weight"> & { weight?: "duotone" };
+/**
+ * What an interface icon takes: everything Phosphor does but the weight, which
+ * the icon sets itself, so a call site has no weight to pass.
+ */
+export type IconProps = Omit<PhosphorIconProps, "weight">;
 
 /**
  * One Phosphor icon, always in its duotone weight.
@@ -114,20 +123,25 @@ export const ArrowCounterClockwiseIcon = duotone(ArrowCounterClockwise, "ArrowCo
 export const ArrowDownIcon = duotone(ArrowDown, "ArrowDownIcon");
 export const ArrowLeftIcon = duotone(ArrowLeft, "ArrowLeftIcon");
 export const ArrowUpIcon = duotone(ArrowUp, "ArrowUpIcon");
+export const ArrowsInIcon = duotone(ArrowsIn, "ArrowsInIcon");
 export const ArrowsMergeIcon = duotone(ArrowsMerge, "ArrowsMergeIcon");
+export const ArrowsOutIcon = duotone(ArrowsOut, "ArrowsOutIcon");
 export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsOutLineVerticalIcon");
 export const ArticleIcon = duotone(Article, "ArticleIcon");
 export const BracketsCurlyIcon = duotone(BracketsCurly, "BracketsCurlyIcon");
 export const CalendarBlankIcon = duotone(CalendarBlank, "CalendarBlankIcon");
+export const CameraIcon = duotone(Camera, "CameraIcon");
 export const CardsIcon = duotone(Cards, "CardsIcon");
 export const CaretCircleDownIcon = duotone(CaretCircleDown, "CaretCircleDownIcon");
 export const CaretDownIcon = duotone(CaretDown, "CaretDownIcon");
 export const CaretLeftIcon = duotone(CaretLeft, "CaretLeftIcon");
 export const CaretRightIcon = duotone(CaretRight, "CaretRightIcon");
+export const CaretUpDownIcon = duotone(CaretUpDown, "CaretUpDownIcon");
 export const ChartLineIcon = duotone(ChartLine, "ChartLineIcon");
 export const CheckCircleIcon = duotone(CheckCircle, "CheckCircleIcon");
 export const CheckSquareIcon = duotone(CheckSquare, "CheckSquareIcon");
 export const CodeIcon = duotone(Code, "CodeIcon");
+export const CopyIcon = duotone(Copy, "CopyIcon");
 export const ColumnsIcon = duotone(Columns, "ColumnsIcon");
 export const CropIcon = duotone(Crop, "CropIcon");
 export const CubeIcon = duotone(Cube, "CubeIcon");
@@ -140,6 +154,7 @@ export const EyeIcon = duotone(Eye, "EyeIcon");
 export const FilePdfIcon = duotone(FilePdf, "FilePdfIcon");
 export const FilesIcon = duotone(Files, "FilesIcon");
 export const FloppyDiskIcon = duotone(FloppyDisk, "FloppyDiskIcon");
+export const FunnelIcon = duotone(Funnel, "FunnelIcon");
 export const GearIcon = duotone(Gear, "GearIcon");
 export const GlobeIcon = duotone(Globe, "GlobeIcon");
 export const GridFourIcon = duotone(GridFour, "GridFourIcon");
@@ -190,3 +205,15 @@ export const WarningIcon = duotone(Warning, "WarningIcon");
 export const WarningOctagonIcon = duotone(WarningOctagon, "WarningOctagonIcon");
 export const WrenchIcon = duotone(Wrench, "WrenchIcon");
 export const XIcon = duotone(X, "XIcon");
+
+/**
+ * The icon each status tone is marked with, so a tone is never carried by
+ * color alone. A content note and a dashboard notification both mark their
+ * tone with these.
+ */
+export const TONE_ICONS = {
+  info: InfoIcon,
+  success: CheckCircleIcon,
+  warning: WarningIcon,
+  danger: WarningOctagonIcon,
+} as const;

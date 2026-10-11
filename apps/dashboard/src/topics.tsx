@@ -1,28 +1,19 @@
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  MaxLength,
-  type SaveTopicBody,
-  saveTopicBody,
-  type TopicListItem,
-} from "@layered/schemas";
-import { Button, Card, Field, Input, Select } from "@layered/ui";
-import { ArrowsMergeIcon, FloppyDiskIcon, PencilSimpleIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useMemo, useState } from "react";
+import { type ContentLanguage, MaxLength, type TopicListItem } from "@layered/schemas";
+import { Badge, Card, Field, Input, Select } from "@layered/ui";
+import { useMemo, useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { DashboardApiError } from "./api.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog, ConfirmDialog } from "./modal.js";
+import { ConfirmDialog, FormDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
+import { EmptyState, noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { Table, useTableSearch } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
+import { filterTopics, type NameDraft, nameDraftOf, topicBodyOf, topicLabel } from "./topics-model.js";
+import { useDeleteTopic, useMergeTopic, useSaveTopic, useTopics } from "./topics-query.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -34,50 +25,6 @@ import { Translated } from "./translated.js";
  * other language's name, because this is the screen where the gap gets filled.
  */
 
-/**
- * What a topic is called in one language, or in the other where it has no name
- * in that one, and whether the name is its own.
- *
- * @param topic - The topic.
- * @param language - The language wanted.
- */
-export function topicLabel(
-  topic: TopicListItem,
-  language: ContentLanguage,
-): { name: string; named: boolean } {
-  const own = topic[language];
-  if (own) return { name: own.name, named: true };
-  return { name: (topic.en ?? topic.de)?.name ?? "", named: false };
-}
-
-/**
- * The topics a search leaves: those with the text anywhere in either name or
- * address, ignoring case.
- *
- * @param topics - Every topic.
- * @param search - What the reader typed.
- */
-export function filterTopics(topics: readonly TopicListItem[], search: string): TopicListItem[] {
-  const needle = search.trim().toLocaleLowerCase();
-  if (!needle) return [...topics];
-  return topics.filter((topic) =>
-    CONTENT_LANGUAGES.some((language) => {
-      const named = topic[language];
-      return (
-        named !== null && (named.name.toLocaleLowerCase().includes(needle) || named.slug.includes(needle))
-      );
-    }),
-  );
-}
-
-/** Refreshes everything a change to a topic shows up in. */
-function refreshAfterTopicChange(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
-  void refreshCounts(queryClient);
-}
-
 /** Which dialog is open, and for which topic. */
 type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | null;
 
@@ -87,9 +34,8 @@ type OpenDialog = { kind: "edit" | "merge" | "delete"; topic: TopicListItem } | 
  * @param area - The sidebar area, which names the screen.
  */
 export function TopicsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const { language, text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
+  const list = useTopics();
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const rows = useMemo(() => filterTopics(list.data ?? [], search), [list.data, search]);
@@ -119,22 +65,15 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
               </>
             }
           />
-          {list.isError && (
-            <Card.Body>
-              <ErrorNotice error={list.error} />
-            </Card.Body>
-          )}
-          {list.isSuccess && rows.length === 0 && (
-            <Table.Empty>{list.data.length === 0 ? text("topicsEmpty") : text("topicsNoMatch")}</Table.Empty>
-          )}
-          {rows.length > 0 && (
-            <TopicTable
-              rows={rows}
-              canMerge={(list.data?.length ?? 0) >= 2}
-              onOpen={setDialog}
-              search={field}
-            />
-          )}
+          <QueryStates query={list} empty={text("topicsEmpty")} isEmpty={noRows}>
+            {(topics) =>
+              rows.length === 0 ? (
+                <EmptyState>{text("topicsNoMatch")}</EmptyState>
+              ) : (
+                <TopicTable rows={rows} canMerge={topics.length >= 2} onOpen={setDialog} search={field} />
+              )
+            }
+          </QueryStates>
         </Card>
       </Translated>
       {dialog?.kind === "edit" && <TopicEditDialog topic={dialog.topic} onClose={() => setDialog(null)} />}
@@ -202,28 +141,27 @@ function TopicTable({
               {named ? (
                 <Table.Title title={named.name} />
               ) : (
-                <Table.Badge tone="warning">{text("topicNameMissing")}</Table.Badge>
+                <Badge tone="warning">{text("topicNameMissing")}</Badge>
               )}
             </Table.Cell>
             <Table.Cell>{named?.slug}</Table.Cell>
             <Table.Cell kind="count">{topic.entryCount}</Table.Cell>
             <Table.Actions>
-              <Button.Icon
+              <ActionButton.Icon
+                action="edit"
                 label={text("editTopic")}
-                icon={<PencilSimpleIcon />}
                 tabIndex={-1}
                 onClick={() => onOpen({ kind: "edit", topic })}
               />
-              <Button.Icon
+              <ActionButton.Icon
+                action="merge"
                 label={text("mergeTopic")}
-                icon={<ArrowsMergeIcon />}
                 disabled={!canMerge}
                 onClick={() => onOpen({ kind: "merge", topic })}
               />
-              <Button.Icon
+              <ActionButton.Icon
+                action="delete"
                 label={text("deleteTopic")}
-                icon={<TrashIcon />}
-                tone="danger"
                 onClick={() => onOpen({ kind: "delete", topic })}
               />
             </Table.Actions>
@@ -234,65 +172,30 @@ function TopicTable({
   );
 }
 
-/** The two fields of one language, as typed. */
-type NameDraft = { name: string; slug: string };
-
-/**
- * The typed fields as the body a save sends, or the reason they cannot be.
- *
- * Both fields of a language empty means the topic has no name in it; one of the
- * two empty is a mistake rather than a choice. Everything else is checked by the
- * same schema the API validates with.
- *
- * @param draft - Both languages as typed.
- */
-export function topicBodyOf(
-  draft: Record<ContentLanguage, NameDraft>,
-): { value: SaveTopicBody } | { problem: DashboardStringKey } {
-  const sides: Partial<Record<ContentLanguage, NameDraft | null>> = {};
-  for (const language of CONTENT_LANGUAGES) {
-    const name = draft[language].name.trim();
-    const slug = draft[language].slug.trim();
-    if (!name && !slug) sides[language] = null;
-    else if (!name || !slug) return { problem: "topicIncomplete" };
-    else sides[language] = { name, slug };
-  }
-  const parsed = saveTopicBody.safeParse(sides);
-  if (parsed.success) return { value: parsed.data };
-  const onSlug = parsed.error.issues.some((issue) => issue.path.at(-1) === "slug");
-  return { problem: onSlug ? "topicSlugInvalid" : "topicNeedsName" };
-}
-
 /** A topic's names and addresses in both languages, with a save. */
 function TopicEditDialog({ topic, onClose }: { topic: TopicListItem; onClose: () => void }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notify, notifyError } = useNotify();
-  const [draft, setDraft] = useState<Record<ContentLanguage, NameDraft>>({
-    en: { name: topic.en?.name ?? "", slug: topic.en?.slug ?? "" },
-    de: { name: topic.de?.name ?? "", slug: topic.de?.slug ?? "" },
-  });
+  const { notify } = useNotify();
+  const [draft, setDraft] = useState(() => nameDraftOf(topic));
   const [problem, setProblem] = useState<DashboardStringKey>();
-  const save = useMutation({
-    mutationFn: (value: SaveTopicBody) => api.saveTopic(topic.id, value),
+  const save = useSaveTopic(topic, {
+    // An address another topic holds is a problem with what was typed, said
+    // where the other checks of the typed fields are said.
     onError: (error) => {
       if (error instanceof DashboardApiError && error.code === "conflict") setProblem("topicSlugTaken");
-      else notifyError(error);
     },
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("saved") });
       onClose();
     },
   });
+  const takenSlug = save.error instanceof DashboardApiError && save.error.code === "conflict";
 
   const update = (language: ContentLanguage, change: Partial<NameDraft>) => {
     setDraft((current) => ({ ...current, [language]: { ...current[language], ...change } }));
     setProblem(undefined);
   };
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submit = () => {
     const outcome = topicBodyOf(draft);
     if ("problem" in outcome) setProblem(outcome.problem);
     else save.mutate(outcome.value);
@@ -300,37 +203,17 @@ function TopicEditDialog({ topic, onClose }: { topic: TopicListItem; onClose: ()
 
   return (
     <Translated>
-      <CardDialog labelId="topic-edit-title" onClose={onClose}>
-        <Card.Header id="topic-edit-title" title={text("topicEditTitle")} actions={<Translated.Switch />} />
-        <Card.Body>
-          <form id="topic-edit-form" className="settings-form" onSubmit={submit} noValidate>
-            <TopicNameFields draft={draft} onChange={update} />
-            {problem && (
-              <p className="dashboard-error" role="alert">
-                {text(problem)}
-              </p>
-            )}
-          </form>
-        </Card.Body>
-        <Card.Footer
-          actions={
-            <>
-              <Button icon={<XIcon />} onClick={onClose}>
-                {text("cancel")}
-              </Button>
-              <Button
-                type="submit"
-                form="topic-edit-form"
-                tone="primary"
-                disabled={save.isPending}
-                icon={<FloppyDiskIcon />}
-              >
-                {save.isPending ? text("savePending") : text("save")}
-              </Button>
-            </>
-          }
-        />
-      </CardDialog>
+      <FormDialog
+        title={text("topicEditTitle")}
+        headerActions={<Translated.Switch />}
+        onSubmit={submit}
+        onClose={onClose}
+        busy={save.isPending}
+        problem={problem ? text(problem) : null}
+        error={takenSlug ? null : save.error}
+      >
+        <TopicNameFields draft={draft} onChange={update} />
+      </FormDialog>
     </Translated>
   );
 }
@@ -351,8 +234,8 @@ function TopicNameFields({
   const { text } = useDashboardLanguage();
   const language = useTextLanguage();
   return (
-    <div className="settings-form__pair">
-      <Field label={text("topicName")} htmlFor={`topic-name-${language}`} hint={text("topicLanguageHint")}>
+    <div className="field-row">
+      <Field label={text("topicName")} htmlFor={`topic-name-${language}`}>
         <Input
           id={`topic-name-${language}`}
           lang={language}
@@ -364,7 +247,7 @@ function TopicNameFields({
       <Field label={text("topicSlug")} htmlFor={`topic-slug-${language}`} hint={text("topicSlugHint")}>
         <Input
           id={`topic-slug-${language}`}
-          className="settings-form__code"
+          className="input--code"
           value={draft[language].slug}
           maxLength={MaxLength.Handle}
           spellCheck={false}
@@ -387,53 +270,39 @@ function TopicMergeDialog({
   language: ContentLanguage;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
-  const { notify, notifyError } = useNotify();
+  const { notify } = useNotify();
   const [into, setInto] = useState(others[0]?.id ?? "");
   const name = topicLabel(topic, language).name;
-  const merge = useMutation({
-    mutationFn: () => api.mergeTopic(topic.id, into),
-    onError: (error) => notifyError(error),
+  const merge = useMergeTopic(topic, {
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("topicMerged") });
       onClose();
     },
   });
   return (
-    <CardDialog labelId="topic-merge-title" onClose={onClose}>
-      <Card.Header id="topic-merge-title" title={text("topicMergeTitle", name)} />
-      <Card.Body className="settings-form">
-        <p>{text("topicMergeBody", topic.entryCount, name)}</p>
-        <Field label={text("topicMergeInto")} htmlFor="topic-merge-into">
-          <Select
-            id="topic-merge-into"
-            value={into}
-            onChange={(event) => setInto(event.target.value)}
-            options={others.map((other) => ({ value: other.id, label: topicLabel(other, language).name }))}
-          />
-        </Field>
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose}>
-              {text("cancel")}
-            </Button>
-            <Button
-              tone="primary"
-              icon={<ArrowsMergeIcon />}
-              disabled={!into || merge.isPending}
-              onClick={() => merge.mutate()}
-            >
-              {merge.isPending ? text("topicMergePending") : text("mergeTopic")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <FormDialog
+      title={text("topicMergeTitle", name)}
+      onSubmit={() => merge.mutate(into)}
+      onClose={onClose}
+      busy={merge.isPending}
+      blocked={!into}
+      error={merge.error}
+      submit={{
+        label: merge.isPending ? text("topicMergePending") : text("mergeTopic"),
+        action: "merge",
+      }}
+    >
+      <p>{text("topicMergeBody", topic.entryCount, name)}</p>
+      <Field label={text("topicMergeInto")} htmlFor="topic-merge-into">
+        <Select
+          id="topic-merge-into"
+          value={into}
+          onChange={(event) => setInto(event.target.value)}
+          options={others.map((other) => ({ value: other.id, label: topicLabel(other, language).name }))}
+        />
+      </Field>
+    </FormDialog>
   );
 }
 
@@ -447,14 +316,10 @@ function TopicDeleteDialog({
   name: string;
   onClose: () => void;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
-  const remove = useMutation({
-    mutationFn: () => api.deleteTopic(topic.id),
+  const remove = useDeleteTopic(topic, {
     onSuccess: () => {
-      refreshAfterTopicChange(queryClient);
       notify({ tone: "success", message: text("topicDeleted") });
       onClose();
     },

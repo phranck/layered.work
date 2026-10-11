@@ -13,18 +13,36 @@ import {
   TextIndentIcon,
   TextItalicIcon,
 } from "@layered/ui/icons";
-import { lazy, type RefObject, Suspense } from "react";
+import { lazy, type ReactNode, type RefObject, Suspense } from "react";
 import type { ContentEditorHandle } from "./content-editor.js";
 import type { CheckedContent } from "./content-validation.js";
 import { type EditorTextSize, steppedTextSize } from "./editor-text-size.js";
 import { COMPONENT_GROUPS, COMPONENT_ICONS, componentSnippet } from "./editor-toolbar.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaUploadProgress, useMediaLibrary } from "./media-uploads.js";
+import { useMediaLibrary } from "./media-query.js";
+import { MediaUploadProgress } from "./media-uploads.js";
 import { useNamedValues } from "./named-values-query.js";
 
 const ContentEditor = lazy(() =>
   import("./content-editor.js").then((module) => ({ default: module.ContentEditor })),
 );
+/**
+ * The editor's main column: the title, the toolbar, the writing surface and
+ * the actions under the text. The text is written in CodeMirror, loaded when
+ * the surface first shows, and the toolbar acts on it through `editor`.
+ *
+ * @param title - The entry's title as drafted.
+ * @param body - The entry's text as drafted.
+ * @param language - The entry's language, which the title field is marked with.
+ * @param focusTitle - Whether the title takes the focus when the editor opens, for a new entry.
+ * @param editor - The handle the toolbar inserts into the text through.
+ * @param textSize - The size the text is written at.
+ * @param setTextSize - Changes that size.
+ * @param onTitle - Replaces the title.
+ * @param onBody - Replaces the text.
+ * @param onValidation - Receives the validator's findings for the text.
+ */
+
 export function WritingSurface({
   title,
   body,
@@ -36,6 +54,7 @@ export function WritingSurface({
   onTitle,
   onBody,
   onValidation,
+  actions,
 }: {
   title: string;
   body: string;
@@ -47,6 +66,8 @@ export function WritingSurface({
   onTitle: (title: string) => void;
   onBody: (body: string) => void;
   onValidation: (checked: CheckedContent) => void;
+  /** The actions under the text, such as its preview and its move to the trash. */
+  actions?: ReactNode;
 }) {
   const { text } = useDashboardLanguage();
   const { library, progress } = useMediaLibrary();
@@ -160,7 +181,7 @@ export function WritingSurface({
           failed with the reason, until the next upload. */}
       {progress.length > 0 && <MediaUploadProgress items={progress} />}
       <Editor.Surface data-text-size={textSize}>
-        <Suspense fallback={<p>{text("loading")}</p>}>
+        <Suspense fallback={<p className="unfinished">{text("loading")}</p>}>
           <ContentEditor
             editorRef={editor}
             library={library}
@@ -172,6 +193,7 @@ export function WritingSurface({
           />
         </Suspense>
       </Editor.Surface>
+      {actions}
     </Editor.Main>
   );
 }

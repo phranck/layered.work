@@ -95,7 +95,7 @@ export function EntryCard({
             ))}
           </span>
         }
-        actions={<ArticleIcon weight="duotone" aria-hidden="true" />}
+        actions={<ArticleIcon aria-hidden="true" />}
       />
     </Card.Link>
   );

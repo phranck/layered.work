@@ -82,7 +82,7 @@ it("uploads multiple dropped files with progress and selects the final successfu
     new File(["one"], "one.png", { type: "image/png" }),
     new File(["two"], "two.png", { type: "image/png" }),
   ];
-  fireEvent.drop(screen.getByRole("region", { name: "Bilder hier ablegen oder Dateien auswählen." }), {
+  fireEvent.drop(screen.getByRole("region", { name: "Medien" }), {
     dataTransfer: { files },
   });
   await screen.findByRole("progressbar", { name: "two.png: 50%" });

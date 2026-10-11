@@ -1,11 +1,9 @@
 import { isProcessing, type MediaDetail } from "@layered/schemas";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
+import { Field, FieldHint } from "@layered/ui";
 import { useDashboardLanguage } from "./language-context.js";
+import { useDeleteMedia } from "./media-query.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import { entryPath, settingsGroupArea } from "./routes.js";
 
 /** One place a file is used, as the API lists it. */
@@ -31,30 +29,47 @@ function SettingsUse({ use }: { use: MediaUse }) {
   );
 }
 
+/**
+ * Every place a file is used, each linked to where it can be changed, or a line
+ * saying nothing uses it.
+ *
+ * @param uses - The uses, as the API lists them.
+ */
 export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
   const { text } = useDashboardLanguage();
   return (
-    <section>
-      <h3>{text("mediaUses")}</h3>
-      {!uses.length && <p>{text("mediaUnused")}</p>}
-      <ul>
-        {uses.map((use) => (
-          <li key={`${use.kind}-${use.id}-${use.language}-${use.settingsGroup ?? ""}`}>
-            {use.kind === "account" ? (
-              `${use.title} (${text("account")})`
-            ) : use.kind === "settings" ? (
-              <SettingsUse use={use} />
-            ) : (
-              <a href={entryPath(use.kind, use.id)}>
-                {use.title} ({use.language.toUpperCase()})
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Field label={text("mediaUses")}>
+      {uses.length === 0 ? (
+        <FieldHint as="p">{text("mediaUnused")}</FieldHint>
+      ) : (
+        <ul>
+          {uses.map((use) => (
+            <li key={`${use.kind}-${use.id}-${use.language}-${use.settingsGroup ?? ""}`}>
+              {use.kind === "account" ? (
+                `${use.title} (${text("account")})`
+              ) : use.kind === "settings" ? (
+                <SettingsUse use={use} />
+              ) : (
+                <a href={entryPath(use.kind, use.id)}>
+                  {use.title} ({use.language.toUpperCase()})
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Field>
   );
 }
+
+/**
+ * The question before a file is deleted. A file still in use, or still being
+ * processed, cannot be deleted, and the dialog says why instead of offering it.
+ *
+ * @param detail - The file.
+ * @param onClose - Closes the question without deleting.
+ * @param onDeleted - Runs once the file is gone, after the notification.
+ */
 export function MediaDeleteDialog({
   detail,
   onClose,
@@ -64,19 +79,11 @@ export function MediaDeleteDialog({
   onClose: () => void;
   onDeleted: () => void;
 }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
   const processing = isProcessing(detail.processing.state);
-  const remove = useMutation({
-    mutationFn: () => api.deleteMedia(detail.id),
-    onError: () => client.invalidateQueries({ queryKey: queryKeys.mediaDetail(detail.id) }),
-    onSuccess: async (result) => {
-      await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery }),
-        refreshCounts(client),
-      ]);
+  const remove = useDeleteMedia(detail, {
+    onSuccess: (result) => {
       notify({
         tone: result.cleanupState === "ready" ? "success" : "warning",
         message:

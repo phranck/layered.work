@@ -1,5 +1,4 @@
-import { Card, Row } from "@layered/ui";
-import { MagnifyingGlassIcon } from "@layered/ui/icons";
+import { Row } from "@layered/ui";
 import {
   type CSSProperties,
   createContext,
@@ -10,7 +9,7 @@ import {
   useRef,
 } from "react";
 import { Reorder, useReorderItem } from "./reorder.js";
-import { SearchShortcutCap, useSearchField } from "./search.js";
+import { SearchField, useSearchField } from "./search.js";
 import "./table.css";
 
 /**
@@ -238,18 +237,6 @@ function TableTitle({ title, thumbnail, tile }: TableTitleProps) {
   );
 }
 
-/** The tones a badge in a table takes, as the state colors name them. */
-export type BadgeTone = "success" | "warning" | "info" | "danger" | "neutral";
-
-/** A state, drawn as the badge of the Posts list: a dot and a word in a tone. */
-function TableBadge({ tone, children }: { tone: BadgeTone; children: ReactNode }) {
-  return (
-    <span className="badge" data-tone={tone}>
-      {children}
-    </span>
-  );
-}
-
 /**
  * A cell holding controls, such as a switch or icon buttons. A click on one
  * acts on the control and does not also open the row.
@@ -307,18 +294,6 @@ function TableGrip({ index, label, disabled }: TableGripProps) {
   );
 }
 
-/**
- * What a card says in place of its table when there are no rows, as Posts
- * says it.
- */
-function TableEmpty({ children }: { children: ReactNode }) {
-  return (
-    <Card.Body>
-      <p className="unfinished">{children}</p>
-    </Card.Body>
-  );
-}
-
 /** Props for the search field above a table. */
 interface TableSearchProps {
   /** What the field searches, which is its accessible name and its placeholder. */
@@ -335,37 +310,28 @@ interface TableSearchProps {
  */
 function TableSearch({ label, value, onChange, search }: TableSearchProps) {
   return (
-    <label className="search-field">
-      <MagnifyingGlassIcon aria-hidden="true" />
-      <input
-        ref={search.fieldRef}
-        className="input"
-        type="search"
-        aria-label={label}
-        placeholder={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={search.onFieldKeyDown}
-        data-search-field=""
-      />
-      <SearchShortcutCap />
-    </label>
+    <SearchField
+      label={label}
+      value={value}
+      onChange={onChange}
+      inputRef={search.fieldRef}
+      onKeyDown={search.onFieldKeyDown}
+      shortcut
+    />
   );
 }
 
 /**
- * The table and its parts: rows, cells, title cells, badges, cells of
- * controls, the grip, the action cell, the empty state and the search field.
+ * The table and its parts: rows, cells, title cells, cells of controls, the
+ * grip, the action cell and the search field.
  */
 export const Table = Object.assign(TableRoot, {
   Row: TableRow,
   Cell: TableCell,
   Title: TableTitle,
-  Badge: TableBadge,
   Control: TableControl,
   Mark: TableMark,
   Actions: TableActions,
   Grip: TableGrip,
-  Empty: TableEmpty,
   Search: TableSearch,
 });

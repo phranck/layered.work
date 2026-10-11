@@ -1,6 +1,5 @@
 import {
   type CreateFormBody,
-  createFormBody,
   FORM_COLUMNS,
   FORM_FIELD_COUNT,
   FORM_FIELD_TYPES,
@@ -10,31 +9,33 @@ import {
   fieldSpan,
   formFields,
 } from "@layered/schemas";
-import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, GearIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
+import { issueLine } from "./checked-draft.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FormBuilder } from "./forms-builder.js";
 import {
   FIELD_TYPE_TEXT,
   type FieldPlace,
   fieldAt,
-  newField,
+  formDraftOf,
   newForm,
   newOption,
   removeField,
   replaceField,
+  retypedField,
   setFieldSpan,
   widestSpan,
+  withOption,
+  withoutOption,
 } from "./forms-model.js";
+import { checkedForm, useForm, useForms, useSaveForm } from "./forms-query.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
+import { noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
@@ -43,57 +44,52 @@ import "./forms.css";
 
 /** The list follows the same card and app-bar pattern as the entry lists. */
 export function FormsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const navigate = useNavigate();
   const { text } = useDashboardLanguage();
-  const list = useQuery({ queryKey: queryKeys.forms, queryFn: api.fetchForms });
+  const list = useForms();
   return (
     <>
       <ScreenTitle title={text("forms")} />
       <HeaderEnd>
-        <Button tone="primary" icon={<PlusIcon />} onClick={() => navigate(`/${area.path}/new`)}>
+        <ActionButton action="new" tone="primary" onClick={() => navigate(`/${area.path}/new`)}>
           {text("formNew")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       <Card>
         <Card.Header title={text("forms")} meta={list.data?.length} />
-        {list.isError && (
-          <Card.Body>
-            <ErrorNotice error={list.error} />
-          </Card.Body>
-        )}
-        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("formsEmpty")}</Table.Empty>}
-        {list.isSuccess && list.data.length > 0 && (
-          <Table
-            columns={[
-              { kind: "title", label: text("columnName") },
-              { kind: "text", label: text("formSlug") },
-              { kind: "count", label: text("columnFields") },
-              { kind: "action", label: text("columnAction") },
-            ]}
-          >
-            {list.data.map((form) => {
-              const open = () => navigate(`/${area.path}/${form.id}`);
-              return (
-                <Table.Row key={form.id} onOpen={open}>
-                  <Table.Cell kind="title">
-                    <Table.Title title={form.name} />
-                  </Table.Cell>
-                  <Table.Cell>{form.slug}</Table.Cell>
-                  <Table.Cell kind="count">{formFields(form).length}</Table.Cell>
-                  <Table.Actions>
-                    <Button.Icon
-                      label={text("editForm")}
-                      icon={<PencilSimpleIcon />}
-                      tabIndex={-1}
-                      onClick={open}
-                    />
-                  </Table.Actions>
-                </Table.Row>
-              );
-            })}
-          </Table>
-        )}
+        <QueryStates query={list} empty={text("formsEmpty")} isEmpty={noRows}>
+          {(forms) => (
+            <Table
+              columns={[
+                { kind: "title", label: text("columnName") },
+                { kind: "text", label: text("formSlug") },
+                { kind: "count", label: text("columnFields") },
+                { kind: "action", label: text("columnAction") },
+              ]}
+            >
+              {forms.map((form) => {
+                const open = () => navigate(`/${area.path}/${form.id}`);
+                return (
+                  <Table.Row key={form.id} onOpen={open}>
+                    <Table.Cell kind="title">
+                      <Table.Title title={form.name} />
+                    </Table.Cell>
+                    <Table.Cell>{form.slug}</Table.Cell>
+                    <Table.Cell kind="count">{formFields(form).length}</Table.Cell>
+                    <Table.Actions>
+                      <ActionButton.Icon
+                        action="edit"
+                        label={text("editForm")}
+                        tabIndex={-1}
+                        onClick={open}
+                      />
+                    </Table.Actions>
+                  </Table.Row>
+                );
+              })}
+            </Table>
+          )}
+        </QueryStates>
       </Card>
     </>
   );
@@ -186,8 +182,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
   }
   if (field.type === "singleChoice" || field.type === "multipleChoice") {
     return (
-      <div className="forms-options">
-        <strong>{text("formOptions")}</strong>
+      <Field.Set label={text("formOptions")}>
         {field.options.map((option, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Option order is fixed and inputs are controlled; values are editable.
           <div key={index} className="forms-option">
@@ -195,49 +190,32 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
               <Input
                 id={`option-value-${index}`}
                 value={option.value}
-                onChange={(event) =>
-                  update({
-                    ...field,
-                    options: field.options.map((item, position) =>
-                      position === index ? { ...item, value: event.target.value } : item,
-                    ),
-                  })
-                }
+                onChange={(event) => update(withOption(field, index, { value: event.target.value }))}
               />
             </Field>
             <Translated.Field
               id={`form-option-label-${index}`}
               label={text("formOptionLabel", index + 1)}
               value={option.label}
-              onChange={(label) =>
-                update({
-                  ...field,
-                  options: field.options.map((item, position) =>
-                    position === index ? { ...item, label } : item,
-                  ),
-                })
-              }
+              onChange={(label) => update(withOption(field, index, { label }))}
             />
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
+            <ActionButton
+              action="remove"
               disabled={field.options.length <= FORM_OPTION_COUNT.min}
-              onClick={() =>
-                update({ ...field, options: field.options.filter((_, position) => position !== index) })
-              }
+              onClick={() => update(withoutOption(field, index))}
             >
               {text("formOptionRemove", index + 1)}
-            </Button>
+            </ActionButton>
           </div>
         ))}
-        <Button
-          icon={<PlusIcon />}
+        <ActionButton
+          action="new"
           disabled={field.options.length >= FORM_OPTION_COUNT.max}
           onClick={() => update({ ...field, options: [...field.options, newOption(field.options)] })}
         >
           {text("formOptionAdd")}
-        </Button>
-      </div>
+        </ActionButton>
+      </Field.Set>
     );
   }
   if (field.type === "consent") {
@@ -316,50 +294,21 @@ function SpanControl({
 export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const { id } = useParams();
   const isNew = id === "new";
-  const api = useDashboardApi();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { language, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
-  const loaded = useQuery({
-    queryKey: queryKeys.form(id),
-    queryFn: () => api.fetchForm(id ?? ""),
-    enabled: Boolean(id && !isNew),
-  });
+  const loaded = useForm(isNew ? undefined : id);
   const [draft, setDraft] = useState<CreateFormBody | null>(isNew ? newForm(text("formNew")) : null);
   const [selected, setSelected] = useState<FieldPlace | null>(null);
   const [problem, setProblem] = useState("");
 
   useEffect(() => {
-    if (loaded.data) {
-      const {
-        slug,
-        name,
-        notificationEmail,
-        confirmationEmailField,
-        successMessage,
-        storeSubmissions,
-        rows,
-      } = loaded.data;
-      setDraft({
-        slug,
-        name,
-        notificationEmail,
-        confirmationEmailField: confirmationEmailField ?? null,
-        successMessage,
-        storeSubmissions,
-        rows,
-      });
-    }
+    if (loaded.data) setDraft(formDraftOf(loaded.data));
   }, [loaded.data]);
 
-  const save = useMutation({
-    mutationFn: (value: CreateFormBody) => (isNew ? api.createForm(value) : api.saveForm(id ?? "", value)),
-    onError: (error) => notifyError(error),
+  const save = useSaveForm(isNew ? undefined : id, {
+    onError: notifyError,
     onSuccess: (saved) => {
-      queryClient.setQueryData(queryKeys.form(saved.id), saved);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.forms });
-      void refreshCounts(queryClient);
       notify({ tone: "success", message: text("saved") });
       if (isNew) navigate(`/${area.path}/${saved.id}`, { replace: true });
     },
@@ -367,14 +316,13 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
 
   const submit = () => {
     if (!draft) return;
-    const checked = createFormBody.safeParse(draft);
-    if (!checked.success) {
-      const issue = checked.error.issues[0];
-      setProblem(`${text("formInvalid")} ${issue?.path.join(".")}: ${issue?.message}`);
+    const outcome = checkedForm(draft);
+    if ("issue" in outcome) {
+      setProblem(issueLine(text("formInvalid"), outcome.issue));
       return;
     }
     setProblem("");
-    save.mutate(checked.data);
+    save.mutate(outcome.value);
   };
   const change = (next: CreateFormBody) => {
     setDraft(next);
@@ -392,16 +340,12 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     <>
       <BackToList area={area} title={draft ? draft.name || text("formNew") : text("loading")} />
       <HeaderEnd>
-        <Button tone="primary" icon={<FloppyDiskIcon />} disabled={!draft || save.isPending} onClick={submit}>
+        <ActionButton action="save" tone="primary" disabled={!draft || save.isPending} onClick={submit}>
           {save.isPending ? text("savePending") : text("save")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       {loaded.isError && <ErrorNotice error={loaded.error} />}
-      {problem && (
-        <p role="alert" className="dashboard-error">
-          {problem}
-        </p>
-      )}
+      {problem && <ErrorNotice message={problem} />}
       {draft && (
         <Translated>
           <Editor>
@@ -419,9 +363,9 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     title={draft.name || text("formNew")}
                     meta={fields.length}
                     actions={
-                      <Button icon={<GearIcon />} onClick={() => setSelected(null)}>
+                      <ActionButton action="settings" onClick={() => setSelected(null)}>
                         {text("formSettings")}
-                      </Button>
+                      </ActionButton>
                     }
                   />
                 }
@@ -447,15 +391,12 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       id="form-type"
                       value={selectedField.type}
                       options={typeOptions}
-                      onChange={(event) => {
-                        const replacement = newField(event.target.value as FormFieldType, selectedField.key);
-                        updateField(selected, {
-                          ...replacement,
-                          label: selectedField.label,
-                          hint: selectedField.hint,
-                          required: selectedField.required,
-                        });
-                      }}
+                      onChange={(event) =>
+                        updateField(
+                          selected,
+                          retypedField(selectedField, event.target.value as FormFieldType),
+                        )
+                      }
                     />
                   </Field>
                   <SpanControl
@@ -493,9 +434,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     />
                   </Field.Inline>
                   <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
-                  <Button
-                    tone="danger"
-                    icon={<TrashIcon />}
+                  <ActionButton
+                    action="remove"
                     disabled={fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
                       change(removeField(draft, selected));
@@ -503,7 +443,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     }}
                   >
                     {text("formFieldRemove")}
-                  </Button>
+                  </ActionButton>
                 </>
               ) : (
                 <>

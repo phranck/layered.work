@@ -73,10 +73,9 @@ it("searches Unsplash through the API and hands the chosen photo on as a library
       </DashboardApiProvider>
     </QueryClientProvider>,
   );
-  fireEvent.change(screen.getByRole("searchbox", { name: "Unsplash durchsuchen" }), {
-    target: { value: " soldering " },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Unsplash durchsuchen" }));
+  const field = screen.getByRole("searchbox", { name: "Unsplash durchsuchen" });
+  fireEvent.change(field, { target: { value: " soldering " } });
+  fireEvent.submit(field.closest("form") as HTMLFormElement);
   fireEvent.click(await screen.findByTitle("a soldering iron"));
   await vi.waitFor(() => expect(choose).toHaveBeenCalledWith(picture));
   expect(search).toHaveBeenCalledWith("soldering", 1);
