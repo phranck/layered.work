@@ -61,6 +61,63 @@ jobs:
       # Docker Hub wants a token from auth.docker.io before every pull, and when
       # that does not answer, nothing merges and nothing deploys.
       #
+      # ECR Public limits anonymous pulls per address, and the runners share
+      # their addresses with everybody else's jobs. So the image is pulled once a
+      # month and kept in the Actions cache, and a run loads it from there. When
+      # the month turns and the registry refuses the fresh pull, the copy restored
+      # from the month before runs instead.
+      - name: Name the month the database image belongs to
+        if: steps.affected.outputs.backend == 'true'
+        id: image-month
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the database image
+        if: steps.affected.outputs.backend == 'true'
+        id: image-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/postgres-image.tar
+          key: postgres-18-alpine-${{ steps.image-month.outputs.month }}
+          restore-keys: postgres-18-alpine-
+
+      # The pull is tried three times because a refusal names a rate per second,
+      # and the attempts only ever run once a month.
+      - name: Load or pull the database image
+        if: steps.affected.outputs.backend == 'true'
+        id: image
+        env:
+          IMAGE: public.ecr.aws/docker/library/postgres:18-alpine
+          TARBALL: ${{ runner.temp }}/postgres-image.tar
+          CACHE_HIT: ${{ steps.image-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then
+            docker load --input "$TARBALL"
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            docker pull "$IMAGE" && break
+            sleep $((attempt * 15))
+          done
+          if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            docker save --output "$TARBALL" "$IMAGE"
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          elif [ -f "$TARBALL" ]; then
+            echo "The registry refused the image, so the copy from the month before runs." >&2
+            docker load --input "$TARBALL"
+          else
+            echo "The registry refused the image and no earlier copy is cached." >&2
+            exit 1
+          fi
+
+      # Saved straight away rather than at the end of the job, so a failing test
+      # further down does not throw the month's copy away.
+      - name: Keep the database image for the rest of the month
+        if: steps.image.outputs.fresh == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/postgres-image.tar
+          key: postgres-18-alpine-${{ steps.image-month.outputs.month }}
+
       # The roles and the test database come from the same scripts
       # `docker compose up -d` uses locally, so there is one description of that
       # shape rather than two.
@@ -69,7 +126,7 @@ jobs:
         env:
           ADMIN_URL: postgres://layered:layered_local@127.0.0.1:5432/postgres
         run: |
-          docker run --detach --publish 5432:5432 \
+          docker run --detach --pull never --publish 5432:5432 \
             --env POSTGRES_USER=layered \
             --env POSTGRES_PASSWORD=layered_local \
             --env POSTGRES_DB=layered \
