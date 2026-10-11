@@ -208,6 +208,10 @@
   /* How far anything travels when it arrives. Stated once, because two elements
      arriving from different heights read as two systems. */
   --travel: 14px;
+
+  /* How far a card that opens something rises under the pointer, its content
+     with it. */
+  --card-lift: 5px;
 }
 
 /*
