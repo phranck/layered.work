@@ -4,6 +4,7 @@ import { parseContent } from "../parser/index.js";
 import { NODE } from "../parser/nodes.js";
 import { argumentsOf, childOf, childrenOf, unquote, writtenKindOf, writtenValueOf } from "../parser/read.js";
 import { scanComponent } from "../parser/scan.js";
+import { CONSTRUCT_TEXT, type ContentProfile, refusedConstruct } from "../profile.js";
 import { SPACE_STEPS } from "../register/components.js";
 import { accepts, either } from "../register/describe.js";
 import type { ComponentDefinition, Parameter, Register } from "../register/kinds.js";
@@ -50,6 +51,12 @@ export type ValidateOptions = {
   values?: ReadonlySet<string>;
   /** Which register to check against. The real one unless a test says otherwise. */
   register?: Register;
+  /**
+   * The part of the language the text may be written in. The whole language
+   * unless said otherwise. In a mail, `values` names the template's
+   * placeholders rather than the named values.
+   */
+  profile?: ContentProfile;
 };
 
 /** Somewhere to put a finding, with its line and column still to be worked out. */
@@ -78,7 +85,7 @@ type Bound = { name: string; parameter: Parameter };
  * @returns Everything found, and whether this may be published.
  */
 export function validateContent(text: string, options: ValidateOptions = {}): Validation {
-  return validateTree(parseContent(text), text, options);
+  return validateTree(parseContent(text, options.profile), text, options);
 }
 
 /**
@@ -106,8 +113,26 @@ export function validateTree(tree: Tree, text: string, options: ValidateOptions 
     report: (finding) => findings.push({ ...finding, ...place(finding.from) }),
   };
 
+  const profile = options.profile ?? "entry";
+
   tree.iterate({
     enter(node) {
+      // A construct the profile does not admit is reported once, as what it is,
+      // and nothing under it is looked at: a list refused in a caption would
+      // otherwise be followed by every emphasis inside it.
+      const construct = refusedConstruct(profile, node.node);
+      if (construct) {
+        context.report({
+          code: FINDING.NotInProfile,
+          severity: "error",
+          message: `${CONSTRUCT_TEXT[construct]} cannot be written here.`,
+          from: node.from,
+          to: node.to,
+          construct,
+        });
+        return false;
+      }
+
       if (node.name === NODE.ComponentError) {
         reportUnreadable(node.node, context);
         // What is under here belongs to a component that was never read to its

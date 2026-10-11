@@ -13,6 +13,7 @@
  * Nothing about a component is written down twice.
  */
 export * from "./parser/index.js";
+export * from "./profile.js";
 export * from "./register/index.js";
 export * from "./render/index.js";
 export * from "./validate/index.js";

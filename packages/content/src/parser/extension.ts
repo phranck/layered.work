@@ -10,7 +10,7 @@ import type {
 import { dedent } from "./dedent.js";
 import { NODE, VALUE_NODE } from "./nodes.js";
 import { OPEN_ERRORS, type ScannedComponent, scanComponent, startsComponent } from "./scan.js";
-import { readValueReference } from "./value.js";
+import { readMailPlaceholder, readValueReference, type WrittenValueReference } from "./value.js";
 
 /**
  * The block parser, which is the thin part.
@@ -162,6 +162,40 @@ function startsLine(cx: InlineContext, at: number): boolean {
 }
 
 /**
+ * The inline parser for a reference of one kind.
+ *
+ * A reference is its own node, so everything that walks the tree finds it, and
+ * Markdown's code spans keep it as text because an inline parser never runs
+ * inside one. A named value and a mail's placeholder make the same nodes, so
+ * the highlighting, the validator and the completion serve both alike.
+ *
+ * @param name - What Lezer calls the parser.
+ * @param read - Reads one reference at the start of a text.
+ */
+function referenceParser(name: string, read: (text: string) => WrittenValueReference | null) {
+  return {
+    name,
+
+    parse(cx: InlineContext, next: number, at: number) {
+      if (next !== OPEN_BRACE || cx.char(at + 1) !== OPEN_BRACE) return -1;
+      const reference = read(cx.slice(at, cx.end));
+      if (!reference) return -1;
+      const nameFrom = at + reference.nameFrom;
+      return cx.addElement(
+        cx.elt(NODE.ValueReference, at, at + reference.length, [
+          cx.elt(NODE.ValueName, nameFrom, nameFrom + reference.name.length),
+        ]),
+      );
+    },
+  };
+}
+
+const valueReference = referenceParser("ValueReference", readValueReference);
+
+/** The nodes a reference makes, for a configuration without components. */
+const REFERENCE_NODES = [NODE.ValueReference, NODE.ValueName].map((name) => ({ name, block: false }));
+
+/**
  * The extension, as Lezer takes it.
  *
  * Placed before Markdown's own fenced code parser would be wrong: a component
@@ -236,23 +270,30 @@ export const componentSyntax: MarkdownConfig = {
         return cx.addElement(cx.elt(NODE.ComponentEscape, at, at + 1));
       },
     },
-    // A reference to a named value is its own node, so everything that walks the
-    // tree finds it, and Markdown's code spans keep it as text because an inline
-    // parser never runs inside one.
-    {
-      name: "ValueReference",
-
-      parse(cx: InlineContext, next: number, at: number) {
-        if (next !== OPEN_BRACE || cx.char(at + 1) !== OPEN_BRACE) return -1;
-        const reference = readValueReference(cx.slice(at, cx.end));
-        if (!reference) return -1;
-        const nameFrom = at + reference.nameFrom;
-        return cx.addElement(
-          cx.elt(NODE.ValueReference, at, at + reference.length, [
-            cx.elt(NODE.ValueName, nameFrom, nameFrom + reference.name.length),
-          ]),
-        );
-      },
-    },
+    valueReference,
   ],
+};
+
+/**
+ * The references alone, without components, for a line of text such as a
+ * caption or a notice.
+ *
+ * A caption reading "Front(2)" on a line of its own is a sentence, and with the
+ * component syntax it would become a component nobody wrote. References are
+ * still read, so that one written there can be refused as what it is rather
+ * than reach the page as braces.
+ */
+export const valueReferenceSyntax: MarkdownConfig = {
+  defineNodes: REFERENCE_NODES,
+  parseInline: [valueReference],
+};
+
+/**
+ * A mail's placeholders, without components, for a template's body. A
+ * placeholder is written as a reference and named with capitals, such as
+ * `{{formName}}`.
+ */
+export const mailPlaceholderSyntax: MarkdownConfig = {
+  defineNodes: REFERENCE_NODES,
+  parseInline: [referenceParser("MailPlaceholder", readMailPlaceholder)],
 };
