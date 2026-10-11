@@ -31,8 +31,8 @@ function block(type, sortOrder) {
 // their declared order, so the page's order can only come from the arrangement.
 const locked = homeBlockTypes.filter((type) => HOME_BLOCKS[type].locked);
 const order = [...locked, ...homeBlockTypes.filter((type) => !HOME_BLOCKS[type].locked).reverse()];
-/** The one block the dashboard put the countdown's sky behind. */
-const SKY_TYPE = "topic_bar";
+/** The blocks the dashboard put the countdown's sky behind, with a block between them that has none. */
+const SKY_TYPES = ["topic_bar", "project_grid"];
 const switchedOff = {
   type: "post_grid",
   sortOrder: order.length,
@@ -49,7 +49,9 @@ const snapshot = {
     fixtureEntry({ id: "project", path: "/projects/a-project/", kind: "project" }),
   ],
   homeBlocks: [...order.map((type, sortOrder) => block(type, sortOrder)), switchedOff].map((each) =>
-    each.type === SKY_TYPE && each.enabled ? { ...each, settings: { ...each.settings, sky: true } } : each,
+    SKY_TYPES.includes(each.type) && each.enabled
+      ? { ...each, settings: { ...each.settings, sky: true } }
+      : each,
   ),
 };
 const [home] = await renderPages(snapshot, ["/"]);
@@ -80,13 +82,20 @@ function sectionOf(type) {
   return { tag: body.slice(start, body.indexOf(">", start) + 1), opening: body.slice(start, at) };
 }
 
-test("puts the countdown's sky behind the block the dashboard chose, and behind no other", () => {
+test("puts one sky behind the blocks the dashboard chose, and behind no other", () => {
   for (const type of order) {
     const { tag, opening } = sectionOf(type);
-    const chosen = type === SKY_TYPE;
+    const chosen = SKY_TYPES.includes(type);
     assert.equal(tag.includes("section--sky"), chosen, `${type}: ${tag}`);
-    assert.equal(opening.includes("sky--band"), chosen, `${type} has the sky layer`);
+    // The clouds are on by default, and the stylesheet shows them over the first band alone.
+    assert.equal(tag.includes("section--clouds"), chosen, `${type}: ${tag}`);
+    assert(!opening.includes("data-sky="), `${type} carries a sky layer of its own`);
   }
   assert.equal(body.split("data-sky=").length - 1, 1, "one sky layer on the page");
-  assert(body.includes(".sky--band canvas"), "the script that starts the band's web is on the page");
+  assert.match(
+    body,
+    /<div class="sky-host">\s*<div class="sky sky--bands"/,
+    "the layer opens the blocks' host",
+  );
+  assert(body.includes(".sky--bands canvas"), "the script that starts the web is on the page");
 });
