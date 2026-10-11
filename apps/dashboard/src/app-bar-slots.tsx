@@ -1,6 +1,10 @@
-import { AppBar } from "@layered/ui";
+import { AppBar, Button } from "@layered/ui";
+import { ArrowLeftIcon } from "@layered/ui/icons";
 import { createContext, type ReactNode, use, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLinkClickHandler } from "react-router";
+import { useDashboardLanguage } from "./language-context.js";
+import type { DashboardArea } from "./routes.js";
 
 /**
  * The dashboard's bar, and the way a screen puts something into it.
@@ -48,6 +52,11 @@ export function HeaderStart({ children }: { children: ReactNode }) {
   return start ? createPortal(children, start) : null;
 }
 
+/** The heading in the bar, naming the screen or the item open in it. */
+function BarTitle({ title }: { title: string }) {
+  return <h1 className="app-bar-title">{title}</h1>;
+}
+
 /**
  * A screen's heading, at the start of the bar, where an open entry shows its
  * title after the way back. The content below begins with what the screen
@@ -58,7 +67,33 @@ export function HeaderStart({ children }: { children: ReactNode }) {
 export function ScreenTitle({ title }: { title: string }) {
   return (
     <HeaderStart>
-      <h1 className="app-bar-title">{title}</h1>
+      <BarTitle title={title} />
+    </HeaderStart>
+  );
+}
+
+/**
+ * The way back from an item to the list it belongs to, at the start of the
+ * bar, with the item's title after it. Every editor that opens one item of a
+ * list leaves by it, so the end of the bar holds only what can be done to the
+ * item. It is a link, so it can be opened in a new tab, and a plain click stays
+ * in the dashboard, where an editor holding unsaved changes can still ask first.
+ *
+ * @param area - The list the item belongs to, whose address the link leads to
+ *   and whose name it reads.
+ * @param title - The open item's title. Left out where there is no item to
+ *   name, such as after it failed to load.
+ */
+export function BackToList({ area, title }: { area: DashboardArea; title?: string }) {
+  const { text } = useDashboardLanguage();
+  const to = `/${area.path}`;
+  const onClick = useLinkClickHandler(to);
+  return (
+    <HeaderStart>
+      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon />}>
+        {text(area.labelKey)}
+      </Button.Link>
+      {title !== undefined && <BarTitle title={title} />}
     </HeaderStart>
   );
 }
