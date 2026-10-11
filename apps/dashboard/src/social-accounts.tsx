@@ -135,6 +135,7 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
                   <Button.Icon
                     label={text("navigationDelete", account.handle)}
                     icon={<TrashIcon />}
+                    tone="danger"
                     disabled={!owner}
                     onClick={() => setDialog({ deleting: account })}
                   />

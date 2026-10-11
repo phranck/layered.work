@@ -102,6 +102,7 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
                   <Button.Icon
                     label={text("navigationDelete", value.name)}
                     icon={<TrashIcon />}
+                    tone="danger"
                     disabled={!owner}
                     onClick={() => setDialog({ deleting: value })}
                   />

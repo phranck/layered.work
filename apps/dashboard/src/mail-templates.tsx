@@ -5,23 +5,28 @@ import {
   saveMailTemplateBody,
 } from "@layered/schemas";
 import { Button, Card, Field, Input } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PaperPlaneTiltIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
+import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MailPreview } from "./mail-preview.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
+import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
-/** Fixed template kinds, with their editable bilingual content. */
-export function MailTemplatesScreen() {
+/**
+ * Fixed template kinds, with their editable bilingual content.
+ *
+ * @param area - The templates' list, whose address each template opens under.
+ */
+export function MailTemplatesScreen({ area }: { area: DashboardArea }) {
   const api = useDashboardApi();
   const navigate = useNavigate();
   const { language, text } = useDashboardLanguage();
@@ -45,7 +50,7 @@ export function MailTemplatesScreen() {
             ]}
           >
             {list.data.map((template) => {
-              const open = () => navigate(`/mail-templates/${template.kind}`);
+              const open = () => navigate(`/${area.path}/${template.kind}`);
               return (
                 <Table.Row key={template.kind} onOpen={open}>
                   <Table.Cell kind="title">
@@ -69,12 +74,15 @@ export function MailTemplatesScreen() {
   );
 }
 
-/** A template editor uses the existing dashboard cards and form controls. */
-export function MailTemplateEditorScreen() {
+/**
+ * A template editor uses the existing dashboard cards and form controls.
+ *
+ * @param area - The templates' list, which the way back in the bar leads to.
+ */
+export function MailTemplateEditorScreen({ area }: { area: DashboardArea }) {
   const { kind } = useParams();
   const templateKind = kind as MailTemplateKind;
   const api = useDashboardApi();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { language: interfaceLanguage, text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
@@ -122,9 +130,8 @@ export function MailTemplateEditorScreen() {
   const title = loaded.data?.name[interfaceLanguage] ?? text("emailTemplates");
   return (
     <>
-      <ScreenTitle title={title} />
+      <BackToList area={area} title={loaded.isPending ? text("loading") : title} />
       <HeaderEnd>
-        <Button onClick={() => navigate("/mail-templates")}>{text("emailTemplates")}</Button>
         <Button
           tone="primary"
           icon={<FloppyDiskIcon />}
@@ -248,6 +255,7 @@ function MailTemplateCards({
             />
           </Field>
           <Button
+            icon={<PaperPlaneTiltIcon />}
             disabled={!recipient || test.isPending}
             onClick={() => {
               const value = checked();

@@ -9,8 +9,13 @@ function buttonClasses(tone: Tone, className?: string): string {
 
 /** Props shared by labelled button shapes. */
 export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
-  /** Optional icon rendered before the label. */
-  icon?: ReactNode;
+  /**
+   * The icon that says what the button does, before the label. Required,
+   * because every action carries one: an icon is recognized before a word is
+   * read, and a button left without one is a type error rather than something
+   * a reviewer has to spot.
+   */
+  icon: ReactNode;
   /** Visual emphasis. */
   tone?: Tone;
 }
@@ -29,6 +34,12 @@ export interface ButtonIconProps extends Omit<ComponentPropsWithoutRef<"button">
   label: string;
   /** Icon content hidden from assistive technology. */
   icon: ReactNode;
+  /**
+   * `danger` for an action that removes or destroys something, which draws the
+   * glyph in the danger color and the danger tint behind it on hover. Left
+   * out, the glyph takes the text color.
+   */
+  tone?: "danger";
 }
 
 /** Props for a non-interactive button-shaped mark. */
@@ -67,10 +78,14 @@ const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
 );
 /** An icon-only action button. */
 const ButtonIcon = forwardRef<HTMLButtonElement, ButtonIconProps>(
-  ({ className, icon, label, title = label, type = "button", ...props }, ref) => (
+  ({ className, icon, label, title = label, tone, type = "button", ...props }, ref) => (
     <button
       ref={ref}
-      className={join("button button--ghost button--icon", className)}
+      className={join(
+        "button button--ghost button--icon",
+        tone === "danger" && "button--ghost-danger",
+        className,
+      )}
       type={type}
       aria-label={label}
       title={title}

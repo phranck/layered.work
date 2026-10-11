@@ -114,7 +114,7 @@
 
 .button--danger {
   color: var(--state-danger);
-  background-color: color-mix(in oklab, var(--state-danger) 12%, transparent);
+  background-color: var(--danger-tint);
   border-color: color-mix(in oklab, var(--state-danger) 30%, transparent);
 }
 
@@ -126,6 +126,17 @@
   background-color: var(--state-danger);
   background-image: var(--control-sheen);
   border-color: var(--state-danger);
+}
+
+/* An icon alone that removes or destroys something says so in the glyph at
+   rest, and under the pointer takes the tint a danger button has at rest. */
+.button--ghost-danger,
+.button--ghost-danger:hover {
+  color: var(--state-danger);
+}
+
+.button--ghost-danger:hover {
+  background: var(--danger-tint);
 }
 
 /* The compact treatment is the only size. SVGs are flex contents, so their

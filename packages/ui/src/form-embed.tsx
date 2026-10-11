@@ -3,6 +3,7 @@ import { Button } from "./button.js";
 import { Card } from "./card.js";
 import { InlineContent } from "./content-renderer.js";
 import { FormControls } from "./form-controls.js";
+import { PaperPlaneTiltIcon } from "./icons.js";
 
 export type FormOutcome = {
   status: "success" | "error";
@@ -90,7 +91,7 @@ export function FormEmbed({
       </Card.Stack>
       <Card.Footer
         actions={
-          <Button type="submit" tone="primary" disabled={!ready}>
+          <Button type="submit" tone="primary" icon={<PaperPlaneTiltIcon />} disabled={!ready}>
             {preview
               ? language === "de"
                 ? "Vorschau"

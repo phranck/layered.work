@@ -15,11 +15,11 @@ import {
   XIcon,
 } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { useBlocker, useLinkClickHandler, useLocation, useNavigate, useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { useBlocker, useLocation, useNavigate, useParams } from "react-router";
 import { isSavableSlug } from "./address-field.js";
 import { DashboardApiError } from "./api.js";
-import { HeaderEnd, HeaderStart } from "./app-bar-slots.js";
+import { BackToList, HeaderEnd } from "./app-bar-slots.js";
 import type { ContentEditorHandle } from "./content-editor.js";
 import { type CheckedContent, contentIsPublishable } from "./content-validation.js";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -121,12 +121,7 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
       </Section>
     );
   }
-  if (!entry.data)
-    return (
-      <BackToList area={area}>
-        <h1 className="app-bar-title">{text("loading")}</h1>
-      </BackToList>
-    );
+  if (!entry.data) return <BackToList area={area} title={text("loading")} />;
   // Keyed by the translation, so opening another one starts a fresh draft.
   return (
     <EntryEditor
@@ -136,24 +131,6 @@ export function EntryEditorScreen({ area, kind }: { area: DashboardArea; kind: E
       entry={entry.data}
       focusTitle={location.state?.focusTitle === true}
     />
-  );
-}
-
-/**
- * The way back to the list, at the start of the dashboard's bar, with whatever
- * follows it there, such as the entry's title.
- */
-function BackToList({ area, children }: { area: DashboardArea; children?: ReactNode }) {
-  const { text } = useDashboardLanguage();
-  const to = `/${area.path}`;
-  const onClick = useLinkClickHandler(to);
-  return (
-    <HeaderStart>
-      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon />}>
-        {text(area.labelKey)}
-      </Button.Link>
-      {children}
-    </HeaderStart>
   );
 }
 
@@ -337,9 +314,7 @@ function EntryEditor({
     <>
       {/* The entry's title stands in the bar, after the way back, so the
           writing column starts with what is written. */}
-      <BackToList area={area}>
-        <h1 className="app-bar-title">{draft.title.trim() || text("editorTitleMissing")}</h1>
-      </BackToList>
+      <BackToList area={area} title={draft.title.trim() || text("editorTitleMissing")} />
       {/* What the entry's state is and what can be done with it, at the end of
           the bar, where they stay in view however far the text is scrolled. */}
       {entry.trashed ? (

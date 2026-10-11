@@ -5,6 +5,13 @@ import {
   submittedValueText,
 } from "@layered/schemas";
 import { Button, Card, Select } from "@layered/ui";
+import {
+  DownloadSimpleIcon,
+  EnvelopeOpenIcon,
+  EnvelopeSimpleIcon,
+  TrashIcon,
+  WarningOctagonIcon,
+} from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
@@ -127,7 +134,11 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     }}
                   />
                   {form && (
-                    <Button.Link href={`${__API_BASE__}/forms/${formId}/submissions/export`} download>
+                    <Button.Link
+                      href={`${__API_BASE__}/forms/${formId}/submissions/export`}
+                      download
+                      icon={<DownloadSimpleIcon />}
+                    >
                       {text("submissionsExport")}
                     </Button.Link>
                   )}
@@ -214,20 +225,32 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
               actions={
                 <>
                   {selected.status === "unread" ? (
-                    <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("read")}>
+                    <Button
+                      icon={<EnvelopeOpenIcon />}
+                      disabled={changeStatus.isPending}
+                      onClick={() => changeStatus.mutate("read")}
+                    >
                       {text("submissionMarkRead")}
                     </Button>
                   ) : (
-                    <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("unread")}>
+                    <Button
+                      icon={<EnvelopeSimpleIcon />}
+                      disabled={changeStatus.isPending}
+                      onClick={() => changeStatus.mutate("unread")}
+                    >
                       {text("submissionMarkUnread")}
                     </Button>
                   )}
                   {selected.status !== "spam" && (
-                    <Button disabled={changeStatus.isPending} onClick={() => changeStatus.mutate("spam")}>
+                    <Button
+                      icon={<WarningOctagonIcon />}
+                      disabled={changeStatus.isPending}
+                      onClick={() => changeStatus.mutate("spam")}
+                    >
                       {text("submissionMarkSpam")}
                     </Button>
                   )}
-                  <Button tone="danger" onClick={() => setConfirmDelete(true)}>
+                  <Button tone="danger" icon={<TrashIcon />} onClick={() => setConfirmDelete(true)}>
                     {text("submissionDelete")}
                   </Button>
                 </>

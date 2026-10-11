@@ -141,13 +141,30 @@ describe("static compounds", () => {
     const ref = createRef<HTMLButtonElement>();
     const onClick = vi.fn();
     render(
-      <Button ref={ref} name="save" disabled onClick={onClick}>
+      <Button ref={ref} name="save" icon={<i />} disabled onClick={onClick}>
         Save
       </Button>,
     );
     expect(ref.current).toBe(screen.getByRole("button", { name: "Save" }));
     expect(ref.current?.disabled).toBe(true);
     expect(ref.current?.getAttribute("name")).toBe("save");
+  });
+
+  it("asks every button for the icon that says what it does", () => {
+    // The type check fails here once `icon` is optional again.
+    // @ts-expect-error A button without an icon.
+    expect(renderToStaticMarkup(<Button>Save</Button>)).toContain("Save");
+  });
+
+  it("draws an icon alone in the danger tone only for a destructive action", () => {
+    render(
+      <>
+        <Button.Icon label="Delete" icon={<i />} tone="danger" />
+        <Button.Icon label="Edit" icon={<i />} />
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Delete" }).classList).toContain("button--ghost-danger");
+    expect(screen.getByRole("button", { name: "Edit" }).classList).not.toContain("button--ghost-danger");
   });
 
   it("shows a collapsible card's header actions only while it is open", () => {

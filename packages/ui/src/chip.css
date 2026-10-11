@@ -34,7 +34,9 @@ a.chip:hover {
 }
 
 /* The button that takes a chip away, inside it at its end: the icon alone, as
-   high as the chip's text, and brighter under the pointer at once. */
+   high as the chip's text. It removes, so under the pointer or the focus it
+   takes the danger color at once. At rest it stays faint, because every chip
+   has one and a row of them in red would outweigh the names. */
 .chip__remove {
   display: inline-grid;
   place-items: center;
@@ -49,11 +51,11 @@ a.chip:hover {
 }
 
 .chip__remove:hover {
-  color: var(--text-primary);
+  color: var(--state-danger);
 }
 
 .chip__remove:focus-visible {
-  color: var(--text-primary);
+  color: var(--state-danger);
   box-shadow: var(--focus-halo);
 }
 

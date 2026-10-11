@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
@@ -187,6 +187,22 @@ describe("form builder", () => {
     const field = await screen.findByRole("button", { name: /^Short text/, pressed: false });
     fireEvent.click(field);
     expect(document.activeElement).toBe(field);
+  });
+
+  it("leads back to the list from the start of the bar, before the form's name", async () => {
+    mountRecording();
+    await screen.findByLabelText("Form name");
+
+    const start = document.querySelector<HTMLElement>(".app-bar__start");
+    const end = document.querySelector<HTMLElement>(".app-bar__end");
+    if (!start || !end) throw new Error("Missing bar");
+    const back = within(start).getByRole("link", { name: "Forms" });
+    expect(back.querySelector(".button__icon svg")).not.toBeNull();
+    expect(back.nextElementSibling?.textContent).toBe("New form");
+    expect(within(end).queryByRole("button", { name: "Forms" })).toBeNull();
+
+    fireEvent.click(back);
+    expect(await screen.findByText("No forms yet.")).toBeTruthy();
   });
 
   it("does not send a field whose German label is blank", async () => {

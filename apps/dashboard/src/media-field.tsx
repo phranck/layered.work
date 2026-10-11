@@ -58,7 +58,7 @@ export function MediaField({ label, hint, none, mediaId, shape, editable, onChan
         )}
         <span className="actions media-field__actions">
           {mediaId && (
-            <Button disabled={!editable} icon={<XIcon />} onClick={() => onChange(null)}>
+            <Button disabled={!editable} tone="danger" icon={<XIcon />} onClick={() => onChange(null)}>
               {text("remove")}
             </Button>
           )}

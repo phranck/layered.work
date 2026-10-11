@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { createDashboardApi } from "./api.js";
@@ -32,7 +32,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("edits both languages and previews and test-sends the current draft", async () => {
+/**
+ * The confirmation template's editor against an API that answers every request
+ * it makes, and the requests as they were sent.
+ */
+function mountEditor() {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -78,6 +82,27 @@ it("edits both languages and previews and test-sends the current draft", async (
       </DashboardApiProvider>
     </QueryClientProvider>,
   );
+  return requests;
+}
+
+it("leads back to the list from the start of the bar, before the template's name", async () => {
+  mountEditor();
+  await screen.findByLabelText("Test recipient");
+
+  const start = document.querySelector<HTMLElement>(".app-bar__start");
+  const end = document.querySelector<HTMLElement>(".app-bar__end");
+  if (!start || !end) throw new Error("Missing bar");
+  const back = within(start).getByRole("link", { name: "Email templates" });
+  expect(back.querySelector(".button__icon svg")).not.toBeNull();
+  expect(back.nextElementSibling?.textContent).toBe("Confirmation");
+  expect(within(end).queryByRole("button", { name: "Email templates" })).toBeNull();
+
+  fireEvent.click(back);
+  expect(await screen.findByRole("button", { name: "Edit template" })).toBeTruthy();
+});
+
+it("edits both languages and previews and test-sends the current draft", async () => {
+  const requests = mountEditor();
 
   await writeInEditor("Body", "Hello **{{formName}}**");
   chooseTextLanguage("de");
