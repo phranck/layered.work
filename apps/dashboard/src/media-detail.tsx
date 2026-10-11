@@ -1,56 +1,43 @@
 import {
-  CONTENT_LANGUAGES,
   type ContentLanguage,
   MaxLength,
   type MediaDetail,
-  type SaveMediaMetadataBody,
   unsplashCreditLine,
   WATERMARK_ANCHORS,
-  type WatermarkAnchor,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, MediaCredit, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MarkdownField } from "./markdown-field.js";
 import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
-import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
+import { PROCESSING_TEXT } from "./media-processing.js";
+import {
+  metadataDraftOf,
+  useMediaDetail,
+  useSaveMediaMetadata,
+  WATERMARK_ANCHOR_TEXT,
+} from "./media-query.js";
 import { CardDialog } from "./modal.js";
-import { queryKeys } from "./query-keys.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
-/** What each watermark position is called in the select. */
-const ANCHOR_TEXT: Record<WatermarkAnchor, DashboardStringKey> = {
-  "top-left": "watermarkTopLeft",
-  top: "watermarkTop",
-  "top-right": "watermarkTopRight",
-  left: "watermarkLeft",
-  center: "watermarkCenter",
-  right: "watermarkRight",
-  "bottom-left": "watermarkBottomLeft",
-  bottom: "watermarkBottom",
-  "bottom-right": "watermarkBottomRight",
-};
-
 /** The value the select uses for a picture without a watermark, since a select value cannot be null. */
 const NO_WATERMARK = "";
 
+/**
+ * A file's descriptions, focal point and watermark, with what the library
+ * knows about it: its size, its variants and where it is used.
+ *
+ * @param detail - The file as the API returned it.
+ * @param onClose - Closes the dialog, after a save as well.
+ */
 function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose: () => void }) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text, language: interfaceLanguage } = useDashboardLanguage();
-  const [value, setValue] = useState<SaveMediaMetadataBody>({
-    focalPoint: detail.focalPoint,
-    translations: CONTENT_LANGUAGES.map((language) => ({ language, ...detail.translations[language] })),
-    watermark: detail.watermark,
-  });
+  const [value, setValue] = useState(() => metadataDraftOf(detail));
   const formId = useId();
   const prefix = useId();
   const [deleting, setDeleting] = useState(false);
@@ -58,24 +45,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
   // language's alt text and caption stay in the draft and are saved with it.
   const language = useTextLanguage();
   const translation = value.translations.find((candidate) => candidate.language === language);
-  const save = useMutation({
-    mutationFn: () =>
-      api.saveMediaMetadata(detail.id, {
-        ...value,
-        translations: value.translations.map((translation) => ({
-          ...translation,
-          altText:
-            translation.altText === null || translation.altText === ""
-              ? translation.altText
-              : translation.altText.trim() || null,
-          caption: translation.caption?.trim() || null,
-        })),
-      }),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery });
-      onClose();
-    },
-  });
+  const save = useSaveMediaMetadata(detail, { onSuccess: () => onClose() });
   function description(language: ContentLanguage, field: "altText" | "caption", next: string | null) {
     setValue((current) => ({
       ...current,
@@ -92,7 +62,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
           className="settings-form"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate();
+            save.mutate(value);
           }}
         >
           <p>
@@ -153,7 +123,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
                   { value: NO_WATERMARK, label: text("watermarkNone") },
                   ...WATERMARK_ANCHORS.map((anchor) => ({
                     value: anchor,
-                    label: text(ANCHOR_TEXT[anchor]),
+                    label: text(WATERMARK_ANCHOR_TEXT[anchor]),
                   })),
                 ]}
                 onChange={(event) => {
@@ -230,17 +200,17 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
     </>
   );
 }
+/**
+ * One file of the library in a dialog, with its descriptions in the language
+ * the dialog's switch has chosen.
+ *
+ * @param id - The file's id.
+ * @param onClose - Closes the dialog.
+ */
 export function MediaDetailDialog({ id, onClose }: { id: string; onClose: () => void }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const titleId = useId();
-  const detail = useQuery({
-    queryKey: queryKeys.mediaDetail(id),
-    queryFn: () => api.fetchMediaDetail(id),
-    retry: false,
-    refetchInterval: (current) =>
-      pollWhileProcessing(current.state.data ? [current.state.data.processing.state] : []),
-  });
+  const detail = useMediaDetail(id);
   return (
     <Translated>
       <CardDialog labelId={titleId} onClose={onClose}>

@@ -13,27 +13,29 @@ import {
   UserCircleIcon,
   XIcon,
 } from "@layered/ui/icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
+import { useAccountActions } from "./account-query.js";
 import { DASHBOARD_LANGUAGES } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { INTERFACE_SCALES, restoredScale, useInterfaceScale } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
-import { refreshMediaQueries } from "./media-uploads.js";
+import { useUploadMedia } from "./media-query.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import { useSaveShortcut } from "./save-shortcut.js";
-import { useSignOut } from "./session-queries.js";
 
 /** The interface sizes as the segmented control offers them, labeled like the reading width's steps. */
 const SCALE_OPTIONS = INTERFACE_SCALES.map((scale) => ({ value: scale, label: scale.toUpperCase() }));
 
+/**
+ * The signed-in author's account in a dialog: portrait, name, address, role,
+ * interface language and size, a save, and signing out.
+ *
+ * @param account - The account as it is stored.
+ * @param onClose - Closes the dialog, after a save as well.
+ */
 export function AccountDialog({ account, onClose }: { account: AccountProfile; onClose: () => void }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notify } = useNotify();
   const [draft, setDraft] = useState<UpdateAccountBody>({
@@ -48,24 +50,16 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   // account's own changes when the dialog is saved, as the language is.
   const [scale, chooseScale] = useInterfaceScale();
   const [scaleDraft, setScaleDraft] = useState(scale);
-  const savingRef = useRef(false);
-  const signingOutRef = useRef(false);
-  const save = useMutation({
-    mutationFn: api.updateAccount,
-    onSuccess: (profile) => queryClient.setQueryData(queryKeys.account(profile.id), profile),
-  });
-  const signOut = useSignOut();
+  const { save, signOut, running, saveDraft, signOutOnce } = useAccountActions();
   const fileInput = useRef<HTMLInputElement>(null);
-  const upload = useMutation({
-    mutationFn: (file: File) => api.uploadMedia(file),
+  // The upload is a file of the library like any other, so the picker and the
+  // sidebar's count show it.
+  const upload = useUploadMedia({
     onSuccess: (picture) => {
       // The upload becomes the draft portrait, exactly as a chosen picture does,
       // and is kept only when the account is saved.
       setDraft((current) => ({ ...current, avatarMediaId: picture.id }));
       setAvatarUrl(picture.url);
-      // The upload is a file of the library like any other, so the picker and
-      // the sidebar's count show it.
-      void refreshMediaQueries(queryClient);
     },
   });
   const accountPending = save.isPending || signOut.isPending;
@@ -86,36 +80,15 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   }
 
   function dismiss() {
-    if (savingRef.current || signingOutRef.current) return;
-    onClose();
+    if (!running()) onClose();
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (savingRef.current || signingOutRef.current) return;
-    savingRef.current = true;
-    try {
-      await save.mutateAsync(draft);
-      chooseScale(scaleDraft);
-      notify({ tone: "success", message: text("saved") });
-      onClose();
-    } catch {
-      // The mutation retains the structured error for the alert.
-    } finally {
-      savingRef.current = false;
-    }
-  }
-
-  async function submitSignOut() {
-    if (signingOutRef.current || savingRef.current) return;
-    signingOutRef.current = true;
-    try {
-      await signOut.mutateAsync();
-    } catch {
-      // The mutation retains the structured error for the alert.
-    } finally {
-      signingOutRef.current = false;
-    }
+    if (!(await saveDraft(draft))) return;
+    chooseScale(scaleDraft);
+    notify({ tone: "success", message: text("saved") });
+    onClose();
   }
 
   return (
@@ -225,7 +198,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                 <Button
                   type="button"
                   tone="danger"
-                  onClick={submitSignOut}
+                  onClick={signOutOnce}
                   disabled={accountPending}
                   icon={<SignOutIcon weight="duotone" />}
                 >

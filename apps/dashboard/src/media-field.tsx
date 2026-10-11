@@ -1,13 +1,11 @@
 import type { PictureShape } from "@layered/schemas";
 import { Button, Field, imagePosition } from "@layered/ui";
 import { ImagesIcon, XIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
-import { queryKeys } from "./query-keys.js";
+import { useMediaDetail } from "./media-query.js";
 
 /** Props for a field that names one picture from the library. */
 export interface MediaFieldProps {
@@ -32,14 +30,9 @@ export interface MediaFieldProps {
  * here as well.
  */
 export function MediaField({ label, hint, none, mediaId, shape, editable, onChange }: MediaFieldProps) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const [picking, setPicking] = useState(false);
-  const picture = useQuery({
-    queryKey: queryKeys.mediaDetail(mediaId ?? ""),
-    queryFn: () => api.fetchMediaDetail(mediaId ?? ""),
-    enabled: mediaId !== null,
-  });
+  const picture = useMediaDetail(mediaId);
   const shown = mediaId !== null ? picture.data : undefined;
   return (
     <Field label={label} hint={hint}>

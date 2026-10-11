@@ -1,26 +1,17 @@
 import { MEDIA_KINDS, type MediaLibraryItem } from "@layered/schemas";
 import { Button, Card, Field, Input, imagePosition, Row, Select, Switch } from "@layered/ui";
 import { FilesIcon, GlobeIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT, KILOBYTE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
-import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
-import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
+import { PROCESSING_TEXT } from "./media-processing.js";
+import { MEDIA_KIND_TEXT, useMediaPage, useMediaUploads } from "./media-query.js";
+import { MediaUploadButton, MediaUploadProgress } from "./media-uploads.js";
 import { PageButtons } from "./page-buttons.js";
-import { queryKeys } from "./query-keys.js";
 import { UnsplashSearch } from "./unsplash-search.js";
 import "./media-browser.css";
-
-const KIND_LABEL = {
-  image: "mediaKindImage",
-  video: "mediaKindVideo",
-  document: "mediaKindDocument",
-  model: "mediaKindModel",
-} as const;
 
 /** How many bytes the grid counts as one kilobyte. */
 const BYTES_PER_KILOBYTE = 1024;
@@ -53,7 +44,7 @@ function MediaGrid({
           </Row.Tile>
           <Row.Text
             title={item.slug}
-            note={`${text(KIND_LABEL[item.kind])} · ${KILOBYTE_FORMAT[language].format(item.byteSize / BYTES_PER_KILOBYTE)} · ${DATE_FORMAT[language].format(new Date(item.uploadedAt))}`}
+            note={`${text(MEDIA_KIND_TEXT[item.kind])} · ${KILOBYTE_FORMAT[language].format(item.byteSize / BYTES_PER_KILOBYTE)} · ${DATE_FORMAT[language].format(new Date(item.uploadedAt))}`}
           >
             <span className="row__note">{text(PROCESSING_TEXT[item.processingState])}</span>
           </Row.Text>
@@ -63,7 +54,6 @@ function MediaGrid({
   );
 }
 function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -71,13 +61,7 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   const [kind, setKind] = useState("all");
   const [unused, setUnused] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const media = useQuery({
-    queryKey: queryKeys.mediaPage(query, imageOnly ? "image" : kind, page, unused),
-    queryFn: () => api.fetchMedia(query, imageOnly ? "image" : kind, page, unused),
-    retry: false,
-    refetchInterval: (current) =>
-      pollWhileProcessing(current.state.data?.items.map((item) => item.processingState) ?? []),
-  });
+  const media = useMediaPage({ search: query, kind: imageOnly ? "image" : kind, page, unused });
   const choose = (item: MediaLibraryItem) => {
     if (onChoose) onChoose(item.slug, item);
     else setDetailId(item.id);
@@ -96,7 +80,7 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
   const unusedId = useId();
   const options = [
     { value: "all", label: text("filterAll") },
-    ...MEDIA_KINDS.map((value) => ({ value, label: text(KIND_LABEL[value]) })),
+    ...MEDIA_KINDS.map((value) => ({ value, label: text(MEDIA_KIND_TEXT[value]) })),
   ];
   return (
     <>

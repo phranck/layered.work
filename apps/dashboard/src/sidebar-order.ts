@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { zoomOf } from "./interface-scale.js";
+import { moveItem } from "./list-order.js";
 import { storedChoiceKey } from "./stored-choice.js";
 
 /**
@@ -64,20 +65,6 @@ export function orderGroups<Group extends { id: string }>(
     return [group];
   });
   return [...ordered, ...byId.values()];
-}
-
-/**
- * A list with one item moved.
- *
- * @param items - The list as it is.
- * @param from - Where the item stands.
- * @param to - Where it ends up, counted in the list after the move.
- */
-export function moveItem<Item>(items: readonly Item[], from: number, to: number): Item[] {
-  const next = [...items];
-  const [moved] = next.splice(from, 1);
-  if (moved !== undefined) next.splice(to, 0, moved);
-  return next;
 }
 
 /** The vertical extent of one group, as measured when the drag started. */

@@ -1,7 +1,5 @@
-import type { EntryKind, SearchResults } from "@layered/schemas";
 import { Card, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
 import { ArticleIcon, ImagesIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
-import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -14,13 +12,11 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router";
-import { useDashboardApi } from "./dashboard-context.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog } from "./modal.js";
-import { queryKeys } from "./query-keys.js";
-import { entryPath, MEDIA_PATH } from "./routes.js";
+import { ENTRY_KIND_TEXT, type Hit, hitsOf, useSearchResults } from "./search-query.js";
+import { isSearchShortcut, takesText } from "./shortcuts.js";
 
 /**
  * Search, on the same shortcut everywhere.
@@ -34,59 +30,6 @@ import { entryPath, MEDIA_PATH } from "./routes.js";
  * be the reader's own keystroke. The one exception is a search field, where the
  * shortcut simply puts the caret back.
  */
-
-/** How long typing has to pause before the dialog asks the API, in milliseconds. */
-const SEARCH_DELAY_MS = 150;
-
-/** Input types that take no typed text, where the shortcut is free to act. */
-const NON_TEXT_INPUTS = new Set([
-  "button",
-  "checkbox",
-  "color",
-  "file",
-  "image",
-  "radio",
-  "range",
-  "reset",
-  "submit",
-]);
-
-/**
- * Whether a key event is the search shortcut on this platform.
- *
- * @param event - The keystroke.
- * @param apple - Whether the modifier is Command rather than Control.
- */
-export function isSearchShortcut(event: ShortcutEvent, apple: boolean): boolean {
-  return isModifierShortcut(event, "k", apple);
-}
-
-/** What a shortcut is read from. */
-export type ShortcutEvent = Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">;
-
-/**
- * Whether a key event is the platform's modifier with one letter and nothing
- * else: Command on an Apple platform, Control elsewhere.
- *
- * @param event - The keystroke.
- * @param letter - The letter, in lower case.
- * @param apple - Whether the modifier is Command rather than Control.
- */
-export function isModifierShortcut(event: ShortcutEvent, letter: string, apple: boolean): boolean {
-  const modifier = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  return modifier && !event.altKey && !event.shiftKey && event.key.toLowerCase() === letter;
-}
-
-/**
- * Whether an element takes typed text, so a shortcut must not take its keys.
- *
- * @param element - Whatever has focus.
- */
-export function takesText(element: Element | null): boolean {
-  if (!(element instanceof HTMLElement)) return false;
-  if (element.isContentEditable || element instanceof HTMLTextAreaElement) return true;
-  return element instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(element.type);
-}
 
 /** What a screen and the shortcut share. */
 interface SearchContextValue {
@@ -179,58 +122,6 @@ export function SearchShortcutCap() {
   );
 }
 
-/** The catalogue word for each kind of entry, as a hit's note. */
-const KIND_TEXT: Record<EntryKind, DashboardStringKey> = {
-  post: "kindPost",
-  page: "kindPage",
-  project: "kindProject",
-};
-
-/** One hit, whichever kind it is, flattened so the arrow keys can move across both kinds. */
-interface Hit {
-  key: string;
-  path: string;
-  title: string;
-  note: string;
-  thumbnailUrl: string | null;
-  language?: string;
-  group: "entries" | "media";
-}
-
-function hitsOf(results: SearchResults | undefined, kindText: (kind: EntryKind) => string): Hit[] {
-  if (!results) return [];
-  return [
-    ...results.entries.map((hit) => ({
-      key: `entry-${hit.id}`,
-      path: entryPath(hit.kind, hit.id),
-      title: hit.title,
-      note: kindText(hit.kind),
-      thumbnailUrl: null,
-      language: hit.language,
-      group: "entries" as const,
-    })),
-    ...results.media.map((hit) => ({
-      key: `media-${hit.id}`,
-      // A file has no screen of its own; it opens in the library.
-      path: MEDIA_PATH,
-      title: hit.slug,
-      note: hit.altText ?? "",
-      thumbnailUrl: hit.thumbnailUrl,
-      group: "media" as const,
-    })),
-  ];
-}
-
-/** The value it was given, once it has stopped changing for the delay. */
-function useSettled<Value>(value: Value, delay: number): Value {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return settled;
-}
-
 /**
  * The search for a screen without a list: a field, and what it finds in
  * entries and in the media library.
@@ -242,18 +133,12 @@ function useSettled<Value>(value: Value, delay: number): Value {
  * @param onClose - Closes the dialog.
  */
 export function SearchDialog({ onClose }: { onClose: () => void }) {
-  const api = useDashboardApi();
   const navigate = useNavigate();
   const { text } = useDashboardLanguage();
   const [query, setQuery] = useState("");
-  const settled = useSettled(query.trim(), SEARCH_DELAY_MS);
+  const { settled, results } = useSearchResults(query);
   const [active, setActive] = useState(0);
-  const results = useQuery({
-    queryKey: queryKeys.search(settled),
-    queryFn: () => api.search(settled),
-    enabled: settled.length > 0,
-  });
-  const hits = settled ? hitsOf(results.data, (kind) => text(KIND_TEXT[kind])) : [];
+  const hits = settled ? hitsOf(results.data, (kind) => text(ENTRY_KIND_TEXT[kind])) : [];
   const activeHit = hits[Math.min(active, hits.length - 1)];
   const activeKey = activeHit?.key;
 

@@ -1,13 +1,27 @@
 import { NAVIGATION_HREF_MAX_LENGTH, type SaveFooterNavigationBody } from "@layered/schemas";
 import { Field, Input, Select } from "@layered/ui";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { queryKeys } from "./query-keys.js";
+import {
+  type TargetKind,
+  targetKindOf,
+  targetOptions,
+  useNavigationTargetEntries,
+} from "./navigation-query.js";
+import { useTopics } from "./topics-query.js";
 
+/** One link of a group, as the editor holds it. */
 type Item = SaveFooterNavigationBody["items"][number];
+
+/**
+ * Where a link points: an address typed in, an entry, or a topic. Entries and
+ * topics are asked for only once the link points at one of them.
+ *
+ * @param item - The link.
+ * @param itemKey - The link's key in the editor, which the fields' ids are made from.
+ * @param onChange - Replaces part of the link. Choosing another kind of target clears the old one.
+ */
 export function NavigationTarget({
   item,
   itemKey,
@@ -17,36 +31,15 @@ export function NavigationTarget({
   itemKey: string;
   onChange: (change: Partial<Item>) => void;
 }) {
-  const api = useDashboardApi();
   const { text, language } = useDashboardLanguage();
-  const [kind, setKind] = useState(item.entryId ? "entry" : item.topicId ? "topic" : "external");
-  const entries = useQuery({
-    queryKey: queryKeys.navigationTargetEntries,
-    enabled: kind === "entry",
-    queryFn: async () =>
-      (await Promise.all([api.fetchEntries("post"), api.fetchEntries("page"), api.fetchEntries("project")]))
-        .flat()
-        .filter((row) => !row.trashed),
-  });
-  const topics = useQuery({
-    queryKey: queryKeys.topics,
-    queryFn: api.fetchTopics,
-    enabled: kind === "topic",
-  });
-  const options =
-    kind === "entry"
-      ? [
-          ...new Map(
-            entries.data?.map((row) => [row.entryId, { value: row.entryId, label: row.title }]),
-          ).values(),
-        ]
-      : (topics.data?.map((row) => ({
-          value: row.id,
-          label: row[language]?.name ?? row.en?.name ?? row.de?.name ?? row.id,
-        })) ?? []);
+  const [kind, setKind] = useState<TargetKind>(() => targetKindOf(item));
+  const entries = useNavigationTargetEntries(kind === "entry");
+  const topics = useTopics(kind === "topic");
   const selected = item.entryId ?? item.topicId ?? "";
-  if (selected && !options.some((option) => option.value === selected))
-    options.push({ value: selected, label: text("navigationBroken") });
+  const options =
+    kind === "external"
+      ? []
+      : targetOptions(kind, entries.data, topics.data, language, selected, text("navigationBroken"));
   return (
     <>
       <Field label={text("navigationTarget")} htmlFor={`navigation-${itemKey}-kind`}>
@@ -59,7 +52,7 @@ export function NavigationTarget({
             { value: "topic", label: text("tags") },
           ]}
           onChange={(event) => {
-            setKind(event.target.value);
+            setKind(event.target.value as TargetKind);
             onChange({ href: null, entryId: null, topicId: null });
           }}
         />

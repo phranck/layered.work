@@ -1,6 +1,6 @@
 import type { EntryListItem } from "@layered/schemas";
 import { describe, expect, it } from "vitest";
-import { countEntries, filterEntries } from "./entry-list.js";
+import { countEntries, filterEntries } from "./entry-model.js";
 
 function row(overrides: Partial<EntryListItem>): EntryListItem {
   return {

@@ -1,15 +1,12 @@
 import type { MediaLibraryItem } from "@layered/schemas";
 import { Button, Card, Field, Input, Row } from "@layered/ui";
 import { MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { refreshMediaQueries } from "./media-uploads.js";
+import { useImportUnsplash, useUnsplashSearch } from "./media-query.js";
 import { CardDialog } from "./modal.js";
 import { PageButtons } from "./page-buttons.js";
-import { queryKeys } from "./query-keys.js";
 
 /** Props for the Unsplash search. */
 interface UnsplashSearchProps {
@@ -29,29 +26,14 @@ interface UnsplashSearchProps {
  * picker or the library screen that opened this receives it the same way.
  */
 export function UnsplashSearch({ onChoose, onCancel }: UnsplashSearchProps) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
   const { text } = useDashboardLanguage();
   const labelId = useId();
   const searchId = useId();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const results = useQuery({
-    queryKey: queryKeys.unsplash(query, page),
-    queryFn: () => api.searchUnsplash(query, page),
-    enabled: query !== "",
-    retry: false,
-  });
-  const take = useMutation({
-    mutationFn: async (photoId: string) => {
-      const imported = await api.importUnsplash(photoId);
-      const item = await api.fetchMediaDetail(imported.id);
-      await refreshMediaQueries(client);
-      return item;
-    },
-    onSuccess: (item) => onChoose(item),
-  });
+  const results = useUnsplashSearch(query, page);
+  const take = useImportUnsplash({ onSuccess: (item) => onChoose(item) });
   return (
     <CardDialog labelId={labelId} onClose={onCancel}>
       <Card.Header id={labelId} title={text("unsplash")} />

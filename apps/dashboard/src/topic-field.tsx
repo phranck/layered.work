@@ -1,15 +1,13 @@
-import { type ContentLanguage, MAX_TOPICS_PER_ENTRY, MaxLength, type TopicListItem } from "@layered/schemas";
+import { type ContentLanguage, MAX_TOPICS_PER_ENTRY, MaxLength } from "@layered/schemas";
 import { Input, Row, RowList } from "@layered/ui";
 import { PlusIcon, TagIcon, XIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
-import { useDashboardApi } from "./dashboard-context.js";
-import { LANGUAGE_TEXT, otherLanguage } from "./entry-list.js";
+import { LANGUAGE_TEXT, otherLanguage } from "./entry-model.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
-import { topicLabel } from "./topics.js";
+import { type Suggestion, topicLabel, topicSuggestions } from "./topics-model.js";
+import { useCreateTopic, useTopics } from "./topics-query.js";
 
 /**
  * An entry's topics in the editor panel: a chip per topic with a button that
@@ -19,45 +17,7 @@ import { topicLabel } from "./topics.js";
  * typed, and a line that creates a new one under that name where no topic has
  * it yet, so a topic is made without leaving the text. The change belongs to
  * the draft and is saved with the entry.
- */
-
-/** How many suggestions the list under the field shows at once. */
-const MAX_SUGGESTIONS = 8;
-
-/** One line of the list under the field: an existing topic, or the new one the typed name makes. */
-type Suggestion = { kind: "topic"; topic: TopicListItem } | { kind: "create"; name: string };
-
-/**
- * What the list under the field offers for a typed text.
  *
- * Topics already chosen are left out. A new topic is offered unless one has
- * exactly that name in the entry's language, ignoring case.
- *
- * @param topics - Every topic.
- * @param chosen - The ids the entry has.
- * @param typed - What is in the field.
- * @param language - The entry's language, which a new topic is named in.
- */
-export function topicSuggestions(
-  topics: readonly TopicListItem[],
-  chosen: readonly string[],
-  typed: string,
-  language: ContentLanguage,
-): Suggestion[] {
-  const needle = typed.trim().toLocaleLowerCase();
-  if (!needle) return [];
-  const matches = topics
-    .filter((topic) => !chosen.includes(topic.id))
-    .filter((topic) =>
-      [topic.en?.name, topic.de?.name].some((name) => name?.toLocaleLowerCase().includes(needle)),
-    )
-    .slice(0, MAX_SUGGESTIONS)
-    .map((topic): Suggestion => ({ kind: "topic", topic }));
-  const exists = topics.some((topic) => topic[language]?.name.toLocaleLowerCase() === needle);
-  return exists ? matches : [...matches, { kind: "create", name: typed.trim() }];
-}
-
-/**
  * @param language - The entry's language, which names the chips and a new topic.
  * @param value - The ids of the topics the draft has.
  * @param onChange - Replaces them.
@@ -74,12 +34,10 @@ export function TopicField({
   onChange: (topicIds: string[]) => void;
   inputId: string;
 }) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const { notifyError } = useNotify();
   const listId = useId();
-  const topics = useQuery({ queryKey: queryKeys.topics, queryFn: api.fetchTopics });
+  const topics = useTopics();
   const [typed, setTyped] = useState("");
   const [active, setActive] = useState(0);
 
@@ -96,16 +54,7 @@ export function TopicField({
     setTyped("");
     setActive(0);
   };
-  const create = useMutation({
-    mutationFn: (name: string) => api.createTopic({ language, name }),
-    onError: (error) => notifyError(error),
-    onSuccess: (topic) => {
-      queryClient.setQueryData<TopicListItem[]>(queryKeys.topics, (current) =>
-        current?.some((item) => item.id === topic.id) ? current : [...(current ?? []), topic],
-      );
-      add(topic.id);
-    },
-  });
+  const create = useCreateTopic(language, { onError: notifyError, onSuccess: (topic) => add(topic.id) });
   const choose = (suggestion: Suggestion) => {
     if (suggestion.kind === "topic") add(suggestion.topic.id);
     else create.mutate(suggestion.name);

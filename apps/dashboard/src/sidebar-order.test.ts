@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dropIndex, type GroupBox, moveItem, orderGroups, readOrder } from "./sidebar-order.js";
+import { moveItem } from "./list-order.js";
+import { dropIndex, type GroupBox, orderGroups, readOrder } from "./sidebar-order.js";
 
 const groups = [{ id: "content" }, { id: "landing" }, { id: "structure" }, { id: "system" }];
 const ids = (list: { id: string }[]) => list.map((group) => group.id);

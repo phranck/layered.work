@@ -1,127 +1,30 @@
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  type EntryKind,
-  type EntryListItem,
-  PUBLICATION_STATES,
-  type PublicationState,
-} from "@layered/schemas";
+import { type EntryKind, type EntryListItem, PUBLICATION_STATES } from "@layered/schemas";
 import { Button, Card, Segmented, Select } from "@layered/ui";
 import { ArrowCounterClockwiseIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
-import { refreshCounts } from "./dashboard-counts.js";
-import type { DashboardStringKey } from "./dashboard-i18n.js";
+import {
+  countEntries,
+  type EntryFilter,
+  filterEntries,
+  LANGUAGE_TEXT,
+  OPEN_FILTER,
+  otherLanguage,
+  STATE_TEXT,
+  STATE_TONE,
+  type StateTone,
+} from "./entry-model.js";
+import { useCreateEntry, useEmptyTrash, useEntryList, useRestoreEntry } from "./entry-query.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { Table, useTableSearch } from "./table.js";
 import { contentLanguageOptions } from "./translated.js";
-
-/**
- * What the reader narrowed the list to. `all` leaves that dimension open, and
- * `trash` shows what is in the trash, which every other choice leaves out.
- */
-export interface EntryFilter {
-  search: string;
-  state: PublicationState | "all" | "trash";
-  language: ContentLanguage | "all";
-}
-
-/** The filter a list opens with, which shows everything. */
-const OPEN_FILTER: EntryFilter = { search: "", state: "all", language: "all" };
-
-/**
- * The rows a filter leaves.
- *
- * The search matches anywhere in the title or in a topic's name and ignores
- * case, because a reader types the word they remember rather than how the title
- * begins, and often remembers what a post was about rather than what it was
- * called. A row in the trash is shown only where the reader asked for the trash.
- *
- * @param rows - The whole list.
- * @param filter - What the reader narrowed it to.
- */
-export function filterEntries(rows: readonly EntryListItem[], filter: EntryFilter): EntryListItem[] {
-  const search = filter.search.trim().toLocaleLowerCase();
-  return rows.filter(
-    (row) =>
-      row.trashed === (filter.state === "trash") &&
-      (filter.state === "all" || filter.state === "trash" || row.state === filter.state) &&
-      (filter.language === "all" || row.language === filter.language) &&
-      (search === "" ||
-        row.title.toLocaleLowerCase().includes(search) ||
-        row.topics.some((topic) => topic.toLocaleLowerCase().includes(search))),
-  );
-}
-
-/** The figures above a list, counted from the rows it shows. */
-export interface EntryCounts {
-  published: number;
-  drafts: number;
-  hidden: number;
-  translated: number;
-  total: number;
-}
-
-/**
- * The figures above a list.
- *
- * Counted from the rows the table shows, never from a separate query, because a
- * number that describes a different set than the table under it is worse than
- * no number.
- *
- * @param rows - The rows the table shows.
- */
-export function countEntries(rows: readonly EntryListItem[]): EntryCounts {
-  const counted = (keep: (row: EntryListItem) => boolean) => rows.filter(keep).length;
-  return {
-    published: counted((row) => row.state === "public"),
-    drafts: counted((row) => row.state === "draft"),
-    hidden: counted((row) => row.state === "hidden"),
-    translated: counted((row) => row.translated),
-    total: rows.length,
-  };
-}
-
-/** The word for each publication state, in the catalogue. */
-const STATE_TEXT: Record<PublicationState, DashboardStringKey> = {
-  public: "statePublic",
-  draft: "stateDraft",
-  hidden: "stateHidden",
-};
-
-/** A tone the status colours name, as `data-tone` takes it. */
-export type StateTone = "success" | "warning" | "info";
-
-/**
- * The tone each publication state is shown in: its mark in the editor and its
- * figure above a list, so the same state has the same colour everywhere.
- */
-export const STATE_TONE: Record<PublicationState, StateTone> = {
-  public: "success",
-  draft: "warning",
-  hidden: "info",
-};
-
-/** The name of each language, in the interface language. */
-export const LANGUAGE_TEXT: Record<ContentLanguage, DashboardStringKey> = {
-  en: "languageEn",
-  de: "languageDe",
-};
-
-/** The other of the site's two languages. */
-export function otherLanguage(language: ContentLanguage): ContentLanguage {
-  return CONTENT_LANGUAGES.find((other) => other !== language) ?? language;
-}
 
 /**
  * One of the figures above a list: a label, the number, and what it means.
@@ -163,13 +66,11 @@ function Stat({
  * @param kind - Which entries it lists.
  */
 export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
-  const api = useDashboardApi();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { notify, notifyError } = useNotify();
   const { language, text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
-  const list = useQuery({ queryKey: queryKeys.entryList(kind), queryFn: () => api.fetchEntries(kind) });
+  const list = useEntryList(kind);
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
   const title = text(area.labelKey);
@@ -178,35 +79,17 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
 
   const open = (row: EntryListItem) => navigate(`/${area.path}/${row.id}`);
 
-  // Restoring and emptying both change what every list and the sidebar's
-  // counts show, so both refresh all of them.
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryList });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.everyEntryDetail });
-    void refreshCounts(queryClient);
-  };
-  const create = useMutation({
-    mutationFn: () => api.createEntry({ kind, title: text("editorTitleMissing") }),
-    onError: (error) => notifyError(error),
-    onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.entryDetail(created.id), created);
-      refresh();
-      navigate(`/${area.path}/${created.id}`, { state: { focusTitle: true } });
-    },
+  const create = useCreateEntry(kind, {
+    onError: notifyError,
+    onSuccess: (created) => navigate(`/${area.path}/${created.id}`, { state: { focusTitle: true } }),
   });
-  const restore = useMutation({
-    mutationFn: (id: string) => api.setTrashed(id, false),
-    onError: (error) => notifyError(error),
-    onSuccess: () => {
-      refresh();
-      notify({ tone: "success", message: text("restored") });
-    },
+  const restore = useRestoreEntry({
+    onError: notifyError,
+    onSuccess: () => notify({ tone: "success", message: text("restored") }),
   });
   const [emptying, setEmptying] = useState(false);
-  const empty = useMutation({
-    mutationFn: () => api.emptyTrash(kind),
+  const empty = useEmptyTrash(kind, {
     onSuccess: ({ deleted }) => {
-      refresh();
       setEmptying(false);
       notify({ tone: "success", message: text("trashEmptied", deleted) });
     },
@@ -220,7 +103,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           tone="primary"
           icon={<PlusIcon />}
           disabled={create.isPending}
-          onClick={() => create.mutate()}
+          onClick={() => create.mutate(text("editorTitleMissing"))}
         >
           {create.isPending ? text("newEntryPending") : text("newEntry")}
         </Button>

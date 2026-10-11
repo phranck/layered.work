@@ -11,20 +11,25 @@ import {
 } from "@layered/schemas";
 import { Button, Card, Field, Input, Segmented } from "@layered/ui";
 import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@layered/ui/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { AccessTokensCard } from "./access-tokens.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { useDashboardApi } from "./dashboard-context.js";
+import type { DraftSchema } from "./checked-draft.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaField } from "./media-field.js";
 import { useNotify } from "./notifications.js";
-import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
+import {
+  checkedSettings,
+  testMailBlocker,
+  useSaveSettings,
+  useSendTestMail,
+  useSettings,
+} from "./settings-query.js";
 import { sameValue, useStoredRevision } from "./stored-draft.js";
 import { contentLanguageOptions, Translated } from "./translated.js";
 
@@ -36,13 +41,6 @@ import { contentLanguageOptions, Translated } from "./translated.js";
  * change to the mail sender cannot be lost to an unrelated mistake in the site
  * title. Every author can read them; only the owner can change them.
  */
-
-/** Anything that checks a draft and says which fields failed. */
-interface DraftSchema<Value> {
-  safeParse(
-    value: unknown,
-  ): { success: true; data: Value } | { success: false; error: { issues: { path: PropertyKey[] }[] } };
-}
 
 /** Props for one group's card. */
 interface SettingsCardProps<Group extends SettingsGroup> {
@@ -102,19 +100,16 @@ function SettingsCardDraft<Group extends SettingsGroup>({
   collapse,
   headerActions,
 }: SettingsCardProps<Group>) {
-  const api = useDashboardApi();
-  const queryClient = useQueryClient();
   const { text } = useDashboardLanguage();
   const account = useAccount();
   const editable = account.data?.role === "owner";
   const [draft, setDraft] = useState(saved);
   const [problems, setProblems] = useState<DashboardStringKey[]>([]);
   const { notify, notifyError } = useNotify();
-  const save = useMutation({
-    mutationFn: (value: SettingsValues[Group]) => api.saveSettings(group, value),
-    onError: (error) => notifyError(error),
-    onSuccess: (view) => {
-      queryClient.setQueryData(queryKeys.settings, view);
+  const save = useSaveSettings(group, {
+    onError: notifyError,
+    onSuccess: (_view, value) => {
+      setDraft(value);
       notify({ tone: "success", message: text("saved") });
     },
   });
@@ -135,15 +130,9 @@ function SettingsCardDraft<Group extends SettingsGroup>({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const parsed = schema.safeParse(draft);
-    if (!parsed.success) {
-      const keys = parsed.error.issues.map(
-        (issue) => reasons[String(issue.path[0])] ?? "errorInvalidRequest",
-      );
-      setProblems([...new Set(keys)]);
-      return;
-    }
-    save.mutate(parsed.data, { onSuccess: () => setDraft(parsed.data) });
+    const checked = checkedSettings(schema, draft, reasons);
+    if ("problems" in checked) setProblems(checked.problems);
+    else save.mutate(checked.value);
   };
 
   const content = (
@@ -205,9 +194,8 @@ function SettingsCardDraft<Group extends SettingsGroup>({
  * @param render - Draws the screen from the loaded settings.
  */
 function WithSettings({ area, render }: { area: DashboardArea; render: (view: SettingsView) => ReactNode }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: api.fetchSettings });
+  const settings = useSettings();
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
@@ -300,9 +288,8 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
 
 /** Who mail comes from, whether a key is there to send it, and a test message. */
 export function MailSettingsScreen({ area }: { area: DashboardArea }) {
-  const api = useDashboardApi();
   const { text } = useDashboardLanguage();
-  const test = useMutation({ mutationFn: api.sendTestMail });
+  const test = useSendTestMail();
   return (
     <WithSettings
       area={area}
@@ -315,18 +302,16 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
             saved={saved}
             schema={mailSettings}
             reasons={{ senderAddress: "invalidSenderAddress", senderName: "invalidSenderName" }}
-            note={(dirty) =>
-              !apiKeyConfigured
-                ? text("testMailNeedsKey")
-                : dirty
-                  ? text("testMailNeedsSave")
-                  : !saved.senderAddress
-                    ? text("testMailNeedsSender")
-                    : undefined
-            }
+            note={(dirty) => {
+              const blocker = testMailBlocker(apiKeyConfigured, dirty, saved.senderAddress);
+              return blocker && text(blocker);
+            }}
             actions={(dirty) => (
               <Button
-                disabled={!apiKeyConfigured || dirty || !saved.senderAddress || test.isPending}
+                disabled={
+                  testMailBlocker(apiKeyConfigured, dirty, saved.senderAddress) !== undefined ||
+                  test.isPending
+                }
                 icon={<PaperPlaneTiltIcon weight="duotone" />}
                 onClick={() => test.mutate()}
               >

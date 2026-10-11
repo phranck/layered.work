@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import type { SetStateAction } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createDashboardApi, type DashboardApi } from "./api.js";
-import { type UploadProgress, uploadInOrder } from "./media-uploads.js";
+import { type UploadProgress, uploadInOrder } from "./media-query.js";
 
 const named = (name: string, type: string) => new File(["bytes"], name, { type });
 
