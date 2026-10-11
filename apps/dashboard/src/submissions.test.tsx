@@ -24,16 +24,20 @@ const form = {
   notificationEmail: null,
   storeSubmissions: true,
   successMessage: { en: "Thanks", de: "Danke" },
-  fields: [
+  rows: [
     {
-      key: "message",
-      type: "longText",
-      label: { en: "Message", de: "Nachricht" },
-      hint: { en: "", de: "" },
-      required: true,
-      minLength: 1,
-      maxLength: 2000,
-      pattern: null,
+      fields: [
+        {
+          key: "message",
+          type: "longText",
+          label: { en: "Message", de: "Nachricht" },
+          hint: { en: "", de: "" },
+          required: true,
+          minLength: 1,
+          maxLength: 2000,
+          pattern: null,
+        },
+      ],
     },
   ],
   createdAt: "2026-10-03T12:00:00.000Z",

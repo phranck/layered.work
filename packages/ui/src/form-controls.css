@@ -1,6 +1,30 @@
 .form-controls {
+  container: form / inline-size;
   display: grid;
   gap: var(--space-4);
+}
+
+/* A row lays its fields out on the form's columns, whose number the component
+   sets as `--columns`, and each field spans as many as its `--span` says. */
+.form-controls__row {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.form-controls__field {
+  grid-column: span var(--span);
+  min-width: 0;
+}
+
+/* Where the form itself is as narrow as a phone, every field takes the whole
+   row: a third of a phone is too narrow to write in. The form's own width
+   decides rather than the window's, because a form also stands in a column. */
+@container form (width < 30rem) {
+  .form-controls__field {
+    grid-column: 1 / -1;
+  }
 }
 .form-controls__field fieldset {
   display: grid;

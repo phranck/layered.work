@@ -26,7 +26,7 @@ const declaration = {
   notificationEmail: "notify@example.test",
   successMessage: { en: "Received", de: "Erhalten" },
   storeSubmissions: true,
-  fields: [
+  rows: [
     {
       key: "name",
       type: "shortText" as const,
@@ -46,7 +46,7 @@ const declaration = {
       notice: { en: "I agree", de: "Ich stimme zu" },
       revision: "v1",
     },
-  ],
+  ].map((field) => ({ fields: [field] })),
 };
 
 describe("signed form challenge", () => {
@@ -84,17 +84,21 @@ runs("public form submission", () => {
           ...declaration,
           slug: confirmSlug,
           confirmationEmailField: "reply",
-          fields: [
-            ...declaration.fields,
+          rows: [
+            ...declaration.rows,
             {
-              key: "reply",
-              type: "email" as const,
-              label: { en: "Email", de: "E-Mail" },
-              hint: { en: "", de: "" },
-              required: true,
-              minLength: 3,
-              maxLength: 254,
-              pattern: null,
+              fields: [
+                {
+                  key: "reply",
+                  type: "email" as const,
+                  label: { en: "Email", de: "E-Mail" },
+                  hint: { en: "", de: "" },
+                  required: true,
+                  minLength: 3,
+                  maxLength: 254,
+                  pattern: null,
+                },
+              ],
             },
           ],
         },
@@ -259,16 +263,20 @@ it("keeps submitted choices constrained to the declaration", () => {
     slug: "choices",
     name: "Choices",
     successMessage: { en: "Thanks", de: "Danke" },
-    fields: [
+    rows: [
       {
-        key: "hardware",
-        type: "multipleChoice" as const,
-        label: { en: "Hardware", de: "Hardware" },
-        hint: { en: "", de: "" },
-        required: true,
-        options: [
-          { value: "pi", label: { en: "Pi", de: "Pi" } },
-          { value: "nuc", label: { en: "NUC", de: "NUC" } },
+        fields: [
+          {
+            key: "hardware",
+            type: "multipleChoice" as const,
+            label: { en: "Hardware", de: "Hardware" },
+            hint: { en: "", de: "" },
+            required: true,
+            options: [
+              { value: "pi", label: { en: "Pi", de: "Pi" } },
+              { value: "nuc", label: { en: "NUC", de: "NUC" } },
+            ],
+          },
         ],
       },
     ],

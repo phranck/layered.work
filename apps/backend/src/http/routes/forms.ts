@@ -2,6 +2,7 @@ import {
   createFormBody,
   deletionResult,
   formDetail,
+  formFields,
   formList,
   formSubmission,
   formSubmissionList,
@@ -62,7 +63,7 @@ formsRoutes.get(
     c.header("Cache-Control", "no-store");
     return c.body(
       submissionsCsv(
-        form.fields.map((field) => field.key),
+        formFields(form).map((field) => field.key),
         rows,
       ),
     );

@@ -29,6 +29,7 @@ import {
   READING_WIDTHS,
   unknownHomeBlocks,
   unsplashCreditLine,
+  withFormRows,
   withoutControlCharacters,
 } from "@layered/schemas";
 import { z } from "zod";
@@ -124,7 +125,16 @@ const snapshotSchema = z.object({
   mainNavigation: publicMainNavigation.optional(),
   siteFrame: publicSiteFrame.optional(),
   entries: z.array(entrySchema),
-  forms: z.array(publicForm).default([]),
+  // A snapshot written before forms had rows, such as the one this repository
+  // holds, reads with one field in each row.
+  forms: z
+    .array(
+      z.preprocess(
+        (form) => (form !== null && typeof form === "object" ? withFormRows(form) : form),
+        publicForm,
+      ),
+    )
+    .default([]),
   topics: z.array(topicSchema),
   media: z.array(mediaSchema),
   redirects: z.array(z.object({ source: path, target: path })),

@@ -6,8 +6,9 @@ import {
   FORM_OPTION_COUNT,
   type FormField,
   type FormFieldType,
+  formFields,
 } from "@layered/schemas";
-import { Button, Card, Editor, Field, FormControls, Input, Select, Switch } from "@layered/ui";
+import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -16,7 +17,16 @@ import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
-import { addField, FIELD_TYPE_TEXT, newField, newForm, newOption, reorderFields } from "./forms-model.js";
+import {
+  addField,
+  FIELD_TYPE_TEXT,
+  newField,
+  newForm,
+  newOption,
+  removeFieldAt,
+  reorderFields,
+  replaceFieldAt,
+} from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
@@ -66,7 +76,7 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
                     <Table.Title title={form.name} />
                   </Table.Cell>
                   <Table.Cell>{form.slug}</Table.Cell>
-                  <Table.Cell kind="count">{form.fields.length}</Table.Cell>
+                  <Table.Cell kind="count">{formFields(form).length}</Table.Cell>
                   <Table.Actions>
                     <Button.Icon
                       label={text("editForm")}
@@ -274,7 +284,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
         confirmationEmailField,
         successMessage,
         storeSubmissions,
-        fields,
+        rows,
       } = loaded.data;
       setDraft({
         slug,
@@ -283,7 +293,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
         confirmationEmailField: confirmationEmailField ?? null,
         successMessage,
         storeSubmissions,
-        fields,
+        rows,
       });
     }
   }, [loaded.data]);
@@ -317,12 +327,12 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
   };
   const updateField = (index: number, field: FormField) => {
     if (!draft) return;
-    change({
-      ...draft,
-      fields: draft.fields.map((current, position) => (position === index ? field : current)),
-    });
+    change(replaceFieldAt(draft, index, field));
   };
-  const selectedField = selected === null ? null : draft?.fields[selected];
+  // The fields in reading order, row by row, which the list shows and a
+  // selection counts in.
+  const fields = draft ? formFields(draft) : [];
+  const selectedField = selected === null ? null : fields[selected];
   const typeOptions = FORM_FIELD_TYPES.map((type) => ({ value: type, label: text(FIELD_TYPE_TEXT[type]) }));
 
   return (
@@ -347,18 +357,20 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
               <Card>
                 <Card.Header
                   title={draft.name || text("formNew")}
-                  meta={draft.fields.length}
+                  meta={fields.length}
                   actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
                 />
                 <Card.Body>
                   <Reorder.List
                     className="forms-fields"
                     onMove={(from, to) => {
-                      change(reorderFields(draft, from, to));
-                      setSelected(to);
+                      const next = reorderFields(draft, from, to);
+                      const moved = fields[from]?.key;
+                      change(next);
+                      setSelected(formFields(next).findIndex((field) => field.key === moved));
                     }}
                   >
-                    {draft.fields.map((field, index) => (
+                    {fields.map((field, index) => (
                       <Reorder.Item key={field.key} index={index}>
                         <div className="forms-fields__row" data-selected={selected === index || undefined}>
                           <Reorder.Handle
@@ -391,11 +403,10 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       />
                       <Button
                         icon={<PlusIcon />}
-                        disabled={draft.fields.length >= FORM_FIELD_COUNT.max}
+                        disabled={fields.length >= FORM_FIELD_COUNT.max}
                         onClick={() => {
-                          const next = addField(draft, addType);
-                          change(next);
-                          setSelected(next.fields.length - 1);
+                          change(addField(draft, addType));
+                          setSelected(fields.length);
                         }}
                       >
                         {text("formFieldAdd")}
@@ -407,7 +418,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
               <Card>
                 <Card.Header title={text("preview")} />
                 <Card.Body>
-                  <FormPreview fields={draft.fields} />
+                  <FormPreview form={draft} />
                 </Card.Body>
               </Card>
             </Editor.Main>
@@ -466,9 +477,9 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   </Field.Inline>
                   <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
                   <Button
-                    disabled={draft.fields.length <= FORM_FIELD_COUNT.min}
+                    disabled={fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
-                      change({ ...draft, fields: draft.fields.filter((_, index) => index !== selected) });
+                      change(removeFieldAt(draft, selected));
                       setSelected(null);
                     }}
                   >
@@ -507,7 +518,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       value={draft.confirmationEmailField ?? ""}
                       options={[
                         { value: "", label: text("formNoConfirmation") },
-                        ...draft.fields
+                        ...fields
                           .filter((field) => field.type === "email")
                           .map((field) => ({ value: field.key, label: field.label[language] || field.key })),
                       ]}
@@ -542,11 +553,17 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
 }
 
 /**
- * The form as a reader would see it, in the language the panel's switch has
- * chosen, so the texts being edited show where they will appear.
+ * The form as a visitor sees it: the site's own form component in preview mode,
+ * inside the site's content scope and at the site's density, in the language
+ * the panel's switch has chosen, so the texts being edited show where they will
+ * appear and at the size they will have.
  *
- * @param fields - The form's fields as drafted.
+ * @param form - The form as drafted.
  */
-function FormPreview({ fields }: { fields: CreateFormBody["fields"] }) {
-  return <FormControls fields={fields} language={useTextLanguage()} />;
+function FormPreview({ form }: { form: CreateFormBody }) {
+  return (
+    <div className="site-scope content-prose forms-preview">
+      <FormEmbed form={form} language={useTextLanguage()} preview />
+    </div>
+  );
 }

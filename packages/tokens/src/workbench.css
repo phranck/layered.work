@@ -135,3 +135,13 @@
 .workbench .card-overlay {
   --row-icon-size: 19px;
 }
+
+/* A piece of the site shown inside the workbench, such as a form's preview,
+   takes the site's density back through scale.css and semantic.css. The site
+   gives its controls no common height and sizes each by its content, so the
+   workbench's heights are left unset there, and each control falls back to the
+   size it has on the site. */
+.workbench .site-scope {
+  --control-height: initial;
+  --input-height: initial;
+}

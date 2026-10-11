@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type RenderNode, referencedFormNames } from "@layered/content";
-import type { FormSubmissionValues } from "@layered/schemas";
+import { type FormSubmissionValues, formFields } from "@layered/schemas";
 import type { FormEmbedProps, FormOutcome } from "@layered/ui";
 import type { ContentRepository, Entry } from "./repository.js";
 
@@ -9,7 +9,7 @@ const TIMEOUT_MS = 5_000;
 /** Values from native form controls, including repeated checkbox names. */
 export function submittedValues(form: FormEmbedProps["form"], data: FormData): FormSubmissionValues {
   return Object.fromEntries(
-    form.fields.map((field) => {
+    formFields(form).map((field) => {
       const values = data.getAll(field.key).filter((value): value is string => typeof value === "string");
       return [field.key, field.type === "multipleChoice" ? values : (values[0] ?? "")];
     }),

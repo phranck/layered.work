@@ -65,15 +65,67 @@ runs("form persistence", () => {
       notificationEmail: null,
       successMessage: { en: "Thanks", de: "Danke" },
       storeSubmissions: true,
-      fields: [first, second],
+      rows: [
+        {
+          fields: [
+            { ...first, span: 6 },
+            { ...second, span: 6 },
+          ],
+        },
+      ],
     };
+    const keys = (form: { rows: { fields: { key: string; span?: number }[] }[] }) =>
+      form.rows.map((row) => row.fields.map((field) => `${field.key}:${field.span ?? 12}`));
     const created = await createForm(db, value, actorId);
     createdIds.push(created.id);
-    expect((await readForm(db, created.id)).fields.map((field) => field.key)).toEqual(["name", "email"]);
-    const saved = await saveForm(db, created.id, { ...value, fields: [second, first] }, actorId);
-    expect(saved.fields.map((field) => field.key)).toEqual(["email", "name"]);
-    expect((await readFormBySlug(db, slug)).fields.map((field) => field.key)).toEqual(["email", "name"]);
+    expect(keys(await readForm(db, created.id))).toEqual([["name:6", "email:6"]]);
+    const saved = await saveForm(
+      db,
+      created.id,
+      { ...value, rows: [{ fields: [second] }, { fields: [first] }] },
+      actorId,
+    );
+    expect(keys(saved)).toEqual([["email:12"], ["name:12"]]);
+    expect(keys(await readFormBySlug(db, slug))).toEqual([["email:12"], ["name:12"]]);
     expect((await listForms(db)).some((form) => form.id === created.id)).toBe(true);
+  });
+
+  it("reads a declaration stored before forms had rows with one field in each", async () => {
+    const db = await testDatabase();
+    const fields = ["first", "second"].map((key) => ({
+      key,
+      label: { en: key, de: key },
+      hint: { en: "", de: "" },
+      required: false,
+      type: "shortText" as const,
+      minLength: 0,
+      maxLength: 80,
+      pattern: null,
+    }));
+    const legacySlug = `legacy-${suffix}`;
+    const [row] = await db
+      .insert(forms)
+      .values({
+        slug: legacySlug,
+        name: "Legacy form",
+        declaration: {
+          slug: legacySlug,
+          name: "Legacy form",
+          notificationEmail: null,
+          successMessage: { en: "Thanks", de: "Danke" },
+          storeSubmissions: true,
+          fields,
+        } as never,
+      })
+      .returning({ id: forms.id });
+    if (!row) throw new Error("Legacy form missing");
+    createdIds.push(row.id);
+    const read = await readForm(db, row.id);
+    expect(read.rows.map((stored) => stored.fields.map((field) => field.key))).toEqual([
+      ["first"],
+      ["second"],
+    ]);
+    expect(read).not.toHaveProperty("fields");
   });
 
   it("rejects a duplicate slug without replacing the existing declaration", async () => {
@@ -87,16 +139,20 @@ runs("form persistence", () => {
           notificationEmail: null,
           successMessage: { en: "Thanks", de: "Danke" },
           storeSubmissions: true,
-          fields: [
+          rows: [
             {
-              key: "name",
-              label: { en: "Name", de: "Name" },
-              hint: { en: "", de: "" },
-              required: true,
-              type: "shortText",
-              minLength: 1,
-              maxLength: 80,
-              pattern: null,
+              fields: [
+                {
+                  key: "name",
+                  label: { en: "Name", de: "Name" },
+                  hint: { en: "", de: "" },
+                  required: true,
+                  type: "shortText",
+                  minLength: 1,
+                  maxLength: 80,
+                  pattern: null,
+                },
+              ],
             },
           ],
         },

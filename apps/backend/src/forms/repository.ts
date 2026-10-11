@@ -1,4 +1,4 @@
-import { type CreateFormBody, ErrorCode, type FormDetail } from "@layered/schemas";
+import { type CreateFormBody, ErrorCode, type FormDetail, withFormRows } from "@layered/schemas";
 import { asc, eq } from "drizzle-orm";
 import type { Database } from "../db/connect.js";
 import { auditLog, forms } from "../db/schema/index.js";
@@ -8,7 +8,8 @@ type FormRow = typeof forms.$inferSelect;
 
 function detail(row: FormRow): FormDetail {
   return {
-    ...row.declaration,
+    // A declaration stored before forms had rows reads with one field in each.
+    ...withFormRows(row.declaration),
     id: row.id,
     createdAt: row.createdAt.toISOString(),
     modifiedAt: row.modifiedAt.toISOString(),

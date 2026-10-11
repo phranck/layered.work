@@ -32,6 +32,13 @@
   display: flex;
   gap: var(--space-2);
 }
+
+/* The preview at the width of the site's prose, which is where a form stands in
+   an entry, so its lines wrap where a visitor's do. */
+.forms-preview {
+  max-width: var(--reading-measure);
+  margin-inline: auto;
+}
 .forms-options,
 .forms-option {
   display: grid;

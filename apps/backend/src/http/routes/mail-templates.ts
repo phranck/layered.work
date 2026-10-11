@@ -41,28 +41,34 @@ const kindParam = z.object({ kind: mailTemplateKind });
  * labels and the consent read in the preview's language exactly as they would
  * in a real mail.
  */
-const SAMPLE_FORM: Pick<FormDetail, "name" | "fields"> = {
+const SAMPLE_FORM: Pick<FormDetail, "name" | "rows"> = {
   name: "Contact",
-  fields: [
+  rows: [
     {
-      key: "name",
-      type: "shortText",
-      label: { en: "Name", de: "Name" },
-      hint: { en: "", de: "" },
-      required: true,
-      minLength: 1,
-      maxLength: 120,
-      pattern: null,
-    },
-    {
-      key: "email",
-      type: "email",
-      label: { en: "Email", de: "E-Mail" },
-      hint: { en: "", de: "" },
-      required: true,
-      minLength: 3,
-      maxLength: 254,
-      pattern: null,
+      fields: [
+        {
+          key: "name",
+          type: "shortText",
+          label: { en: "Name", de: "Name" },
+          hint: { en: "", de: "" },
+          required: true,
+          minLength: 1,
+          maxLength: 120,
+          pattern: null,
+          span: 6,
+        },
+        {
+          key: "email",
+          type: "email",
+          label: { en: "Email", de: "E-Mail" },
+          hint: { en: "", de: "" },
+          required: true,
+          minLength: 3,
+          maxLength: 254,
+          pattern: null,
+          span: 6,
+        },
+      ],
     },
   ],
 };

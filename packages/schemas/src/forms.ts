@@ -25,11 +25,19 @@ export function safeFormPattern(source: string): boolean {
   }
 }
 
+/**
+ * How many columns a row of a form has. A field spans some of them, side by
+ * side with the other fields of its row, and all of them where it says nothing.
+ */
+export const FORM_COLUMNS = 12;
+
 const fieldBase = {
   key: text(MaxLength.Handle, { pattern: SLUG_PATTERN }),
   label: formText,
   hint: formHint,
   required: z.boolean(),
+  /** How many of its row's columns the field takes. Absent means all of them. */
+  span: z.number().int().min(1).max(FORM_COLUMNS).optional(),
 };
 
 const textRules = {
@@ -120,15 +128,63 @@ export const formSlug = text(MaxLength.Handle, { pattern: SLUG_PATTERN });
 /** A form's slug as a path parameter of the public routes. */
 export const formSlugParam = z.object({ slug: formSlug });
 
-/** What the dashboard saves, including field order and form-wide settings. */
+/**
+ * How many of its row's columns a field takes.
+ *
+ * @param field - The field, whose `span` may be absent.
+ */
+export function fieldSpan(field: Pick<FormField, "span">): number {
+  return field.span ?? FORM_COLUMNS;
+}
+
+/** One row of a form: its fields side by side, taking no more than the row's columns together. */
+export const formRow = body({
+  fields: z.array(formField).min(1).max(FORM_COLUMNS),
+}).refine((row) => row.fields.reduce((total, field) => total + fieldSpan(field), 0) <= FORM_COLUMNS, {
+  path: ["fields"],
+  message: `The fields of a row take more than its ${FORM_COLUMNS} columns.`,
+});
+export type FormRow = z.infer<typeof formRow>;
+
+/**
+ * Every field of a form, row by row and left to right, which is the order a
+ * visitor reads them, fills them in and finds them in a submission.
+ *
+ * @param form - Anything holding a form's rows.
+ */
+export function formFields(form: { rows: readonly FormRow[] }): FormField[] {
+  return form.rows.flatMap((row) => row.fields);
+}
+
+/**
+ * A declaration as it was stored before forms had rows, read with one field in
+ * each row, which is how such a form always looked. A declaration with rows is
+ * returned as it is.
+ *
+ * Applied where a stored declaration is read, by the API and by the site, so a
+ * form saved before rows existed opens and renders unchanged until it is saved
+ * again with rows.
+ *
+ * @param declaration - The stored declaration.
+ */
+export function withFormRows<Declaration extends object>(
+  declaration: Declaration,
+): Omit<Declaration, "fields"> & { rows: FormRow[] } {
+  if ("rows" in declaration) return declaration as Omit<Declaration, "fields"> & { rows: FormRow[] };
+  const { fields, ...rest } = declaration as Declaration & { fields?: FormField[] };
+  return { ...rest, rows: (fields ?? []).map((field) => ({ fields: [field] })) };
+}
+
+/** What the dashboard saves, including the rows of fields and form-wide settings. */
 const publicDeclarationFields = {
   slug: formSlug,
   name: text(MaxLength.Line),
   successMessage: formText,
-  fields: z.array(formField).min(FORM_FIELD_COUNT.min).max(FORM_FIELD_COUNT.max),
+  rows: z.array(formRow).min(FORM_FIELD_COUNT.min).max(FORM_FIELD_COUNT.max),
 };
-const uniqueFieldKeys = (form: { fields: FormField[] }) =>
-  new Set(form.fields.map((field) => field.key)).size === form.fields.length;
+const fieldCountInRange = (form: { rows: FormRow[] }) => formFields(form).length <= FORM_FIELD_COUNT.max;
+const uniqueFieldKeys = (form: { rows: FormRow[] }) =>
+  new Set(formFields(form).map((field) => field.key)).size === formFields(form).length;
 export const createFormBody = body({
   ...publicDeclarationFields,
   notificationEmail: emailAddress.nullable(),
@@ -136,14 +192,18 @@ export const createFormBody = body({
   confirmationEmailField: z.string().max(MaxLength.Handle).nullable().optional(),
   storeSubmissions: z.boolean(),
 })
+  .refine(fieldCountInRange, {
+    path: ["rows"],
+    message: `A form holds at most ${FORM_FIELD_COUNT.max} fields.`,
+  })
   .refine(uniqueFieldKeys, {
-    path: ["fields"],
+    path: ["rows"],
     message: "Field names must be unique.",
   })
   .refine(
     (form) =>
       !form.confirmationEmailField ||
-      form.fields.some((field) => field.key === form.confirmationEmailField && field.type === "email"),
+      formFields(form).some((field) => field.key === form.confirmationEmailField && field.type === "email"),
     {
       path: ["confirmationEmailField"],
       message: "Choose an email field for confirmations.",
@@ -164,10 +224,15 @@ export const formDetail = createFormBody.safeExtend({
 export type FormDetail = z.infer<typeof formDetail>;
 
 /** The declaration a public page may read, without editor-only settings. */
-export const publicForm = body(publicDeclarationFields).refine(uniqueFieldKeys, {
-  path: ["fields"],
-  message: "Field names must be unique.",
-});
+export const publicForm = body(publicDeclarationFields)
+  .refine(fieldCountInRange, {
+    path: ["rows"],
+    message: `A form holds at most ${FORM_FIELD_COUNT.max} fields.`,
+  })
+  .refine(uniqueFieldKeys, {
+    path: ["rows"],
+    message: "Field names must be unique.",
+  });
 export type PublicForm = z.infer<typeof publicForm>;
 
 /**
@@ -220,7 +285,8 @@ export function validateFormValues(
     required: language === "de" ? "Dieses Feld ist erforderlich." : "This field is required.",
     invalid: language === "de" ? "Bitte gib einen gültigen Wert ein." : "Enter a valid value.",
   };
-  for (const field of form.fields) {
+  const fields = formFields(form);
+  for (const field of fields) {
     const raw = submitted[field.key];
     const value =
       field.type === "multipleChoice"
@@ -293,7 +359,7 @@ export function validateFormValues(
         break;
     }
   }
-  if (Object.keys(submitted).some((key) => !form.fields.some((field) => field.key === key))) {
+  if (Object.keys(submitted).some((key) => !fields.some((field) => field.key === key))) {
     errors._form = message.invalid;
   }
   return { values, errors, consents };

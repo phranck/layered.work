@@ -114,23 +114,6 @@
   --tracking-wide: 0.04em;
   --tracking-caps: 0.1em;
 
-  /* --- Space -------------------------------------------------------------- */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --space-9: 96px;
-  --space-10: 136px;
-
-  --gap-tight: var(--space-3);
-  --gap: var(--space-5);
-  --gap-loose: var(--space-7);
-  --section-gap: clamp(var(--space-8), 7vw, var(--space-10));
-
   /* --- Page measure -------------------------------------------------------
      Header, content and footer share this one width, so the page reads as one
      column rather than as three stacked on top of each other. */
@@ -146,17 +129,6 @@
      site never zooms, so here both are the plain values. */
   --interface-zoom: 1;
   --viewport-height: calc(100dvh / var(--interface-zoom));
-
-  /* --- Card geometry ------------------------------------------------------
-     Two numbers are chosen. Everything derived from them is in semantic.css,
-     beside the values that reference it, because a custom property containing
-     var() resolves on the element where it is declared. */
-  --card-radius: 24px;
-  --card-padding: 14px;
-
-  /* Media sits closer to the edge than the content does, so it derives from its
-     own inset rather than from the padding it does not use. */
-  --card-media-inset: var(--space-1);
 
   /* A control is not nested inside a card, so it carries a radius of its own
      rather than being coupled to a padding it has nothing to do with. */
@@ -183,14 +155,54 @@
 
   --duration-instant: 90ms;
   --duration-fast: 160ms;
+  --duration-reveal: 720ms;
+  --travel-far: 28px;
+}
+
+/*
+ * Density: the values the workbench tightens, because a workbench is worked in
+ * for hours and shows many rows at once. They are declared on `.site-scope` as
+ * well as on the root, so a piece of the site shown inside the workbench, such
+ * as a form's preview, takes the site's own density back and looks as it does
+ * on the site. semantic.css does the same for what derives from them.
+ */
+:root,
+.site-scope {
+  /* --- Space -------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 136px;
+
+  --gap-tight: var(--space-3);
+  --gap: var(--space-5);
+  --gap-loose: var(--space-7);
+  --section-gap: clamp(var(--space-8), 7vw, var(--space-10));
+
+  /* --- Card geometry ------------------------------------------------------
+     Two numbers are chosen. Everything derived from them is in semantic.css,
+     beside the values that reference it, because a custom property containing
+     var() resolves on the element where it is declared. */
+  --card-radius: 24px;
+  --card-padding: 14px;
+
+  /* Media sits closer to the edge than the content does, so it derives from its
+     own inset rather than from the padding it does not use. */
+  --card-media-inset: var(--space-1);
+
+  /* --- Motion ------------------------------------------------------------- */
   --duration: 260ms;
   --duration-slow: 460ms;
-  --duration-reveal: 720ms;
 
   /* How far anything travels when it arrives. Stated once, because two elements
      arriving from different heights read as two systems. */
   --travel: 14px;
-  --travel-far: 28px;
 }
 
 /*
@@ -199,7 +211,8 @@
  * a response.
  */
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  :root,
+  .site-scope {
     --duration-slow: var(--duration-fast);
     --duration-reveal: var(--duration-fast);
     --travel: 0px;

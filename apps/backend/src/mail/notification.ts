@@ -4,6 +4,7 @@ import {
   type FormConsent,
   type FormDetail,
   type FormSubmissionValues,
+  formFields,
   submittedValueText,
 } from "@layered/schemas";
 import type { MailTemplateValues } from "./templates.js";
@@ -14,13 +15,13 @@ import type { MailTemplateValues } from "./templates.js";
  * independent of later form edits.
  */
 export function formMailValues(
-  form: Pick<FormDetail, "name" | "fields">,
+  form: Pick<FormDetail, "name" | "rows">,
   values: FormSubmissionValues,
   language: ContentLanguage,
   consents: FormConsent[],
   now: Date = new Date(),
 ): MailTemplateValues<"submission_notification"> {
-  const fields = form.fields.map(
+  const fields = formFields(form).map(
     (field) => `${field.label[language]}: ${submittedValueText(values[field.key])}`,
   );
   return {

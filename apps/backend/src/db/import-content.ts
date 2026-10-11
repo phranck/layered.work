@@ -22,6 +22,7 @@ import {
   type PublicationState,
   type PublicForm,
   type ReadingWidth,
+  withFormRows,
 } from "@layered/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 import sharp from "sharp";
@@ -781,7 +782,8 @@ async function importListings(database: Database, snapshot: Snapshot): Promise<v
 async function importForms(database: Database, snapshot: Snapshot): Promise<void> {
   for (const form of snapshot.forms ?? []) {
     const declaration = createFormBody.parse({
-      ...form,
+      // A snapshot written before forms had rows reads with one field in each.
+      ...withFormRows(form),
       notificationEmail: null,
       confirmationEmailField: null,
       storeSubmissions: true,
