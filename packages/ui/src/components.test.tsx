@@ -167,6 +167,19 @@ describe("static compounds", () => {
 });
 
 describe("controlled form components", () => {
+  it("draws a check box and a radio button as marks beside their label, not in a text field's box", () => {
+    const markup = renderToStaticMarkup(
+      <>
+        <Input type="checkbox" />
+        <Input type="radio" />
+        <Input type="email" />
+      </>,
+    );
+    expect(markup).toBe(
+      '<input class="check" type="checkbox"/><input class="check" type="radio"/><input class="input" type="email"/>',
+    );
+  });
+
   it("renders labelled native input and select values", () => {
     const onInput = vi.fn();
     const onSelect = vi.fn();
