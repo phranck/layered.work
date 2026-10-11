@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { dashboardApiBoundary } from "./api-boundary.mjs";
-import { dashboardApiOrigin } from "./config.mjs";
+import { DEVELOPMENT_API_PATH, dashboardApiOrigin } from "./config.mjs";
 
 /**
  * The name the seeded local account signs in under, paired with its address.
@@ -37,10 +37,10 @@ export default defineConfig(({ command }) => ({
     host: "localhost",
     port: Number(process.env.PORT ?? 4502),
     proxy: {
-      "/api": {
+      [DEVELOPMENT_API_PATH]: {
         target: dashboardApiOrigin(command),
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api(?=\/|$)/, ""),
+        rewrite: (path) => path.replace(new RegExp(DEVELOPMENT_API_PATH), ""),
       },
     },
   },
