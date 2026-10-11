@@ -21,6 +21,8 @@ export { CONTENT_RENDERERS } from "./content-adapters.js";
 export {
   ContentRenderer,
   type ContentRendererProps,
+  InlineContent,
+  type InlineContentProps,
   type MediaAsset,
   type MediaResolver,
 } from "./content-renderer.js";

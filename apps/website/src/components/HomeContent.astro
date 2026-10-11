@@ -1,6 +1,6 @@
 ---
 import { homeBlockSettings, homeBlockText, isKnownHomeBlock, type HomeBlock } from "@layered/schemas";
-import { Button, Card, MediaCredit, Section, SkyBand, imagePosition } from "@layered/ui";
+import { Button, Card, InlineContent, MediaCredit, Section, SkyBand, imagePosition } from "@layered/ui";
 import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
 import { createElement, Fragment as ReactFragment } from "react";
 import SkyBands from "./SkyBands.astro";
@@ -70,7 +70,13 @@ if (unknown.length)
           <div class="hero__copy">
             <p class="eyebrow">{homeBlockText("hero", settings, "eyebrow", language)}</p>
             <h1 class="title-hero">{homeBlockText("hero", settings, "title", language)}</h1>
-            <p class="lede">{homeBlockText("hero", settings, "description", language)}</p>
+            <p class="lede">
+              <InlineContent
+                text={homeBlockText("hero", settings, "description", language)}
+                {language}
+                resolveUrl={repository.contentUrl}
+              />
+            </p>
             <div class="actions">
               <Button.Link
                 href={`${root}projects/`}

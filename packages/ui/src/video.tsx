@@ -1,5 +1,6 @@
 import type { PropsOf } from "@layered/content";
 import { ContentPlaceholder } from "./content-placeholder.js";
+import { InlineContent } from "./content-renderer.js";
 import { contentUrl, type MediaProps } from "./content-shared.js";
 import { Figure } from "./figure.js";
 /** Video parameters and the library that resolves video and poster. */
@@ -29,7 +30,11 @@ export function Video({ slug, poster, caption, media }: VideoProps) {
         })}
         <a href={src}>Download video</a>
       </video>
-      {text && <Figure.Caption>{text}</Figure.Caption>}
+      {text && (
+        <Figure.Caption>
+          <InlineContent text={text} />
+        </Figure.Caption>
+      )}
     </Figure.Root>
   );
 }

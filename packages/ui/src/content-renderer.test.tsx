@@ -2,7 +2,7 @@ import { components, renderContent } from "@layered/content";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CONTENT_RENDERERS } from "./content-adapters.js";
-import { ContentRenderer, type MediaResolver } from "./content-renderer.js";
+import { ContentRenderer, InlineContent, type MediaResolver } from "./content-renderer.js";
 import * as ui from "./index.js";
 
 const media: MediaResolver = (slug) => ({
@@ -276,5 +276,63 @@ describe("content renderer", () => {
     expect(html).toContain('alt="Library alt"');
     expect(html).toContain('width="800"');
     expect(html).toContain('height="600"');
+  });
+  it("draws a line of inline Markdown as its words and links, with nothing around them and nothing unsafe followed", () => {
+    const html = renderToStaticMarkup(
+      <p>
+        <InlineContent
+          text={
+            'Siehe *bitte* die [Datenschutzerklärung](/de/datenschutz/) und "das" [hier](javascript:alert(1)).'
+          }
+          language="de"
+          resolveUrl={(url) => new URL(url, "https://layered.work/").href}
+        />
+      </p>,
+    );
+    expect(html).toBe(
+      '<p>Siehe <em>bitte</em> die <a href="https://layered.work/de/datenschutz/">Datenschutzerklärung</a> und „das“ <a>hier</a>.</p>',
+    );
+  });
+  it("draws captions, a consent notice and a success message as inline Markdown", () => {
+    const caption = draw('Image("front", caption: "Die **Front**")');
+    expect(caption).toContain('<figcaption class="content-figure__caption">Die <strong>Front</strong>');
+    expect(draw('Video("clip.mp4", caption: "Ein *Clip*")')).toContain("Ein <em>Clip</em></figcaption>");
+    expect(draw('Model("model.glb", alt: "Box", caption: "Die *Box*")')).toContain(
+      "Die <em>Box</em></figcaption>",
+    );
+    const uncaptioned = renderToStaticMarkup(
+      <ContentRenderer
+        nodes={renderContent('Model("model.glb", alt: "Eine *Box*")')}
+        media={(slug) => ({ src: `/media/${slug}` })}
+      />,
+    );
+    expect(uncaptioned).toContain(">Eine *Box*</figcaption>");
+
+    const consent = renderToStaticMarkup(
+      <ui.FormControls
+        language="de"
+        fields={[
+          {
+            key: "privacy",
+            type: "consent",
+            label: { en: "Privacy", de: "Datenschutz" },
+            hint: { en: "", de: "" },
+            notice: { en: "", de: "Ich habe die [Erklärung](/de/datenschutz/) gelesen." },
+            revision: "1",
+            required: true,
+          },
+        ]}
+      />,
+    );
+    expect(consent).toContain('<span>Ich habe die <a href="/de/datenschutz/">Erklärung</a> gelesen.</span>');
+
+    const success = renderToStaticMarkup(
+      <ui.FormEmbed
+        form={{ slug: "interest", name: "Interest", successMessage: { en: "", de: "" }, fields: [] }}
+        language="de"
+        outcome={{ status: "success", message: "**Danke!** Wir melden uns." }}
+      />,
+    );
+    expect(success).toContain("<p><strong>Danke!</strong> Wir melden uns.</p>");
   });
 });

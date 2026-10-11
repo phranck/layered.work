@@ -1,5 +1,6 @@
 import type { ContentLanguage, FormField } from "@layered/schemas";
 import type { ReactNode } from "react";
+import { InlineContent } from "./content-renderer.js";
 import { Field, Input, Select, Textarea } from "./field.js";
 
 export interface FormControlsProps {
@@ -134,7 +135,9 @@ export function FormControls({ fields, language, values = {}, errors = {} }: For
                   value="yes"
                   defaultChecked={stringValue(values[field.key]) === "yes"}
                 />
-                <span>{field.notice[language]}</span>
+                <span>
+                  <InlineContent text={field.notice[language]} language={language} />
+                </span>
               </label>
             );
             break;

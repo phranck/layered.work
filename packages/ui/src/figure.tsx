@@ -1,6 +1,10 @@
 import type { PropsOf } from "@layered/content";
 import type { ComponentPropsWithoutRef } from "react";
 import { ContentPlaceholder } from "./content-placeholder.js";
+// The renderer imports the adapters, which import this module. Every binding in
+// that circle is read while rendering and never while loading, so none is met
+// unfinished.
+import { InlineContent } from "./content-renderer.js";
 import { contentUrl, imagePosition, type MediaAsset, type MediaProps } from "./content-shared.js";
 import { MediaCredit } from "./media-credit.js";
 /** A library image and the author overrides declared in the register. */
@@ -53,7 +57,7 @@ function FigureContent({ slug, caption, alt, media }: FigureProps) {
       <FigureImage asset={asset} alt={alt} />
       {(text || asset.credit) && (
         <FigureCaption>
-          {text}
+          {text && <InlineContent text={text} />}
           {asset.credit && <MediaCredit credit={asset.credit} />}
         </FigureCaption>
       )}
