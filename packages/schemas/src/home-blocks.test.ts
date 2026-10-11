@@ -28,6 +28,17 @@ describe("the declarations", () => {
     }
   });
 
+  it("let a flag require only a flag its own block declares", () => {
+    for (const type of homeBlockTypes) {
+      const settings = HOME_BLOCKS[type].settings;
+      for (const setting of settings) {
+        if (setting.kind !== "flag" || !setting.requires) continue;
+        const required = settings.find((candidate) => candidate.key === setting.requires);
+        expect(required?.kind, `${type}.${setting.key}`).toBe("flag");
+      }
+    }
+  });
+
   it("lock the hero alone, which opens the page", () => {
     expect(homeBlockTypes.filter((type) => HOME_BLOCKS[type].locked)).toEqual(["hero"]);
   });
@@ -82,11 +93,16 @@ describe("reading a block's settings", () => {
       order: "title",
       excludeFeatured: false,
       sky: false,
+      clouds: true,
     });
   });
 
   it("reads every kind of block stored before the sky existed with the sky off", () => {
     for (const type of homeBlockTypes) expect(homeBlockSettings(type, {}).sky, type).toBe(false);
+  });
+
+  it("reads a sky stored before its clouds could be switched off with the clouds on", () => {
+    for (const type of homeBlockTypes) expect(homeBlockSettings(type, { sky: true }).clouds, type).toBe(true);
   });
 
   it("reads a picture the snapshot names by its slug", () => {
