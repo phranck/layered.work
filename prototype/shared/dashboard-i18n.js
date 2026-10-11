@@ -145,14 +145,14 @@ const STRINGS = {
     "option.all": "Alle Themen",
     "option.electronics": "Elektronik",
     "option.software": "Software",
-    "block.pickHint": "Jeder Baustein bringt seine eigenen Einstellungen mit.",
+    "block.pickHint": "Jeder Baustein hat eigene Einstellungen.",
 
     // Site settings
     "setting.reading": "Lesebreite",
     "setting.readingHint": (chars) =>
       chars
-        ? `Etwa ${chars} Zeichen pro Zeile. Empfohlen sind 45 bis 75, weil das Auge danach den Anfang der nächsten Zeile schlechter findet.`
-        : "Ohne Begrenzung. Sinnvoll für Seiten mit breiten Tabellen oder Code, sonst schwerer zu lesen.",
+        ? `Etwa ${chars} Zeichen pro Zeile.`
+        : "Ohne Begrenzung.",
 
     // Account
     "account.name": "Name",
@@ -160,7 +160,7 @@ const STRINGS = {
     "account.role": "Rolle",
     "account.roleAdmin": "Administrator",
     "account.language": "Sprache des Dashboards",
-    "account.languageHint": "Gilt nur für diese Oberfläche, nicht für die Website.",
+    "account.languageHint": "Nur diese Oberfläche, nicht die Website.",
     "account.avatarChange": "Bild wählen",
 
     // Sidebar
@@ -291,21 +291,21 @@ const STRINGS = {
     "option.all": "All topics",
     "option.electronics": "Electronics",
     "option.software": "Software",
-    "block.pickHint": "Every block brings settings of its own.",
+    "block.pickHint": "Each block has its own settings.",
 
     // Site settings
     "setting.reading": "Reading width",
     "setting.readingHint": (chars) =>
       chars
-        ? `About ${chars} characters per line. 45 to 75 is the usual recommendation, because past that the eye loses the start of the next line.`
-        : "No limit. Right for pages of wide tables or code, harder to read otherwise.",
+        ? `About ${chars} characters per line.`
+        : "No limit.",
 
     "account.name": "Name",
     "account.email": "Email",
     "account.role": "Role",
     "account.roleAdmin": "Administrator",
     "account.language": "Dashboard language",
-    "account.languageHint": "Applies to this interface only, not to the website.",
+    "account.languageHint": "This interface only, not the website.",
     "account.avatarChange": "Choose a picture",
 
     "sidebar.resize": "Drag to widen or narrow the sidebar",

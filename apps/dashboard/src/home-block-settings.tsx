@@ -123,7 +123,6 @@ function TextControl({ setting, value, onChange, editable, idPrefix }: ControlPr
     <Translated.Field
       id={`${idPrefix}-${setting.key}`}
       label={text(settingKey(setting.key))}
-      hint={text("homeSettingFallback")}
       value={(value ?? { en: "", de: "" }) as BilingualText}
       onChange={onChange}
       placeholder={setting.fallback}
@@ -212,7 +211,6 @@ function PictureControl({ setting, value, onChange, editable }: ControlProps) {
   return (
     <PictureField
       label={text(settingKey(setting.key))}
-      hint={text("homeSettingPictureHint")}
       none={text("homeSettingPictureNone")}
       mediaId={typeof value === "string" ? value : null}
       shape={setting.shape}

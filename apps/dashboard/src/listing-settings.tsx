@@ -64,7 +64,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
             <Translated.Field
               id={`${group}-headline`}
               label={text("listingHeadline")}
-              hint={text("listingHeadlineHint")}
               value={draft.headline}
               placeholder={bilingualText(DEFAULT_HEADLINE[kind])}
               maxLength={MaxLength.Line}
@@ -74,7 +73,6 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
             <Translated.Field
               id={`${group}-introduction`}
               label={text("listingIntroduction")}
-              hint={text("listingIntroductionHint")}
               value={draft.introduction}
               profile="entry"
               values={values.data}
@@ -99,7 +97,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
                   onChange={(event) => update({ pageSize: typedNumber(event.target.value) })}
                 />
               </Field>
-              <Field label={text("listingColumns")} hint={text("listingColumnsHint")}>
+              <Field label={text("listingColumns")}>
                 <Segmented
                   aria-label={text("listingColumns")}
                   value={String(draft.columns)}

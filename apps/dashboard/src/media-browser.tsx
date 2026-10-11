@@ -86,7 +86,7 @@ export function MediaBrowser({ onChoose, onCancel, imageOnly, labelId }: MediaBr
       />
       <section
         className="media-browser"
-        aria-label={text("mediaDropHint")}
+        aria-label={text("media")}
         onDragOver={(event) => {
           event.preventDefault();
         }}
@@ -126,7 +126,6 @@ export function MediaBrowser({ onChoose, onCancel, imageOnly, labelId }: MediaBr
               }}
             />
           </Field.Inline>
-          <p>{text("mediaDropHint")}</p>
           <MediaUploadProgress items={uploads.progress} />
         </PictureSearch.Controls>
         <PictureSearch.Results query={media} empty={text("mediaEmpty")}>

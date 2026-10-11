@@ -60,6 +60,7 @@ import {
 } from "./forms-model.js";
 import { zoomOf } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MoveKeysDescription } from "./reorder.js";
 import { useTextLanguage } from "./text-language.js";
 
 /** The mark each kind of field is shown with, in the palette and on the canvas. */
@@ -240,6 +241,8 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
   // The labels show in the language the panel's switch has chosen, as the preview does.
   const language = useTextLanguage();
   const hintId = useId();
+  const rowKeysId = useId();
+  const paletteHintId = useId();
   const builder = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
   const rowElements = useRef(new Map<number, HTMLElement>());
@@ -499,8 +502,10 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
       >
         <Card className="forms-palette">
           <Card.Header title={text("formPalette")} />
-          <Card.Stack>
-            <FieldHint as="p">{text("formPaletteHint")}</FieldHint>
+          <Card.Body>
+            <p id={paletteHintId} hidden>
+              {text("formPaletteHint")}
+            </p>
             <div className="forms-palette__tiles">
               {FORM_FIELD_TYPES.map((type) => {
                 const Icon = FIELD_TYPE_ICON[type];
@@ -509,6 +514,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                     key={type}
                     type="button"
                     className="forms-palette__tile"
+                    aria-describedby={paletteHintId}
                     disabled={full}
                     onPointerDown={pressed({ kind: "palette", type })}
                     onClick={clicked(() => {
@@ -522,7 +528,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                 );
               })}
             </div>
-          </Card.Stack>
+          </Card.Body>
         </Card>
         <div className="forms-builder__main">
           <Card>
@@ -531,6 +537,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
               <p id={hintId} hidden>
                 {text("formFieldMoveHint")}
               </p>
+              <MoveKeysDescription id={rowKeysId} />
               <div ref={canvas} className="forms-rows">
                 {shown.rows.map((row, rowIndex) => {
                   const free = freeColumns(row);
@@ -549,6 +556,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                         action="move"
                         className="forms-row__grip"
                         label={text("formRowMove", rowIndex + 1)}
+                        aria-describedby={rowKeysId}
                         onPointerDown={pressed(gripSource(form, rowIndex))}
                         onKeyDown={(event) => moveRowByKey(event, rowIndex)}
                       />

@@ -247,13 +247,12 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                   <Translated.Field
                     id="footer-line"
                     label={text("footerLine")}
-                    hint={text("footerLineHint")}
                     value={draft.footerLine}
                     maxLength={MaxLength.Paragraph}
                     disabled={!editable}
                     onChange={(footerLine) => update({ footerLine })}
                   />
-                  <Field label={text("defaultLanguage")} hint={text("defaultLanguageHint")}>
+                  <Field label={text("defaultLanguage")}>
                     <Segmented
                       aria-label={text("defaultLanguage")}
                       value={draft.defaultLanguage}
@@ -265,7 +264,6 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                   </Field>
                   <PictureField
                     label={text("socialImage")}
-                    hint={text("socialImageHint")}
                     none={text("socialImageNone")}
                     mediaId={draft.socialImageMediaId}
                     shape="sharing"
@@ -274,7 +272,6 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                   />
                   <PictureField
                     label={text("watermark")}
-                    hint={text("watermarkHint")}
                     none={text("watermarkWordmark")}
                     mediaId={draft.watermarkMediaId}
                     shape="whole"
@@ -327,7 +324,7 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
           >
             {(draft, update, editable) => (
               <>
-                <Field label={text("mailKey")} hint={text("mailKeyHint")}>
+                <Field label={text("mailKey")}>
                   <Badge tone={apiKeyConfigured ? "success" : "warning"}>
                     {apiKeyConfigured ? text("mailKeySet") : text("mailKeyMissing")}
                   </Badge>
@@ -353,7 +350,6 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                     />
                   </Field>
                 </div>
-                <FieldHint as="p">{text("mailDomainHint")}</FieldHint>
                 {test.isError && <ErrorNotice error={test.error} />}
                 {test.data && <MailTestOutcome result={test.data} />}
               </>
@@ -386,11 +382,7 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
                   <code>{ANALYTICS_ORIGIN}</code>
                 </FieldHint>
               </Field>
-              <Field
-                label={text("umamiWebsiteId")}
-                htmlFor="umami-website-id"
-                hint={text("umamiWebsiteIdHint")}
-              >
+              <Field label={text("umamiWebsiteId")} htmlFor="umami-website-id">
                 <Input
                   id="umami-website-id"
                   className="input--code"

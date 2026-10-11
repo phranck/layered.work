@@ -235,7 +235,7 @@ function TopicNameFields({
   const language = useTextLanguage();
   return (
     <div className="field-row">
-      <Field label={text("topicName")} htmlFor={`topic-name-${language}`} hint={text("topicLanguageHint")}>
+      <Field label={text("topicName")} htmlFor={`topic-name-${language}`}>
         <Input
           id={`topic-name-${language}`}
           lang={language}
