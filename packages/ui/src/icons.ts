@@ -20,6 +20,7 @@ import { ArrowUpIcon as ArrowUp } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { ArticleIcon as Article } from "@phosphor-icons/react/dist/ssr/Article";
 import { BracketsCurlyIcon as BracketsCurly } from "@phosphor-icons/react/dist/ssr/BracketsCurly";
 import { CalendarBlankIcon as CalendarBlank } from "@phosphor-icons/react/dist/ssr/CalendarBlank";
+import { CameraIcon as Camera } from "@phosphor-icons/react/dist/ssr/Camera";
 import { CardsIcon as Cards } from "@phosphor-icons/react/dist/ssr/Cards";
 import { CaretCircleDownIcon as CaretCircleDown } from "@phosphor-icons/react/dist/ssr/CaretCircleDown";
 import { CaretDownIcon as CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";
@@ -119,6 +120,7 @@ export const ArrowsOutLineVerticalIcon = duotone(ArrowsOutLineVertical, "ArrowsO
 export const ArticleIcon = duotone(Article, "ArticleIcon");
 export const BracketsCurlyIcon = duotone(BracketsCurly, "BracketsCurlyIcon");
 export const CalendarBlankIcon = duotone(CalendarBlank, "CalendarBlankIcon");
+export const CameraIcon = duotone(Camera, "CameraIcon");
 export const CardsIcon = duotone(Cards, "CardsIcon");
 export const CaretCircleDownIcon = duotone(CaretCircleDown, "CaretCircleDownIcon");
 export const CaretDownIcon = duotone(CaretDown, "CaretDownIcon");
@@ -190,3 +192,15 @@ export const WarningIcon = duotone(Warning, "WarningIcon");
 export const WarningOctagonIcon = duotone(WarningOctagon, "WarningOctagonIcon");
 export const WrenchIcon = duotone(Wrench, "WrenchIcon");
 export const XIcon = duotone(X, "XIcon");
+
+/**
+ * The icon each status tone is marked with, so a tone is never carried by
+ * color alone. A content note and a dashboard notification both mark their
+ * tone with these.
+ */
+export const TONE_ICONS = {
+  info: InfoIcon,
+  success: CheckCircleIcon,
+  warning: WarningIcon,
+  danger: WarningOctagonIcon,
+} as const;

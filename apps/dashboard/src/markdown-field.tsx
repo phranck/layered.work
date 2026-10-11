@@ -59,7 +59,7 @@ export function MarkdownField({
   return (
     <Field label={label} hint={hint} htmlFor={id}>
       <Editor.Surface id={id} className="editor__surface--field">
-        <Suspense fallback={<p>{text("loading")}</p>}>
+        <Suspense fallback={<p className="unfinished">{text("loading")}</p>}>
           <ContentEditor
             key={`${lang ?? ""}:${disabled ? "locked" : "open"}`}
             value={value}

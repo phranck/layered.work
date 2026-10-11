@@ -1,8 +1,8 @@
 import type { BilingualText, MailTemplateKind, SaveMailTemplateBody } from "@layered/schemas";
-import { Button, Card, Field, Input } from "@layered/ui";
-import { FloppyDiskIcon, PaperPlaneTiltIcon, PencilSimpleIcon } from "@layered/ui/icons";
+import { Card, Field, Input } from "@layered/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { issueLine } from "./checked-draft.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -16,7 +16,9 @@ import {
   useSaveMailTemplate,
   useTestMailTemplate,
 } from "./mail-templates-query.js";
+import { MailTestOutcome } from "./mail-test-outcome.js";
 import { useNotify } from "./notifications.js";
+import { noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
@@ -36,39 +38,35 @@ export function MailTemplatesScreen({ area }: { area: DashboardArea }) {
       <ScreenTitle title={text("emailTemplates")} />
       <Card>
         <Card.Header title={text("emailTemplates")} meta={list.data?.length} />
-        {list.isError && (
-          <Card.Body>
-            <ErrorNotice error={list.error} />
-          </Card.Body>
-        )}
-        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("mailTemplatesEmpty")}</Table.Empty>}
-        {list.isSuccess && list.data.length > 0 && (
-          <Table
-            columns={[
-              { kind: "title", label: text("columnName") },
-              { kind: "action", label: text("columnAction") },
-            ]}
-          >
-            {list.data.map((template) => {
-              const open = () => navigate(`/${area.path}/${template.kind}`);
-              return (
-                <Table.Row key={template.kind} onOpen={open}>
-                  <Table.Cell kind="title">
-                    <Table.Title title={template.name[language]} />
-                  </Table.Cell>
-                  <Table.Actions>
-                    <Button.Icon
-                      label={text("editMailTemplate")}
-                      icon={<PencilSimpleIcon />}
-                      tabIndex={-1}
-                      onClick={open}
-                    />
-                  </Table.Actions>
-                </Table.Row>
-              );
-            })}
-          </Table>
-        )}
+        <QueryStates query={list} empty={text("mailTemplatesEmpty")} isEmpty={noRows}>
+          {(templates) => (
+            <Table
+              columns={[
+                { kind: "title", label: text("columnName") },
+                { kind: "action", label: text("columnAction") },
+              ]}
+            >
+              {templates.map((template) => {
+                const open = () => navigate(`/${area.path}/${template.kind}`);
+                return (
+                  <Table.Row key={template.kind} onOpen={open}>
+                    <Table.Cell kind="title">
+                      <Table.Title title={template.name[language]} />
+                    </Table.Cell>
+                    <Table.Actions>
+                      <ActionButton.Icon
+                        action="edit"
+                        label={text("editMailTemplate")}
+                        tabIndex={-1}
+                        onClick={open}
+                      />
+                    </Table.Actions>
+                  </Table.Row>
+                );
+              })}
+            </Table>
+          )}
+        </QueryStates>
       </Card>
     </>
   );
@@ -118,9 +116,9 @@ export function MailTemplateEditorScreen({ area }: { area: DashboardArea }) {
     <>
       <BackToList area={area} title={loaded.isPending ? text("loading") : title} />
       <HeaderEnd>
-        <Button
+        <ActionButton
+          action="save"
           tone="primary"
-          icon={<FloppyDiskIcon />}
           disabled={!draft || save.isPending}
           onClick={() => {
             const value = checked();
@@ -128,14 +126,10 @@ export function MailTemplateEditorScreen({ area }: { area: DashboardArea }) {
           }}
         >
           {save.isPending ? text("savePending") : text("save")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       {loaded.isError && <ErrorNotice error={loaded.error} />}
-      {problem && (
-        <p role="alert" className="dashboard-error">
-          {problem}
-        </p>
-      )}
+      {problem && <ErrorNotice message={problem} />}
       {draft && (
         <Translated>
           <MailTemplateCards
@@ -195,7 +189,7 @@ function MailTemplateCards({
     <>
       <Card>
         <Card.Header title={title} actions={<Translated.Switch />} />
-        <Card.Body>
+        <Card.Stack>
           <Translated.Field
             id="mail-name"
             label={text("mailTemplateName")}
@@ -222,11 +216,11 @@ function MailTemplateCards({
               <code key={name}>{`{{${name}}}`} </code>
             ))}
           </p>
-        </Card.Body>
+        </Card.Stack>
       </Card>
       <Card>
         <Card.Header title={text("preview")} />
-        <Card.Body>
+        <Card.Stack>
           <MailPreview kind={kind} draft={draft} language={language} />
           <Field label={text("mailTemplateRecipient")} htmlFor="mail-test-recipient">
             <Input
@@ -236,23 +230,22 @@ function MailTemplateCards({
               onChange={(event) => setRecipient(event.target.value)}
             />
           </Field>
-          <Button
-            icon={<PaperPlaneTiltIcon />}
-            disabled={!recipient || test.isPending}
-            onClick={() => {
-              const value = checked();
-              if (value) test.mutate({ value, language, recipient });
-            }}
-          >
-            {text("mailTemplateTest")}
-          </Button>
-          {test.data && (
-            <p role="status">
-              {test.data.accepted ? text("mailTemplateAccepted") : text("mailTemplateRefused")}{" "}
-              {test.data.answer}
-            </p>
-          )}
-        </Card.Body>
+          {test.data && <MailTestOutcome result={test.data} />}
+        </Card.Stack>
+        <Card.Footer
+          actions={
+            <ActionButton
+              action="send"
+              disabled={!recipient || test.isPending}
+              onClick={() => {
+                const value = checked();
+                if (value) test.mutate({ value, language, recipient });
+              }}
+            >
+              {text("mailTemplateTest")}
+            </ActionButton>
+          }
+        />
       </Card>
     </>
   );

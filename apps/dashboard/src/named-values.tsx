@@ -6,13 +6,13 @@ import {
   type NamedValueUse,
   VALUE_NAME_MAX_LENGTH,
 } from "@layered/schemas";
-import { Button, Card, Field, Input } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon, XIcon } from "@layered/ui/icons";
-import { type FormEvent, useState } from "react";
+import { Field, Input } from "@layered/ui";
+import { useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog, ConfirmDialog } from "./modal.js";
+import { ListCard } from "./list-card.js";
+import { ConfirmDialog, FormDialog } from "./modal.js";
 import {
   checkedValueDraft,
   useDeleteNamedValue,
@@ -20,7 +20,6 @@ import {
   useSaveNamedValue,
 } from "./named-values-query.js";
 import type { DashboardArea } from "./routes.js";
-import { useSession } from "./session-queries.js";
 import { Table } from "./table.js";
 
 /**
@@ -34,6 +33,7 @@ import { Table } from "./table.js";
  * the API would refuse.
  */
 
+/** Which dialog is open: the editor for a value or a new one, or the question before one is deleted. */
 type Dialog = { editing: NamedValue | null } | { deleting: NamedValue } | null;
 
 /**
@@ -43,37 +43,19 @@ type Dialog = { editing: NamedValue | null } | { deleting: NamedValue } | null;
  */
 export function NamedValuesScreen({ area }: { area: DashboardArea }) {
   const { text } = useDashboardLanguage();
-  const owner = useSession().data?.role === "owner";
   const values = useNamedValues();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const list = values.data ?? [];
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
-      <Card>
-        <Card.Header
-          title={text(area.labelKey)}
-          meta={list.length}
-          actions={
-            <Button
-              tone="primary"
-              icon={<PlusIcon />}
-              disabled={!owner}
-              onClick={() => setDialog({ editing: null })}
-            >
-              {text("valuesNew")}
-            </Button>
-          }
-        />
-        {(values.isError || values.isPending || !owner) && (
-          <Card.Body>
-            {values.isError && <ErrorNotice error={values.error} />}
-            {values.isPending && <p>{text("loading")}</p>}
-            {!owner && <p>{text("ownerOnly")}</p>}
-          </Card.Body>
-        )}
-        {values.isSuccess && !list.length && <Table.Empty>{text("valuesEmpty")}</Table.Empty>}
-        {list.length > 0 && (
+      <ListCard
+        title={text(area.labelKey)}
+        query={values}
+        newLabel={text("valuesNew")}
+        onNew={() => setDialog({ editing: null })}
+        empty={text("valuesEmpty")}
+      >
+        {(list, owner) => (
           <Table
             columns={[
               { kind: "title", label: text("valueName") },
@@ -92,17 +74,16 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
                   {value.usedBy.length ? text("valueUsedIn", value.usedBy.length) : text("valueUnused")}
                 </Table.Cell>
                 <Table.Actions>
-                  <Button.Icon
+                  <ActionButton.Icon
+                    action="edit"
                     label={text("navigationEdit", value.name)}
-                    icon={<PencilSimpleIcon />}
                     disabled={!owner}
                     tabIndex={-1}
                     onClick={() => setDialog({ editing: value })}
                   />
-                  <Button.Icon
+                  <ActionButton.Icon
+                    action="delete"
                     label={text("navigationDelete", value.name)}
-                    icon={<TrashIcon />}
-                    tone="danger"
                     disabled={!owner}
                     onClick={() => setDialog({ deleting: value })}
                   />
@@ -111,7 +92,7 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
             ))}
           </Table>
         )}
-      </Card>
+      </ListCard>
       {dialog && "editing" in dialog && (
         <ValueEditor value={dialog.editing} onClose={() => setDialog(null)} />
       )}
@@ -136,69 +117,43 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
     value: value?.value ?? "",
   });
   const [invalid, setInvalid] = useState(false);
-  const save = useSaveNamedValue(value, onClose);
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  const save = useSaveNamedValue(value, { onSuccess: () => onClose() });
+  const submit = () => {
     const checked = checkedValueDraft(value, draft);
     setInvalid(checked === null);
     if (checked) save.mutate(checked);
   };
   return (
-    <CardDialog labelId="value-edit-title" onClose={onClose}>
-      <Card.Header
-        id="value-edit-title"
-        title={value ? text("navigationEdit", writeValueReference(value.name)) : text("valuesNew")}
-      />
-      <Card.Body>
-        <form id="value-edit" className="settings-form" onSubmit={submit} noValidate>
-          <Field label={text("valueName")} hint={text("valueNameHint")} htmlFor="value-name">
-            <Input
-              id="value-name"
-              value={draft.name}
-              maxLength={VALUE_NAME_MAX_LENGTH}
-              readOnly={value !== null}
-              autoFocus={value === null}
-              spellCheck={false}
-              autoCapitalize="none"
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-            />
-          </Field>
-          <Field label={text("valueText")} hint={text("valueTextHint")} htmlFor="value-text">
-            <Input
-              id="value-text"
-              value={draft.value}
-              maxLength={MaxLength.Line}
-              autoFocus={value !== null}
-              onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))}
-            />
-          </Field>
-          {invalid && (
-            <p role="alert" className="dashboard-error">
-              {text("valueInvalid")}
-            </p>
-          )}
-          {save.isError && <ErrorNotice error={save.error} />}
-        </form>
-      </Card.Body>
-      <Card.Footer
-        actions={
-          <>
-            <Button icon={<XIcon />} onClick={onClose}>
-              {text("cancel")}
-            </Button>
-            <Button
-              form="value-edit"
-              type="submit"
-              tone="primary"
-              icon={<FloppyDiskIcon />}
-              disabled={save.isPending}
-            >
-              {text("save")}
-            </Button>
-          </>
-        }
-      />
-    </CardDialog>
+    <FormDialog
+      title={value ? text("navigationEdit", writeValueReference(value.name)) : text("valuesNew")}
+      onSubmit={submit}
+      onClose={onClose}
+      busy={save.isPending}
+      problem={invalid ? text("valueInvalid") : null}
+      error={save.error}
+    >
+      <Field label={text("valueName")} hint={text("valueNameHint")} htmlFor="value-name">
+        <Input
+          id="value-name"
+          value={draft.name}
+          maxLength={VALUE_NAME_MAX_LENGTH}
+          readOnly={value !== null}
+          autoFocus={value === null}
+          spellCheck={false}
+          autoCapitalize="none"
+          onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+        />
+      </Field>
+      <Field label={text("valueText")} hint={text("valueTextHint")} htmlFor="value-text">
+        <Input
+          id="value-text"
+          value={draft.value}
+          maxLength={MaxLength.Line}
+          autoFocus={value !== null}
+          onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))}
+        />
+      </Field>
+    </FormDialog>
   );
 }
 
@@ -211,7 +166,7 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
  */
 function ValueDelete({ value, onClose }: { value: NamedValue; onClose: () => void }) {
   const { text } = useDashboardLanguage();
-  const remove = useDeleteNamedValue(value, onClose);
+  const remove = useDeleteNamedValue(value, { onSuccess: () => onClose() });
   const inUse = value.usedBy.length > 0;
   const place = (use: NamedValueUse) =>
     use.kind === "entry" ? use.title : text("valueUseListing", use.listing);

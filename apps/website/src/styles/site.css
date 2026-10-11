@@ -56,7 +56,7 @@
   --text-3xl: 3.25rem;
 }
 /* A phone takes the three large steps down, so a heading still fits a line. */
-@media (width <= 720px) {
+@media (width < 720px) {
   :root {
     --text-xl: 1.3125rem;
     --text-2xl: 1.75rem;

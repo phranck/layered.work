@@ -99,6 +99,10 @@
   --panel-width: 380px;
   --form-measure: 720px;
 
+  /* The height a chosen picture stands at in its field, as the mockup draws it:
+     large enough to recognize, small enough to keep the field one line. */
+  --picture-field-image: 40px;
+
   /* --- Sidebar ------------------------------------------------------------
      The width is a property rather than a fixed track, because the drag handle
      writes to it and the stored value is read back into it on load. The bounds

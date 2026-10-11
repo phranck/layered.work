@@ -4,20 +4,18 @@ import {
   type HomeBlockType,
   type StoredHomeBlock,
 } from "@layered/schemas";
-import { Button, Card, Editor, Switch } from "@layered/ui";
+import { Card, Editor, Switch } from "@layered/ui";
 import {
   CardsIcon,
   CropIcon,
-  FloppyDiskIcon,
   type IconProps,
   LockSimpleIcon,
-  PlusIcon,
   SquaresFourIcon,
   StarIcon,
   TagIcon,
-  TrashIcon,
 } from "@layered/ui/icons";
 import { type ComponentType, useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { ErrorNotice } from "./error-notice.js";
 import { blockSummary, blockTypeKey, settingKey } from "./home-block-labels.js";
@@ -37,6 +35,7 @@ import { useDashboardLanguage } from "./language-context.js";
 import { reorderedPositions } from "./list-order.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
@@ -89,88 +88,83 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
         <Editor.Main>
           <Card>
             <Card.Header title={text("homeBlocksTitle")} meta={list.length} />
-            {(blocks.isError || blocks.isPending) && (
-              <Card.Body>
-                {blocks.isError && <ErrorNotice error={blocks.error} />}
-                {blocks.isPending && <p>{text("loading")}</p>}
-              </Card.Body>
-            )}
-            {list.length > 0 && (
-              <Table
-                columns={[
-                  { kind: "grip", label: "" },
-                  { kind: "title", label: text("columnName") },
-                  { kind: "text", label: text("columnContent") },
-                  { kind: "switch", label: text("navigationVisible") },
-                  { kind: "action", label: text("columnAction") },
-                ]}
-                onMove={(from, to) => {
-                  const target = allowedTarget(list, to);
-                  if (from !== target) reorder.mutate(reorderedPositions(list, from, target));
-                }}
-              >
-                {list.map((block, index) => {
-                  const name = text(blockTypeKey(block.type));
-                  const locked = HOME_BLOCKS[block.type].locked;
-                  const Icon = BLOCK_ICONS[block.type];
-                  return (
-                    <Table.Row
-                      key={block.id}
-                      index={index}
-                      active={block.id === open?.id}
-                      onOpen={() => setOpenId(block.id)}
-                    >
-                      <Table.Grip
+            <QueryStates query={blocks}>
+              {() => (
+                <Table
+                  columns={[
+                    { kind: "grip", label: "" },
+                    { kind: "title", label: text("columnName") },
+                    { kind: "text", label: text("columnContent") },
+                    { kind: "switch", label: text("navigationVisible") },
+                    { kind: "action", label: text("columnAction") },
+                  ]}
+                  onMove={(from, to) => {
+                    const target = allowedTarget(list, to);
+                    if (from !== target) reorder.mutate(reorderedPositions(list, from, target));
+                  }}
+                >
+                  {list.map((block, index) => {
+                    const name = text(blockTypeKey(block.type));
+                    const locked = HOME_BLOCKS[block.type].locked;
+                    const Icon = BLOCK_ICONS[block.type];
+                    return (
+                      <Table.Row
+                        key={block.id}
                         index={index}
-                        label={text("moveGroup", name)}
-                        disabled={!owner || locked || reorder.isPending}
-                      />
-                      <Table.Cell kind="title">
-                        <Table.Title title={name} tile={<Icon aria-hidden="true" />} />
-                      </Table.Cell>
-                      <Table.Cell>{blockSummary(text, block, language)}</Table.Cell>
-                      <Table.Control kind="switch">
-                        <Switch
-                          aria-label={text("homeBlockEnabled", name)}
-                          checked={block.enabled}
-                          disabled={!owner || toggle.isPending}
-                          onCheckedChange={() => toggle.mutate(block)}
+                        active={block.id === open?.id}
+                        onOpen={() => setOpenId(block.id)}
+                      >
+                        <Table.Grip
+                          index={index}
+                          label={text("moveGroup", name)}
+                          disabled={!owner || locked || reorder.isPending}
                         />
-                      </Table.Control>
-                      <Table.Actions>
-                        {locked ? (
-                          <Table.Mark label={text("homeBlockLocked")}>
-                            <LockSimpleIcon />
-                          </Table.Mark>
-                        ) : (
-                          <Button.Icon
-                            label={text("homeBlockRemove", name)}
-                            icon={<TrashIcon />}
-                            tone="danger"
-                            disabled={!owner}
-                            onClick={() => setRemoving(block)}
+                        <Table.Cell kind="title">
+                          <Table.Title title={name} tile={<Icon aria-hidden="true" />} />
+                        </Table.Cell>
+                        <Table.Cell>{blockSummary(text, block, language)}</Table.Cell>
+                        <Table.Control kind="switch">
+                          <Switch
+                            aria-label={text("homeBlockEnabled", name)}
+                            checked={block.enabled}
+                            disabled={!owner || toggle.isPending}
+                            onCheckedChange={() => toggle.mutate(block)}
                           />
-                        )}
-                      </Table.Actions>
-                    </Table.Row>
-                  );
-                })}
-              </Table>
-            )}
+                        </Table.Control>
+                        <Table.Actions>
+                          {locked ? (
+                            <Table.Mark label={text("homeBlockLocked")}>
+                              <LockSimpleIcon />
+                            </Table.Mark>
+                          ) : (
+                            <ActionButton.Icon
+                              action="remove"
+                              label={text("homeBlockRemove", name)}
+                              disabled={!owner}
+                              onClick={() => setRemoving(block)}
+                            />
+                          )}
+                        </Table.Actions>
+                      </Table.Row>
+                    );
+                  })}
+                </Table>
+              )}
+            </QueryStates>
             <Card.Footer
               note={text("homeBlockPickHint")}
               actions={
                 <div className="home-block__add">
                   {ADDABLE_BLOCKS.map((type) => (
-                    <Button
+                    <ActionButton
                       key={type}
-                      icon={<PlusIcon />}
+                      action="new"
                       aria-label={text("homeBlockAdd", text(blockTypeKey(type)))}
                       disabled={!owner || add.isPending}
                       onClick={() => add.mutate(type)}
                     >
                       {text(blockTypeKey(type))}
-                    </Button>
+                    </ActionButton>
                   ))}
                 </div>
               }
@@ -232,9 +226,9 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
         headerActions={<Translated.Switch />}
         note={editable ? undefined : text("ownerOnly")}
         actions={
-          <Button tone="primary" disabled={!canSave} icon={<FloppyDiskIcon />} onClick={submit}>
+          <ActionButton action="save" tone="primary" disabled={!canSave} onClick={submit}>
             {save.isPending ? text("savePending") : text("save")}
-          </Button>
+          </ActionButton>
         }
       >
         <HomeBlockSettingsFields
@@ -246,11 +240,7 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
             setProblem(null);
           }}
         />
-        {problem && (
-          <p role="alert" className="dashboard-error">
-            {problem}
-          </p>
-        )}
+        {problem && <ErrorNotice message={problem} />}
       </Editor.Panel>
     </Translated>
   );

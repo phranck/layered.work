@@ -69,7 +69,8 @@
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
-@media (max-width: 719px) {
+/* The phone breakpoint, as `button.css` states it. */
+@media (width < 720px) {
   .focal-point__previews {
     grid-template-columns: 1fr;
   }

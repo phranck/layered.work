@@ -165,10 +165,8 @@
   --content-note-edge: var(--space-1);
   --content-media-ratio: 16 / 10;
   --content-icon-size: var(--text-xl);
-  --content-note-info: var(--state-info);
   --content-note-success: var(--state-success);
   --content-note-warning: var(--state-warning);
-  --content-note-danger: var(--state-danger);
 
   /* --- Code ---------------------------------------------------------------
      What each part of a highlighted code block is drawn in. The names are the

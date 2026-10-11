@@ -9,10 +9,10 @@ import {
   fieldSpan,
   formFields,
 } from "@layered/schemas";
-import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, GearIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { issueLine } from "./checked-draft.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -35,6 +35,7 @@ import {
 import { checkedForm, useForm, useForms, useSaveForm } from "./forms-query.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
+import { noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
@@ -50,49 +51,45 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
     <>
       <ScreenTitle title={text("forms")} />
       <HeaderEnd>
-        <Button tone="primary" icon={<PlusIcon />} onClick={() => navigate(`/${area.path}/new`)}>
+        <ActionButton action="new" tone="primary" onClick={() => navigate(`/${area.path}/new`)}>
           {text("formNew")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       <Card>
         <Card.Header title={text("forms")} meta={list.data?.length} />
-        {list.isError && (
-          <Card.Body>
-            <ErrorNotice error={list.error} />
-          </Card.Body>
-        )}
-        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("formsEmpty")}</Table.Empty>}
-        {list.isSuccess && list.data.length > 0 && (
-          <Table
-            columns={[
-              { kind: "title", label: text("columnName") },
-              { kind: "text", label: text("formSlug") },
-              { kind: "count", label: text("columnFields") },
-              { kind: "action", label: text("columnAction") },
-            ]}
-          >
-            {list.data.map((form) => {
-              const open = () => navigate(`/${area.path}/${form.id}`);
-              return (
-                <Table.Row key={form.id} onOpen={open}>
-                  <Table.Cell kind="title">
-                    <Table.Title title={form.name} />
-                  </Table.Cell>
-                  <Table.Cell>{form.slug}</Table.Cell>
-                  <Table.Cell kind="count">{formFields(form).length}</Table.Cell>
-                  <Table.Actions>
-                    <Button.Icon
-                      label={text("editForm")}
-                      icon={<PencilSimpleIcon />}
-                      tabIndex={-1}
-                      onClick={open}
-                    />
-                  </Table.Actions>
-                </Table.Row>
-              );
-            })}
-          </Table>
-        )}
+        <QueryStates query={list} empty={text("formsEmpty")} isEmpty={noRows}>
+          {(forms) => (
+            <Table
+              columns={[
+                { kind: "title", label: text("columnName") },
+                { kind: "text", label: text("formSlug") },
+                { kind: "count", label: text("columnFields") },
+                { kind: "action", label: text("columnAction") },
+              ]}
+            >
+              {forms.map((form) => {
+                const open = () => navigate(`/${area.path}/${form.id}`);
+                return (
+                  <Table.Row key={form.id} onOpen={open}>
+                    <Table.Cell kind="title">
+                      <Table.Title title={form.name} />
+                    </Table.Cell>
+                    <Table.Cell>{form.slug}</Table.Cell>
+                    <Table.Cell kind="count">{formFields(form).length}</Table.Cell>
+                    <Table.Actions>
+                      <ActionButton.Icon
+                        action="edit"
+                        label={text("editForm")}
+                        tabIndex={-1}
+                        onClick={open}
+                      />
+                    </Table.Actions>
+                  </Table.Row>
+                );
+              })}
+            </Table>
+          )}
+        </QueryStates>
       </Card>
     </>
   );
@@ -203,23 +200,22 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
               value={option.label}
               onChange={(label) => update(withOption(field, index, { label }))}
             />
-            <Button
-              tone="danger"
-              icon={<TrashIcon />}
+            <ActionButton
+              action="remove"
               disabled={field.options.length <= FORM_OPTION_COUNT.min}
               onClick={() => update(withoutOption(field, index))}
             >
               {text("formOptionRemove", index + 1)}
-            </Button>
+            </ActionButton>
           </div>
         ))}
-        <Button
-          icon={<PlusIcon />}
+        <ActionButton
+          action="new"
           disabled={field.options.length >= FORM_OPTION_COUNT.max}
           onClick={() => update({ ...field, options: [...field.options, newOption(field.options)] })}
         >
           {text("formOptionAdd")}
-        </Button>
+        </ActionButton>
       </div>
     );
   }
@@ -345,16 +341,12 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     <>
       <BackToList area={area} title={draft ? draft.name || text("formNew") : text("loading")} />
       <HeaderEnd>
-        <Button tone="primary" icon={<FloppyDiskIcon />} disabled={!draft || save.isPending} onClick={submit}>
+        <ActionButton action="save" tone="primary" disabled={!draft || save.isPending} onClick={submit}>
           {save.isPending ? text("savePending") : text("save")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       {loaded.isError && <ErrorNotice error={loaded.error} />}
-      {problem && (
-        <p role="alert" className="dashboard-error">
-          {problem}
-        </p>
-      )}
+      {problem && <ErrorNotice message={problem} />}
       {draft && (
         <Translated>
           <Editor>
@@ -372,9 +364,9 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     title={draft.name || text("formNew")}
                     meta={fields.length}
                     actions={
-                      <Button icon={<GearIcon />} onClick={() => setSelected(null)}>
+                      <ActionButton action="settings" onClick={() => setSelected(null)}>
                         {text("formSettings")}
-                      </Button>
+                      </ActionButton>
                     }
                   />
                 }
@@ -443,9 +435,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     />
                   </Field.Inline>
                   <FieldRules field={selectedField} update={(field) => updateField(selected, field)} />
-                  <Button
-                    tone="danger"
-                    icon={<TrashIcon />}
+                  <ActionButton
+                    action="remove"
                     disabled={fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
                       change(removeField(draft, selected));
@@ -453,7 +444,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                     }}
                   >
                     {text("formFieldRemove")}
-                  </Button>
+                  </ActionButton>
                 </>
               ) : (
                 <>

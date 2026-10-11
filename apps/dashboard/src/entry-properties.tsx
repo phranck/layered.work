@@ -7,9 +7,9 @@ import {
   type ReadingWidth,
   type SaveEntryBody,
 } from "@layered/schemas";
-import { Button, Choice, Editor, Field, Segmented, Switch } from "@layered/ui";
-import { EyeIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Choice, Editor, Field, Segmented, Switch } from "@layered/ui";
 import { useLinkClickHandler } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { AddressField } from "./address-field.js";
 import { ContentFindings } from "./content-findings.js";
 import type { CheckedContent } from "./content-validation.js";
@@ -45,6 +45,28 @@ const STATE_OPTIONS: Record<PublicationState, { label: DashboardStringKey; note:
   draft: { label: "stateDraft", note: "stateDraftNote" },
   hidden: { label: "stateHidden", note: "stateHiddenNote" },
 };
+
+/**
+ * The panel beside the writing surface: what the validator found, the state,
+ * the preview, the address, the language and its counterpart, the reading
+ * width, the topics, a project's specification, and the move to the trash.
+ *
+ * Everything here is decided about the entry rather than written into it, so
+ * an author never leaves the text to change how it is published. A change goes
+ * into the draft through `update` and is saved with the text.
+ *
+ * @param entry - The translation as it is stored.
+ * @param draft - What the editor holds.
+ * @param checked - The validator's findings for the body.
+ * @param area - The list the entry belongs to, for the counterpart's address.
+ * @param update - Replaces part of the draft.
+ * @param previewPending - Whether a preview is being made.
+ * @param openPreview - Opens the preview of the draft.
+ * @param translationPending - Whether the other language is being created.
+ * @param onTranslate - Creates the other language.
+ * @param onTrash - Asks before the entry goes to the trash.
+ * @param onSelectFinding - Selects a finding's place in the text.
+ */
 
 export function EntryProperties({
   entry,
@@ -101,9 +123,9 @@ export function EntryProperties({
       {/* Under the state, because what a reader would see is the question the
               state raises, whichever state it is. */}
       <div className="entry-editor__action">
-        <Button icon={<EyeIcon weight="duotone" />} disabled={previewPending} onClick={openPreview}>
+        <ActionButton action="preview" disabled={previewPending} onClick={openPreview}>
           {previewPending ? text("previewPending") : text("preview")}
-        </Button>
+        </ActionButton>
       </div>
       <Field label={text("editorSlug")} htmlFor="entry-address">
         <AddressField
@@ -143,11 +165,11 @@ export function EntryProperties({
         ) : (
           <>
             <span className="entry-editor__note">{text("editorTranslationNone")}</span>
-            <Button icon={<PlusIcon weight="duotone" />} disabled={translationPending} onClick={onTranslate}>
+            <ActionButton action="new" disabled={translationPending} onClick={onTranslate}>
               {translationPending
                 ? text("editorCreateCounterpartPending")
                 : text("editorCreateCounterpart", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-            </Button>
+            </ActionButton>
           </>
         )}
       </Field>
@@ -189,9 +211,9 @@ export function EntryProperties({
       {entry.kind === "project" && <SpecsField specs={draft.specs} onChange={(specs) => update({ specs })} />}
       {!entry.trashed && (
         <div className="entry-editor__action entry-editor__action--apart">
-          <Button tone="danger" icon={<TrashIcon />} onClick={onTrash}>
+          <ActionButton action="delete" onClick={onTrash}>
             {text("trash")}
-          </Button>
+          </ActionButton>
         </div>
       )}
     </Editor.Panel>

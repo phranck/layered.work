@@ -1,36 +1,59 @@
-import { ACCEPTED_IMAGE_TYPES } from "@layered/schemas";
-import { Button } from "@layered/ui";
-import { UploadSimpleIcon } from "@layered/ui/icons";
-import { useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import "./media-uploads.css";
+import { type Action, ActionButton } from "./action-button.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { UploadProgress } from "./media-query.js";
 
+/** Props for a button that opens the browser's file chooser. */
+interface FileChooserButtonProps {
+  /** The action the button carries, whose icon it takes. */
+  action: Action;
+  /** The MIME types the chooser offers. */
+  types: readonly string[];
+  /** Whether more than one file may be chosen at once. */
+  multiple?: boolean;
+  disabled?: boolean;
+  /** Receives the chosen files, and is not called when the chooser is dismissed. */
+  onFiles: (files: File[]) => void;
+  /** The button's label. */
+  children: ReactNode;
+}
+
 /**
- * The button that starts an upload of pictures into the library, beside a
- * hidden file control it opens, so it looks like every other action.
+ * A button that opens the browser's file chooser, for every place in the
+ * dashboard where a file is chosen from a click: an upload to the library and
+ * an account's portrait. The browser's own control stays hidden behind the
+ * button, so the action looks like every other one, and it is emptied after
+ * each choice, so choosing the same file again starts a new upload.
  *
- * @param pending - Whether an upload is running, which disables the button.
- * @param start - Receives the chosen files.
+ * The editor's completion chooses its file through `chooseFile` instead,
+ * because it asks from outside a render, where no element can be drawn.
  */
-export function MediaUploadButton({ pending, start }: { pending: boolean; start: (files: File[]) => void }) {
-  const { text } = useDashboardLanguage();
+export function FileChooserButton({
+  action,
+  types,
+  multiple,
+  disabled,
+  onFiles,
+  children,
+}: FileChooserButtonProps) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
-      <Button icon={<UploadSimpleIcon />} onClick={() => input.current?.click()} disabled={pending}>
-        {text("mediaUpload")}
-      </Button>
+      <ActionButton action={action} disabled={disabled} onClick={() => input.current?.click()}>
+        {children}
+      </ActionButton>
       <input
         ref={input}
         type="file"
         hidden
-        multiple
-        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        multiple={multiple}
+        accept={types.join(",")}
         onChange={(event) => {
-          start(Array.from(event.target.files ?? []));
+          const files = Array.from(event.target.files ?? []);
           event.target.value = "";
+          if (files.length > 0) onFiles(files);
         }}
       />
     </>

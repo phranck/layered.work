@@ -125,7 +125,7 @@ it("edits both languages and previews and test-sends the current draft", async (
   expect(screen.getByText("Hello Contact", { selector: "pre" })).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Test recipient"), { target: { value: "reader@example.test" } });
   fireEvent.click(screen.getByRole("button", { name: "Send test" }));
-  await screen.findByText(/SMTP2GO accepted the test message/);
+  await screen.findByText(/SMTP2GO accepted the message to reader@example.test/);
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
   await waitFor(() =>

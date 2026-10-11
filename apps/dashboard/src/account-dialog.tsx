@@ -4,23 +4,18 @@ import {
   MaxLength,
   type UpdateAccountBody,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import {
-  FloppyDiskIcon,
-  ImagesIcon,
-  SignOutIcon,
-  UploadSimpleIcon,
-  UserCircleIcon,
-  XIcon,
-} from "@layered/ui/icons";
-import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import { Badge, Card, Field, Input, Segmented } from "@layered/ui";
+import { UserCircleIcon } from "@layered/ui/icons";
+import { type FormEvent, useRef, useState } from "react";
 import { useAccountActions } from "./account-query.js";
+import { ActionButton } from "./action-button.js";
 import { DASHBOARD_LANGUAGES } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { INTERFACE_SCALES, restoredScale, useInterfaceScale } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
 import { useUploadMedia } from "./media-query.js";
+import { FileChooserButton } from "./media-uploads.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { useSaveShortcut } from "./save-shortcut.js";
@@ -51,7 +46,6 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const [scale, chooseScale] = useInterfaceScale();
   const [scaleDraft, setScaleDraft] = useState(scale);
   const { save, signOut, running, saveDraft, signOutOnce } = useAccountActions();
-  const fileInput = useRef<HTMLInputElement>(null);
   // The upload is a file of the library like any other, so the picker and the
   // sidebar's count show it.
   const upload = useUploadMedia({
@@ -71,13 +65,6 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   useSaveShortcut(() => {
     if (!avatarPending) form.current?.requestSubmit();
   });
-
-  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    // Cleared, so choosing the same file again after an error starts a new upload.
-    event.target.value = "";
-    if (file) upload.mutate(file);
-  }
 
   function dismiss() {
     if (!running()) onClose();
@@ -103,35 +90,27 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                   <img className="account__avatar" src={avatarUrl} alt="" />
                 ) : (
                   <span className="account__avatar account__avatar--empty">
-                    <UserCircleIcon weight="duotone" />
+                    <UserCircleIcon />
                   </span>
                 )}
                 <div className="account__portrait-actions">
-                  <Button
-                    type="button"
+                  <ActionButton
+                    action="choosePicture"
                     onClick={() => setPickerOpen(true)}
                     disabled={upload.isPending}
-                    icon={<ImagesIcon weight="duotone" />}
                   >
                     {text("accountAvatar")}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => fileInput.current?.click()}
+                  </ActionButton>
+                  <FileChooserButton
+                    action="upload"
+                    types={ACCEPTED_IMAGE_TYPES}
                     disabled={upload.isPending}
-                    icon={<UploadSimpleIcon weight="duotone" />}
+                    onFiles={([file]) => {
+                      if (file) upload.mutate(file);
+                    }}
                   >
                     {upload.isPending ? text("accountAvatarUploading") : text("accountAvatarUpload")}
-                  </Button>
-                  {/* The browser's own file control, hidden behind the button
-                      above so the action looks like every other one. */}
-                  <input
-                    ref={fileInput}
-                    type="file"
-                    accept={ACCEPTED_IMAGE_TYPES.join(",")}
-                    hidden
-                    onChange={chooseFile}
-                  />
+                  </FileChooserButton>
                 </div>
               </div>
               <div className="account__fields">
@@ -158,9 +137,9 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                   />
                 </Field>
                 <Field label={text("accountRole")}>
-                  <span className="badge" data-status="public">
+                  <Badge tone={account.role === "owner" ? "accent" : "neutral"}>
                     {account.role === "owner" ? text("roleOwner") : text("roleEditor")}
-                  </span>
+                  </Badge>
                 </Field>
                 <Field label={text("accountLanguage")} hint={text("accountLanguageHint")}>
                   <Segmented
@@ -195,31 +174,15 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
           <Card.Footer
             actions={
               <>
-                <Button
-                  type="button"
-                  tone="danger"
-                  onClick={signOutOnce}
-                  disabled={accountPending}
-                  icon={<SignOutIcon weight="duotone" />}
-                >
+                <ActionButton action="signOut" tone="danger" onClick={signOutOnce} disabled={accountPending}>
                   {signOut.isPending ? text("signOutPending") : text("signOut")}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={dismiss}
-                  disabled={accountPending}
-                  icon={<XIcon weight="duotone" />}
-                >
+                </ActionButton>
+                <ActionButton action="cancel" onClick={dismiss} disabled={accountPending}>
                   {text("cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  tone="primary"
-                  disabled={avatarPending}
-                  icon={<FloppyDiskIcon weight="duotone" />}
-                >
+                </ActionButton>
+                <ActionButton action="save" type="submit" tone="primary" disabled={avatarPending}>
                   {save.isPending ? text("savePending") : text("save")}
-                </Button>
+                </ActionButton>
               </>
             }
           />

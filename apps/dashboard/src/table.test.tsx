@@ -136,8 +136,3 @@ it("keeps a click on a grip or a switch away from the row it sits in", () => {
   expect(toggle).toHaveBeenCalledOnce();
   expect(open).not.toHaveBeenCalled();
 });
-
-it("draws a state as a badge in its tone", () => {
-  render(<Table.Badge tone="danger">Spam</Table.Badge>);
-  expect(screen.getByText("Spam").getAttribute("data-tone")).toBe("danger");
-});

@@ -93,6 +93,12 @@
   box-shadow: var(--focus-halo);
 }
 
+/* A field holding a code rather than words, such as an address or an id, set
+   in the face code is set in. */
+.input--code {
+  font-family: var(--font-mono);
+}
+
 /* --- Check ------------------------------------------------------------------
    A native check box or radio button, the size of the text beside it and in
    the accent when ticked. Its line box is the label's, so its top sits where the

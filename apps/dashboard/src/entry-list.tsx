@@ -1,8 +1,8 @@
 import { type EntryKind, type EntryListItem, PUBLICATION_STATES } from "@layered/schemas";
-import { Button, Card, Segmented, Select } from "@layered/ui";
-import { ArrowCounterClockwiseIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Badge, Card, Segmented, Select } from "@layered/ui";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import {
   countEntries,
@@ -16,14 +16,14 @@ import {
   type StateTone,
 } from "./entry-model.js";
 import { useCreateEntry, useEmptyTrash, useEntryList, useRestoreEntry } from "./entry-query.js";
-import { ErrorNotice } from "./error-notice.js";
-import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ListingSettingsCard } from "./listing-settings.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { EmptyState, noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { Table, useTableSearch } from "./table.js";
+import { Timestamp } from "./timestamp.js";
 import { contentLanguageOptions } from "./translated.js";
 
 /**
@@ -68,7 +68,7 @@ function Stat({
 export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: EntryKind }) {
   const navigate = useNavigate();
   const { notify, notifyError } = useNotify();
-  const { language, text } = useDashboardLanguage();
+  const { text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
   const list = useEntryList(kind);
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
@@ -99,14 +99,14 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
     <>
       <ScreenTitle title={title} />
       <HeaderEnd>
-        <Button
+        <ActionButton
+          action="new"
           tone="primary"
-          icon={<PlusIcon />}
           disabled={create.isPending}
           onClick={() => create.mutate(text("editorTitleMissing"))}
         >
           {create.isPending ? text("newEntryPending") : text("newEntry")}
-        </Button>
+        </ActionButton>
       </HeaderEnd>
       <div className="stat-row">
         <Stat
@@ -168,89 +168,85 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                 options={[{ value: "all", label: text("filterAll") }, ...contentLanguageOptions()]}
               />
               {filter.state === "trash" && rows.length > 0 && (
-                <Button tone="danger" icon={<TrashIcon />} onClick={() => setEmptying(true)}>
+                <ActionButton action="delete" onClick={() => setEmptying(true)}>
                   {text("emptyTrash")}
-                </Button>
+                </ActionButton>
               )}
             </>
           }
         />
-        {list.isError && (
-          <Card.Body>
-            <ErrorNotice error={list.error} />
-          </Card.Body>
-        )}
-        {list.isSuccess && rows.length === 0 && (
-          <Table.Empty>
-            {filter.state === "trash" && !filter.search.trim()
-              ? text("trashEmpty")
-              : list.data.length === 0
-                ? text("entriesEmpty")
-                : text("entriesNoMatch")}
-          </Table.Empty>
-        )}
-        {rows.length > 0 && (
-          <Table
-            bodyRef={search.bodyRef}
-            onLeaveTop={search.onLeaveTop}
-            columns={[
-              { kind: "title", label: text("columnTitle") },
-              { kind: "state", label: text("columnState") },
-              { kind: "language", label: text("columnLanguage") },
-              { kind: "date", label: text("columnDate") },
-              { kind: "action", label: text("columnAction") },
-            ]}
-          >
-            {rows.map((row) => (
-              <Table.Row key={row.id} onOpen={() => open(row)}>
-                <Table.Cell kind="title">
-                  <Table.Title title={row.title} thumbnail={row.thumbnailUrl} />
-                </Table.Cell>
-                <Table.Cell kind="state">
-                  <Table.Badge tone={row.trashed ? "danger" : STATE_TONE[row.state]}>
-                    {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
-                  </Table.Badge>
-                </Table.Cell>
-                <Table.Cell kind="language">
-                  <span className="lang-tags">
-                    <span className="lang-tag" data-language={row.language} lang={row.language}>
-                      {row.language}
-                    </span>
-                    {row.translated && (
-                      <span
-                        className="lang-tag lang-tag--counterpart"
-                        data-language={otherLanguage(row.language)}
-                        title={text("alsoIn", text(LANGUAGE_TEXT[otherLanguage(row.language)]))}
-                      >
-                        {otherLanguage(row.language)}
+        <QueryStates query={list} empty={text("entriesEmpty")} isEmpty={noRows}>
+          {() =>
+            rows.length === 0 ? (
+              <EmptyState>
+                {filter.state === "trash" && !filter.search.trim()
+                  ? text("trashEmpty")
+                  : text("entriesNoMatch")}
+              </EmptyState>
+            ) : (
+              <Table
+                bodyRef={search.bodyRef}
+                onLeaveTop={search.onLeaveTop}
+                columns={[
+                  { kind: "title", label: text("columnTitle") },
+                  { kind: "state", label: text("columnState") },
+                  { kind: "language", label: text("columnLanguage") },
+                  { kind: "date", label: text("columnDate") },
+                  { kind: "action", label: text("columnAction") },
+                ]}
+              >
+                {rows.map((row) => (
+                  <Table.Row key={row.id} onOpen={() => open(row)}>
+                    <Table.Cell kind="title">
+                      <Table.Title title={row.title} thumbnail={row.thumbnailUrl} />
+                    </Table.Cell>
+                    <Table.Cell kind="state">
+                      <Badge tone={row.trashed ? "danger" : STATE_TONE[row.state]}>
+                        {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell kind="language">
+                      <span className="lang-tags">
+                        <span className="lang-tag" data-language={row.language} lang={row.language}>
+                          {row.language}
+                        </span>
+                        {row.translated && (
+                          <span
+                            className="lang-tag lang-tag--counterpart"
+                            data-language={otherLanguage(row.language)}
+                            title={text("alsoIn", text(LANGUAGE_TEXT[otherLanguage(row.language)]))}
+                          >
+                            {otherLanguage(row.language)}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                </Table.Cell>
-                <Table.Cell kind="date">
-                  <time dateTime={row.date}>{DATE_FORMAT[language].format(new Date(row.date))}</time>
-                </Table.Cell>
-                <Table.Actions>
-                  {row.trashed ? (
-                    <Button.Icon
-                      label={text("restore")}
-                      icon={<ArrowCounterClockwiseIcon />}
-                      disabled={restore.isPending}
-                      onClick={() => restore.mutate(row.id)}
-                    />
-                  ) : (
-                    <Button.Icon
-                      label={text("editEntry")}
-                      icon={<PencilSimpleIcon />}
-                      tabIndex={-1}
-                      onClick={() => open(row)}
-                    />
-                  )}
-                </Table.Actions>
-              </Table.Row>
-            ))}
-          </Table>
-        )}
+                    </Table.Cell>
+                    <Table.Cell kind="date">
+                      <Timestamp at={row.date} />
+                    </Table.Cell>
+                    <Table.Actions>
+                      {row.trashed ? (
+                        <ActionButton.Icon
+                          action="restore"
+                          label={text("restore")}
+                          disabled={restore.isPending}
+                          onClick={() => restore.mutate(row.id)}
+                        />
+                      ) : (
+                        <ActionButton.Icon
+                          action="edit"
+                          label={text("editEntry")}
+                          tabIndex={-1}
+                          onClick={() => open(row)}
+                        />
+                      )}
+                    </Table.Actions>
+                  </Table.Row>
+                ))}
+              </Table>
+            )
+          }
+        </QueryStates>
       </Card>
       {emptying && (
         <ConfirmDialog

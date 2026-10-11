@@ -1,20 +1,13 @@
 import { formFields, submittedValueText } from "@layered/schemas";
-import { Button, Card, Select } from "@layered/ui";
-import {
-  DownloadSimpleIcon,
-  EnvelopeOpenIcon,
-  EnvelopeSimpleIcon,
-  TrashIcon,
-  WarningOctagonIcon,
-} from "@layered/ui/icons";
+import { Badge, Card, Select } from "@layered/ui";
 import { useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { ErrorNotice } from "./error-notice.js";
-import { DATE_FORMAT, DATE_TIME_FORMAT } from "./format.js";
 import { useForms } from "./forms-query.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { EmptyState, noRows, QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import {
   filterSubmissions,
@@ -26,6 +19,7 @@ import {
   useSetSubmissionStatus,
 } from "./submissions-query.js";
 import { Table, useTableSearch } from "./table.js";
+import { Timestamp } from "./timestamp.js";
 import "./submissions.css";
 
 /** An inbox for one form at a time, using the dashboard's card and row compounds. */
@@ -42,7 +36,6 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   const form = forms.data?.find((item) => item.id === formId);
   const submissions = useFormSubmissions(formId);
   const selected = submissions.data?.find((item) => item.id === selectedId);
-  const matches = submissions.data && filterSubmissions(submissions.data, search, language);
   const changeStatus = useSetSubmissionStatus(formId, { onError: notifyError });
   const remove = useDeleteSubmission(formId, {
     onSuccess: () => {
@@ -80,72 +73,76 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
                     }}
                   />
                   {form && (
-                    <Button.Link
+                    <ActionButton.Link
+                      action="download"
                       href={`${__API_BASE__}/forms/${formId}/submissions/export`}
                       download
-                      icon={<DownloadSimpleIcon />}
                     >
                       {text("submissionsExport")}
-                    </Button.Link>
+                    </ActionButton.Link>
                   )}
                 </>
               )
             }
           />
-          {(forms.isError || submissions.isError || forms.data?.length === 0) && (
-            <Card.Body>
-              {forms.isError && <ErrorNotice error={forms.error} />}
-              {submissions.isError && <ErrorNotice error={submissions.error} />}
-              {forms.data?.length === 0 && <p>{text("formsEmpty")}</p>}
-            </Card.Body>
-          )}
-          {matches && matches.length === 0 && (
-            <Table.Empty>{search ? text("submissionsNoMatch") : text("submissionsEmpty")}</Table.Empty>
-          )}
-          {matches && matches.length > 0 && (
-            <Table
-              bodyRef={field.bodyRef}
-              onLeaveTop={field.onLeaveTop}
-              columns={[
-                { kind: "title", label: text("submission") },
-                { kind: "state", label: text("columnState") },
-                { kind: "date", label: text("columnDate") },
-              ]}
-            >
-              {matches.map((submission) => (
-                <Table.Row
-                  key={submission.id}
-                  active={selectedId === submission.id}
-                  onOpen={() => setSelectedId(submission.id)}
-                >
-                  <Table.Cell kind="title">
-                    <Table.Title title={submissionPreview(submission)} />
-                  </Table.Cell>
-                  <Table.Cell kind="state">
-                    <Table.Badge tone={SUBMISSION_STATUS_TONE[submission.status]}>
-                      {text(SUBMISSION_STATUS_TEXT[submission.status])}
-                    </Table.Badge>
-                  </Table.Cell>
-                  <Table.Cell kind="date">
-                    <time dateTime={submission.createdAt}>
-                      {DATE_FORMAT[language].format(new Date(submission.createdAt))}
-                    </time>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table>
-          )}
+          <QueryStates query={forms} empty={text("formsEmpty")} isEmpty={noRows}>
+            {() => (
+              <QueryStates query={submissions} empty={text("submissionsEmpty")} isEmpty={noRows}>
+                {(all) => {
+                  const matches = filterSubmissions(all, search, language);
+                  return matches.length === 0 ? (
+                    <EmptyState>{text("submissionsNoMatch")}</EmptyState>
+                  ) : (
+                    <Table
+                      bodyRef={field.bodyRef}
+                      onLeaveTop={field.onLeaveTop}
+                      columns={[
+                        { kind: "title", label: text("submission") },
+                        { kind: "state", label: text("columnState") },
+                        { kind: "date", label: text("columnDate") },
+                      ]}
+                    >
+                      {matches.map((submission) => (
+                        <Table.Row
+                          key={submission.id}
+                          active={selectedId === submission.id}
+                          onOpen={() => setSelectedId(submission.id)}
+                        >
+                          <Table.Cell kind="title">
+                            <Table.Title title={submissionPreview(submission)} />
+                          </Table.Cell>
+                          <Table.Cell kind="state">
+                            <Badge tone={SUBMISSION_STATUS_TONE[submission.status]}>
+                              {text(SUBMISSION_STATUS_TEXT[submission.status])}
+                            </Badge>
+                          </Table.Cell>
+                          <Table.Cell kind="date">
+                            <Timestamp at={submission.createdAt} />
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table>
+                  );
+                }}
+              </QueryStates>
+            )}
+          </QueryStates>
         </Card>
         {selected && form && (
           <Card>
-            <Card.Header title={text("submission")} meta={text(SUBMISSION_STATUS_TEXT[selected.status])} />
+            <Card.Header
+              title={text("submission")}
+              actions={
+                <Badge tone={SUBMISSION_STATUS_TONE[selected.status]}>
+                  {text(SUBMISSION_STATUS_TEXT[selected.status])}
+                </Badge>
+              }
+            />
             <Card.Body>
               <dl className="submissions-detail">
                 <dt>{text("submissionSubmitted")}</dt>
                 <dd>
-                  <time dateTime={selected.createdAt}>
-                    {DATE_TIME_FORMAT[language].format(new Date(selected.createdAt))}
-                  </time>
+                  <Timestamp at={selected.createdAt} show="dateTime" />
                 </dd>
                 <dt>{text("submissionOrigin")}</dt>
                 <dd>
@@ -170,35 +167,37 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
             <Card.Footer
               actions={
                 <>
-                  {selected.status === "unread" ? (
-                    <Button
-                      icon={<EnvelopeOpenIcon />}
-                      disabled={changeStatus.isPending}
-                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "read" })}
-                    >
-                      {text("submissionMarkRead")}
-                    </Button>
-                  ) : (
-                    <Button
-                      icon={<EnvelopeSimpleIcon />}
-                      disabled={changeStatus.isPending}
-                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "unread" })}
-                    >
-                      {text("submissionMarkUnread")}
-                    </Button>
-                  )}
+                  <span className="actions__aside">
+                    <ActionButton action="delete" onClick={() => setConfirmDelete(true)}>
+                      {text("submissionDelete")}
+                    </ActionButton>
+                  </span>
                   {selected.status !== "spam" && (
-                    <Button
-                      icon={<WarningOctagonIcon />}
+                    <ActionButton
+                      action="markSpam"
                       disabled={changeStatus.isPending}
                       onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "spam" })}
                     >
                       {text("submissionMarkSpam")}
-                    </Button>
+                    </ActionButton>
                   )}
-                  <Button tone="danger" icon={<TrashIcon />} onClick={() => setConfirmDelete(true)}>
-                    {text("submissionDelete")}
-                  </Button>
+                  {selected.status === "unread" ? (
+                    <ActionButton
+                      action="markRead"
+                      disabled={changeStatus.isPending}
+                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "read" })}
+                    >
+                      {text("submissionMarkRead")}
+                    </ActionButton>
+                  ) : (
+                    <ActionButton
+                      action="markUnread"
+                      disabled={changeStatus.isPending}
+                      onClick={() => changeStatus.mutate({ submissionId: selected.id, status: "unread" })}
+                    >
+                      {text("submissionMarkUnread")}
+                    </ActionButton>
+                  )}
                 </>
               }
             />

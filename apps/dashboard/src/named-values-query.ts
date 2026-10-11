@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { queryKeys } from "./query-keys.js";
+import type { Reactions } from "./reactions.js";
 
 /**
  * The named values as the dashboard holds them, in one cache entry, and every
@@ -60,18 +61,22 @@ function useRefreshAfterChange() {
  * Saves a value: a new one is created, an existing one takes its new text.
  *
  * @param existing - The value being changed, or null for a new one.
- * @param onSaved - Runs once the API has stored it.
+ * @param reactions - What the dialog does once the API has stored it or refused it.
  * @returns The mutation, which takes a body `checkedValueDraft` has passed.
  */
-export function useSaveNamedValue(existing: NamedValue | null, onSaved: () => void) {
+export function useSaveNamedValue(
+  existing: NamedValue | null,
+  reactions: Reactions<NamedValue, CreateNamedValueBody>,
+) {
   const api = useDashboardApi();
   const refresh = useRefreshAfterChange();
   return useMutation({
     mutationFn: (body: CreateNamedValueBody) =>
       existing ? api.updateNamedValue(existing.id, { value: body.value }) : api.createNamedValue(body),
-    onSuccess: () => {
+    onError: (error) => reactions.onError?.(error),
+    onSuccess: (saved, body) => {
       refresh();
-      onSaved();
+      reactions.onSuccess?.(saved, body);
     },
   });
 }
@@ -81,16 +86,17 @@ export function useSaveNamedValue(existing: NamedValue | null, onSaved: () => vo
  * the screen says before it offers the deletion.
  *
  * @param value - The value to delete.
- * @param onDeleted - Runs once the API has deleted it.
+ * @param reactions - What the dialog does once the API has deleted it or refused it.
  */
-export function useDeleteNamedValue(value: NamedValue, onDeleted: () => void) {
+export function useDeleteNamedValue(value: NamedValue, reactions: Reactions<void>) {
   const api = useDashboardApi();
   const refresh = useRefreshAfterChange();
   return useMutation({
     mutationFn: () => api.deleteNamedValue(value.id),
+    onError: (error) => reactions.onError?.(error),
     onSuccess: () => {
       refresh();
-      onDeleted();
+      reactions.onSuccess?.();
     },
   });
 }

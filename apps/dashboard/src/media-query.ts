@@ -55,9 +55,10 @@ export const WATERMARK_ANCHOR_TEXT: Record<WatermarkAnchor, DashboardStringKey> 
 };
 
 /**
- * Every cached view of the library that a new file changes: each page of the
- * library, which the library screen and every picker show, and the counts in
- * the sidebar.
+ * Every cached view of the library that a change to a file reaches: each page
+ * of the library, which the library screen and every picker show, each file's
+ * detail, and the counts in the sidebar. Every change to the library refreshes
+ * through this, whether a file arrived, changed or went.
  *
  * @param client - The dashboard's query cache.
  */
@@ -171,7 +172,7 @@ export function useSaveMediaMetadata(
     mutationFn: (value: SaveMediaMetadataBody) => api.saveMediaMetadata(detail.id, storedMetadata(value)),
     onError: (error) => reactions.onError?.(error),
     onSuccess: async (stored, value) => {
-      await client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery });
+      await refreshMediaQueries(client);
       reactions.onSuccess?.(stored, value);
     },
   });
@@ -194,10 +195,7 @@ export function useDeleteMedia(detail: MediaDetail, reactions: Reactions<MediaDe
       reactions.onError?.(error);
     },
     onSuccess: async (result) => {
-      await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.everyMediaQuery }),
-        refreshCounts(client),
-      ]);
+      await refreshMediaQueries(client);
       reactions.onSuccess?.(result);
     },
   });

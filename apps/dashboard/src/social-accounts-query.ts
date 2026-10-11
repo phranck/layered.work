@@ -8,7 +8,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
-import type { Position } from "./list-order.js";
+import { inPositions, type Position } from "./list-order.js";
 import { queryKeys } from "./query-keys.js";
 import type { Reactions } from "./reactions.js";
 
@@ -93,10 +93,20 @@ export function useSaveSocialAccount(reactions: Reactions<SocialAccount, Account
  */
 export function useReorderSocialAccounts(reactions: Reactions<SocialAccount[], Position[]>) {
   const api = useDashboardApi();
+  const client = useQueryClient();
   const refresh = useRefreshAccounts();
   return useMutation({
     mutationFn: api.reorderSocialAccounts,
-    onError: (error) => reactions.onError?.(error),
+    onMutate: (positions) => {
+      client.setQueryData<SocialAccount[]>(
+        queryKeys.socialAccounts,
+        (current) => current && inPositions(current, positions),
+      );
+    },
+    onError: (error) => {
+      refresh();
+      reactions.onError?.(error);
+    },
     onSuccess: (accounts, positions) => {
       refresh();
       reactions.onSuccess?.(accounts, positions);

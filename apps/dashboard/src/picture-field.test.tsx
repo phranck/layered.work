@@ -5,7 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { DashboardLanguageProvider } from "./language-context.js";
-import { MediaField } from "./media-field.js";
+import { PictureField } from "./picture-field.js";
 
 afterEach(cleanup);
 
@@ -37,7 +37,7 @@ function field(shape: "sharing" | "home-plate" | "whole") {
         api={{ ...createDashboardApi(client, () => {}), fetchMediaDetail: async () => picture }}
       >
         <DashboardLanguageProvider language="en">
-          <MediaField
+          <PictureField
             label="Picture"
             none="None"
             mediaId={picture.id}

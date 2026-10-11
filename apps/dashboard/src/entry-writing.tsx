@@ -161,7 +161,7 @@ export function WritingSurface({
           failed with the reason, until the next upload. */}
       {progress.length > 0 && <MediaUploadProgress items={progress} />}
       <Editor.Surface data-text-size={textSize}>
-        <Suspense fallback={<p>{text("loading")}</p>}>
+        <Suspense fallback={<p className="unfinished">{text("loading")}</p>}>
           <ContentEditor
             editorRef={editor}
             library={library}
