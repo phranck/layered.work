@@ -37,10 +37,19 @@ const FieldInline = forwardRef<HTMLDivElement, FieldProps>(
 );
 /** A label, control and optional hint. */
 export const Field = Object.assign(FieldRoot, { Inline: FieldInline });
-/** A styled native input. */
+/**
+ * A styled native input. A check box or a radio button is a mark beside its
+ * label rather than a place to write, so it takes the `check` class and not the
+ * text field's box, which would stretch it across the row.
+ */
 export const Input = forwardRef<HTMLInputElement, ComponentPropsWithoutRef<"input">>(
   ({ className, type = "text", ...props }, ref) => (
-    <input ref={ref} className={join("input", className)} type={type} {...props} />
+    <input
+      ref={ref}
+      className={join(type === "checkbox" || type === "radio" ? "check" : "input", className)}
+      type={type}
+      {...props}
+    />
   ),
 );
 

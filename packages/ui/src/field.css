@@ -71,6 +71,24 @@
   box-shadow: var(--focus-halo);
 }
 
+/* --- Check ------------------------------------------------------------------
+   A native check box or radio button, the size of the text beside it and in
+   the accent when ticked. Its line box is the label's, so its top sits where the
+   first line of the label sits, set down by half the leading. */
+
+.check {
+  flex: none;
+  /* The label's font and line height, which a form control does not inherit
+     on its own, so the size and the offset below are the label's. */
+  font: inherit;
+  line-height: inherit;
+  width: 1.1em;
+  height: 1.1em;
+  margin: calc((1lh - 1.1em) / 2) 0 0;
+  accent-color: var(--accent-500);
+  cursor: pointer;
+}
+
 /* A multi-line field, as `Textarea` draws it or as a block showing what a
    setting holds, at the height its text needs. A textarea is taller only by
    the reader's hand. */
