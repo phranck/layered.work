@@ -67,9 +67,9 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    transform var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease),
-    border-color var(--duration) var(--ease);
+    transform var(--card-lift-duration) var(--card-lift-ease),
+    box-shadow var(--card-lift-duration) var(--card-lift-ease),
+    border-color var(--card-lift-duration) var(--card-lift-ease);
 }
 
 .card--interactive:hover {
