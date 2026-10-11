@@ -14,6 +14,7 @@
 // boolean per variation, which is how the three separate card shapes that
 // preceded this happened.
 
+export { AppBar } from "./app-bar.js";
 export { Button } from "./button.js";
 export { Card } from "./card.js";
 export { Choice, selectChoice } from "./choice.js";

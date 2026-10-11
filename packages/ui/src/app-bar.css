@@ -17,9 +17,9 @@
   align-items: center;
   flex: none;
   height: var(--app-bar-height, 56px);
-  /* The height is a control plus the gutter above and below, so this makes the
-     padding the same on all four sides. */
-  padding-inline: var(--workbench-gutter, var(--space-6));
+  /* The content area's padding, so what the bar holds starts where the content
+     beneath it starts. */
+  padding-inline: var(--content-gutter, var(--space-6));
   background: var(--surface-sunken);
   /* Drawn over the bar's last pixel rather than taking a pixel of its height, so
      the padding stays the same above and below what the bar holds. */

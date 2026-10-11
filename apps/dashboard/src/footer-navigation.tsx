@@ -90,8 +90,14 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
                     <Table.Title title={name} />
                   </Table.Cell>
                   <Table.Cell>
-                    {hasBrokenLink(group) && <Badge tone="warning">{text("navigationBroken")}</Badge>}{" "}
-                    {group.items.map((item) => item.label[language]).join(", ")}
+                    <span className="nav-chips">
+                      {hasBrokenLink(group) && <Badge tone="warning">{text("navigationBroken")}</Badge>}
+                      {group.items.map((item) => (
+                        <span key={item.id} className="chip">
+                          {item.label[language]}
+                        </span>
+                      ))}
+                    </span>
                   </Table.Cell>
                   <Table.Actions>
                     <ActionButton.Icon

@@ -59,11 +59,12 @@ function show(id = "footer-nav") {
   );
 }
 
-it("shows each navigation as one row, with its links beside its name", async () => {
+it("shows each navigation as one row, with its links as chips beside its name", async () => {
   show();
   const row = (await screen.findByText("Entdecken")).closest("tr");
   expect(row).not.toBeNull();
-  expect(within(row as HTMLElement).getByText("Projekte, Beiträge")).toBeTruthy();
+  const chips = (row as HTMLElement).querySelectorAll(".chip");
+  expect(Array.from(chips, (chip) => chip.textContent)).toEqual(["Projekte", "Beiträge"]);
 });
 
 it("edits main navigation with language visibility, a parent and keyboard reordering", async () => {

@@ -1,6 +1,6 @@
 import { type EntryKind, type EntryListItem, PUBLICATION_STATES } from "@layered/schemas";
-import { Badge, Card, Segmented, Select } from "@layered/ui";
-import { useMemo, useState } from "react";
+import { Badge, Card, Field, Segmented, Select } from "@layered/ui";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ActionButton } from "./action-button.js";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
@@ -59,7 +59,8 @@ function Stat({
  * because they differ in what they are and in nothing about how they are
  * listed. A row is the way into the entry, so the whole row is the target, by
  * pointer and by keyboard, and the pencil at its end stays as the visible sign
- * of that.
+ * of that. The card's header holds the search, and Filter in the bar opens the
+ * state and language filters above the rows, as the mockup places them.
  *
  * @param area - The sidebar area this list belongs to, which names it and
  *   decides the address a row opens.
@@ -70,6 +71,15 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
   const { notify, notifyError } = useNotify();
   const { text } = useDashboardLanguage();
   const [filter, setFilter] = useState<EntryFilter>(OPEN_FILTER);
+  // The state and language filters show while Filter is on, and switching it
+  // off clears them, so no filter is in force that the screen does not show.
+  const [filtering, setFiltering] = useState(false);
+  const toggleFiltering = () => {
+    if (filtering)
+      setFilter((current) => ({ ...current, state: OPEN_FILTER.state, language: OPEN_FILTER.language }));
+    setFiltering(!filtering);
+  };
+  const stateId = useId();
   const list = useEntryList(kind);
   const rows = useMemo(() => filterEntries(list.data ?? [], filter), [list.data, filter]);
   const counts = countEntries(rows);
@@ -99,6 +109,14 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
     <>
       <ScreenTitle title={title} />
       <HeaderEnd>
+        {filter.state === "trash" && rows.length > 0 && (
+          <ActionButton action="delete" onClick={() => setEmptying(true)}>
+            {text("emptyTrash")}
+          </ActionButton>
+        )}
+        <ActionButton action="filter" aria-pressed={filtering} onClick={() => toggleFiltering()}>
+          {text("filter")}
+        </ActionButton>
         <ActionButton
           action="new"
           tone="primary"
@@ -140,41 +158,47 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           title={title}
           meta={counts.total}
           actions={
-            <>
-              <Table.Search
-                label={text("searchTitles")}
-                value={filter.search}
-                onChange={(value) => setFilter((current) => ({ ...current, search: value }))}
-                search={search}
-              />
-              <Select
-                aria-label={text("filterState")}
-                value={filter.state}
-                onChange={(event) =>
-                  setFilter((current) => ({ ...current, state: event.target.value as EntryFilter["state"] }))
-                }
-                options={[
-                  { value: "all", label: text("filterAll") },
-                  ...PUBLICATION_STATES.map((state) => ({ value: state, label: text(STATE_TEXT[state]) })),
-                  { value: "trash", label: text("filterTrash") },
-                ]}
-              />
-              <Segmented
-                aria-label={text("filterLanguage")}
-                value={filter.language}
-                onValueChange={(value) =>
-                  setFilter((current) => ({ ...current, language: value as EntryFilter["language"] }))
-                }
-                options={[{ value: "all", label: text("filterAll") }, ...contentLanguageOptions()]}
-              />
-              {filter.state === "trash" && rows.length > 0 && (
-                <ActionButton action="delete" onClick={() => setEmptying(true)}>
-                  {text("emptyTrash")}
-                </ActionButton>
-              )}
-            </>
+            <Table.Search
+              label={text("searchTitles")}
+              value={filter.search}
+              onChange={(value) => setFilter((current) => ({ ...current, search: value }))}
+              search={search}
+            />
           }
         />
+        {filtering && (
+          <Card.Stack>
+            <div className="field-row">
+              <Field label={text("filterState")} htmlFor={stateId}>
+                <Select
+                  id={stateId}
+                  value={filter.state}
+                  onChange={(event) =>
+                    setFilter((current) => ({
+                      ...current,
+                      state: event.target.value as EntryFilter["state"],
+                    }))
+                  }
+                  options={[
+                    { value: "all", label: text("filterAll") },
+                    ...PUBLICATION_STATES.map((state) => ({ value: state, label: text(STATE_TEXT[state]) })),
+                    { value: "trash", label: text("filterTrash") },
+                  ]}
+                />
+              </Field>
+              <Field label={text("filterLanguage")}>
+                <Segmented
+                  aria-label={text("filterLanguage")}
+                  value={filter.language}
+                  onValueChange={(value) =>
+                    setFilter((current) => ({ ...current, language: value as EntryFilter["language"] }))
+                  }
+                  options={[{ value: "all", label: text("filterAll") }, ...contentLanguageOptions()]}
+                />
+              </Field>
+            </div>
+          </Card.Stack>
+        )}
         <QueryStates query={list} empty={text("entriesEmpty")} isEmpty={noRows}>
           {() =>
             rows.length === 0 ? (

@@ -155,17 +155,22 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
               note={text("homeBlockPickHint")}
               actions={
                 <div className="home-block__add">
-                  {ADDABLE_BLOCKS.map((type) => (
-                    <ActionButton
-                      key={type}
-                      action="new"
-                      aria-label={text("homeBlockAdd", text(blockTypeKey(type)))}
-                      disabled={!owner || add.isPending}
-                      onClick={() => add.mutate(type)}
-                    >
-                      {text(blockTypeKey(type))}
-                    </ActionButton>
-                  ))}
+                  {ADDABLE_BLOCKS.map((type) => {
+                    const Icon = BLOCK_ICONS[type];
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        className="chip"
+                        aria-label={text("homeBlockAdd", text(blockTypeKey(type)))}
+                        disabled={!owner || add.isPending}
+                        onClick={() => add.mutate(type)}
+                      >
+                        <Icon aria-hidden="true" />
+                        {text(blockTypeKey(type))}
+                      </button>
+                    );
+                  })}
                 </div>
               }
             />
@@ -216,8 +221,6 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
 
   useSaveShortcut(submit);
 
-  // No form element around the fields: each field has to be a direct child of
-  // the panel's stack, where `editor.css` gives it the band across the card.
   return (
     <Translated>
       <Editor.Panel

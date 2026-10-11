@@ -1,9 +1,4 @@
-import {
-  ACCEPTED_IMAGE_TYPES,
-  type AccountProfile,
-  MaxLength,
-  type UpdateAccountBody,
-} from "@layered/schemas";
+import { type AccountProfile, MaxLength, type UpdateAccountBody } from "@layered/schemas";
 import { Badge, Card, Field, Input, Segmented } from "@layered/ui";
 import { UserCircleIcon } from "@layered/ui/icons";
 import { type FormEvent, useRef, useState } from "react";
@@ -14,8 +9,6 @@ import { ErrorNotice } from "./error-notice.js";
 import { INTERFACE_SCALES, restoredScale, useInterfaceScale } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaPicker } from "./media-picker.js";
-import { useUploadMedia } from "./media-query.js";
-import { FileChooserButton } from "./media-uploads.js";
 import { CardDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { useSaveShortcut } from "./save-shortcut.js";
@@ -46,24 +39,13 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const [scale, chooseScale] = useInterfaceScale();
   const [scaleDraft, setScaleDraft] = useState(scale);
   const { save, signOut, running, saveDraft, signOutOnce } = useAccountActions();
-  // The upload is a file of the library like any other, so the picker and the
-  // sidebar's count show it.
-  const upload = useUploadMedia({
-    onSuccess: (picture) => {
-      // The upload becomes the draft portrait, exactly as a chosen picture does,
-      // and is kept only when the account is saved.
-      setDraft((current) => ({ ...current, avatarMediaId: picture.id }));
-      setAvatarUrl(picture.url);
-    },
-  });
   const accountPending = save.isPending || signOut.isPending;
-  const avatarPending = accountPending || upload.isPending;
 
   // Command-S submits the dialog as its Save button does. Registered after the
   // screen behind it, so it is the dialog that saves whilst it is open.
   const form = useRef<HTMLFormElement>(null);
   useSaveShortcut(() => {
-    if (!avatarPending) form.current?.requestSubmit();
+    if (!accountPending) form.current?.requestSubmit();
   });
 
   function dismiss() {
@@ -93,25 +75,10 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                     <UserCircleIcon />
                   </span>
                 )}
-                <div className="account__portrait-actions">
-                  <ActionButton
-                    action="choosePicture"
-                    onClick={() => setPickerOpen(true)}
-                    disabled={upload.isPending}
-                  >
-                    {text("accountAvatar")}
-                  </ActionButton>
-                  <FileChooserButton
-                    action="upload"
-                    types={ACCEPTED_IMAGE_TYPES}
-                    disabled={upload.isPending}
-                    onFiles={([file]) => {
-                      if (file) upload.mutate(file);
-                    }}
-                  >
-                    {upload.isPending ? text("accountAvatarUploading") : text("accountAvatarUpload")}
-                  </FileChooserButton>
-                </div>
+                {/* One button, because the picker it opens uploads as well. */}
+                <ActionButton action="choosePicture" onClick={() => setPickerOpen(true)}>
+                  {text("accountAvatar")}
+                </ActionButton>
               </div>
               <div className="account__fields">
                 <Field label={text("accountName")} htmlFor="account-name">
@@ -162,9 +129,9 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                     onValueChange={(value) => setScaleDraft(restoredScale(value))}
                   />
                 </Field>
-                {(upload.error || save.error || signOut.error) && (
+                {(save.error || signOut.error) && (
                   <ErrorNotice
-                    error={upload.error ?? save.error ?? signOut.error}
+                    error={save.error ?? signOut.error}
                     keyFor={(failure) => (failure.code === "conflict" ? "accountEmailTaken" : undefined)}
                   />
                 )}
@@ -174,13 +141,20 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
           <Card.Footer
             actions={
               <>
-                <ActionButton action="signOut" tone="danger" onClick={signOutOnce} disabled={accountPending}>
-                  {signOut.isPending ? text("signOutPending") : text("signOut")}
-                </ActionButton>
+                <span className="actions__aside">
+                  <ActionButton
+                    action="signOut"
+                    tone="danger"
+                    onClick={signOutOnce}
+                    disabled={accountPending}
+                  >
+                    {signOut.isPending ? text("signOutPending") : text("signOut")}
+                  </ActionButton>
+                </span>
                 <ActionButton action="cancel" onClick={dismiss} disabled={accountPending}>
                   {text("cancel")}
                 </ActionButton>
-                <ActionButton action="save" type="submit" tone="primary" disabled={avatarPending}>
+                <ActionButton action="save" type="submit" tone="primary" disabled={accountPending}>
                   {save.isPending ? text("savePending") : text("save")}
                 </ActionButton>
               </>

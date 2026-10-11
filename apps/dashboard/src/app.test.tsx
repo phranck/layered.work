@@ -378,6 +378,9 @@ describe("dashboard shell", () => {
     expect(within(table).getAllByTitle("Auch auf Deutsch")).toHaveLength(1);
     expect(within(table).getAllByTitle("Auch auf Englisch")).toHaveLength(1);
 
+    // The state and language filters stand behind Filter in the bar.
+    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     fireEvent.click(screen.getByRole("button", { name: "DE" }));
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     expect(figures()).toBe("0 0 1 1");
@@ -392,6 +395,11 @@ describe("dashboard shell", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "public" } });
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText("Kein Eintrag passt zu Suche und Filter.")).toBeTruthy();
+
+    // Switching Filter off clears the filters it showed, and keeps the search.
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
   });
 
   it.each([
@@ -1115,6 +1123,7 @@ describe("dashboard shell", () => {
 
     const table = await screen.findByRole("table");
     expect(within(table).queryByText("A draft about soldering")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Status" }), { target: { value: "trash" } });
     expect(within(table).getByText("A draft about soldering")).toBeTruthy();
     expect(within(table).getByText("Im Papierkorb")).toBeTruthy();
@@ -1522,6 +1531,8 @@ describe("dashboard shell", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Frank Updated" } });
+    // One button for the portrait: the picker it opens uploads as well.
+    expect(screen.getByRole("dialog").querySelector('input[type="file"]')).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Bild auswählen" }));
     fireEvent.click(await screen.findByRole("button", { name: /portrait/ }));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
@@ -1583,76 +1594,16 @@ describe("dashboard shell", () => {
     ).toBe(false);
   });
 
-  it("uploads a portrait through the library and saves it as the account's picture", async () => {
-    const uploaded = {
-      id: "0c1d5e0b-6a43-4f2a-9b6e-3c8a7d2f1e90",
-      slug: "mein-portrait",
-      url: "/api/account/media/0c1d5e0b-6a43-4f2a-9b6e-3c8a7d2f1e90/content",
-      width: 800,
-      height: 800,
-      existing: false,
-    };
-    const token = "claims.signature";
-    const request = vi.fn((input, init?: RequestInit) => {
-      const url = String(input);
-      if (url.endsWith("/media/uploads"))
-        return Promise.resolve(
-          json({
-            data: { token, url: `/media/uploads/${token}/content`, headers: { "Content-Type": "image/png" } },
-          }),
-        );
-      if (url.endsWith(`/media/uploads/${token}/content`))
-        return Promise.resolve(json({ data: { received: true } }));
-      if (url.endsWith("/media/uploads/complete")) return Promise.resolve(json({ data: uploaded }));
-      if (url.endsWith("/account") && init?.method === "PATCH")
-        return Promise.resolve(
-          json({ data: { ...account, avatarMediaId: uploaded.id, avatarUrl: uploaded.url } }),
-        );
-      return Promise.resolve(successfulGet(input));
-    });
-    vi.stubGlobal("fetch", request);
-    renderDashboard();
-
-    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
-    const dialog = screen.getByRole("dialog", { name: "Benutzerkonto" });
-    const input = dialog.querySelector<HTMLInputElement>('input[type="file"]');
-    if (!input) throw new Error("No file input in the account dialog.");
-    const file = new File([new Uint8Array([137, 80, 78, 71])], "Mein Portrait.png", { type: "image/png" });
-    fireEvent.change(input, { target: { files: [file] } });
-
-    await waitFor(() => expect(dialog.querySelector("img")?.getAttribute("src")).toBe(uploaded.url));
-    const asked = request.mock.calls.find(([url]) => String(url).endsWith("/media/uploads"));
-    expect(JSON.parse(String(asked?.[1]?.body))).toEqual({
-      filename: "Mein Portrait.png",
-      type: "image/png",
-      size: 4,
-    });
-    const sent = request.mock.calls.find(([url]) => String(url).endsWith("/content"));
-    expect(sent?.[1]?.method).toBe("PUT");
-    expect(sent?.[1]?.body).toBe(file);
-
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
-    await waitFor(() =>
-      expect(
-        request.mock.calls.some(
-          ([url, init]) => String(url).endsWith("/account") && init?.method === "PATCH",
-        ),
-      ).toBe(true),
-    );
-    const patch = request.mock.calls.find(
-      ([url, init]) => String(url).endsWith("/account") && init?.method === "PATCH",
-    );
-    expect(JSON.parse(String(patch?.[1]?.body))).toMatchObject({ avatarMediaId: uploaded.id });
-  });
-
   it("refuses a file the library does not take before anything is sent", async () => {
     const request = vi.fn((input) => Promise.resolve(successfulGet(input)));
     vi.stubGlobal("fetch", request);
     renderDashboard();
 
     fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
-    const input = screen.getByRole("dialog").querySelector<HTMLInputElement>('input[type="file"]');
-    if (!input) throw new Error("No file input in the account dialog.");
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Bild auswählen" }));
+    const picker = await screen.findByRole("dialog", { name: /^Bild auswählen/ });
+    const input = picker.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error("No file input in the picker.");
     fireEvent.change(input, { target: { files: [new File(["text"], "notes.txt", { type: "text/plain" })] } });
 
     expect((await screen.findByRole("alert")).textContent).toContain("JPEG, PNG, WebP, AVIF und GIF");
@@ -1785,22 +1736,17 @@ describe("dashboard shell", () => {
     expect(router.state.location.pathname).toBe("/login");
   });
 
-  it("signs out from the button beside the account in the sidebar, without opening the account", async () => {
-    const request = vi.fn((input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith("/auth/sign-out")) return Promise.resolve(json({ data: { signedOut: true } }));
-      return Promise.resolve(successfulGet(input));
-    });
-    vi.stubGlobal("fetch", request);
-    const { router } = renderDashboard("/media");
+  it("offers the way out in the account dialog and nowhere else in the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input) => Promise.resolve(successfulGet(input))),
+    );
+    renderDashboard("/media");
 
     await screen.findByRole("button", { name: /Frank Gregor/ });
     const footer = document.querySelector(".sidebar__footer") as HTMLElement;
-    fireEvent.click(within(footer).getByRole("button", { name: "Abmelden" }));
-
-    await screen.findByRole("heading", { name: "Anmelden" });
-    expect(router.state.location.pathname).toBe("/login");
-    expect(request.mock.calls.filter(([url]) => String(url).endsWith("/auth/sign-out"))).toHaveLength(1);
+    expect(within(footer).getAllByRole("button")).toHaveLength(1);
+    expect(within(footer).queryByRole("button", { name: "Abmelden" })).toBeNull();
   });
 
   it("keeps the account dialog open and shows a sign-out failure with its id", async () => {

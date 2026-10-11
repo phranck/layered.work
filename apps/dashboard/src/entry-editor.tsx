@@ -260,6 +260,21 @@ function EntryEditor({
           onTitle={(title) => update({ title })}
           onBody={(body) => update({ body })}
           onValidation={setChecked}
+          actions={
+            <Editor.Actions
+              destructive={
+                !entry.trashed && (
+                  <ActionButton action="delete" onClick={() => setAskingToTrash(true)}>
+                    {text("trash")}
+                  </ActionButton>
+                )
+              }
+            >
+              <ActionButton action="preview" disabled={preview.isPending} onClick={openPreview}>
+                {preview.isPending ? text("previewPending") : text("preview")}
+              </ActionButton>
+            </Editor.Actions>
+          }
         />
         <EntryProperties
           entry={entry}
@@ -267,11 +282,8 @@ function EntryEditor({
           checked={checked}
           area={area}
           update={update}
-          previewPending={preview.isPending}
-          openPreview={openPreview}
           translationPending={translate.isPending}
           onTranslate={() => translate.mutate()}
-          onTrash={() => setAskingToTrash(true)}
           onSelectFinding={(finding) => editor.current?.selectFinding(finding)}
         />
       </Editor>

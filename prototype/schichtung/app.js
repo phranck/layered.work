@@ -64,7 +64,7 @@ const entryCard = (entry, index) => html`
             ${each(entry.tags.slice(0, 2), (tag) => html`<span class="chip">${tag.name}</span>`)}
           </span>
         `,
-        actions: html`<span class="chip chip--action" aria-hidden="true"><i class="ph ph-arrow-right"></i></span>`,
+        actions: html`<span class="chip chip--action" aria-hidden="true"><i class="ph-duotone ph-arrow-right"></i></span>`,
       }),
     )}
   </div>
@@ -82,7 +82,7 @@ const sectionHead = (eyebrow, title, action) => html`
     ${Section.Title({
       eyebrow,
       title,
-      actions: action && Button.link({ href: "#/home", label: action, icon: "ph ph-arrow-right", size: "small" }),
+      actions: action && Button.link({ href: "#/home", label: action, icon: "ph-duotone ph-arrow-right", size: "small" }),
     })}
   </div>
 `;
@@ -102,8 +102,8 @@ const homeView = () => html`
           was beim Bauen an Software anfällt. Alles dokumentiert, damit es jemand nachbauen kann.
         </p>
         <div class="actions" style="justify-content: flex-start">
-          ${Button.link({ href: "#/project", label: "Projekte ansehen", icon: "ph ph-stack", tone: "primary" })}
-          ${Button.link({ href: "#/post", label: "Beiträge lesen", icon: "ph ph-article" })}
+          ${Button.link({ href: "#/project", label: "Projekte ansehen", icon: "ph-duotone ph-stack", tone: "primary" })}
+          ${Button.link({ href: "#/post", label: "Beiträge lesen", icon: "ph-duotone ph-article" })}
         </div>
       </div>
       <div class="plate-stack" data-reveal style="--reveal-delay: 120ms">
@@ -140,7 +140,7 @@ const homeView = () => html`
                 <div class="cluster">
                   ${each(featured.tags, (tag) => html`<span class="chip">${tag.name}</span>`)}
                 </div>
-                ${Button.inert({ label: "Weiterlesen", icon: "ph ph-arrow-right", tone: "primary", size: "small" })}
+                ${Button.inert({ label: "Weiterlesen", icon: "ph-duotone ph-arrow-right", tone: "primary", size: "small" })}
               </div>
             </div>
           `,
@@ -324,8 +324,8 @@ const postView = () => html`
         </div>
 
         <div class="actions" data-reveal>
-          ${Button.link({ href: "#/post", label: "Teilen", icon: "ph ph-share-network", size: "small" })}
-          ${Button.link({ href: "#/post", label: "Nächster Beitrag", icon: "ph ph-arrow-right", size: "small" })}
+          ${Button.link({ href: "#/post", label: "Teilen", icon: "ph-duotone ph-share-network", size: "small" })}
+          ${Button.link({ href: "#/post", label: "Nächster Beitrag", icon: "ph-duotone ph-arrow-right", size: "small" })}
         </div>
       </div>
     </article>

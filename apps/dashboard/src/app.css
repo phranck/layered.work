@@ -47,11 +47,11 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--workbench-gutter);
+  gap: var(--content-gutter);
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: var(--workbench-gutter);
+  padding: var(--content-gutter);
 }
 
 .workbench > .sidebar {
@@ -77,6 +77,20 @@
 
 .unfinished {
   color: var(--text-muted);
+}
+
+/* An area that is not built yet: its mark and its line at the center of a
+   card, as the mockup draws it. */
+.area-placeholder {
+  display: grid;
+  gap: var(--space-3);
+  place-items: center;
+  padding: var(--space-8);
+}
+
+.area-placeholder__mark {
+  font-size: var(--placeholder-mark);
+  color: var(--text-faint);
 }
 
 .dashboard-error {
@@ -152,22 +166,14 @@ dialog.card-dialog::backdrop {
 }
 .account__avatar {
   display: grid;
-  width: 132px;
-  height: 132px;
+  width: var(--account-portrait);
+  height: var(--account-portrait);
   object-fit: cover;
   place-items: center;
-  font-size: 72px;
+  font-size: var(--account-portrait-mark);
   color: var(--text-faint);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-pill);
-}
-/* Two buttons stacked under the portrait take the width of the wider one, so
-   they read as one group rather than as two ragged lines. */
-.account__portrait-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: stretch;
 }
 .account__fields {
   display: flex;
@@ -188,9 +194,9 @@ dialog.card-dialog::backdrop {
 }
 
 /* --- Entry lists -----------------------------------------------------------
-   The figures above a list: the name at the top left with its line of
-   explanation under it, and the number at the top right, in a tabular face, so
-   the numbers line up from one card to the next. */
+   The figures above a list. Each is compared with the one in the next card, so
+   it stands right-aligned in a tabular face, and its name above and its line
+   of explanation below follow it, so the card reads as one column. */
 
 .stat-row {
   display: grid;
@@ -199,19 +205,14 @@ dialog.card-dialog::backdrop {
 }
 
 .stat {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "label value"
-    "note value";
-  column-gap: var(--space-3);
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--card-padding);
-  line-height: var(--leading-snug);
+  text-align: right;
 }
 
 .stat__label {
-  grid-area: label;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
@@ -219,26 +220,14 @@ dialog.card-dialog::backdrop {
   color: var(--text-faint);
 }
 
-/* The number is as tall as the two lines beside it: its digits reach from the
-   cap line of the name to the baseline of the explanation. Measured on Barlow:
-   the two lines span 27.8px of ink and a bold digit is 0.713em high, which
-   makes 39px. At a line height of one the digits begin 0.185em below the box
-   and the name's capitals 4.3px below the row, so the box moves up by the
-   difference. The negative bottom margin keeps the number from stretching the
-   rows it stands beside. */
 .stat__value {
-  grid-area: value;
-  align-self: start;
-  margin-block: -0.075em -0.25em;
-  font-size: 2.4375rem;
+  font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
-  line-height: 1;
+  line-height: var(--leading-tight);
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
 .stat__note {
-  grid-area: note;
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
@@ -374,27 +363,6 @@ dialog.card-dialog::backdrop {
 .field > .badge {
   align-self: flex-start;
 }
-/* The account row and the sign-out button beside it. The row takes what is
-   left and shortens its name rather than pushing the button out. The button
-   stands as far in from the right edge as the portrait does from the left,
-   which is the row's padding and its hairline border, so the two ends of the
-   footer mirror each other. */
-.sidebar-account {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  padding-inline-end: calc(var(--space-3) + 1px);
-}
-
-.sidebar-account > .row {
-  flex: 1;
-  min-width: 0;
-}
-
-.sidebar-account > .button {
-  flex: none;
-}
-
 /* The account's portrait in the sidebar is round, as it is in the account
    dialog, and the tile holds it at the control height whatever its file
    measures. */
@@ -491,8 +459,7 @@ dialog.card-dialog::backdrop {
 }
 
 /* --- Entry editor -----------------------------------------------------------
-   The writing surface, the state beside the save, and the actions of the
-   panel. */
+   The writing surface, the title above it and the state beside the save. */
 
 /* The element CodeMirror is mounted in fills the writing surface, so the editor
    inside it can scroll within the surface's height. */
@@ -523,27 +490,6 @@ dialog.card-dialog::backdrop {
 /* The title's label beside its field, which takes the rest of the line. */
 .entry-editor__title > .input {
   flex: 1;
-}
-
-/* An action in the panel stands across its width, as the one action in a
-   column of fields, so it reads as belonging to all of them: the preview under
-   the state, and the move to the trash at the panel's end, apart from the rest. */
-.entry-editor__action {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* The move to the trash is set off from the fields above it by a rule, so it is
-   not reached by somebody working down the panel. */
-.entry-editor__action--apart {
-  padding-block-start: var(--space-5);
-  border-block-start: 1px solid var(--edge-hairline);
-}
-
-.entry-editor__action .button {
-  justify-content: center;
-  width: 100%;
 }
 
 /* --- Topics -----------------------------------------------------------------
@@ -605,8 +551,13 @@ dialog.card-dialog::backdrop {
 }
 
 .topic-field__list {
+  /* How far the suggestions stand in from the list's edge, and their corners,
+     concentric with the list's: its radius less its hairline and the inset. */
+  --topic-list-inset: var(--space-1);
+  --row-radius: max(calc(var(--radius-control) - 1px - var(--topic-list-inset)), 0px);
+
   margin-block-start: var(--space-1);
-  padding: var(--space-1);
+  padding: var(--topic-list-inset);
   background: var(--surface-raised);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -622,7 +573,7 @@ dialog.card-dialog::backdrop {
 .settings-screen {
   display: flex;
   flex-direction: column;
-  gap: var(--workbench-gutter);
+  gap: var(--content-gutter);
   width: 100%;
   max-width: var(--form-measure);
 }
@@ -668,11 +619,15 @@ dialog.card-dialog::backdrop {
 /* A chosen picture with its file name and the controls that change it, on one
    sunken line that reads as the field's value, as the mockup draws it. */
 .picture-field {
+  /* How far the picture stands in from the field's edge, which its corners
+     are derived from. */
+  --picture-field-inset: var(--space-2);
+
   display: flex;
   gap: var(--space-3);
   align-items: center;
   min-height: var(--input-height);
-  padding: var(--space-2);
+  padding: var(--picture-field-inset);
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -681,14 +636,14 @@ dialog.card-dialog::backdrop {
 /* The picture at the mockup's height, in the shape the site gives it, so the
    crop is the one a reader will see. A sharing picture takes the card of a
    shared link, 1200 by 630, cropped around the middle as the platforms crop
-   it. It sits the field's padding in from its edge, so its corners are the
-   field's radius less that padding. */
+   it. Its corners are concentric with the field's: the field's radius less its
+   hairline and the inset. */
 .picture-field img {
   flex: none;
   height: var(--picture-field-image);
   aspect-ratio: 1200 / 630;
   object-fit: cover;
-  border-radius: max(calc(var(--radius-control) - var(--space-2)), 0px);
+  border-radius: max(calc(var(--radius-control) - 1px - var(--picture-field-inset)), 0px);
 }
 
 /* The home page's plate, around the focal point the field sets inline. */

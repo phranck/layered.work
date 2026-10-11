@@ -66,7 +66,7 @@ export const siteHeader = ({ language = "en", current = "home", translation } = 
       </nav>
       <div class="header-tools">
         <button class="search-trigger" type="button" data-search-open-trigger>
-          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <i class="ph-duotone ph-magnifying-glass" aria-hidden="true"></i>
           <span>${language === "de" ? "Suchen" : "Search"}</span>
           ${Shortcut({ key: "K" })}
         </button>

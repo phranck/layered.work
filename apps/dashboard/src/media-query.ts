@@ -340,26 +340,6 @@ export function useMediaUploads(onComplete: (item: MediaLibraryItem) => void) {
 }
 
 /**
- * Puts one file into the library, where every view of the library and the
- * sidebar's count then show it.
- *
- * @param reactions - What the screen does once the library has it or the upload failed.
- * @returns The mutation, which takes the file.
- */
-export function useUploadMedia(reactions: Reactions<UploadedMedia, File>) {
-  const api = useDashboardApi();
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (file: File) => api.uploadMedia(file),
-    onError: (error) => reactions.onError?.(error),
-    onSuccess: (uploaded, file) => {
-      void refreshMediaQueries(client);
-      reactions.onSuccess?.(uploaded, file);
-    },
-  });
-}
-
-/**
  * One page of Unsplash photos for a search, through the API, which holds the
  * access key. Nothing is asked before something was searched for.
  *

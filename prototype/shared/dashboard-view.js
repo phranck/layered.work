@@ -5,6 +5,7 @@
 // the token scope that makes that true.
 
 import {
+  AppBar,
   Button,
   Card,
   Choice,
@@ -113,17 +114,17 @@ const DEFAULT_AREA = "area.posts";
  * screen. Keyed by the catalogue key of the action's label.
  */
 const ACTION_ICONS = {
-  filter: "ph ph-funnel",
-  new: "ph ph-plus",
-  save: "ph ph-floppy-disk",
-  cancel: "ph ph-x",
-  preview: "ph ph-eye",
-  delete: "ph ph-trash",
-  publish: "ph ph-globe",
-  saveDraft: "ph ph-floppy-disk-back",
-  edit: "ph ph-pencil-simple",
-  navigation: "ph ph-plus",
-  account: "ph ph-plus",
+  filter: "ph-duotone ph-funnel",
+  new: "ph-duotone ph-plus",
+  save: "ph-duotone ph-floppy-disk",
+  cancel: "ph-duotone ph-x",
+  preview: "ph-duotone ph-eye",
+  delete: "ph-duotone ph-trash",
+  publish: "ph-duotone ph-globe",
+  saveDraft: "ph-duotone ph-floppy-disk-back",
+  edit: "ph-duotone ph-pencil-simple",
+  navigation: "ph-duotone ph-plus",
+  account: "ph-duotone ph-plus",
 };
 
 /**
@@ -149,7 +150,7 @@ const userSection = () =>
     { "data-open-account": true, title: t("heading.accountTitle") },
     Row.Tile(html`<img src="../assets/img/portrait.jpg" alt="" />`),
     Row.Text({ title: "Frank Gregor", note: t("account.roleAdmin") }),
-    Row.Actions(html`<i class="ph ph-caret-up-down" aria-hidden="true"></i>`),
+    Row.Actions(html`<i class="ph-duotone ph-caret-up-down" aria-hidden="true"></i>`),
   );
 
 /** Where the reader's own order of the sidebar groups is kept. */
@@ -189,7 +190,7 @@ const sidebar = (activeArea) =>
           <div class="section" data-section="${section.key}">
             ${Section.Title({
               attributes: { "data-section-handle": true },
-              lead: html`<i class="ph ph-dots-six-vertical section__grip" aria-hidden="true"></i>`,
+              lead: html`<i class="ph-duotone ph-dots-six-vertical section__grip" aria-hidden="true"></i>`,
               title: t(section.key),
             })}
             ${Section.Body(
@@ -260,7 +261,7 @@ const entryTable = (area) => {
       meta: rows.length,
       actions: html`
         <label class="search-field">
-          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <i class="ph-duotone ph-magnifying-glass" aria-hidden="true"></i>
           <input class="input" type="search" placeholder="${t("table.search")}" />
           ${Shortcut({ key: "K" })}
         </label>
@@ -398,13 +399,13 @@ const landingBuilder = (area, blockId) => {
             each(LANDING_BLOCKS, (block) =>
               Row.button(
                 { "data-block": block.id, "data-active": block.id === open.id },
-                Row.Grip(html`<i class="ph ph-dots-six-vertical"></i>`),
+                Row.Grip(html`<i class="ph-duotone ph-dots-six-vertical"></i>`),
                 Row.Tile(html`<i class="ph-duotone ${block.icon}"></i>`),
                 Row.Text({ title: t(block.typeKey), note: t(block.summaryKey) }),
                 Row.Actions(
                   block.locked
-                    ? html`<span class="chip" title="${t("block.locked")}"><i class="ph ph-lock-simple"></i></span>`
-                    : html`<span class="chip chip--quiet"><i class="ph ph-x"></i></span>`,
+                    ? html`<span class="chip" title="${t("block.locked")}"><i class="ph-duotone ph-lock-simple"></i></span>`
+                    : html`<span class="chip chip--quiet"><i class="ph-duotone ph-x"></i></span>`,
                 ),
               ),
             ),
@@ -453,7 +454,7 @@ const accountOverlay = () => html`
         <div class="account">
           <div class="account__portrait">
             <img class="account__avatar" src="../assets/img/portrait.jpg" alt="" />
-            ${Button({ label: t("account.avatarChange"), icon: "ph ph-image", size: "small" })}
+            ${Button({ label: t("account.avatarChange"), icon: "ph-duotone ph-image", size: "small" })}
           </div>
 
           <div class="account__fields">
@@ -510,7 +511,7 @@ const footerNavigations = () =>
           (navigation, index) => html`
             <div class="nav-manager__group" ${attrs({ "data-active": index === 0 })}>
               ${Row.bare(
-                Row.Grip(html`<i class="ph ph-dots-six-vertical"></i>`),
+                Row.Grip(html`<i class="ph-duotone ph-dots-six-vertical"></i>`),
                 Row.Text({ title: navigation.title }),
                 Row.Meta(navigation.items.length),
                 Row.Actions(html`
@@ -590,15 +591,15 @@ const editor = (entry) =>
       Editor.Toolbar(
         ["H2", "B", "I"].map((label) => Editor.Tool({ label })),
         [
-          ["ph ph-quotes", "Zitat"],
-          ["ph ph-link", "Link"],
-          ["ph ph-image", "Bild"],
-          ["ph ph-code", "Code"],
-          ["ph ph-cube", "3D"],
-          ["ph ph-play-circle", "Video"],
-          ["ph ph-file-pdf", "PDF"],
-          ["ph ph-graph", "Mermaid"],
-          ["ph ph-table", "Table"],
+          ["ph-duotone ph-quotes", "Zitat"],
+          ["ph-duotone ph-link", "Link"],
+          ["ph-duotone ph-image", "Bild"],
+          ["ph-duotone ph-code", "Code"],
+          ["ph-duotone ph-cube", "3D"],
+          ["ph-duotone ph-play-circle", "Video"],
+          ["ph-duotone ph-file-pdf", "PDF"],
+          ["ph-duotone ph-graph", "Mermaid"],
+          ["ph-duotone ph-table", "Table"],
         ].map(([icon, label]) => Editor.Tool({ label, icon })),
         Editor.Tool({ label: t("editor.shortcodes") }),
       ),
@@ -663,7 +664,7 @@ const editor = (entry) =>
         control: html`
           <div class="cluster">
             ${each(entry.tags, (tag) => html`<span class="chip" data-current>${tag.name}</span>`)}
-            <button class="chip" type="button" aria-label="${t("editor.addTag")}"><i class="ph ph-plus"></i></button>
+            <button class="chip" type="button" aria-label="${t("editor.addTag")}"><i class="ph-duotone ph-plus"></i></button>
           </div>
         `,
       }),
@@ -707,28 +708,35 @@ export const dashboardView = (area = DEFAULT_AREA, editingId = null, openBlockId
   return html`
     <div class="workbench" data-area="${area}">
       ${sidebar(area)}
-      <div class="workbench__main">
-        ${Section.Title({
-          level: 1,
-          // The way back stands in the eyebrow's place, so the heading under it
-          // does not move when the editor opens.
-          eyebrow: entry
-            ? html`
-                <button class="workbench-back" type="button" data-close-editor>
-                  <i class="ph ph-arrow-left"></i>${eyebrow}
-                </button>
-              `
-            : eyebrow,
-          title: heading,
-          actions: entry
-            ? [action("cancel", { attributes: { "data-close-editor": true } }), action("save", { tone: "primary" })]
-            : [action("filter"), action("new", { tone: "primary" })],
-        })}
-        ${entry
-          ? editor(entry)
-          : panels
-            ? each(panels, (name) => PANELS[name](area, openBlockId))
-            : placeholder(area)}
+      <div class="workbench__column">
+        ${AppBar(
+          // The way back stands before the title of what is open, so the title
+          // keeps the bar's start whether the editor is open or not.
+          AppBar.Start(
+            entry
+              ? Button({
+                  label: eyebrow,
+                  icon: "ph-duotone ph-arrow-left",
+                  size: "small",
+                  attributes: { "data-close-editor": true },
+                })
+              : "",
+            html`<h1 class="app-bar-title">${heading}</h1>`,
+          ),
+          AppBar.Center(),
+          AppBar.End(
+            entry
+              ? [action("cancel", { attributes: { "data-close-editor": true } }), action("save", { tone: "primary" })]
+              : [action("filter"), action("new", { tone: "primary" })],
+          ),
+        )}
+        <div class="workbench__main">
+          ${entry
+            ? editor(entry)
+            : panels
+              ? each(panels, (name) => PANELS[name](area, openBlockId))
+              : placeholder(area)}
+        </div>
       </div>
       ${accountOpen ? accountOverlay() : ""}
     </div>

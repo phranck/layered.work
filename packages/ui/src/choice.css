@@ -12,10 +12,14 @@
  */
 
 .choice {
+  /* How far the options stand in from the list's edge, which their corners
+     are derived from. */
+  --choice-inset: 3px;
+
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 3px;
+  padding: var(--choice-inset);
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -35,7 +39,8 @@
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--card-inner-radius);
+  /* Concentric with the list: its radius less its hairline and the inset. */
+  border-radius: max(calc(var(--radius-control) - 1px - var(--choice-inset)), 0px);
   transition:
     color var(--duration) var(--ease),
     border-color var(--duration) var(--ease);

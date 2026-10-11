@@ -97,10 +97,15 @@
 /* A row: its grip, and its fields on the form's columns, whose number the
    builder sets as `--columns`. */
 .forms-row {
+  /* How far the fields stand in from the row's edge, and their corners,
+     concentric with the row's: its radius less its hairline and the inset. */
+  --forms-row-inset: var(--space-2);
+  --forms-row-inner-radius: max(calc(var(--radius-control) - 1px - var(--forms-row-inset)), 0px);
+
   display: flex;
   gap: var(--space-2);
   align-items: stretch;
-  padding: var(--space-2);
+  padding: var(--forms-row-inset);
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -166,7 +171,9 @@
   touch-action: none;
   background: var(--surface-raised);
   border: 1px solid var(--edge-hairline);
-  border-radius: var(--radius-chip);
+  /* The row's inner radius where it stands in a row, and a chip's where it is
+     carried under the pointer, outside any row. */
+  border-radius: var(--forms-row-inner-radius, var(--radius-chip));
 }
 
 .forms-field__select:hover {
@@ -252,7 +259,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-faint);
   border: 1px dashed var(--edge-strong);
-  border-radius: var(--radius-chip);
+  border-radius: var(--forms-row-inner-radius);
 }
 
 /* --- Drag ---------------------------------------------------------------------
@@ -308,7 +315,8 @@
   cursor: pointer;
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
-  border-radius: 4px;
+  /* Half a chip's corner: a step is a mark in a row of twelve, not a chip. */
+  border-radius: calc(var(--radius-chip) / 2);
 }
 
 .forms-span__step[data-filled] {
