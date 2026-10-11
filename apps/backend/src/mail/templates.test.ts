@@ -72,8 +72,8 @@ describe("mail template rendering", () => {
       body: { en: "- One\n\n  More on one.\n\n  - Inner\n- Two", de: "Zeile" },
     };
     const result = renderMailTemplate(template, "en", { formName: "Contact", submittedAt: "today" });
-    expect(result.html).toBe(
-      '<div lang="en"><ul><li>One<br>More on one.<ul><li>Inner</li></ul></li><li>Two</li></ul></div>',
+    expect(result.html).toContain(
+      "><ul><li>One<br>More on one.<ul><li>Inner</li></ul></li><li>Two</li></ul></div>",
     );
     expect(result.text).toBe("- One\n  More on one.\n  - Inner\n- Two");
   });
@@ -84,7 +84,15 @@ describe("mail template rendering", () => {
       body: { en: "Prototype(2)", de: "Zeile" },
     };
     const result = renderMailTemplate(template, "en", { formName: "Contact", submittedAt: "today" });
-    expect(result.html).toBe('<div lang="en"><p>Prototype(2)</p></div>');
+    expect(result.html).toContain("><p>Prototype(2)</p></div>");
+  });
+
+  it("states its own type, so every client draws the same message", () => {
+    const result = renderMailTemplate(DEFAULT_MAIL_TEMPLATES.submission_confirmation, "de", {
+      formName: "Kontakt",
+      submittedAt: "heute",
+    });
+    expect(result.html).toMatch(/^<div lang="de" style="font-family: [^"]+">/);
   });
 
   it("renders only the elements the dashboard's preview rebuilds", () => {

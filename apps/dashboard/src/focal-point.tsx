@@ -6,10 +6,15 @@ import "./focal-point.css";
 
 type EditorProps = { src: string; point: FocalPoint; onChange: (point: FocalPoint) => void };
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
+/**
+ * The shapes the site cuts a picture to, by the token the site's stylesheets
+ * read, so a preview here is the crop a reader sees there.
+ */
 const CROPS = [
-  { ratio: "16 / 10", label: "mediaCropCard" },
-  { ratio: "21 / 9", label: "mediaCropBanner" },
-  { ratio: "4 / 3", label: "mediaCropMobile" },
+  { ratio: "var(--crop-card)", label: "mediaCropCard" },
+  { ratio: "var(--crop-project-hero)", label: "mediaCropProjectHero" },
+  { ratio: "var(--crop-project-hero-narrow)", label: "mediaCropProjectHeroNarrow" },
+  { ratio: "var(--crop-home-plate)", label: "mediaCropHomePlate" },
 ] as const;
 
 function FocalRoot({ src, point, onChange, hintId }: EditorProps & { hintId: string }) {

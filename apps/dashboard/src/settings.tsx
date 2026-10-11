@@ -10,7 +10,7 @@ import {
   siteSettings,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import { FloppyDiskIcon, ImagesIcon, PaperPlaneTiltIcon, XIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
@@ -18,7 +18,7 @@ import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaPicker } from "./media-picker.js";
+import { MediaField } from "./media-field.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
@@ -218,68 +218,6 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
   );
 }
 
-/** Props for a setting that names one picture from the library. */
-interface PictureSettingProps {
-  label: string;
-  hint: string;
-  /** What the field says whilst no picture is chosen. */
-  none: string;
-  mediaId: string | null;
-  /** Where the stored picture can be shown from, as the API answered. */
-  savedUrl: string | null;
-  editable: boolean;
-  onChange: (mediaId: string | null) => void;
-}
-
-/**
- * A setting that names one library picture: the picture, or what stands in for
- * none, with a button that removes it and one that opens the picker.
- *
- * The address of a picture chosen here is held here, because the API only knows
- * the address of the one already saved. Saving re-keys the card, which starts
- * this again from the saved address.
- */
-function PictureSetting({ label, hint, none, mediaId, savedUrl, editable, onChange }: PictureSettingProps) {
-  const { text } = useDashboardLanguage();
-  const [picking, setPicking] = useState(false);
-  const [chosenUrl, setChosenUrl] = useState<string | null>(null);
-  return (
-    <Field label={label} hint={hint}>
-      <div className="media-field">
-        {mediaId ? (
-          <img src={chosenUrl ?? savedUrl ?? ""} alt="" />
-        ) : (
-          <span className="media-field__name">{none}</span>
-        )}
-        <span className="actions media-field__actions">
-          {mediaId && (
-            <Button disabled={!editable} icon={<XIcon weight="duotone" />} onClick={() => onChange(null)}>
-              {text("remove")}
-            </Button>
-          )}
-          <Button
-            disabled={!editable}
-            icon={<ImagesIcon weight="duotone" />}
-            onClick={() => setPicking(true)}
-          >
-            {text("mediaPicker")}
-          </Button>
-        </span>
-      </div>
-      {picking && (
-        <MediaPicker
-          onCancel={() => setPicking(false)}
-          onChoose={(item) => {
-            onChange(item.id);
-            setChosenUrl(item.url);
-            setPicking(false);
-          }}
-        />
-      )}
-    </Field>
-  );
-}
-
 /** The site's name, its footer line, its language, its fallback sharing picture and its watermark. */
 export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
   const { text } = useDashboardLanguage();
@@ -287,13 +225,12 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
     <WithSettings
       area={area}
       render={(view) => {
-        const { pictureUrls, ...saved } = view.site;
         return (
           <Translated>
             <SettingsCard<"site">
               group="site"
               title={text("settingsSite")}
-              saved={saved}
+              saved={view.site}
               schema={siteSettings}
               reasons={{ title: "invalidTitle", footerLine: "invalidFooterLine" }}
               headerActions={<Translated.Switch />}
@@ -327,21 +264,21 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                       }
                     />
                   </Field>
-                  <PictureSetting
+                  <MediaField
                     label={text("socialImage")}
                     hint={text("socialImageHint")}
                     none={text("socialImageNone")}
                     mediaId={draft.socialImageMediaId}
-                    savedUrl={pictureUrls.socialImageMediaId}
+                    shape="sharing"
                     editable={editable}
                     onChange={(socialImageMediaId) => update({ socialImageMediaId })}
                   />
-                  <PictureSetting
+                  <MediaField
                     label={text("watermark")}
                     hint={text("watermarkHint")}
                     none={text("watermarkWordmark")}
                     mediaId={draft.watermarkMediaId}
-                    savedUrl={pictureUrls.watermarkMediaId}
+                    shape="whole"
                     editable={editable}
                     onChange={(watermarkMediaId) => update({ watermarkMediaId })}
                   />
