@@ -139,7 +139,7 @@ runs("the site's settings", () => {
     expect((await getMediaUses(database, mark)).map((use) => use.title)).toContain("Site watermark");
   });
 
-  it("refuses a test message whilst no SMTP2GO key is configured, and only the owner may ask", async () => {
+  it("refuses a test message while no SMTP2GO key is configured, and only the owner may ask", async () => {
     const editor = await app.request("/settings/mail/test", {
       method: "POST",
       headers: { cookie: await signedInCookie() },

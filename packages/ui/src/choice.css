@@ -1,11 +1,11 @@
 /*
  * A list of explained options.
  *
- * The tone does two jobs: it colours the mark, and the chosen option takes a
- * dimmed version of that same colour as its fill. A reader who has seen green
+ * The tone does two jobs: it colors the mark, and the chosen option takes a
+ * dimmed version of that same color as its fill. A reader who has seen green
  * beside "public" once knows what a green panel means without reading it again.
  *
- * Choosing an option animates its colour, its edge, its mark and its fill,
+ * Choosing an option animates its color, its edge, its mark and its fill,
  * because a state that snaps reads as the interface redrawing itself. Hover
  * feedback is immediate, so hover owns the option's background and the chosen
  * fill is a layer of its own that fades in and out above it.
@@ -51,7 +51,7 @@
 }
 
 /*
- * The chosen option, in a dimmed version of its own mark's colour. The tone is
+ * The chosen option, in a dimmed version of its own mark's color. The tone is
  * read off the element rather than written per option, so a new status is a new
  * entry in the data and needs no rule here.
  */

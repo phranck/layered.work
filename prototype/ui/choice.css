@@ -1,8 +1,8 @@
 /*
  * A list of explained options.
  *
- * The tone does two jobs: it colours the mark, and the chosen option takes a
- * dimmed version of that same colour as its fill. A reader who has seen green
+ * The tone does two jobs: it colors the mark, and the chosen option takes a
+ * dimmed version of that same color as its fill. A reader who has seen green
  * beside "public" once knows what a green panel means without reading it again.
  *
  * Every part of the change is animated. A state that snaps reads as the
@@ -43,7 +43,7 @@
 }
 
 /*
- * The chosen option, in a dimmed version of its own mark's colour. The tone is
+ * The chosen option, in a dimmed version of its own mark's color. The tone is
  * read off the element rather than written per option, so a new status is a new
  * entry in the data and needs no rule here.
  */
@@ -55,7 +55,7 @@
 
 /* --- Tones ------------------------------------------------------------------
    Four names, bound to the status tokens. They are the only place this component
-   touches colour, and they read the semantic tokens like everything else. */
+   touches color, and they read the semantic tokens like everything else. */
 
 .choice__option[data-tone="success"] { --choice-tone: var(--state-success); }
 .choice__option[data-tone="warning"] { --choice-tone: var(--state-warning); }

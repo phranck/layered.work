@@ -12,7 +12,7 @@ import { rewritePreloadHelper } from "./preview-assets.mjs";
 import { loadProductionApp } from "./production-app.mjs";
 
 // The same table the route redirects from, read rather than repeated, because a
-// second copy here would pass its own check whilst the site answered 404.
+// second copy here would pass its own check while the site answered 404.
 const LEGACY_REDIRECTS = JSON.parse(
   await readFile(new URL("../src/content/legacy-redirects.json", import.meta.url), "utf8"),
 );

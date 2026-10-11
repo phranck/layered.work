@@ -9,12 +9,12 @@
  * ```
  *
  * The layers, in the order they build on each other: `scale.css` holds every
- * stepped series and not one colour, `palettes.css` holds the colour worlds,
+ * stepped series and not one color, `palettes.css` holds the color worlds,
  * `semantic.css` holds what follows from those two and is what components read,
  * and `workbench.css` holds the dashboard's density.
  *
  * The rule that holds it together is that a component names a semantic token
- * and never a colour, a step of a ramp, or a literal. `README.md` beside this
+ * and never a color, a step of a ramp, or a literal. `README.md` beside this
  * file explains why, and carries the two resolution traps that each cost a
  * working day to find.
  *

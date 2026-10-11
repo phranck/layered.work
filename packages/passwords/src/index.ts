@@ -26,7 +26,7 @@ import { promisify } from "node:util";
  *
  * `promisify` reads the first of the callback's overloads, which is the one
  * without the options object, so the parameters below would otherwise be an
- * error at every call whilst working perfectly at run time.
+ * error at every call while working perfectly at run time.
  */
 const scrypt = promisify(scryptCallback) as (
   password: string,

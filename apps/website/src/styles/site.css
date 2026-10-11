@@ -1,5 +1,5 @@
 /* The frame follows prototype/schichtung. These inputs preserve its geometry;
-   shared type, colour, surface and spacing come from @layered/tokens. */
+   shared type, color, surface and spacing come from @layered/tokens. */
 :root {
   --line-width: 1px;
   --bar-height: 68px;

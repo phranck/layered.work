@@ -2,11 +2,11 @@
  * The bar across the top of a workbench's content.
  *
  * Its height is `--app-bar-height`, which the sidebar's mark area derives from
- * as well, so the mark and whatever stands in the bar share one centre line.
+ * as well, so the mark and whatever stands in the bar share one center line.
  * It takes the sidebar's sunken surface, so the two read as one frame around
  * the content, and a hairline closes it off from what scrolls beneath.
  *
- * Three columns, the outer two equal: the centre is centred on the bar rather
+ * Three columns, the outer two equal: the center is centered on the bar rather
  * than on whatever space the two sides happen to leave.
  */
 

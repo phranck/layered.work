@@ -21,7 +21,7 @@ export type PublicationState = (typeof PUBLICATION_STATES)[number];
 /**
  * The states a reader may reach.
  *
- * `public` appears everywhere, and `hidden` answers at its own address whilst
+ * `public` appears everywhere, and `hidden` answers at its own address while
  * staying out of every listing. `draft` is neither, so every query that reads
  * what the site may show filters by this list rather than by a condition of its
  * own.
@@ -145,11 +145,11 @@ export const entryDetail = z.object({
   state: z.enum(PUBLICATION_STATES),
   readingWidth: z.enum(READING_WIDTHS),
   /**
-   * Whether the other language's listings show it as well whilst that language
+   * Whether the other language's listings show it as well while that language
    * has no published version of its own.
    */
   showInOtherLanguage: z.boolean(),
-  /** When it first became public, or null whilst it never has been. */
+  /** When it first became public, or null while it never has been. */
   publishedAt: z.iso.datetime().nullable(),
   /** When anything about the entry last changed. */
   modifiedAt: z.iso.datetime(),

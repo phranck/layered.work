@@ -76,7 +76,7 @@ export function TopicField({
     }
   };
 
-  // The list opens and closes by its height. Whilst it closes it goes on showing
+  // The list opens and closes by its height. While it closes it goes on showing
   // what it held, so the closing is seen rather than the lines vanishing first.
   const [kept, setKept] = useState<Suggestion[]>([]);
   useEffect(() => {

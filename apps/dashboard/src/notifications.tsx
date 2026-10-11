@@ -19,11 +19,11 @@ import { errorKey } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 
 /**
- * What just happened, said in one place: the centre of the dashboard's bar.
+ * What just happened, said in one place: the center of the dashboard's bar.
  *
  * One notification at a time, because a stack of them is a log nobody reads. A
  * new one replaces the one shown. Success and information leave by themselves
- * after a few seconds, and stay whilst the pointer rests on them; a warning or
+ * after a few seconds, and stay while the pointer rests on them; a warning or
  * a failure stays until it is closed, because a failure read in passing is a
  * failure missed.
  *
@@ -31,7 +31,7 @@ import { useDashboardLanguage } from "./language-context.js";
  * changes or when it was last saved, stays beside the thing it describes.
  */
 
-/** The four tones, the status colours the design system names. */
+/** The four tones, the status colors the design system names. */
 export type NotificationTone = "success" | "info" | "warning" | "danger";
 
 /** One notification: what kind it is, what it says, and a line beneath it where there is one. */

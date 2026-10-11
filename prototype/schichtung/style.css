@@ -106,7 +106,7 @@ a {
 /*
  * One measure for the whole page. A band spans the window and carries the
  * backdrop, the row inside it is held to the page width, so a frosted edge
- * reaches both sides whilst the wordmark still begins where the text does.
+ * reaches both sides while the wordmark still begins where the text does.
  */
 .page {
   width: min(100%, var(--page-width));
@@ -332,7 +332,7 @@ a.chip:hover {
 }
 
 /*
- * Status is carried by a dot plus a word, never by colour alone, so the meaning
+ * Status is carried by a dot plus a word, never by color alone, so the meaning
  * survives a reader who cannot tell the two greens apart.
  */
 .badge {
@@ -340,7 +340,7 @@ a.chip:hover {
   gap: 6px;
   align-items: center;
   /* One pixel more above than below: at a line height of one the em box is
-     shorter than the glyph box, and the caps land a pixel above the centre.
+     shorter than the glyph box, and the caps land a pixel above the center.
      Measured at 1.0px on 13px. */
   padding: 5px 9px 3px 7px;
   font-size: var(--text-xs);
@@ -349,9 +349,9 @@ a.chip:hover {
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   border-radius: var(--radius-chip);
-  color: var(--badge-colour, var(--text-muted));
-  background: color-mix(in oklab, var(--badge-colour, var(--ink-500)) 14%, transparent);
-  border: 1px solid color-mix(in oklab, var(--badge-colour, var(--ink-500)) 30%, transparent);
+  color: var(--badge-color, var(--text-muted));
+  background: color-mix(in oklab, var(--badge-color, var(--ink-500)) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--badge-color, var(--ink-500)) 30%, transparent);
 }
 
 .badge::before {
@@ -362,10 +362,10 @@ a.chip:hover {
   border-radius: 50%;
 }
 
-.badge[data-status="public"] { --badge-colour: var(--state-success); }
-.badge[data-status="draft"] { --badge-colour: var(--state-warning); }
-.badge[data-status="hidden"] { --badge-colour: var(--state-info); }
-.badge[data-status="secret"] { --badge-colour: var(--accent-400); }
+.badge[data-status="public"] { --badge-color: var(--state-success); }
+.badge[data-status="draft"] { --badge-color: var(--state-warning); }
+.badge[data-status="hidden"] { --badge-color: var(--state-info); }
+.badge[data-status="secret"] { --badge-color: var(--accent-400); }
 
 .lang-tag {
   display: inline-flex;
@@ -439,7 +439,7 @@ a.chip:hover {
   background: var(--hover-tint);
 }
 
-/* The current item carries the accent and a tint of it, because colour alone
+/* The current item carries the accent and a tint of it, because color alone
    asks a reader to compare two greys. Hover must not replace that tint. */
 .site-nav a[data-current] {
   color: var(--accent-300);
@@ -1121,7 +1121,7 @@ a.chip:hover {
  * The footer closes the page, so its own surface has to reach the bottom edge of
  * the document. The room the prototype bar needs is part of the footer's lower
  * padding rather than padding on the body, which would leave a strip of page
- * colour below the footer and make it look as though it had stopped early.
+ * color below the footer and make it look as though it had stopped early.
  */
 .site-footer {
   margin-block-start: var(--section-gap);
@@ -1226,7 +1226,7 @@ a.chip:hover {
 }
 
 /*
- * A brand mark, drawn as a mask so it inherits the colour it sits in. Sized from
+ * A brand mark, drawn as a mask so it inherits the color it sits in. Sized from
  * one token, because every mark has to be optically the same size whether its
  * file is a circle, a square or a pair of strokes.
  */

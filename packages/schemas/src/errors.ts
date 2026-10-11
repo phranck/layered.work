@@ -4,7 +4,7 @@ import { z } from "zod";
  * The one shape every failure arrives in, and the codes it may carry.
  *
  * This lives here rather than in the backend because the dashboard reads it.
- * A screen that wants to say "that address is already taken" has to recognise
+ * A screen that wants to say "that address is already taken" has to recognize
  * the failure, and matching on a message means the wording of a sentence is
  * load-bearing: translating it, or making it friendlier, breaks the screen.
  * The code is what it matches on, and the message is free to change.

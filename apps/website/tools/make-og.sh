@@ -91,8 +91,8 @@ trap 'rm -rf "$work"' EXIT
 magick "$work/og-2x.png" -resize "${width}x${height}!" -strip "$work/og.png"
 pngquant --quality 70-92 --speed 1 --force --output "$public/og.png" "$work/og.png"
 
-# The icon is the mark on the page colour, squared. The file carries empty
-# margin, so it is trimmed before it is centred, or the mark sits small in the
+# The icon is the mark on the page color, squared. The file carries empty
+# margin, so it is trimmed before it is centered, or the mark sits small in the
 # middle of its own whitespace.
 rsvg-convert -w 600 "$public/logo.svg" -o "$work/mark.png"
 magick "$work/mark.png" \

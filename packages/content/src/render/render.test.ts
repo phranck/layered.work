@@ -363,7 +363,7 @@ describe("what somebody typed", () => {
 
   it("renders a comment, rather than hiding what somebody wrote", () => {
     // A comment is HTML and follows the same rule as the rest of it. Dropping
-    // it would be the one behaviour that loses text without saying so, and an
+    // it would be the one behavior that loses text without saying so, and an
     // author who wants a note that nobody sees has the draft for that.
     expect(renderContent("<!-- eine Notiz -->\n")).toEqual([{ kind: "text", value: "<!-- eine Notiz -->" }]);
   });

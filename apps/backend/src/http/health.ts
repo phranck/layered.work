@@ -27,7 +27,7 @@ health.get("/", responds(healthAlive, { envelope: false }), (c) =>
 /**
  * Whether this container can actually serve.
  *
- * Asked by the platform's readiness check, which runs only whilst a deployment
+ * Asked by the platform's readiness check, which runs only while a deployment
  * rolls out, so a container in a state that would fail every real request never
  * replaces the one already running.
  *

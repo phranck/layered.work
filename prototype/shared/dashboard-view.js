@@ -97,7 +97,7 @@ const statusLabel = (status) => t(`status.${status}`);
  *
  * Content areas list their entries and nothing else. The editor is a second
  * state reached by opening one of them, not a panel underneath the list, because
- * nobody edits a post whilst looking at a table of all the others.
+ * nobody edits a post while looking at a table of all the others.
  */
 const AREAS = {
   "area.posts": ["statistics", "entryTable"],
@@ -443,7 +443,7 @@ const landingBuilder = (area, blockId) => {
  * and comes back untouched.
  *
  * The portrait is the subject of this card, so it is large and its control sits
- * beneath it, centred under the thing it changes. A label over a picture and a
+ * beneath it, centered under the thing it changes. A label over a picture and a
  * hint under a button would only name what both already show.
  */
 const accountOverlay = () => html`
@@ -557,7 +557,7 @@ const socialAccounts = () =>
  * What the writing surface shows.
  *
  * A sample rather than the entry's real body, because the prototype has no
- * editor behind it: this is what an author sees, in the syntax colours of the
+ * editor behind it: this is what an author sees, in the syntax colors of the
  * markdown editor in lmaa and musiccloud. The lines start at the margin, since
  * the surface preserves whitespace and an indent here would show on screen.
  */
@@ -844,7 +844,7 @@ export function wireDashboard(root, rerender) {
   });
 
   // Escape belongs on the document: a key event travels from whatever has focus
-  // up to the document, so a listener on the view only hears it whilst focus is
+  // up to the document, so a listener on the view only hears it while focus is
   // inside the view. The previous one is removed first, or every re-render would
   // leave another behind.
   document.removeEventListener("keydown", activeEscapeHandler);
@@ -887,7 +887,7 @@ function wireSectionReorder(workbench, onReorder) {
   const aside = workbench.querySelector(".sidebar");
 
   // The outline that shows where the group will land. One element, reused for
-  // every drag, so nothing is created whilst a gesture is running.
+  // every drag, so nothing is created while a gesture is running.
   const slot = document.createElement("div");
   slot.className = "drop-slot";
   slot.setAttribute("aria-hidden", "true");
@@ -901,7 +901,7 @@ function wireSectionReorder(workbench, onReorder) {
     event.preventDefault();
 
     const groups = [...aside.querySelectorAll(".sidebar__body [data-section]")];
-    // One read of the layout, before anything moves. Reading a rect again whilst
+    // One read of the layout, before anything moves. Reading a rect again while
     // dragging would measure the transform we just wrote and feed it back in.
     const asideBox = aside.getBoundingClientRect();
     const boxes = groups.map((group) => group.getBoundingClientRect());

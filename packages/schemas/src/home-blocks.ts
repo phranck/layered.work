@@ -8,7 +8,7 @@ import { body, MaxLength } from "./request.js";
  * One list, read by the database enum that constrains what may be stored and by
  * the snapshot schema the website parses. They were written out separately once
  * and four of the five names had already drifted apart, which nothing could see:
- * the website renders a block it does not recognise as nothing at all, so the
+ * the website renders a block it does not recognize as nothing at all, so the
  * page simply arrives shorter than it should.
  *
  * Adding a type here is half the work. The website has to render it, and

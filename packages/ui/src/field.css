@@ -168,7 +168,7 @@
 /* --- Select -----------------------------------------------------------------
    The native element in the input's box, with the browser's own arrow replaced
    by one drawn on the wrapper, so it matches the rest of the controls rather
-   than the platform's form widgets. The colour scheme is stated, or the opened
+   than the platform's form widgets. The color scheme is stated, or the opened
    menu comes up light on a dark interface. */
 
 .select {
@@ -176,7 +176,7 @@
   display: block;
 }
 
-/* No vertical padding: a select centres its text in the content box and clips
+/* No vertical padding: a select centers its text in the content box and clips
    what does not fit there, so the input's padding would cut the word in half. */
 .select .input {
   padding-block: 0;
@@ -287,13 +287,13 @@
 }
 
 /* The options sit above the pill and bring no fill of their own: the pill is the
-   fill, and two of them would show as a double edge whilst it travels.
+   fill, and two of them would show as a double edge while it travels.
 
    An option is never shortened. Where a place is too narrow for every label,
    the segmented control is the wrong control there, and an overflow shows that
    where an ellipsis would hide it.
 
-   The text colour changes on hover as well as on selection, so it carries no
+   The text color changes on hover as well as on selection, so it carries no
    transition: hover appears at once, and the pill is what travels. */
 .segmented button {
   position: relative;

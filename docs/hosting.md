@@ -1,6 +1,6 @@
 # Hosting
 
-The project runs on [Zerops](https://zerops.io) in the `LAYERED` organisation, alongside lmaa.space, musiccloud.io, velvet.li and the Umami instance.
+The project runs on [Zerops](https://zerops.io) in the `LAYERED` organization, alongside lmaa.space, musiccloud.io, velvet.li and the Umami instance.
 
 Nothing in this file is a secret. `zcli project env` prints the database password and the generated session secret in clear text, so no value from that output is ever copied into this repository.
 
@@ -11,7 +11,7 @@ Nothing in this file is a secret. `zcli project env` prints the database passwor
 | | |
 | --- | --- |
 | Name | `layered.work` |
-| Organisation | `LAYERED` |
+| Organization | `LAYERED` |
 | Core package | LIGHT |
 | Location | `eu-central`, which resolves to `prg1` |
 | Created | 13 September 2026, from `zerops-project-import.yml` |
@@ -46,7 +46,7 @@ Each application service also answers on a Zerops subdomain. They are enabled on
 | `dashboard` | `https://dashboard-2444.prg1.zerops.app` |
 | `backend` | `https://backend-2444-3000.prg1.zerops.app` |
 
-**The port is part of the name, and the subdomain has to be enabled after the first deploy.** `enableSubdomainAccess: true` in the import file runs before any service declares a port, and what it produces is a subdomain that resolves and routes nowhere: every request answers 502 with "Check if your application is running on a correct port", whilst the process log says it is listening. Running it again once the port exists fixes it.
+**The port is part of the name, and the subdomain has to be enabled after the first deploy.** `enableSubdomainAccess: true` in the import file runs before any service declares a port, and what it produces is a subdomain that resolves and routes nowhere: every request answers 502 with "Check if your application is running on a correct port", while the process log says it is listening. Running it again once the port exists fixes it.
 
 ```bash
 zcli service enable-subdomain --projectId <project> --serviceId <service>
@@ -71,13 +71,13 @@ Zerops issues the certificate through Let's Encrypt. One certificate covers `lay
 
 **The API has no public name, because nothing outside the project addresses it by one.** The site's server asks it at `http://backend:3000` inside the project. The dashboard's nginx passes `/api/` on to `http://backend.zerops:3000`, so a browser only ever talks to the host whose page it shows. A name for the API costs a DNS record and a certificate, and it is attached once a client outside the project needs one.
 
-`new.layered.work` carries the same two records and answers on the `website` service. It is one of the preview hosts in `apps/website/src/site.ts`, so it shows the finished site whilst `layered.work` still shows the countdown, and the smoke test checks the site there.
+`new.layered.work` carries the same two records and answers on the `website` service. It is one of the preview hosts in `apps/website/src/site.ts`, so it shows the finished site while `layered.work` still shows the countdown, and the smoke test checks the site there.
 
 The backend publishes its generated OpenAPI description at `/openapi.json`. The route, authentication and shared error contract are documented in [API](api.md).
 
-Adding a name to a project makes Zerops re-issue that certificate, and for a minute or two whilst it does, the existing host answers with a self-signed one. Nothing is broken; it passes.
+Adding a name to a project makes Zerops re-issue that certificate, and for a minute or two while it does, the existing host answers with a self-signed one. Nothing is broken; it passes.
 
-**A domain with a record pointing at something dead cannot get a certificate.** On 13 September the old host's A and AAAA records were still published alongside the new ones. Let's Encrypt validates over HTTP against whichever address it picks, so it kept hitting a host that answered 502 and 404, and no certificate was issued whilst the site was already down. Removing the two old records fixed it within minutes. The lesson for the remaining two hosts: one name points at one place, and the old record goes at the same moment the new one arrives, not before and not after.
+**A domain with a record pointing at something dead cannot get a certificate.** On 13 September the old host's A and AAAA records were still published alongside the new ones. Let's Encrypt validates over HTTP against whichever address it picks, so it kept hitting a host that answered 502 and 404, and no certificate was issued while the site was already down. Removing the two old records fixed it within minutes. The lesson for the remaining two hosts: one name points at one place, and the old record goes at the same moment the new one arrives, not before and not after.
 
 Lower the time to live before the next such change. It stood at 3125 seconds, so a mistake took the better part of an hour to undo.
 
@@ -131,9 +131,9 @@ All three send `Content-Security-Policy`, `Referrer-Policy`, `X-Content-Type-Opt
 
 Styling is split, because a `<style>` element and `element.style.setProperty(…)` are the same directive to CSP and not the same risk. `style-src-elem` takes the nonce; `style-src-attr` permits attributes, which only a script can reach and no script runs without the nonce; `style-src` stays as the fallback for a browser that knows neither, carrying no nonce so that `'unsafe-inline'` still applies there.
 
-**A page with a three-dimensional model gets one permission the rest of the site does not.** The viewer decodes compressed textures with an Emscripten build that constructs its functions from strings, in a worker built from a blob, which inherits the document's policy, so that page carries `'unsafe-eval'`. No build of that transcoder exists without it. The page decides this about itself whilst it renders, by asking its own body whether a `Model` is in it, and the middleware reads the answer when it writes the header. Every other response is unchanged, and a model exported without Basis-compressed textures would need none of it.
+**A page with a three-dimensional model gets one permission the rest of the site does not.** The viewer decodes compressed textures with an Emscripten build that constructs its functions from strings, in a worker built from a blob, which inherits the document's policy, so that page carries `'unsafe-eval'`. No build of that transcoder exists without it. The page decides this about itself while it renders, by asking its own body whether a `Model` is in it, and the middleware reads the answer when it writes the header. Every other response is unchanged, and a model exported without Basis-compressed textures would need none of it.
 
-The viewer's own stylesheet is a `<style>` block inside its template, which this server never touches and therefore cannot give a nonce. It is permitted by its hash, computed from the installed package whilst assets are prepared, so a new release of the viewer cannot leave a stale value behind. Its two decoders are copied out of `three` into `public/draco/` and `public/basis/` and served from this origin, because otherwise the viewer fetches them from `gstatic.com`.
+The viewer's own stylesheet is a `<style>` block inside its template, which this server never touches and therefore cannot give a nonce. It is permitted by its hash, computed from the installed package while assets are prepared, so a new release of the viewer cannot leave a stale value behind. Its two decoders are copied out of `three` into `public/draco/` and `public/basis/` and served from this origin, because otherwise the viewer fetches them from `gstatic.com`.
 
 **The policy is not sent in development.** The dev server injects its own scripts and styles without nonces, so any policy loose enough for those has stopped saying anything, and one tight enough fills the console with violations about Vite. It is checked against the built output instead:
 
@@ -168,7 +168,7 @@ Zerops has both, they are configured in different sections, and giving one the o
 
 | | `run.healthCheck` | `deploy.readinessCheck` |
 | --- | --- | --- |
-| When it runs | continuously, for the life of the container | only whilst a deployment is rolling out |
+| When it runs | continuously, for the life of the container | only while a deployment is rolling out |
 | What it decides | whether a running container stays in service | whether a new container may take over |
 | What it may touch | the process alone | whatever the container needs to serve |
 
@@ -251,9 +251,9 @@ pnpm --filter @layered/backend db:migrate
 
 **A file that has been applied anywhere is never edited again.** The deployment runs `node apps/backend/dist/db/migrate.js` before the service starts, and the runner records a hash of each file it applies. Rewriting `0000_initial_schema.sql` therefore produces a file the deployed database has no record of, whose statements describe a schema it already has, and the deployment fails at the first `CREATE TYPE`.
 
-That happened on 23 September 2026. `entry_kind` gained a third value, the one file was regenerated as the note here used to instruct, and `deploy-backend` failed whilst the site went on serving its previous build. The answer was to put `0000_initial_schema.sql` back exactly as the deployed database had applied it and let `db:generate` write `0001_add_project_kind.sql` beside it, which is one line: `ALTER TYPE "public"."entry_kind" ADD VALUE 'project';`.
+That happened on 23 September 2026. `entry_kind` gained a third value, the one file was regenerated as the note here used to instruct, and `deploy-backend` failed while the site went on serving its previous build. The answer was to put `0000_initial_schema.sql` back exactly as the deployed database had applied it and let `db:generate` write `0001_add_project_kind.sql` beside it, which is one line: `ALTER TYPE "public"."entry_kind" ADD VALUE 'project';`.
 
-So the history starts here, earlier than #180 expected, and for a plainer reason than the one it named. Rewriting the first file only works whilst every database that has applied it can be thrown away at once, and the deployed one cannot: it is reachable only from inside the project network, because `zcli vpn up` needs a password only phranck can give. Replacing it is a push from the local database, which is not a step to put in front of every schema change.
+So the history starts here, earlier than #180 expected, and for a plainer reason than the one it named. Rewriting the first file only works while every database that has applied it can be thrown away at once, and the deployed one cannot: it is reachable only from inside the project network, because `zcli vpn up` needs a password only phranck can give. Replacing it is a push from the local database, which is not a step to put in front of every schema change.
 
 ## How another service reaches the database and the bucket
 

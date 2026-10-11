@@ -85,7 +85,7 @@ export default defineConfig({
   server: {
     host: true,
     // Note for anyone testing the switch locally: the development server
-    // refuses a request whose Host header it does not recognise, so asking it
+    // refuses a request whose Host header it does not recognize, so asking it
     // as `layered.work` answers 403 rather than the countdown. That is Vite
     // guarding against DNS rebinding and it is worth keeping. Set
     // WEBSITE_MODE=countdown to see the countdown instead. The built server has

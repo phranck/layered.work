@@ -6,10 +6,10 @@ import { MODEL_VIEWER_STYLE_HASH } from "./generated/model-viewer.js";
 import { hasOpened, isPreviewHost, websiteMode } from "./site.js";
 
 /**
- * What still answers on the public host whilst the site is held back.
+ * What still answers on the public host while the site is held back.
  *
  * The sharing image, the wordmark and the typefaces are all files under
- * `public/`, which are recognised by having an extension rather than by being
+ * `public/`, which are recognized by having an extension rather than by being
  * listed. These three are routes, so they have to be named.
  *
  * `/health` matters most of the three. Zerops asks for it before it sends
@@ -49,7 +49,7 @@ function issueNonce(): string {
  *
  * @param response - What the route produced.
  * @param nonce - The one issued for this response.
- * @param rendersModel - What the page said about itself whilst it rendered.
+ * @param rendersModel - What the page said about itself while it rendered.
  *   Read here rather than decided here, because the answer is in the body and
  *   nothing has read the body when the request arrives.
  */
@@ -112,7 +112,7 @@ const ENFORCE_POLICY = import.meta.env.PROD;
  *    nothing left to do.
  * 3. The host. Before the launch the finished site answers on the Zerops
  *    subdomains and on localhost, so it can be looked at, and the public domain
- *    shows the countdown. Anything unrecognised counts as the public domain,
+ *    shows the countdown. Anything unrecognized counts as the public domain,
  *    which is the way round that fails safely.
  *
  * Held back, only three things answer: the countdown at the root, the two

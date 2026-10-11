@@ -6,27 +6,27 @@
  * and the four status colors, plus the original logo's four brand colors and
  * the syntax scheme for code.
  * The lightness steps of the neutral ramp are in
- * scale.css, so this file holds colour and no spacing.
+ * scale.css, so this file holds color and no spacing.
  *
  * Should a second palette ever be wanted, it goes in a block of its own keyed by
  * `data-palette` on the root, and this one keeps the bare `:root` as the default.
- * Nothing else in the project names a colour, so that is the whole change.
+ * Nothing else in the project names a color, so that is the whole change.
  */
 
 :root {
-  /* Exact stripe colours from packages/ui/assets/logo.svg. */
+  /* Exact stripe colors from packages/ui/assets/logo.svg. */
   --brand-stripe-rust: rgb(198 70 22);
   --brand-stripe-amber: rgb(251 172 62);
   --brand-stripe-olive: rgb(117 140 52);
   --brand-stripe-petrol: rgb(43 116 136);
 
-  /* Neutral graphite with barely any colour in it, so the photographs and the
-     accent carry all the colour on screen. */
+  /* Neutral graphite with barely any color in it, so the photographs and the
+     accent carry all the color on screen. */
   --neutral-c: 0.008;
   --neutral-h: 250;
 
   /* Built around #0d70d3 by holding its hue and saturation and moving lightness
-     only, so the five steps read as one colour at five strengths rather than as
+     only, so the five steps read as one color at five strengths rather than as
      five blues. The 500 step carries white at 4.9:1, which is what lets a filled
      control sit there rather than a step further down. */
   --accent-700: #08417b;
@@ -37,7 +37,7 @@
 
   --text-on-accent: #ffffff;
 
-  /* Info is violet rather than blue. The accent is blue, and a status colour
+  /* Info is violet rather than blue. The accent is blue, and a status color
      that shares its hue reads as the accent wherever the two meet: a hidden
      entry beside a protected one showed two blues. Set to oklch(0.66 0.14 300),
      which sits at the lightness of the other three. */

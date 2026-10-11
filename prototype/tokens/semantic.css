@@ -6,7 +6,7 @@
  * of thing the design needs a name for.
  *
  * This is the layer components read. A component names `--surface-raised`, never
- * `--ink-900` and never a colour, which is what lets a palette swap work and what
+ * `--ink-900` and never a color, which is what lets a palette swap work and what
  * keeps a component from having an opinion about how high it sits.
  *
  * Every derivation lives on `:root` beside the values that reference it, because
@@ -34,7 +34,7 @@
   /* --- Surfaces -----------------------------------------------------------
      Five heights. A component picks the height it sits at and takes all three
      properties of that height together: the fill, the lit edge and the shadow.
-     A surface that declares only one of the three reads as a coloured rectangle
+     A surface that declares only one of the three reads as a colored rectangle
      rather than as material. */
   --surface-page: var(--ink-990);
   --surface-sunken: var(--ink-950);
@@ -54,7 +54,7 @@
   --text-accent: var(--accent-400);
 
   /* --- Accent at low strength ---------------------------------------------
-     A tint behind a current item, so state never rests on colour alone and a
+     A tint behind a current item, so state never rests on color alone and a
      reader is not asked to compare two similar greys. */
   --accent-tint: color-mix(in oklab, var(--accent-500) 14%, transparent);
   --accent-tint-strong: color-mix(in oklab, var(--accent-500) 22%, transparent);
@@ -75,9 +75,9 @@
   --press-tint: rgb(0 0 0 / 18%);
 
   /* --- Scrims -------------------------------------------------------------
-     The page's own colour at three strengths, for anything lying over content: a
+     The page's own color at three strengths, for anything lying over content: a
      scrim under text on a photograph, a frosted bar, an overlay backdrop.
-     Derived from the surface rather than written as a colour, so they follow the
+     Derived from the surface rather than written as a color, so they follow the
      palette instead of staying behind when it changes. */
   --scrim-soft: color-mix(in srgb, var(--surface-page) 72%, transparent);
   --scrim: color-mix(in srgb, var(--surface-page) 80%, transparent);
@@ -86,7 +86,7 @@
   /* --- Sheen --------------------------------------------------------------
      Light falls from above, so anything standing off the page is brighter along
      its top edge. Stated once and laid over whatever fill a control has, rather
-     than written as a gradient between two named colours, which would have to be
+     than written as a gradient between two named colors, which would have to be
      restated for every fill and every palette.
 
      The strength is a variable, so a control can lean into it on hover without a

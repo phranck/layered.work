@@ -226,7 +226,7 @@ export const COUNTDOWN_SCRIPT = `
   /*
    * Two drivers, because neither is a clock on its own.
    *
-   * The frame loop is exact whilst the window is in front, and a browser
+   * The frame loop is exact while the window is in front, and a browser
    * throttles it hard when the window is behind another one. Measured on this
    * page with the tab still on screen but not focused: frames arrived in bursts
    * of two or three, seventeen milliseconds apart, with two seconds of nothing

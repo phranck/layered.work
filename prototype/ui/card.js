@@ -51,7 +51,7 @@ Card.link = (href, ...parts) => html`<a class="card card--interactive" href="${h
  *
  * Its own part rather than something put inside the body, because it takes a
  * radius derived from its own inset and the body's padding would otherwise leave
- * a strip of card colour around it.
+ * a strip of card color around it.
  */
 Card.Media = ({ src, alt = "", ratio } = {}) => html`
   <div class="card__media" ${attrs({ style: ratio && `aspect-ratio: ${ratio}` })}>
@@ -64,7 +64,7 @@ Card.Media = ({ src, alt = "", ratio } = {}) => html`
  *
  * Its own part rather than text put in a body, because it brings its own padding
  * and so works in a flush card, where the body gives its padding up for the
- * picture. Centred, because it names the thing above it rather than beginning a
+ * picture. Centered, because it names the thing above it rather than beginning a
  * column of text.
  */
 Card.Caption = (...children) => html`<figcaption class="card__caption">${children}</figcaption>`;

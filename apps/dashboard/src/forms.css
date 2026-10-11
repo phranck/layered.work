@@ -15,7 +15,7 @@
 }
 
 /* Beside the canvas, the palette stays at the top of the editor's main column
-   whilst the builder and the preview scroll inside it, so a tile can be dragged
+   while the builder and the preview scroll inside it, so a tile can be dragged
    onto any row on the screen. Where the page scrolls as a whole instead, the
    palette's scrolling box is the content area, which does not scroll then, so
    the palette scrolls with the page. Stacked above the canvas it scrolls away
@@ -269,7 +269,7 @@
 
 /* Drawn in the workbench rather than in the builder, and fixed to the window,
    because the editor's main column scrolls and would cut off a copy dragged
-   past its edge. Above the bar, which stands at 20 whilst the page scrolls
+   past its edge. Above the bar, which stands at 20 while the page scrolls
    under it, and below a dialog, which stands at 300. */
 .forms-builder__carried {
   position: fixed;
@@ -291,7 +291,7 @@
   background: var(--surface-overlay);
 }
 
-/* Whilst something is dragged, everything shows the hand holding it, and no
+/* While something is dragged, everything shows the hand holding it, and no
    text is selected as the pointer passes over it. */
 .forms-builder[data-dragging],
 .forms-builder[data-dragging] * {

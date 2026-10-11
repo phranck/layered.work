@@ -13,7 +13,7 @@ import { FOOTER_NAVIGATIONS, NAVIGATION, published, SOCIAL_ACCOUNTS } from "./pr
 /**
  * A brand mark.
  *
- * Applied as a CSS mask rather than as an image, so the mark takes the colour of
+ * Applied as a CSS mask rather than as an image, so the mark takes the color of
  * whatever it sits on, exactly as an icon font would, and the downloaded file
  * stays untouched.
  */

@@ -12,7 +12,7 @@ import type { Register } from "./kinds.js";
  * adding a component.
  *
  * **Values come from the token system.** `spacing` takes the steps of the space
- * scale and `tone` takes the status colours, both imported rather than typed
+ * scale and `tone` takes the status colors, both imported rather than typed
  * out, so a step added to a stylesheet is offered to authors with nothing else
  * edited. That is the line between composing and restyling: an author says
  * which step, never how many pixels.
@@ -265,7 +265,7 @@ export const components = {
       tone: {
         kind: "keyword",
         description: "How much it asks to be pressed.",
-        // Not the status colours: these say how important a control is, not
+        // Not the status colors: these say how important a control is, not
         // what state something is in. The two sets meet at `danger` and mean
         // the same thing there.
         values: ["primary", "secondary", "danger"],

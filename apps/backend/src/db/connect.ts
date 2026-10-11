@@ -7,7 +7,7 @@ import * as schema from "./schema/index.js";
  * confusing afternoon: a missing address is an error.
  *
  * `data-safety.md` states it plainly. Falling back to a hosted database when
- * the local one is not configured means reading somebody's real data whilst
+ * the local one is not configured means reading somebody's real data while
  * believing you are looking at your own, and every answer that comes back is
  * about the wrong place. An empty table then reads as "this record does not
  * exist" rather than as "you are looking in the wrong database".

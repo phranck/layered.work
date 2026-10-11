@@ -39,7 +39,7 @@ content.get(
  * expensive part cannot be provoked more than twice a minute.
  *
  * Half a minute is short enough that a change made in the dashboard shows up
- * whilst somebody is still looking at the page they changed.
+ * while somebody is still looking at the page they changed.
  */
 const CACHE_MS = 30_000;
 

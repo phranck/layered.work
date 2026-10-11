@@ -4,8 +4,8 @@
 // for a choice where each option needs explaining, which is most of the ones
 // worth making: publication status, visibility, a plan, a role.
 //
-// Each option can carry a tone, and the tone does two jobs at once: it colours
-// the mark, and the chosen option takes a dimmed version of that same colour as
+// Each option can carry a tone, and the tone does two jobs at once: it colors
+// the mark, and the chosen option takes a dimmed version of that same color as
 // its fill. That is what makes the choice readable without reading: the green
 // option is green when it is chosen, and the reader learns the mapping once.
 //

@@ -41,7 +41,7 @@ import { useSaveShortcut } from "./save-shortcut.js";
  * Where an entry is written, with everything decided about it in the panel
  * beside the text.
  *
- * The list is gone whilst an entry is open, because nobody edits a post whilst
+ * The list is gone while an entry is open, because nobody edits a post while
  * looking at a table of all the others. The way back stands at the start of the
  * dashboard's bar, and the state and the saving at its end.
  */
@@ -79,7 +79,7 @@ export function EntryEditorScreen({ area }: { area: DashboardArea }) {
 /**
  * The editor for one translation.
  *
- * A draft saves itself whilst it is a draft, because nothing a reader sees
+ * A draft saves itself while it is a draft, because nothing a reader sees
  * depends on it. Anything already public or hidden is saved by hand, because a
  * save there changes what readers get, and half a sentence must not reach them
  * by itself. Leaving with something unsaved asks first, inside the dashboard

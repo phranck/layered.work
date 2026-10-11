@@ -74,7 +74,7 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
   const list = blocks.data ?? [];
   const open = list.find((block) => block.id === openId) ?? list[0];
   // The panel starts again from the open block's settings whenever what is
-  // stored changes, and keeps its draft whilst the blocks are only reordered.
+  // stored changes, and keeps its draft while the blocks are only reordered.
   const revision = useStoredRevision(open?.settings);
 
   const toggle = useToggleHomeBlock({ onError: notifyError });

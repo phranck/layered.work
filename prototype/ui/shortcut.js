@@ -3,7 +3,7 @@
 // It appears wherever a control can also be reached from the keyboard, which in
 // this product is every search field. One component rather than a `kbd` styled
 // in each place, so the cap is the same size and the same shape on the site and
-// in the workbench, and a reader who has learnt it once recognises it.
+// in the workbench, and a reader who has learnt it once recognizes it.
 //
 // In the real project:
 //

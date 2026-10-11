@@ -62,7 +62,7 @@
 }
 
 /* --- Header ---------------------------------------------------------------
-   The mark is centred in the column rather than aligned with the entries: it is
+   The mark is centered in the column rather than aligned with the entries: it is
    the sign above the list, not the first item in it. */
 
 .sidebar__header {
@@ -76,7 +76,7 @@
 .workbench .sidebar__header {
   /* Flex rather than the grid above: the mark's image is taller than its ink,
      and a grid row grows to the image and hangs it from the top, whereas a
-     flex line overflows evenly and keeps it centred on the band. */
+     flex line overflows evenly and keeps it centered on the band. */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,7 +137,7 @@
 
 /* --- Reordering ------------------------------------------------------------
    The sections can be dragged into another order, so they animate back into
-   place when the order changes and stop animating whilst one is being dragged,
+   place when the order changes and stop animating while one is being dragged,
    which would otherwise make it lag behind the pointer. */
 
 .sidebar .section {
