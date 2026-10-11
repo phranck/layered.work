@@ -1,5 +1,61 @@
-import { type ComponentPropsWithoutRef, type CSSProperties, forwardRef, type ReactNode } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ElementType,
+  forwardRef,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import { type DivProps, join, moveValue } from "./shared.js";
+
+/**
+ * Props for a label standing on its own, which names a control, a group of
+ * controls or a value.
+ *
+ * @property as - The element the label is drawn as, so it keeps the meaning
+ *   its place gives it: a `legend` names a fieldset, a `dt` names the value
+ *   after it, a `p` names a group that is no form control. Without it the label
+ *   is a `label` where `htmlFor` names its control, and a `span` otherwise.
+ * @property htmlFor - The id of the control the label names.
+ */
+export interface FieldLabelProps extends HTMLAttributes<HTMLElement> {
+  as?: "span" | "label" | "legend" | "dt" | "p";
+  htmlFor?: string;
+}
+
+/**
+ * Props for a hint standing on its own: a quiet line about a field, a value, a
+ * picture or an outcome.
+ *
+ * @property as - The element the hint is drawn as, a `span` without it: a `p`
+ *   for a sentence of its own, a `figcaption` for a picture's caption, an
+ *   `output` for a value a control reports as it changes.
+ */
+export interface FieldHintProps extends HTMLAttributes<HTMLElement> {
+  as?: "span" | "p" | "figcaption" | "output";
+}
+
+/**
+ * The words that name something in a form or beside a value, in the face every
+ * label in the product has. A field draws its own label with it, and so does
+ * anything that names controls or values without being a field, so no screen
+ * styles a label by hand.
+ */
+export function FieldLabel({ as, className, ...props }: FieldLabelProps) {
+  const Element: ElementType = as ?? (props.htmlFor ? "label" : "span");
+  return <Element className={join("field__label", className)} {...props} />;
+}
+
+/**
+ * The secondary text of the product: a hint under a field, a note where a
+ * field holds no control, a caption, a reported value, the id beneath an error.
+ * Every quiet line is this, so they all read alike. A hint that says why
+ * something cannot be done takes the tone of that state through `data-tone`.
+ */
+export function FieldHint({ as, className, ...props }: FieldHintProps) {
+  const Element: ElementType = as ?? "span";
+  return <Element className={join("field__hint", className)} {...props} />;
+}
 
 /** Props for a labelled field. */
 export interface FieldProps extends DivProps {
@@ -11,15 +67,9 @@ export interface FieldProps extends DivProps {
 const FieldRoot = forwardRef<HTMLDivElement, FieldProps>(
   ({ children, className, hint, htmlFor, label, ...props }, ref) => (
     <div ref={ref} className={join("field", className)} {...props}>
-      {htmlFor ? (
-        <label className="field__label" htmlFor={htmlFor}>
-          {label}
-        </label>
-      ) : (
-        <span className="field__label">{label}</span>
-      )}
+      <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
       {children}
-      {hint && <span className="field__hint">{hint}</span>}
+      {hint && <FieldHint>{hint}</FieldHint>}
     </div>
   ),
 );
@@ -27,11 +77,11 @@ const FieldRoot = forwardRef<HTMLDivElement, FieldProps>(
 const FieldInline = forwardRef<HTMLDivElement, FieldProps>(
   ({ children, className, hint, htmlFor, label, ...props }, ref) => (
     <div ref={ref} className={join("field field--inline", className)} {...props}>
-      <label className="field__label" htmlFor={htmlFor}>
+      <FieldLabel as="label" htmlFor={htmlFor}>
         {label}
-      </label>
+      </FieldLabel>
       {children}
-      {hint && <span className="field__hint">{hint}</span>}
+      {hint && <FieldHint>{hint}</FieldHint>}
     </div>
   ),
 );
@@ -45,8 +95,33 @@ const FieldInline = forwardRef<HTMLDivElement, FieldProps>(
 const FieldInlineGroup = forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
   <div ref={ref} className={join("field-group", className)} {...props} />
 ));
+
+/** Props for controls standing under one label. */
+export interface FieldSetProps extends Omit<ComponentPropsWithoutRef<"fieldset">, "children"> {
+  label: ReactNode;
+  hint?: ReactNode;
+  children: ReactNode;
+}
+/**
+ * Several controls under one label, such as a run of check boxes or the
+ * permissions of a token. It is a fieldset, so a screen reader names every
+ * control in it by the label, and it stands in a form as a field does.
+ */
+const FieldSet = forwardRef<HTMLFieldSetElement, FieldSetProps>(
+  ({ children, className, hint, label, ...props }, ref) => (
+    <fieldset ref={ref} className={join("field field--set", className)} {...props}>
+      <FieldLabel as="legend">{label}</FieldLabel>
+      {children}
+      {hint && <FieldHint>{hint}</FieldHint>}
+    </fieldset>
+  ),
+);
 /** A label, control and optional hint. */
-export const Field = Object.assign(FieldRoot, { Inline: FieldInline, InlineGroup: FieldInlineGroup });
+export const Field = Object.assign(FieldRoot, {
+  Inline: FieldInline,
+  InlineGroup: FieldInlineGroup,
+  Set: FieldSet,
+});
 /**
  * A styled native input. A check box or a radio button is a mark beside its
  * label rather than a place to write, so it takes the `check` class and not the

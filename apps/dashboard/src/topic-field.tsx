@@ -1,5 +1,5 @@
 import { type ContentLanguage, MAX_TOPICS_PER_ENTRY, MaxLength } from "@layered/schemas";
-import { Input, Row, RowList } from "@layered/ui";
+import { FieldHint, Input, Row, RowList } from "@layered/ui";
 import { PlusIcon, TagIcon, XIcon } from "@layered/ui/icons";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { LANGUAGE_TEXT, otherLanguage } from "./entry-model.js";
@@ -125,7 +125,7 @@ export function TopicField({
           })}
         </ul>
       ) : (
-        topics.data && <span className="entry-editor__note">{text("editorTopicsNone")}</span>
+        topics.data && <FieldHint>{text("editorTopicsNone")}</FieldHint>
       )}
       <div className="topic-field__control">
         <Input

@@ -39,7 +39,12 @@ export {
 export {
   type ControlOption,
   Field,
+  FieldHint,
+  type FieldHintProps,
+  FieldLabel,
+  type FieldLabelProps,
   type FieldProps,
+  type FieldSetProps,
   Input,
   Segmented,
   type SegmentedProps,
@@ -56,7 +61,7 @@ export { FormEmbed, FormEmbed as Form, type FormEmbedProps, type FormOutcome } f
 export { Gallery } from "./gallery.js";
 export { Grid } from "./grid.js";
 export { Logo, type LogoProps } from "./logo.js";
-export { MediaCredit, type MediaCreditProps } from "./media-credit.js";
+export { MediaCredit, type MediaCreditProps, type MediaCreditTextProps } from "./media-credit.js";
 export { Model, type ModelProps } from "./model.js";
 export { Note } from "./note.js";
 export { Row, RowList, type RowTextProps } from "./row.js";

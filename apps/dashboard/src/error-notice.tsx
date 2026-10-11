@@ -1,3 +1,4 @@
+import { FieldHint } from "@layered/ui";
 import { DashboardApiError } from "./api.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -67,9 +68,12 @@ export function ErrorNotice(props: ErrorNoticeProps) {
     <p className="dashboard-error" role="alert">
       {text(key)}
       {known?.id && (
-        <span className="dashboard-error__id">
-          {text("errorId")}: {known.id}
-        </span>
+        <>
+          <br />
+          <FieldHint>
+            {text("errorId")}: {known.id}
+          </FieldHint>
+        </>
       )}
     </p>
   );

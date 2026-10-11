@@ -19,10 +19,6 @@
   margin: 0;
 }
 
-.submissions-detail dt {
-  color: var(--text-muted);
-}
-
 .submissions-detail dd {
   margin: 0;
   overflow-wrap: anywhere;

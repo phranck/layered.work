@@ -5,7 +5,7 @@ import {
   unsplashCreditLine,
   WATERMARK_ANCHORS,
 } from "@layered/schemas";
-import { Card, Field, Input, MediaCredit, Select, Switch } from "@layered/ui";
+import { Card, Field, FieldHint, Input, MediaCredit, Select, Switch } from "@layered/ui";
 import { useId, useState } from "react";
 import { ActionButton } from "./action-button.js";
 import { FocalPointEditor } from "./focal-point.js";
@@ -80,16 +80,20 @@ function MediaMetadataEditor({
           </ActionButton>
         }
       >
-        <p>
+        <FieldHint as="p">
           {detail.mimeType} · {fileSize(interfaceLanguage, detail.byteSize)} ·{" "}
           <Timestamp at={detail.uploadedAt} />
-        </p>
+        </FieldHint>
         {detail.width && detail.height && (
-          <p>
+          <FieldHint as="p">
             {text("mediaDimensions")}: {detail.width} × {detail.height}
-          </p>
+          </FieldHint>
         )}
-        {detail.credit && <MediaCredit credit={unsplashCreditLine(detail.credit, interfaceLanguage)} />}
+        {detail.credit && (
+          <FieldHint as="p">
+            <MediaCredit.Text credit={unsplashCreditLine(detail.credit, interfaceLanguage)} />
+          </FieldHint>
+        )}
         {translation && (
           <>
             <Field label={text("mediaAlt")} htmlFor={`${prefix}-${language}-alt`}>
@@ -151,13 +155,12 @@ function MediaMetadataEditor({
             />
           </Field>
         )}
-        <section>
-          <h3>{text("mediaVariants")}</h3>
-          <p>{text(PROCESSING_TEXT[detail.processing.state])}</p>
+        <Field label={text("mediaVariants")}>
+          <FieldHint as="p">{text(PROCESSING_TEXT[detail.processing.state])}</FieldHint>
           {detail.processing.errorId && (
-            <p>
+            <FieldHint as="p">
               {text("errorId")}: {detail.processing.errorId}
-            </p>
+            </FieldHint>
           )}
           {detail.processing.variants.length > 0 && (
             <Table
@@ -178,7 +181,7 @@ function MediaMetadataEditor({
               ))}
             </Table>
           )}
-        </section>
+        </Field>
         <MediaUses uses={detail.uses} />
       </DialogForm>
       {deleting && (

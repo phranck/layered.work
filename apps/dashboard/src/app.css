@@ -94,13 +94,6 @@
   padding-inline-start: var(--space-6);
 }
 
-.dashboard-error__id {
-  display: block;
-  margin-block-start: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
 .login-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -375,15 +368,6 @@ dialog.card-dialog::backdrop {
   gap: var(--space-2);
 }
 
-.search-results__label {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-
 /* A badge standing in for a field's control, such as a role or a status. A
    field stretches its control to the full width, which is right for an input
    and wrong for a pill. */
@@ -460,8 +444,9 @@ dialog.card-dialog::backdrop {
   min-width: 0;
 }
 
-.notification__message,
-.notification__detail {
+/* The message and the hint beneath it each stay on one line in the bar,
+   shortened where they are long. */
+.notification__text > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -469,11 +454,6 @@ dialog.card-dialog::backdrop {
 
 .notification__message {
   color: var(--notification-ink);
-}
-
-.notification__detail {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
 }
 
 /* Read by a screen reader, seen by nobody: the pill above is what is seen. */
@@ -523,14 +503,9 @@ dialog.card-dialog::backdrop {
   min-height: 0;
 }
 
-/* Whether the text is saved, at the left of the row the save buttons end. */
-.entry-editor__status {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-/* Unsaved changes are hard to miss: the warning tone, in the shape a chosen
-   segment takes, as high as the buttons beside it. */
+/* Whether the text is saved is a hint at the left of the row the save buttons
+   end. Unsaved changes are hard to miss: the warning tone, in the shape a
+   chosen segment takes, as high as the buttons beside it. */
 .entry-editor__status[data-unsaved] {
   display: inline-flex;
   align-items: center;
@@ -571,32 +546,6 @@ dialog.card-dialog::backdrop {
   width: 100%;
 }
 
-.entry-editor__value,
-.entry-editor__link {
-  display: inline-flex;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.entry-editor__link {
-  color: var(--text-accent);
-  text-decoration: none;
-}
-
-/* A value that is only words, where a field would hold a control, begins where
-   the label's words begin rather than where a control's edge would. */
-.entry-editor__note {
-  padding-inline-start: var(--control-text-inset);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.entry-editor__link:hover {
-  text-decoration: underline;
-}
-
 /* --- Topics -----------------------------------------------------------------
    An entry's topics as chips over the field that adds more. The list of
    suggestions opens under the field in the panel's own flow, because the panel
@@ -606,6 +555,12 @@ dialog.card-dialog::backdrop {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* The line saying the entry has no topics stands where the chips would, over
+   the field, and begins where the field's label does. */
+.topic-field > .field__hint {
+  padding-inline-start: var(--control-text-inset);
 }
 
 .topic-field__chips {
@@ -697,32 +652,6 @@ dialog.card-dialog::backdrop {
   flex-grow: 1;
 }
 
-/* Switches under one label, such as a token's permissions. The label stands
-   where a field's label stands, and the switches keep the step of a list. */
-.settings-form__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.settings-form__group > legend {
-  margin-block-end: var(--space-2);
-  padding-inline-start: var(--control-text-inset);
-}
-
-/* A sentence about the whole form, set in from the edge as a field's hint is,
-   so it lines up with the labels above it rather than with the inputs. */
-.settings-form__note {
-  margin: 0;
-  padding-inline-start: var(--control-text-inset);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
 /* The provider's answer, quoted as it came, under a sentence that says what it
    means, in the tone of the outcome. */
 .mail-test-outcome {
@@ -734,21 +663,6 @@ dialog.card-dialog::backdrop {
   background: var(--surface-raised);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
-}
-
-.mail-test-outcome p {
-  margin: 0;
-}
-
-.mail-test-outcome__answer {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.settings-form__value {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
 }
 
 /* A chosen picture with its file name and the controls that change it, on one
@@ -788,21 +702,12 @@ dialog.card-dialog::backdrop {
   object-fit: contain;
 }
 
+/* The file name stays on the field's one line, shortened where it is long. */
 .picture-field__name {
   min-width: 0;
   overflow: hidden;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Without a picture the field says so in words, which are not a file name and
-   take the interface's own face. */
-.picture-field__name[data-empty] {
-  font-family: inherit;
-  font-size: var(--text-sm);
 }
 
 .picture-field__actions {

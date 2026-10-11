@@ -4,7 +4,7 @@ import {
   mailSenderLine,
   type SaveMailTemplateBody,
 } from "@layered/schemas";
-import { Segmented } from "@layered/ui";
+import { FieldLabel, Segmented } from "@layered/ui";
 import { useEffect, useRef, useState } from "react";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -64,11 +64,11 @@ export function MailPreview({ kind, draft, language }: MailPreviewProps) {
     <div className="mail-preview">
       <div className="mail-preview__bar">
         <dl className="mail-preview__head">
-          <dt>{text("mailPreviewFrom")}</dt>
+          <FieldLabel as="dt">{text("mailPreviewFrom")}</FieldLabel>
           <dd>{sender ?? text("mailSenderMissing")}</dd>
-          <dt>{text("mailPreviewTo")}</dt>
+          <FieldLabel as="dt">{text("mailPreviewTo")}</FieldLabel>
           <dd>{text(RECIPIENT_TEXT[kind])}</dd>
-          <dt>{text("mailTemplateSubject")}</dt>
+          <FieldLabel as="dt">{text("mailTemplateSubject")}</FieldLabel>
           <dd>{shown?.subject}</dd>
         </dl>
         <Segmented

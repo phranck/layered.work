@@ -1,5 +1,5 @@
 import { formFields, submittedValueText } from "@layered/schemas";
-import { Badge, Card, Select } from "@layered/ui";
+import { Badge, Card, FieldLabel, Select } from "@layered/ui";
 import { useState } from "react";
 import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
@@ -140,25 +140,27 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
             />
             <Card.Body>
               <dl className="submissions-detail">
-                <dt>{text("submissionSubmitted")}</dt>
+                <FieldLabel as="dt">{text("submissionSubmitted")}</FieldLabel>
                 <dd>
                   <Timestamp at={selected.createdAt} show="dateTime" />
                 </dd>
-                <dt>{text("submissionOrigin")}</dt>
+                <FieldLabel as="dt">{text("submissionOrigin")}</FieldLabel>
                 <dd>
                   <code>{selected.sourceHash ?? text("submissionOriginUnknown")}</code>
                 </dd>
                 {Object.entries(selected.values).map(([key, value]) => (
                   <div key={key} className="submissions-detail__field">
-                    <dt>{formFields(form).find((field) => field.key === key)?.label[language] ?? key}</dt>
+                    <FieldLabel as="dt">
+                      {formFields(form).find((field) => field.key === key)?.label[language] ?? key}
+                    </FieldLabel>
                     <dd>{submittedValueText(value)}</dd>
                   </div>
                 ))}
                 {selected.consents.map((consent) => (
                   <div key={consent.key} className="submissions-detail__field">
-                    <dt>
+                    <FieldLabel as="dt">
                       {text("submissionConsent")} · {consent.revision}
-                    </dt>
+                    </FieldLabel>
                     <dd>{consent.notice}</dd>
                   </div>
                 ))}

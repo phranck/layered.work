@@ -26,17 +26,6 @@
     grid-column: 1 / -1;
   }
 }
-.form-controls__field fieldset {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.form-controls__field legend {
-  margin-block-end: var(--space-2);
-  font-weight: 600;
-}
 .form-controls__choices {
   display: grid;
   gap: var(--space-2);

@@ -9,7 +9,7 @@ import {
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { Badge, Card, Field, Input, Segmented } from "@layered/ui";
+import { Badge, Card, Field, FieldHint, Input, Segmented } from "@layered/ui";
 import { type ReactNode, useRef, useState } from "react";
 import { AccessTokensCard } from "./access-tokens.js";
 import { ActionButton } from "./action-button.js";
@@ -353,7 +353,7 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                     />
                   </Field>
                 </div>
-                <p className="settings-form__note">{text("mailDomainHint")}</p>
+                <FieldHint as="p">{text("mailDomainHint")}</FieldHint>
                 {test.isError && <ErrorNotice error={test.error} />}
                 {test.data && <MailTestOutcome result={test.data} />}
               </>
@@ -382,7 +382,9 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
           {(draft, update, editable) => (
             <>
               <Field label={text("umamiInstance")}>
-                <code className="settings-form__value">{ANALYTICS_ORIGIN}</code>
+                <FieldHint>
+                  <code>{ANALYTICS_ORIGIN}</code>
+                </FieldHint>
               </Field>
               <Field
                 label={text("umamiWebsiteId")}

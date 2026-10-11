@@ -1,5 +1,5 @@
 import type { BilingualText, MailTemplateKind, SaveMailTemplateBody } from "@layered/schemas";
-import { Card, Field, Input } from "@layered/ui";
+import { Card, Field, FieldHint, Input } from "@layered/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionButton } from "./action-button.js";
@@ -210,12 +210,12 @@ function MailTemplateCards({
             values={placeholders}
             onChange={(value) => onChange("body", value)}
           />
-          <p>
+          <FieldHint as="p">
             {text("mailTemplateValues")}:{" "}
             {allowedVariables.map((name) => (
               <code key={name}>{`{{${name}}}`} </code>
             ))}
-          </p>
+          </FieldHint>
         </Card.Stack>
       </Card>
       <Card>

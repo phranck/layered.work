@@ -7,7 +7,7 @@ import {
   type ReadingWidth,
   type SaveEntryBody,
 } from "@layered/schemas";
-import { Choice, Editor, Field, Segmented, Switch } from "@layered/ui";
+import { Choice, Editor, Field, FieldHint, Segmented, Switch } from "@layered/ui";
 import { useLinkClickHandler } from "react-router";
 import { ActionButton } from "./action-button.js";
 import { AddressField } from "./address-field.js";
@@ -138,33 +138,30 @@ export function EntryProperties({
         />
       </Field>
       <Field label={text("editorLanguage")}>
-        <span className="entry-editor__value">
+        <FieldHint>
           <span className="lang-tag" data-language={entry.language}>
             {entry.language}
-          </span>
+          </span>{" "}
           {text(LANGUAGE_TEXT[entry.language])}
-        </span>
+        </FieldHint>
       </Field>
       <Field label={text("editorTranslation")}>
         {entry.counterpart && counterpartPath ? (
-          <a
-            className="entry-editor__link"
-            href={counterpartPath}
-            onClick={openCounterpart}
-            lang={entry.counterpart.language}
-          >
-            <span className="lang-tag" data-language={entry.counterpart.language}>
-              {entry.counterpart.language}
-            </span>
-            {text("editorOpenCounterpart", entry.counterpart.title)}
-          </a>
+          <FieldHint>
+            <a href={counterpartPath} onClick={openCounterpart} lang={entry.counterpart.language}>
+              <span className="lang-tag" data-language={entry.counterpart.language}>
+                {entry.counterpart.language}
+              </span>{" "}
+              {text("editorOpenCounterpart", entry.counterpart.title)}
+            </a>
+          </FieldHint>
         ) : entry.counterpartTrashed ? (
-          <span className="entry-editor__note">
+          <FieldHint>
             {text("editorTranslationInTrash", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
-          </span>
+          </FieldHint>
         ) : (
           <>
-            <span className="entry-editor__note">{text("editorTranslationNone")}</span>
+            <FieldHint>{text("editorTranslationNone")}</FieldHint>
             <ActionButton action="new" disabled={translationPending} onClick={onTranslate}>
               {translationPending
                 ? text("editorCreateCounterpartPending")

@@ -1,4 +1,4 @@
-import { Card, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
+import { Card, FieldLabel, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
 import { ArticleIcon, ImagesIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
 import {
   type ComponentPropsWithoutRef,
@@ -208,9 +208,9 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
     return (
       // biome-ignore lint/a11y/useSemanticElements: An option group inside a listbox is a role, and fieldset would add browser layout.
       <div role="group" aria-label={label} className="search-results__group">
-        <p className="search-results__label" aria-hidden="true">
+        <FieldLabel as="p" aria-hidden="true">
           {label}
-        </p>
+        </FieldLabel>
         <RowList>
           {members.map((hit) => (
             <Row

@@ -27,10 +27,6 @@
   font-size: var(--text-sm);
 }
 
-.mail-preview__head dt {
-  color: var(--text-muted);
-}
-
 .mail-preview__head dd {
   min-width: 0;
   margin: 0;
