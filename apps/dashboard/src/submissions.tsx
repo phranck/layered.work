@@ -6,7 +6,6 @@ import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT, DATE_TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -14,6 +13,7 @@ import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
+import { type BadgeTone, Table, useTableSearch } from "./table.js";
 import "./submissions.css";
 
 /** What each status of a submission is called in the catalogue. */
@@ -21,6 +21,16 @@ const STATUS_TEXT: Record<FormSubmissionStatus, DashboardStringKey> = {
   unread: "submissionUnread",
   read: "submissionRead",
   spam: "submissionSpam",
+};
+
+/**
+ * The tone each status is shown in: an unread submission asks to be read, a
+ * read one asks nothing, and spam is what was refused.
+ */
+const STATUS_TONE: Record<FormSubmissionStatus, BadgeTone> = {
+  unread: "info",
+  read: "neutral",
+  spam: "danger",
 };
 
 /** How many characters of a submission's first answer its row shows. */
@@ -95,7 +105,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
               forms.data &&
               forms.data.length > 0 && (
                 <>
-                  <DataTable.Search
+                  <Table.Search
                     label={text("submissionsSearch")}
                     value={search}
                     onChange={setSearch}
@@ -128,12 +138,10 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
             </Card.Body>
           )}
           {matches && matches.length === 0 && (
-            <Card.Body>
-              <p>{search ? text("submissionsNoMatch") : text("submissionsEmpty")}</p>
-            </Card.Body>
+            <Table.Empty>{search ? text("submissionsNoMatch") : text("submissionsEmpty")}</Table.Empty>
           )}
           {matches && matches.length > 0 && (
-            <DataTable
+            <Table
               bodyRef={field.bodyRef}
               onLeaveTop={field.onLeaveTop}
               columns={[
@@ -143,23 +151,27 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
               ]}
             >
               {matches.map((submission) => (
-                <DataTable.Row
+                <Table.Row
                   key={submission.id}
                   active={selectedId === submission.id}
                   onOpen={() => setSelectedId(submission.id)}
                 >
-                  <DataTable.Cell kind="title">
-                    <DataTable.Title title={preview(submission)} />
-                  </DataTable.Cell>
-                  <DataTable.Cell kind="state">{text(STATUS_TEXT[submission.status])}</DataTable.Cell>
-                  <DataTable.Cell kind="date">
+                  <Table.Cell kind="title">
+                    <Table.Title title={preview(submission)} />
+                  </Table.Cell>
+                  <Table.Cell kind="state">
+                    <Table.Badge tone={STATUS_TONE[submission.status]}>
+                      {text(STATUS_TEXT[submission.status])}
+                    </Table.Badge>
+                  </Table.Cell>
+                  <Table.Cell kind="date">
                     <time dateTime={submission.createdAt}>
                       {DATE_FORMAT[language].format(new Date(submission.createdAt))}
                     </time>
-                  </DataTable.Cell>
-                </DataTable.Row>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </DataTable>
+            </Table>
           )}
         </Card>
         {selected && form && (

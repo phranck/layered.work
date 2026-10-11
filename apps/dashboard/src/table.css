@@ -1,15 +1,16 @@
-/* --- Data table ---------------------------------------------------------------
-   Every table of the dashboard, drawn as the Posts list draws it. A fixed
-   layout, so one long value shortens rather than pushing the table past the
-   card. The title column declares no width and takes what is left. */
+/* --- Table -----------------------------------------------------------------
+   Every list of records in the dashboard, drawn as the Posts list draws it. A
+   fixed layout, so one long value shortens rather than pushing the table past
+   the card. Every row is one line. The title and text columns declare no width
+   and share what is left. */
 
-.data-table {
+.table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
 }
 
-.data-table th {
+.table th {
   padding: var(--space-3) var(--space-5);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
@@ -22,7 +23,7 @@
   border-block-end: 1px solid var(--edge-hairline);
 }
 
-.data-table td {
+.table td {
   padding: var(--space-3) var(--space-5);
   overflow: hidden;
   font-size: var(--text-base);
@@ -33,23 +34,23 @@
   border-block-end: 1px solid var(--edge-hairline);
 }
 
-.data-table tr:last-child td {
+.table tr:last-child td {
   border-block-end: 0;
 }
 
 /* A row that opens something is the target as a whole and says so. The hover
    tint carries no transition, because hovering is not a change of state. A
-   static row takes no pointer and no tint, because only its buttons act. */
-.data-table tr[data-opens] {
+   static row takes no pointer and no tint, because only its controls act. */
+.table tr[data-opens] {
   cursor: pointer;
 }
 
-.data-table tr[data-opens]:hover {
+.table tr[data-opens]:hover {
   background: var(--hover-tint);
 }
 
-.data-table tr[data-opens]:focus-visible,
-.data-table tr[data-active] {
+.table tr[data-opens]:focus-visible,
+.table tr[data-active] {
   background: var(--hover-tint);
   box-shadow: inset 2px 0 0 0 var(--text-accent);
 }
@@ -76,20 +77,50 @@
   width: 120px;
 }
 
+/* The grip is one icon button and carries no heading, so the column is that
+   button between the cell's padding. */
+.col-grip {
+  width: calc(2 * var(--space-5) + var(--control-height));
+}
+
+/* A switch column is as wide as its heading, because the switch itself, at
+   40px, is narrower than either language's: "Sichtbar" measures 69px and
+   "Visible" 55px, which is 110px with the cell's padding. */
+.col-switch {
+  width: 120px;
+}
+
 /* An action column is its icon buttons, their gaps and a gap of air, between
    the cell's padding, and never narrower than its heading. */
 .col-action {
   width: max(100px, calc(2 * var(--space-5) + var(--actions, 1) * (var(--control-height) + var(--space-3))));
 }
 
+/* A cell of controls holds them on the row's center line, as an action cell
+   holds its buttons. */
+.table__control {
+  display: flex;
+  align-items: center;
+}
+
+/* A mark takes the square of the icon button it stands in for, so the column
+   keeps its alignment, and the faint color of an affordance that is absent. */
+.table__mark {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  color: var(--text-faint);
+}
+
 /* The title cell's row shortens its text rather than its tile. */
-.data-table .row {
+.table .row {
   min-width: 0;
 }
 
 /* A date or a count is compared by size, so it is right aligned together with
    its heading, in a tabular face so the digits line up and not only the edge. */
-.data-table .align-end {
+.table .align-end {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

@@ -1,4 +1,4 @@
-import { Row } from "@layered/ui";
+import { Card, Row } from "@layered/ui";
 import { MagnifyingGlassIcon } from "@layered/ui/icons";
 import {
   type CSSProperties,
@@ -9,35 +9,50 @@ import {
   use,
   useRef,
 } from "react";
+import { Reorder, useReorderItem } from "./reorder.js";
 import { SearchShortcutCap, useSearchField } from "./search.js";
-import "./data-table.css";
+import "./table.css";
 
 /**
- * The dashboard's table, built once to the shape of the Posts list, which every
- * other table follows.
+ * The dashboard's one table, built to the shape of the Posts list, which every
+ * list of records in the dashboard is drawn with.
  *
  * A table sits directly in its card, edge to edge, with a fixed layout so one
- * long value shortens rather than pushing the table past the card. The column
- * kinds set each column's width and alignment, so two tables with the same kind
- * of column draw it the same way. A row that opens something is the target as a
- * whole, by pointer and by keyboard; a row without `onOpen` is static and its
- * buttons are its only targets.
+ * long value shortens rather than pushing the table past the card. Every row is
+ * one line: what would be a second line under a title is a column of its own.
+ * The column kinds set each column's width and alignment, so two tables with
+ * the same kind of column draw it the same way.
+ *
+ * A row that opens something is the target as a whole, by pointer and by
+ * keyboard; a row without `onOpen` is static and its controls are its only
+ * targets. A table given `onMove` is ordered by hand, through the grip at the
+ * start of each row.
  */
 
 /**
  * What a column holds, which decides its width and its alignment.
  *
- * `title` takes whatever width the others leave. `date` and `count` are compared
- * by size, so they are right aligned in tabular figures. `action` holds icon
- * buttons and is as wide as the number of them it is told.
+ * `title` and `text` share whatever width the others leave. `date` and `count`
+ * are compared by size, so they are right aligned in tabular figures. `grip`
+ * holds the handle a row is moved by, `switch` one switch, and `action` icon
+ * buttons, as many as it is told.
  */
-export type ColumnKind = "title" | "text" | "state" | "language" | "date" | "count" | "action";
+export type ColumnKind =
+  | "grip"
+  | "title"
+  | "text"
+  | "state"
+  | "language"
+  | "date"
+  | "count"
+  | "switch"
+  | "action";
 
 /** The kinds whose cells are right aligned in tabular figures. */
 const ALIGNED_END: ReadonlySet<ColumnKind> = new Set(["date", "count", "action"]);
 
 /** One column's heading. */
-export interface DataTableColumn {
+export interface TableColumn {
   kind: ColumnKind;
   label: string;
   /** For an `action` column: how many icon buttons a row holds there, which sets its width. */
@@ -48,13 +63,19 @@ export interface DataTableColumn {
 const TableContext = createContext<{ onLeaveTop?: () => void }>({});
 
 /** Props for a table. */
-interface DataTableProps {
-  columns: readonly DataTableColumn[];
+interface TableProps {
+  columns: readonly TableColumn[];
   children: ReactNode;
   /** Where focus goes when the arrow key leaves the first row upwards, such as the search field above. */
   onLeaveTop?: () => void;
   /** The body, which `useTableSearch` moves focus into. */
   bodyRef?: RefObject<HTMLTableSectionElement | null>;
+  /**
+   * Makes the rows an order set by hand: called with the position a row leaves
+   * and the one it takes. Each row then needs its `index`, and the first column
+   * is a `grip` holding `Table.Grip`.
+   */
+  onMove?: (from: number, to: number) => void;
 }
 
 /** The class and alignment of a column's heading and of its cells. */
@@ -62,15 +83,16 @@ function columnClass(kind: ColumnKind): string {
   return `col-${kind}${ALIGNED_END.has(kind) ? " align-end" : ""}`;
 }
 
-function DataTableRoot({ columns, children, onLeaveTop, bodyRef }: DataTableProps) {
+function TableRoot({ columns, children, onLeaveTop, bodyRef, onMove }: TableProps) {
+  const body = <tbody ref={bodyRef}>{children}</tbody>;
   return (
     <TableContext value={{ onLeaveTop }}>
-      <table className="data-table">
+      <table className="table">
         <thead>
           <tr>
             {columns.map((column) => (
               <th
-                key={column.label}
+                key={column.label || column.kind}
                 className={columnClass(column.kind)}
                 style={column.actions ? ({ "--actions": column.actions } as CSSProperties) : undefined}
               >
@@ -79,7 +101,7 @@ function DataTableRoot({ columns, children, onLeaveTop, bodyRef }: DataTableProp
             ))}
           </tr>
         </thead>
-        <tbody ref={bodyRef}>{children}</tbody>
+        {onMove ? <Reorder.Scope onMove={onMove}>{body}</Reorder.Scope> : body}
       </table>
     </TableContext>
   );
@@ -131,12 +153,14 @@ export function useTableSearch() {
 }
 
 /** Props for a row. */
-interface DataTableRowProps {
+interface TableRowProps {
   children: ReactNode;
   /** Opens what the row stands for. Without it the row is static. */
   onOpen?: () => void;
   /** Marks the row as the one currently open beside the table. */
   active?: boolean;
+  /** The row's position, which a table ordered by hand needs to move it. */
+  index?: number;
 }
 
 /**
@@ -144,8 +168,9 @@ interface DataTableRowProps {
  * opens it, and the arrow keys move between rows and back up to whatever the
  * table names above it.
  */
-function DataTableRow({ children, onOpen, active }: DataTableRowProps) {
+function TableRow({ children, onOpen, active, index }: TableRowProps) {
   const { onLeaveTop } = use(TableContext);
+  const register = useReorderItem(index);
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (!onOpen || event.target !== event.currentTarget) return;
     const current = event.currentTarget;
@@ -161,6 +186,7 @@ function DataTableRow({ children, onOpen, active }: DataTableRowProps) {
   };
   return (
     <tr
+      ref={register}
       data-opens={onOpen ? "" : undefined}
       data-active={active ? "" : undefined}
       tabIndex={onOpen ? 0 : undefined}
@@ -173,14 +199,14 @@ function DataTableRow({ children, onOpen, active }: DataTableRowProps) {
 }
 
 /** Props for a cell. */
-interface DataTableCellProps {
+interface TableCellProps {
   /** The column's kind, which aligns the cell with its heading. */
   kind?: ColumnKind;
   children?: ReactNode;
   lang?: string;
 }
 
-function DataTableCell({ kind = "text", children, lang }: DataTableCellProps) {
+function TableCell({ kind = "text", children, lang }: TableCellProps) {
   return (
     <td className={ALIGNED_END.has(kind) ? "align-end" : undefined} lang={lang}>
       {children}
@@ -189,44 +215,112 @@ function DataTableCell({ kind = "text", children, lang }: DataTableCellProps) {
 }
 
 /** Props for a title cell's content. */
-interface DataTableTitleProps {
+interface TableTitleProps {
   title: string;
-  /** A line under the title, such as an address. */
-  note?: string;
   /** A thumbnail address. Undefined draws no tile; null draws an empty one, as a row without a picture does. */
   thumbnail?: string | null;
+  /** A mark drawn in the tile instead of a thumbnail, such as an icon or a brand. */
+  tile?: ReactNode;
 }
 
-/** What a title cell shows: the tile where the row has one, the title, and the note under it. */
-function DataTableTitle({ title, note, thumbnail }: DataTableTitleProps) {
+/** What a title cell shows: the tile where the row has one, and the title beside it. */
+function TableTitle({ title, thumbnail, tile }: TableTitleProps) {
+  const hasTile = tile !== undefined || thumbnail !== undefined;
   return (
     <Row.Bare>
-      {thumbnail !== undefined && (
-        <Row.Tile aria-hidden="true">{thumbnail && <img src={thumbnail} alt="" loading="lazy" />}</Row.Tile>
+      {hasTile && (
+        <Row.Tile aria-hidden="true">
+          {tile ?? (thumbnail && <img src={thumbnail} alt="" loading="lazy" />)}
+        </Row.Tile>
       )}
-      <Row.Text title={title} note={note} />
+      <Row.Text title={title} />
     </Row.Bare>
   );
 }
 
-/**
- * The buttons at a row's end. A click on one does not also open the row.
- */
-function DataTableActions({ children }: { children: ReactNode }) {
+/** The tones a badge in a table takes, as the state colors name them. */
+export type BadgeTone = "success" | "warning" | "info" | "danger" | "neutral";
+
+/** A state, drawn as the badge of the Posts list: a dot and a word in a tone. */
+function TableBadge({ tone, children }: { tone: BadgeTone; children: ReactNode }) {
   return (
-    <td className="align-end">
-      {/* A row that opens on click would also open when one of its buttons is pressed. */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: The handler only keeps a button's click from reaching the row. */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: Keys reach the buttons themselves, never this wrapper. */}
-      <div className="actions" onClick={(event) => event.stopPropagation()}>
+    <span className="badge" data-tone={tone}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A cell holding controls, such as a switch or icon buttons. A click on one
+ * acts on the control and does not also open the row.
+ */
+function TableControl({ kind, children }: { kind: ColumnKind; children: ReactNode }) {
+  return (
+    <td className={ALIGNED_END.has(kind) ? "align-end" : undefined}>
+      {/* A row that opens on click would also open when one of its controls is pressed. */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: The handler only keeps a control's click from reaching the row. */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: Keys reach the controls themselves, never this wrapper. */}
+      <div
+        className={kind === "action" ? "actions" : "table__control"}
+        onClick={(event) => event.stopPropagation()}
+      >
         {children}
       </div>
     </td>
   );
 }
 
+/**
+ * A mark in a row's controls that says why one is missing, such as the lock of
+ * a row that cannot move. It is not a control and draws no edge, so it is not
+ * mistaken for a disabled button. It stands in the space of the button it
+ * replaces, and says what it means to a screen reader and in its tooltip.
+ */
+function TableMark({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="table__mark" role="img" aria-label={label} title={label}>
+      {children}
+    </span>
+  );
+}
+
+/** The icon buttons at a row's end. */
+function TableActions({ children }: { children: ReactNode }) {
+  return <TableControl kind="action">{children}</TableControl>;
+}
+
+/** Props for the grip a row is moved by. */
+interface TableGripProps {
+  /** The row's position. */
+  index: number;
+  /** What moving it does, for a screen reader and the tooltip. */
+  label: string;
+  disabled?: boolean;
+}
+
+/** The grip at the start of a row in a table ordered by hand. */
+function TableGrip({ index, label, disabled }: TableGripProps) {
+  return (
+    <TableControl kind="grip">
+      <Reorder.Handle index={index} label={label} disabled={disabled} />
+    </TableControl>
+  );
+}
+
+/**
+ * What a card says in place of its table when there are no rows, as Posts
+ * says it.
+ */
+function TableEmpty({ children }: { children: ReactNode }) {
+  return (
+    <Card.Body>
+      <p className="unfinished">{children}</p>
+    </Card.Body>
+  );
+}
+
 /** Props for the search field above a table. */
-interface DataTableSearchProps {
+interface TableSearchProps {
   /** What the field searches, which is its accessible name and its placeholder. */
   label: string;
   value: string;
@@ -239,7 +333,7 @@ interface DataTableSearchProps {
  * The search field a table's card carries in its header, as on Posts: the
  * magnifier, the field, and the key cap of the search shortcut, which focuses it.
  */
-function DataTableSearch({ label, value, onChange, search }: DataTableSearchProps) {
+function TableSearch({ label, value, onChange, search }: TableSearchProps) {
   return (
     <label className="search-field">
       <MagnifyingGlassIcon aria-hidden="true" />
@@ -259,11 +353,19 @@ function DataTableSearch({ label, value, onChange, search }: DataTableSearchProp
   );
 }
 
-/** The table, its rows, cells, title cells, action cells and the search field above it. */
-export const DataTable = Object.assign(DataTableRoot, {
-  Row: DataTableRow,
-  Cell: DataTableCell,
-  Title: DataTableTitle,
-  Actions: DataTableActions,
-  Search: DataTableSearch,
+/**
+ * The table and its parts: rows, cells, title cells, badges, cells of
+ * controls, the grip, the action cell, the empty state and the search field.
+ */
+export const Table = Object.assign(TableRoot, {
+  Row: TableRow,
+  Cell: TableCell,
+  Title: TableTitle,
+  Badge: TableBadge,
+  Control: TableControl,
+  Mark: TableMark,
+  Actions: TableActions,
+  Grip: TableGrip,
+  Empty: TableEmpty,
+  Search: TableSearch,
 });

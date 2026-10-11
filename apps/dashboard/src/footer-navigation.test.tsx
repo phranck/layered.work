@@ -59,15 +59,11 @@ function show(id = "footer-nav") {
   );
 }
 
-it("shows the bilingual groups as rows with their links beneath them", async () => {
+it("shows each navigation as one row, with its links beside its name", async () => {
   show();
-  expect(await screen.findByText("Entdecken")).toBeTruthy();
-  const list = screen.getByRole("list", { name: "Entdecken" });
-  expect(
-    within(list)
-      .getAllByRole("listitem")
-      .map((item) => item.textContent),
-  ).toEqual(["Projekte", "Beiträge"]);
+  const row = (await screen.findByText("Entdecken")).closest("tr");
+  expect(row).not.toBeNull();
+  expect(within(row as HTMLElement).getByText("Projekte, Beiträge")).toBeTruthy();
 });
 
 it("edits main navigation with language visibility, a parent and keyboard reordering", async () => {
