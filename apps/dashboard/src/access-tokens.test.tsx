@@ -103,6 +103,9 @@ function openSettings(role: "owner" | "editor") {
 it("issues a scoped token on the Settings screen, shows its value once and revokes it", async () => {
   const requests = openSettings("owner");
   fireEvent.change(await screen.findByLabelText("Token name"), { target: { value: "Agent writer" } });
+  // The permissions stand one under another, so their switches share a column.
+  const permissions = screen.getByRole("switch", { name: "Write content" }).closest(".field-group");
+  expect(permissions && within(permissions as HTMLElement).getAllByRole("switch")).toHaveLength(4);
   fireEvent.click(screen.getByRole("switch", { name: "Write content" }));
   fireEvent.click(screen.getByRole("button", { name: "Create token" }));
   expect(await screen.findByDisplayValue(secret)).toBeTruthy();

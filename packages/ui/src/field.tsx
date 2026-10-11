@@ -35,8 +35,18 @@ const FieldInline = forwardRef<HTMLDivElement, FieldProps>(
     </div>
   ),
 );
+/**
+ * Inline fields standing one under another, whose controls line up. The labels
+ * take one column as wide as the longest of them, and every control starts
+ * where that column ends, so a run of switches has one left edge rather than
+ * one per label. The space between the rows is the space the surrounding stack
+ * keeps between its fields, so grouping moves nothing up or down.
+ */
+const FieldInlineGroup = forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
+  <div ref={ref} className={join("field-group", className)} {...props} />
+));
 /** A label, control and optional hint. */
-export const Field = Object.assign(FieldRoot, { Inline: FieldInline });
+export const Field = Object.assign(FieldRoot, { Inline: FieldInline, InlineGroup: FieldInlineGroup });
 /**
  * A styled native input. A check box or a radio button is a mark beside its
  * label rather than a place to write, so it takes the `check` class and not the

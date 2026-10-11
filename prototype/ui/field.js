@@ -50,6 +50,15 @@ Field.Inline = ({ label, control } = {}) => html`
 `;
 
 /**
+ * Inline fields standing one under another, whose controls line up: the labels
+ * take a column as wide as the longest of them, and every switch starts where
+ * that column ends.
+ *
+ * @param fields The `Field.Inline`s, in order.
+ */
+Field.InlineGroup = (fields = []) => html`<div class="field-group">${fields}</div>`;
+
+/**
  * A text input.
  *
  * The attributes go through `attrs`, because the tag escapes what it

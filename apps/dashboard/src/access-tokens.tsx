@@ -135,20 +135,22 @@ export function AccessTokensCard() {
           </div>
           <fieldset className="settings-form__group">
             <legend className="field__label">{text("tokenScopes")}</legend>
-            {TOKEN_SCOPES.map((scope) => (
-              <Field.Inline key={scope} label={text(SCOPE_TEXT[scope])} htmlFor={`token-scope-${scope}`}>
-                <Switch
-                  id={`token-scope-${scope}`}
-                  aria-label={text(SCOPE_TEXT[scope])}
-                  checked={scopes.includes(scope)}
-                  onCheckedChange={(checked) =>
-                    setScopes((current) =>
-                      checked ? [...current, scope] : current.filter((item) => item !== scope),
-                    )
-                  }
-                />
-              </Field.Inline>
-            ))}
+            <Field.InlineGroup>
+              {TOKEN_SCOPES.map((scope) => (
+                <Field.Inline key={scope} label={text(SCOPE_TEXT[scope])} htmlFor={`token-scope-${scope}`}>
+                  <Switch
+                    id={`token-scope-${scope}`}
+                    aria-label={text(SCOPE_TEXT[scope])}
+                    checked={scopes.includes(scope)}
+                    onCheckedChange={(checked) =>
+                      setScopes((current) =>
+                        checked ? [...current, scope] : current.filter((item) => item !== scope),
+                      )
+                    }
+                  />
+                </Field.Inline>
+              ))}
+            </Field.InlineGroup>
           </fieldset>
         </div>
       </Card.Body>
