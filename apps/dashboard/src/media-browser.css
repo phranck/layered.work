@@ -1,20 +1,26 @@
+/* The media library's own frame, around its search, its uploads and its grid,
+   which takes the files dropped on it. It stands in the card's column in the
+   place of the parts it holds. */
 .media-browser {
-  display: grid;
-  gap: var(--space-5);
-}
-.media-browser__controls {
   display: flex;
-  align-items: end;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The search field and the controls that narrow a search of pictures, on one
+   line that wraps rather than shortening a control. */
+.picture-search__controls {
+  display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+  align-items: center;
 }
-.media-browser__grid {
+
+/* Pictures in as many columns as half a reading measure allows, so a row's
+   title is not cut short in a narrow dialog and the grid fills a wide screen. */
+.picture-search__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--reading-measure) / 2)), 1fr));
   gap: var(--space-3);
-}
-.media-detail__header .card__title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

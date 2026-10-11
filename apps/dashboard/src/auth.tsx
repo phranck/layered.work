@@ -1,8 +1,8 @@
 import { MAX_PASSWORD_LENGTH, MaxLength } from "@layered/schemas";
-import { Button, Card, Field, Input, Logo, SkyBackdrop } from "@layered/ui";
-import { SignInIcon } from "@layered/ui/icons";
+import { Card, Field, Input, Logo, SkyBackdrop } from "@layered/ui";
 import { type FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { browserLanguage } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
@@ -90,15 +90,9 @@ function LoginForm({ loginAlias }: LoginScreenProps) {
             rather than standing among the fields. The `form` attribute is what
             keeps it submitting a form it no longer sits inside. */}
         <Card.Footer>
-          <Button
-            type="submit"
-            form={LOGIN_FORM}
-            tone="primary"
-            disabled={pending}
-            icon={<SignInIcon weight="duotone" />}
-          >
+          <ActionButton action="signIn" type="submit" form={LOGIN_FORM} tone="primary" disabled={pending}>
             {pending ? text("signInPending") : text("signIn")}
-          </Button>
+          </ActionButton>
         </Card.Footer>
       </Card>
     </main>

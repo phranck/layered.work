@@ -5,6 +5,7 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { LANGUAGE_TEXT, otherLanguage } from "./entry-model.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { useListbox } from "./listbox.js";
 import { useNotify } from "./notifications.js";
 import { type Suggestion, topicLabel, topicSuggestions } from "./topics-model.js";
 import { useCreateTopic, useTopics } from "./topics-query.js";
@@ -39,20 +40,18 @@ export function TopicField({
   const listId = useId();
   const topics = useTopics();
   const [typed, setTyped] = useState("");
-  const [active, setActive] = useState(0);
 
   const all = topics.data ?? [];
   const chosen = value
     .map((id) => all.find((topic) => topic.id === id))
     .filter((topic) => topic !== undefined);
   const suggestions = topicSuggestions(all, value, typed, language);
-  const activeIndex = Math.min(active, suggestions.length - 1);
   const full = value.length >= MAX_TOPICS_PER_ENTRY;
 
   const add = (id: string) => {
     if (!value.includes(id)) onChange([...value, id]);
     setTyped("");
-    setActive(0);
+    listbox.reset();
   };
   const create = useCreateTopic(language, { onError: notifyError, onSuccess: (topic) => add(topic.id) });
   const choose = (suggestion: Suggestion) => {
@@ -60,17 +59,15 @@ export function TopicField({
     else create.mutate(suggestion.name);
   };
 
+  const listbox = useListbox(suggestions, (suggestion) => {
+    if (!create.isPending) choose(suggestion);
+  });
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      if (suggestions.length === 0) return;
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((activeIndex + step + suggestions.length) % suggestions.length);
-    } else if (event.key === "Enter") {
+    if (listbox.onKeyDown(event)) return;
+    if (event.key === "Enter") {
       // Enter in this field never submits anything around it.
       event.preventDefault();
-      const suggestion = suggestions[activeIndex];
-      if (suggestion && !create.isPending) choose(suggestion);
     } else if (event.key === "Escape" && typed) {
       event.preventDefault();
       setTyped("");
@@ -137,7 +134,7 @@ export function TopicField({
           aria-expanded={suggestions.length > 0}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={suggestions.length > 0 ? optionId(activeIndex) : undefined}
+          aria-activedescendant={suggestions.length > 0 ? optionId(listbox.activeIndex) : undefined}
           placeholder={text("editorTopicsAdd")}
           value={typed}
           maxLength={MaxLength.Line}
@@ -145,7 +142,7 @@ export function TopicField({
           disabled={full}
           onChange={(event) => {
             setTyped(event.target.value);
-            setActive(0);
+            listbox.reset();
           }}
           onKeyDown={onKeyDown}
         />
@@ -158,7 +155,6 @@ export function TopicField({
               className="topic-field__list"
             >
               {listed.map((suggestion, index) => {
-                const current = open && index === activeIndex;
                 const label =
                   suggestion.kind === "topic"
                     ? topicLabel(suggestion.topic, language).name
@@ -167,14 +163,11 @@ export function TopicField({
                   <Row
                     key={suggestion.kind === "topic" ? suggestion.topic.id : "create"}
                     id={optionId(index)}
-                    role="option"
-                    aria-selected={current}
-                    data-active={current ? "" : undefined}
                     className="row--interactive"
                     // The field keeps the focus, so a click must not take it.
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => choose(suggestion)}
-                    onMouseMove={() => setActive(index)}
+                    {...listbox.optionProps(index)}
                   >
                     <Row.Lead aria-hidden="true">
                       {suggestion.kind === "topic" ? <TagIcon /> : <PlusIcon />}

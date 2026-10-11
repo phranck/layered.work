@@ -9,7 +9,7 @@ import {
   fieldSpan,
   formFields,
 } from "@layered/schemas";
-import { Button, Card } from "@layered/ui";
+import { Card } from "@layered/ui";
 import {
   CalendarBlankIcon,
   CaretCircleDownIcon,
@@ -22,7 +22,6 @@ import {
   ShieldCheckIcon,
   TextAaIcon,
   TextAlignLeftIcon,
-  TrashIcon,
 } from "@layered/ui/icons";
 import {
   type ComponentType,
@@ -37,6 +36,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { ActionButton } from "./action-button.js";
 import {
   type DragSource,
   dropTarget,
@@ -545,10 +545,10 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                       data-landing={landingRow === rowIndex || undefined}
                       data-target={landingField?.row === rowIndex || undefined}
                     >
-                      <Button.Icon
+                      <ActionButton.Icon
+                        action="move"
                         className="forms-row__grip"
                         label={text("formRowMove", rowIndex + 1)}
-                        icon={<DotsSixVerticalIcon />}
                         onPointerDown={pressed(gripSource(form, rowIndex))}
                         onKeyDown={(event) => moveRowByKey(event, rowIndex)}
                       />
@@ -601,11 +601,10 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                               >
                                 <FieldFace field={field} language={language} />
                               </button>
-                              <Button.Icon
+                              <ActionButton.Icon
+                                action="remove"
                                 className="forms-field__remove"
                                 label={text("formFieldRemove")}
-                                icon={<TrashIcon />}
-                                tone="danger"
                                 disabled={fieldCount <= FORM_FIELD_COUNT.min}
                                 onClick={() => onChange(removeField(form, place), null)}
                               />

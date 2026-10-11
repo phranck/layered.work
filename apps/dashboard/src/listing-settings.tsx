@@ -82,7 +82,7 @@ export function ListingSettingsCard({ kind }: { kind: ListedKind }) {
               disabled={!editable}
               onChange={(introduction) => update({ introduction })}
             />
-            <div className="settings-form__trio">
+            <div className="field-row" data-fields="3">
               <Field
                 label={text("listingPageSize")}
                 htmlFor={`${group}-page-size`}

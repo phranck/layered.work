@@ -1,9 +1,10 @@
 import { Card, isApplePlatform, Row, RowList, Shortcut } from "@layered/ui";
 import { ArticleIcon, ImagesIcon, MagnifyingGlassIcon } from "@layered/ui/icons";
 import {
+  type ComponentPropsWithoutRef,
   createContext,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type Ref,
   use,
   useCallback,
   useEffect,
@@ -14,6 +15,7 @@ import {
 import { useNavigate } from "react-router";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { useListbox } from "./listbox.js";
 import { CardDialog } from "./modal.js";
 import { ENTRY_KIND_TEXT, type Hit, hitsOf, useSearchResults } from "./search-query.js";
 import { isSearchShortcut, takesText } from "./shortcuts.js";
@@ -122,6 +124,55 @@ export function SearchShortcutCap() {
   );
 }
 
+/** Props for a search field. */
+export interface SearchFieldProps
+  extends Omit<ComponentPropsWithoutRef<"input">, "value" | "onChange" | "type" | "className"> {
+  /** What the field searches, which is its accessible name and its placeholder. */
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  /** The ref of the input itself, such as the one that registers it with the shortcut. */
+  inputRef?: Ref<HTMLInputElement>;
+  /** Whether the key cap of the search shortcut stands at its end, for the field the shortcut focuses. */
+  shortcut?: boolean;
+  /** Whether it takes the width it stands in, as the search dialog's field does, rather than a header's corner. */
+  wide?: boolean;
+}
+
+/**
+ * The dashboard's one search field: the magnifier, the field, and the key cap
+ * of the search shortcut where the shortcut reaches it, on one surface. Every
+ * search in the dashboard is this field, whether it narrows a table, searches
+ * the media library or Unsplash, or searches everything in the dialog.
+ */
+export function SearchField({
+  label,
+  value,
+  onChange,
+  inputRef,
+  shortcut,
+  wide,
+  ...props
+}: SearchFieldProps) {
+  return (
+    <label className="search-field" data-wide={wide || undefined}>
+      <MagnifyingGlassIcon aria-hidden="true" />
+      <input
+        ref={inputRef}
+        className="input"
+        type="search"
+        aria-label={label}
+        placeholder={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        data-search-field={shortcut ? "" : undefined}
+        {...props}
+      />
+      {shortcut && <SearchShortcutCap />}
+    </label>
+  );
+}
+
 /**
  * The search for a screen without a list: a field, and what it finds in
  * entries and in the media library.
@@ -137,33 +188,19 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
   const { text } = useDashboardLanguage();
   const [query, setQuery] = useState("");
   const { settled, results } = useSearchResults(query);
-  const [active, setActive] = useState(0);
   const hits = settled ? hitsOf(results.data, (kind) => text(ENTRY_KIND_TEXT[kind])) : [];
-  const activeHit = hits[Math.min(active, hits.length - 1)];
-  const activeKey = activeHit?.key;
+  const open = (hit: Hit) => {
+    onClose();
+    navigate(hit.path);
+  };
+  const listbox = useListbox(hits, open);
+  const activeKey = listbox.activeOption?.key;
 
   // The list scrolls inside the dialog, so a hit reached with the arrow keys is
   // brought into view rather than left below the edge.
   useEffect(() => {
     if (activeKey) document.getElementById(activeKey)?.scrollIntoView?.({ block: "nearest" });
   }, [activeKey]);
-
-  const open = (hit: Hit) => {
-    onClose();
-    navigate(hit.path);
-  };
-
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      if (hits.length === 0) return;
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((current) => (Math.min(current, hits.length - 1) + step + hits.length) % hits.length);
-    } else if (event.key === "Enter" && activeHit) {
-      event.preventDefault();
-      open(activeHit);
-    }
-  };
 
   const group = (name: Hit["group"], label: string) => {
     const members = hits.filter((hit) => hit.group === name);
@@ -179,20 +216,17 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
             <Row
               key={hit.key}
               id={hit.key}
-              role="option"
-              aria-selected={hit === activeHit}
-              data-active={hit === activeHit ? "" : undefined}
               className="row--interactive"
               onClick={() => open(hit)}
-              onMouseMove={() => setActive(hits.indexOf(hit))}
+              {...listbox.optionProps(hits.indexOf(hit))}
             >
               <Row.Tile aria-hidden="true">
                 {hit.thumbnailUrl ? (
                   <img src={hit.thumbnailUrl} alt="" loading="lazy" />
                 ) : name === "entries" ? (
-                  <ArticleIcon weight="duotone" />
+                  <ArticleIcon />
                 ) : (
-                  <ImagesIcon weight="duotone" />
+                  <ImagesIcon />
                 )}
               </Row.Tile>
               <Row.Text title={hit.title} note={hit.note || undefined} />
@@ -214,30 +248,26 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
     <CardDialog labelId="search-dialog-title" onClose={onClose}>
       <Card.Header id="search-dialog-title" title={text("search")} />
       <Card.Body className="search-dialog">
-        <label className="search-field search-field--wide">
-          <MagnifyingGlassIcon aria-hidden="true" />
-          <input
-            className="input"
-            type="search"
-            role="combobox"
-            aria-label={text("searchEverything")}
-            aria-expanded={hits.length > 0}
-            aria-controls="search-results"
-            aria-activedescendant={activeHit?.key}
-            aria-autocomplete="list"
-            placeholder={text("searchEverything")}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActive(0);
-            }}
-            onKeyDown={onKeyDown}
-            data-search-field=""
-            // biome-ignore lint/a11y/noAutofocus: The dialog exists to be typed into, and it was opened from the keyboard.
-            autoFocus
-          />
-          <SearchShortcutCap />
-        </label>
+        <SearchField
+          label={text("searchEverything")}
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            listbox.reset();
+          }}
+          shortcut
+          wide
+          role="combobox"
+          aria-expanded={hits.length > 0}
+          aria-controls="search-results"
+          aria-activedescendant={activeKey}
+          aria-autocomplete="list"
+          onKeyDown={(event) => {
+            listbox.onKeyDown(event);
+          }}
+          // The dialog exists to be typed into, and it was opened from the keyboard.
+          autoFocus
+        />
         {results.isError && <ErrorNotice error={results.error} />}
         <div id="search-results" role="listbox" aria-label={text("searchResults")} className="search-results">
           {group("entries", text("searchEntries"))}

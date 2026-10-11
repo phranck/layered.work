@@ -1,5 +1,4 @@
-import { Button } from "@layered/ui";
-import { CheckCircleIcon, InfoIcon, WarningIcon, WarningOctagonIcon, XIcon } from "@layered/ui/icons";
+import { TONE_ICONS } from "@layered/ui/icons";
 import {
   createContext,
   type ReactNode,
@@ -11,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ActionButton } from "./action-button.js";
 import type { DashboardApiError } from "./api.js";
 import { HeaderCenter } from "./app-bar-slots.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -80,9 +80,6 @@ interface Notify {
 
 const NotifyContext = createContext<Notify>({ notify: () => {}, notifyError: () => {} });
 
-/** The icon each tone is marked with, so the tone is not carried by colour alone. */
-const ICONS = { success: CheckCircleIcon, info: InfoIcon, warning: WarningIcon, danger: WarningOctagonIcon };
-
 /**
  * Holds the notification shown, and puts it into the bar.
  *
@@ -144,7 +141,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ notify, notifyError }), [notify, notifyError]);
   const urgent = shown && !leavesByItself(shown.tone);
-  const Icon = shown ? ICONS[shown.tone] : null;
+  const Icon = shown ? TONE_ICONS[shown.tone] : null;
 
   return (
     <NotifyContext value={value}>
@@ -176,10 +173,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               {shown.detail && <span className="notification__detail">{shown.detail}</span>}
             </span>
             {urgent && (
-              <Button.Icon
+              <ActionButton.Icon
+                action="close"
                 className="notification__close"
                 label={text("close")}
-                icon={<XIcon />}
                 onClick={leave}
               />
             )}

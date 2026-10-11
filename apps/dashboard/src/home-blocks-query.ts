@@ -9,7 +9,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
-import type { Position } from "./list-order.js";
+import { inPositions, type Position } from "./list-order.js";
 import { queryKeys } from "./query-keys.js";
 import type { Reactions } from "./reactions.js";
 
@@ -97,7 +97,16 @@ export function useReorderHomeBlocks(reactions: Reactions<StoredHomeBlock[], Pos
   const client = useQueryClient();
   return useMutation({
     mutationFn: api.reorderHomeBlocks,
-    onError: (error) => reactions.onError?.(error),
+    onMutate: (positions) => {
+      client.setQueryData<StoredHomeBlock[]>(
+        queryKeys.homeBlocks,
+        (current) => current && inPositions(current, positions),
+      );
+    },
+    onError: (error) => {
+      void client.invalidateQueries({ queryKey: queryKeys.homeBlocks });
+      reactions.onError?.(error);
+    },
     onSuccess: (ordered, positions) => {
       client.setQueryData(queryKeys.homeBlocks, ordered);
       reactions.onSuccess?.(ordered, positions);

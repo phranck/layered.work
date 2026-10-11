@@ -4,13 +4,13 @@ import {
   type InterfaceLanguage,
   submittedValueText,
 } from "@layered/schemas";
+import type { BadgeTone } from "@layered/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { queryKeys } from "./query-keys.js";
 import type { Reactions } from "./reactions.js";
-import type { BadgeTone } from "./table.js";
 
 /**
  * The submissions of one form as the inbox holds them, what a search leaves of

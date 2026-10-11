@@ -40,6 +40,22 @@ export function reorderedPositions(items: readonly { id: string }[], from: numbe
 }
 
 /**
+ * A stored list in the order a reorder request names, so the cache can show
+ * the new order before the API has answered, and the rows travel into it at
+ * once rather than when the answer arrives.
+ *
+ * @param items - The list as it is cached.
+ * @param positions - Every item's new place, as a reorder request sends them.
+ */
+export function inPositions<Item extends { id: string }>(
+  items: readonly Item[],
+  positions: readonly Position[],
+): Item[] {
+  const place = new Map(positions.map((position) => [position.id, position.sortOrder]));
+  return [...items].sort((first, second) => (place.get(first.id) ?? 0) - (place.get(second.id) ?? 0));
+}
+
+/**
  * The place a new item takes: after every item there is, or the first place in
  * an empty list.
  *

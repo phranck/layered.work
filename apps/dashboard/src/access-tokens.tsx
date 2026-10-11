@@ -1,13 +1,13 @@
 import { TOKEN_SCOPES, type TokenScope, type TokenSummary } from "@layered/schemas";
-import { Button, Card, Field, Input, Switch } from "@layered/ui";
-import { KeyIcon, TrashIcon } from "@layered/ui/icons";
+import { Badge, Card, Field, Input, Switch } from "@layered/ui";
 import { useState } from "react";
-import { ErrorNotice } from "./error-notice.js";
-import { DATE_FORMAT } from "./format.js";
+import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
+import { noRows, QueryStates } from "./query-states.js";
 import { Table } from "./table.js";
+import { Timestamp } from "./timestamp.js";
 import {
   issueBodyOf,
   SCOPE_TEXT,
@@ -25,7 +25,7 @@ import {
  * this card's state and nowhere else, so it is shown once, until the card goes.
  */
 export function AccessTokensCard() {
-  const { language, text } = useDashboardLanguage();
+  const { text } = useDashboardLanguage();
   const { notify, notifyError } = useNotify();
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<TokenScope[]>([]);
@@ -49,112 +49,100 @@ export function AccessTokensCard() {
       notify({ tone: "success", message: text("tokenRevokedNotice") });
     },
   });
-  const dateOf = (value: string | null) =>
-    value ? (
-      <time dateTime={value}>{DATE_FORMAT[language].format(new Date(value))}</time>
-    ) : (
-      text("tokenNever")
-    );
+  const dateOf = (value: string | null) => (value ? <Timestamp at={value} /> : text("tokenNever"));
 
   return (
     <Card>
       <Card.Header title={text("apiTokens")} meta={tokens.data?.length} />
-      {tokens.isError && (
-        <Card.Body>
-          <ErrorNotice error={tokens.error} />
-        </Card.Body>
-      )}
-      {tokens.isSuccess && tokens.data.length === 0 && <Table.Empty>{text("tokensEmpty")}</Table.Empty>}
-      {tokens.isSuccess && tokens.data.length > 0 && (
-        <Table
-          columns={[
-            { kind: "title", label: text("columnName") },
-            { kind: "text", label: text("tokenScopes") },
-            { kind: "state", label: text("columnState") },
-            { kind: "date", label: text("tokenLastUse") },
-            { kind: "date", label: text("tokenExpires") },
-            { kind: "action", label: text("columnAction") },
-          ]}
-        >
-          {tokens.data.map((token) => (
-            <Table.Row key={token.id}>
-              <Table.Cell kind="title">
-                <Table.Title title={token.name} />
-              </Table.Cell>
-              <Table.Cell>{token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}</Table.Cell>
-              <Table.Cell kind="state">
-                <Table.Badge tone={token.revokedAt ? "neutral" : "success"}>
-                  {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
-                </Table.Badge>
-              </Table.Cell>
-              <Table.Cell kind="date">{dateOf(token.lastUsedAt)}</Table.Cell>
-              <Table.Cell kind="date">{dateOf(token.expiresAt)}</Table.Cell>
-              <Table.Actions>
-                {!token.revokedAt && (
-                  <Button.Icon
-                    label={text("tokenRevoke")}
-                    icon={<TrashIcon />}
-                    tone="danger"
-                    onClick={() => setRevoking(token)}
-                  />
-                )}
-              </Table.Actions>
-            </Table.Row>
-          ))}
-        </Table>
-      )}
-      <Card.Body>
-        <div className="settings-form">
-          {revealed && (
-            <Field label={text("tokenCreated")} hint={text("tokenSecret")} htmlFor="token-secret">
-              <Input id="token-secret" value={revealed} readOnly onFocus={(event) => event.target.select()} />
-            </Field>
-          )}
-          <div className="settings-form__pair">
-            <Field label={text("tokenName")} htmlFor="token-name">
-              <Input id="token-name" value={name} onChange={(event) => setName(event.target.value)} />
-            </Field>
-            <Field label={text("tokenExpiry")} htmlFor="token-expiry">
-              <Input
-                id="token-expiry"
-                type="datetime-local"
-                value={expiry}
-                onChange={(event) => setExpiry(event.target.value)}
-              />
-            </Field>
-          </div>
-          <fieldset className="settings-form__group">
-            <legend className="field__label">{text("tokenScopes")}</legend>
-            <Field.InlineGroup>
-              {TOKEN_SCOPES.map((scope) => (
-                <Field.Inline key={scope} label={text(SCOPE_TEXT[scope])} htmlFor={`token-scope-${scope}`}>
-                  <Switch
-                    id={`token-scope-${scope}`}
-                    aria-label={text(SCOPE_TEXT[scope])}
-                    checked={scopes.includes(scope)}
-                    onCheckedChange={(checked) =>
-                      setScopes((current) =>
-                        checked ? [...current, scope] : current.filter((item) => item !== scope),
-                      )
-                    }
-                  />
-                </Field.Inline>
-              ))}
-            </Field.InlineGroup>
-          </fieldset>
+      <QueryStates query={tokens} empty={text("tokensEmpty")} isEmpty={noRows}>
+        {(issued) => (
+          <Table
+            columns={[
+              { kind: "title", label: text("columnName") },
+              { kind: "text", label: text("tokenScopes") },
+              { kind: "state", label: text("columnState") },
+              { kind: "date", label: text("tokenLastUse") },
+              { kind: "date", label: text("tokenExpires") },
+              { kind: "action", label: text("columnAction") },
+            ]}
+          >
+            {issued.map((token) => (
+              <Table.Row key={token.id}>
+                <Table.Cell kind="title">
+                  <Table.Title title={token.name} />
+                </Table.Cell>
+                <Table.Cell>{token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}</Table.Cell>
+                <Table.Cell kind="state">
+                  <Badge tone={token.revokedAt ? "neutral" : "success"}>
+                    {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell kind="date">{dateOf(token.lastUsedAt)}</Table.Cell>
+                <Table.Cell kind="date">{dateOf(token.expiresAt)}</Table.Cell>
+                <Table.Actions>
+                  {!token.revokedAt && (
+                    <ActionButton.Icon
+                      action="delete"
+                      label={text("tokenRevoke")}
+                      onClick={() => setRevoking(token)}
+                    />
+                  )}
+                </Table.Actions>
+              </Table.Row>
+            ))}
+          </Table>
+        )}
+      </QueryStates>
+      <Card.Stack>
+        {revealed && (
+          <Field label={text("tokenCreated")} hint={text("tokenSecret")} htmlFor="token-secret">
+            <Input id="token-secret" value={revealed} readOnly onFocus={(event) => event.target.select()} />
+          </Field>
+        )}
+        <div className="field-row">
+          <Field label={text("tokenName")} htmlFor="token-name">
+            <Input id="token-name" value={name} onChange={(event) => setName(event.target.value)} />
+          </Field>
+          <Field label={text("tokenExpiry")} htmlFor="token-expiry">
+            <Input
+              id="token-expiry"
+              type="datetime-local"
+              value={expiry}
+              onChange={(event) => setExpiry(event.target.value)}
+            />
+          </Field>
         </div>
-      </Card.Body>
+        <fieldset className="settings-form__group">
+          <legend className="field__label">{text("tokenScopes")}</legend>
+          <Field.InlineGroup>
+            {TOKEN_SCOPES.map((scope) => (
+              <Field.Inline key={scope} label={text(SCOPE_TEXT[scope])} htmlFor={`token-scope-${scope}`}>
+                <Switch
+                  id={`token-scope-${scope}`}
+                  aria-label={text(SCOPE_TEXT[scope])}
+                  checked={scopes.includes(scope)}
+                  onCheckedChange={(checked) =>
+                    setScopes((current) =>
+                      checked ? [...current, scope] : current.filter((item) => item !== scope),
+                    )
+                  }
+                />
+              </Field.Inline>
+            ))}
+          </Field.InlineGroup>
+        </fieldset>
+      </Card.Stack>
       <Card.Footer
         note={text("tokenOwnerNote")}
         actions={
-          <Button
+          <ActionButton
+            action="issueToken"
             tone="primary"
-            icon={<KeyIcon />}
             disabled={!name.trim() || issue.isPending}
             onClick={() => issue.mutate(issueBodyOf(name, scopes, expiry))}
           >
             {text("tokenCreate")}
-          </Button>
+          </ActionButton>
         }
       />
       {revoking && (

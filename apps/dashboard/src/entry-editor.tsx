@@ -1,15 +1,9 @@
 import { validateContent } from "@layered/content";
 import type { EntryDetail, SaveEntryBody } from "@layered/schemas";
-import { Button, Card, Editor, Section } from "@layered/ui";
-import {
-  ArrowCounterClockwiseIcon,
-  ArrowLeftIcon,
-  FloppyDiskIcon,
-  GlobeIcon,
-  XIcon,
-} from "@layered/ui/icons";
+import { Badge, Editor, Section } from "@layered/ui";
 import { useEffect, useRef, useState } from "react";
 import { useBlocker, useLocation, useNavigate, useParams } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { DashboardApiError } from "./api.js";
 import { BackToList, HeaderEnd } from "./app-bar-slots.js";
 import type { ContentEditorHandle } from "./content-editor.js";
@@ -38,7 +32,7 @@ import { WritingSurface } from "./entry-writing.js";
 import { ErrorNotice } from "./error-notice.js";
 import { TIME_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { CardDialog, ConfirmDialog } from "./modal.js";
+import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
@@ -210,37 +204,37 @@ function EntryEditor({
         // In the trash nothing is written or published; the one thing to do is
         // to take it out again.
         <HeaderEnd>
-          <span className="badge" data-status="trashed" role="status">
+          <Badge tone="danger" role="status">
             {text("editorInTrash")}
-          </span>
-          <Button
+          </Badge>
+          <ActionButton
+            action="restore"
             tone="primary"
-            icon={<ArrowCounterClockwiseIcon />}
             disabled={restore.isPending}
             onClick={() => restore.mutate(entry.id)}
           >
             {restore.isPending ? text("restorePending") : text("restore")}
-          </Button>
+          </ActionButton>
         </HeaderEnd>
       ) : (
         <HeaderEnd>
           <span className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
             {status}
           </span>
-          <Button
+          <ActionButton
+            action="save"
             tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}
             disabled={!savable || !dirty || save.isPending}
-            icon={<FloppyDiskIcon />}
             onClick={() => save.mutate({ value: draft, automatic: false })}
           >
             {text("save")}
-          </Button>
+          </ActionButton>
           {!(saved.state === "public" && draft.state === "public") && (
-            <Button
+            <ActionButton
+              action="publish"
               tone="primary"
               disabled={!publishReady || save.isPending}
               aria-describedby="content-publish-reason"
-              icon={<GlobeIcon />}
               onClick={() => {
                 // The draft takes the new state as well, so what is shown and
                 // what is stored agree once the save returns.
@@ -250,7 +244,7 @@ function EntryEditor({
               }}
             >
               {save.isPending ? text("publishPending") : text("publish")}
-            </Button>
+            </ActionButton>
           )}
         </HeaderEnd>
       )}
@@ -292,29 +286,16 @@ function EntryEditor({
         />
       )}
       {blocker.state === "blocked" && (
-        <CardDialog labelId="leave-entry-title" onClose={() => blocker.reset()}>
-          <Card.Header id="leave-entry-title" title={text("leaveTitle")} />
-          <Card.Body>
-            <p>{text("leaveBody")}</p>
-          </Card.Body>
-          <Card.Footer
-            actions={
-              <>
-                <Button tone="danger" icon={<XIcon weight="duotone" />} onClick={() => blocker.proceed()}>
-                  {text("discard")}
-                </Button>
-                <Button
-                  tone="primary"
-                  icon={<ArrowLeftIcon weight="duotone" />}
-                  onClick={() => blocker.reset()}
-                  autoFocus
-                >
-                  {text("stay")}
-                </Button>
-              </>
-            }
-          />
-        </CardDialog>
+        <ConfirmDialog
+          title={text("leaveTitle")}
+          confirm={text("discard")}
+          action="discard"
+          cancel={{ label: text("stay"), action: "back" }}
+          onConfirm={() => blocker.proceed()}
+          onClose={() => blocker.reset()}
+        >
+          <p>{text("leaveBody")}</p>
+        </ConfirmDialog>
       )}
     </>
   );

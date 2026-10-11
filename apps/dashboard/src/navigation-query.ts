@@ -10,7 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
-import type { Position } from "./list-order.js";
+import { inPositions, type Position } from "./list-order.js";
 import { queryKeys } from "./query-keys.js";
 import type { Reactions } from "./reactions.js";
 import type { DashboardArea } from "./routes.js";
@@ -205,10 +205,20 @@ export function useReorderNavigation(
   reactions: Reactions<FooterNavigation[], Position[]>,
 ) {
   const api = useDashboardApi();
+  const client = useQueryClient();
   const refresh = useRefreshNavigation(placement);
   return useMutation({
     mutationFn: (positions: Position[]) => api.reorderFooterNavigations(positions, placement),
-    onError: (error) => reactions.onError?.(error),
+    onMutate: (positions) => {
+      client.setQueryData<FooterNavigation[]>(
+        queryKeys.navigation(placement),
+        (current) => current && inPositions(current, positions),
+      );
+    },
+    onError: (error) => {
+      refresh();
+      reactions.onError?.(error);
+    },
     onSuccess: (groups, positions) => {
       refresh();
       reactions.onSuccess?.(groups, positions);

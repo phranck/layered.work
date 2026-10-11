@@ -1,7 +1,7 @@
 import { ENTRY_SPEC_LENGTH, type EntrySpec, entrySpecs, MAX_ENTRY_SPECS } from "@layered/schemas";
-import { Button, Field, Input } from "@layered/ui";
-import { PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { Field, Input } from "@layered/ui";
 import { useRef, useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { moveItem } from "./list-order.js";
 import { Reorder } from "./reorder.js";
@@ -60,6 +60,7 @@ export function SpecsField({
           return (
             <Reorder.Item key={key} index={index}>
               <div className="spec-pair">
+                <Reorder.Handle index={index} label={text("moveGroup", name)} />
                 <div className="spec-pair__fields">
                   <Input
                     aria-label={`${text("editorSpecLabel")} ${index + 1}`}
@@ -77,15 +78,11 @@ export function SpecsField({
                     onChange={(event) => change(index, "value", event.target.value)}
                   />
                 </div>
-                <div className="spec-pair__actions">
-                  <Reorder.Handle index={index} label={text("moveGroup", name)} />
-                  <Button.Icon
-                    label={text("editorSpecRemove", name)}
-                    icon={<TrashIcon />}
-                    tone="danger"
-                    onClick={() => remove(index)}
-                  />
-                </div>
+                <ActionButton.Icon
+                  action="remove"
+                  label={text("editorSpecRemove", name)}
+                  onClick={() => remove(index)}
+                />
               </div>
             </Reorder.Item>
           );
@@ -96,9 +93,9 @@ export function SpecsField({
           {text("editorSpecsIncomplete")}
         </p>
       )}
-      <Button icon={<PlusIcon />} disabled={specs.length >= MAX_ENTRY_SPECS} onClick={add}>
+      <ActionButton action="new" disabled={specs.length >= MAX_ENTRY_SPECS} onClick={add}>
         {text("editorSpecAdd")}
-      </Button>
+      </ActionButton>
     </Field>
   );
 }

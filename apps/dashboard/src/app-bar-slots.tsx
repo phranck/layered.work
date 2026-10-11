@@ -1,15 +1,15 @@
-import { AppBar, Button } from "@layered/ui";
-import { ArrowLeftIcon } from "@layered/ui/icons";
+import { AppBar } from "@layered/ui";
 import { createContext, type ReactNode, use, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLinkClickHandler } from "react-router";
+import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
 import type { DashboardArea } from "./routes.js";
 
 /**
  * The dashboard's bar, and the way a screen puts something into it.
  *
- * The bar belongs to the frame, so it stays where it is whilst a screen
+ * The bar belongs to the frame, so it stays where it is while a screen
  * scrolls, but what it holds belongs to the screen: the way back from an open
  * entry, the entry's Save. A screen renders `HeaderStart` or `HeaderEnd`
  * wherever it likes, and the content appears in the bar through a portal. It is
@@ -90,9 +90,9 @@ export function BackToList({ area, title }: { area: DashboardArea; title?: strin
   const onClick = useLinkClickHandler(to);
   return (
     <HeaderStart>
-      <Button.Link href={to} onClick={onClick} icon={<ArrowLeftIcon />}>
+      <ActionButton.Link action="back" href={to} onClick={onClick}>
         {text(area.labelKey)}
-      </Button.Link>
+      </ActionButton.Link>
       {title !== undefined && <BarTitle title={title} />}
     </HeaderStart>
   );

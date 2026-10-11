@@ -1,5 +1,6 @@
 /** Shared UI components and their documented public prop types. */
 export { AppBar } from "./app-bar.js";
+export { Badge, type BadgeProps, type BadgeTone } from "./badge.js";
 export { BrandMark, type BrandMarkProps, type BrandName } from "./brand-mark.js";
 export {
   Button,

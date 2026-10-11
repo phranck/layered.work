@@ -1,5 +1,4 @@
-import { Button } from "@layered/ui";
-import { CaretLeftIcon, CaretRightIcon } from "@layered/ui/icons";
+import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
 
 /**
@@ -25,14 +24,14 @@ export function PageButtons({
   return (
     <>
       {page > 1 && (
-        <Button icon={<CaretLeftIcon />} onClick={() => onPage(page - 1)}>
+        <ActionButton action="previousPage" onClick={() => onPage(page - 1)}>
           {text("previousPage")}
-        </Button>
+        </ActionButton>
       )}
       {hasMore && (
-        <Button icon={<CaretRightIcon />} onClick={() => onPage(page + 1)}>
+        <ActionButton action="nextPage" onClick={() => onPage(page + 1)}>
           {text("nextPage")}
-        </Button>
+        </ActionButton>
       )}
     </>
   );

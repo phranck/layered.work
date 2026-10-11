@@ -4,22 +4,14 @@ import {
   NAVIGATION_ITEMS_MAX,
   type NavigationPlacement,
 } from "@layered/schemas";
-import { Button, Card, Field, Select, Switch } from "@layered/ui";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  FloppyDiskIcon,
-  PencilSimpleIcon,
-  PlusIcon,
-  TrashIcon,
-  XIcon,
-} from "@layered/ui/icons";
-import { type FormEvent, useState } from "react";
+import { Badge, Field, Select, Switch } from "@layered/ui";
+import { useState } from "react";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { ListCard } from "./list-card.js";
 import { moveItem, nextSortOrder, reorderedPositions } from "./list-order.js";
-import { CardDialog, ConfirmDialog } from "./modal.js";
+import { ConfirmDialog, FormDialog } from "./modal.js";
 import {
   type DraftItem,
   draftItemsOf,
@@ -37,7 +29,6 @@ import { NavigationTarget } from "./navigation-target.js";
 import { useNotify } from "./notifications.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
-import { useSession } from "./session-queries.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
@@ -56,8 +47,6 @@ type OpenDialog = { editing: FooterNavigation | null } | { deleting: FooterNavig
 export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
   const placement = placementOf(area);
   const { text, language } = useDashboardLanguage();
-  const session = useSession();
-  const owner = session.data?.role === "owner";
   const list = useNavigation(placement);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const { notifyError } = useNotify();
@@ -65,30 +54,14 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
-      <Card>
-        <Card.Header
-          title={text(area.labelKey)}
-          meta={list.data?.length}
-          actions={
-            <Button
-              tone="primary"
-              icon={<PlusIcon />}
-              disabled={!owner}
-              onClick={() => setDialog({ editing: null })}
-            >
-              {text("navigationNew")}
-            </Button>
-          }
-        />
-        {(list.isError || list.isPending || !owner) && (
-          <Card.Body>
-            {list.isError && <ErrorNotice error={list.error} />}
-            {list.isPending && <p>{text("loading")}</p>}
-            {!owner && <p>{text("ownerOnly")}</p>}
-          </Card.Body>
-        )}
-        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("navigationEmpty")}</Table.Empty>}
-        {list.isSuccess && list.data.length > 0 && (
+      <ListCard
+        title={text(area.labelKey)}
+        query={list}
+        newLabel={text("navigationNew")}
+        onNew={() => setDialog({ editing: null })}
+        empty={text("navigationEmpty")}
+      >
+        {(groups, owner) => (
           <Table
             columns={[
               { kind: "grip", label: "" },
@@ -97,12 +70,11 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
               { kind: "action", label: text("columnAction"), actions: 2 },
             ]}
             onMove={(from, to) => {
-              if (from !== to) reorder.mutate(reorderedPositions(list.data, from, to));
+              if (from !== to) reorder.mutate(reorderedPositions(groups, from, to));
             }}
           >
-            {list.data.map((group, index) => {
+            {groups.map((group, index) => {
               const name = group.title[language];
-              const broken = hasBrokenLink(group);
               return (
                 <Table.Row
                   key={group.id}
@@ -118,21 +90,20 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
                     <Table.Title title={name} />
                   </Table.Cell>
                   <Table.Cell>
-                    {broken && <Table.Badge tone="warning">{text("navigationBroken")}</Table.Badge>}{" "}
+                    {hasBrokenLink(group) && <Badge tone="warning">{text("navigationBroken")}</Badge>}{" "}
                     {group.items.map((item) => item.label[language]).join(", ")}
                   </Table.Cell>
                   <Table.Actions>
-                    <Button.Icon
+                    <ActionButton.Icon
+                      action="edit"
                       label={text("navigationEdit", name)}
-                      icon={<PencilSimpleIcon />}
                       disabled={!owner}
                       tabIndex={-1}
                       onClick={() => setDialog({ editing: group })}
                     />
-                    <Button.Icon
+                    <ActionButton.Icon
+                      action="delete"
                       label={text("navigationDelete", name)}
-                      icon={<TrashIcon />}
-                      tone="danger"
                       disabled={!owner}
                       onClick={() => setDialog({ deleting: group })}
                     />
@@ -142,7 +113,7 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
             })}
           </Table>
         )}
-      </Card>
+      </ListCard>
       {dialog && "editing" in dialog && (
         <NavigationEditor
           placement={placement}
@@ -180,19 +151,17 @@ function NavigationEditor({
   onClose: () => void;
 }) {
   const { text, language } = useDashboardLanguage();
-  const { notify, notifyError } = useNotify();
+  const { notify } = useNotify();
   const [title, setTitle] = useState(group?.title ?? { en: "", de: "" });
   const [items, setItems] = useState(() => draftItemsOf(group));
   const [invalid, setInvalid] = useState(false);
   const save = useSaveNavigation(placement, group, {
-    onError: notifyError,
     onSuccess: () => {
       notify({ tone: "success", message: text("saved") });
       onClose();
     },
   });
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submit = () => {
     const body = navigationBodyOf(title, group?.sortOrder ?? sortOrder, items);
     setInvalid(body === null);
     if (body) save.mutate(body);
@@ -201,76 +170,66 @@ function NavigationEditor({
     setItems((current) => current.map((item) => (item.key === key ? { ...item, ...change } : item)));
   return (
     <Translated>
-      <CardDialog labelId="navigation-edit-title" onClose={onClose}>
-        <Card.Header
-          id="navigation-edit-title"
-          title={group ? text("navigationEdit", group.title[language]) : text("navigationNew")}
-          actions={<Translated.Switch />}
+      <FormDialog
+        title={group ? text("navigationEdit", group.title[language]) : text("navigationNew")}
+        headerActions={<Translated.Switch />}
+        onSubmit={submit}
+        onClose={onClose}
+        busy={save.isPending}
+        problem={invalid ? text("navigationInvalid") : null}
+        error={save.error}
+      >
+        <Translated.Field
+          id="navigation-title"
+          label={text("navigationTitle")}
+          value={title}
+          maxLength={MaxLength.Line}
+          onChange={setTitle}
         />
-        <Card.Body>
-          <form id="navigation-edit" className="settings-form" onSubmit={submit} noValidate>
-            <Translated.Field
-              id="navigation-title"
-              label={text("navigationTitle")}
-              value={title}
-              maxLength={MaxLength.Line}
-              onChange={setTitle}
-            />
-            <Reorder.List onMove={(from, to) => setItems((current) => moveItem(current, from, to))}>
-              {items.map((item, index) => (
-                <Reorder.Item key={item.key} index={index}>
-                  <NavigationItemFields
-                    key={item.key}
-                    item={item}
-                    parents={items.filter((candidate) => candidate.key !== item.key && !candidate.parentId)}
-                    hasChildren={items.some((candidate) => candidate.parentId === item.id)}
-                    index={index}
-                    length={items.length}
-                    onChange={(change) => updateItem(item.key, change)}
-                    onMove={(to) => setItems((current) => moveItem(current, index, to))}
-                    onRemove={() => setItems((current) => withoutItem(current, item))}
-                  />
-                </Reorder.Item>
-              ))}
-            </Reorder.List>
-            <Button
-              icon={<PlusIcon />}
-              disabled={items.length >= NAVIGATION_ITEMS_MAX}
-              onClick={() => setItems((current) => [...current, newNavigationItem()])}
-            >
-              {text("navigationAddLink")}
-            </Button>
-            {invalid && (
-              <p className="dashboard-error" role="alert">
-                {text("navigationInvalid")}
-              </p>
-            )}
-            {save.isError && <ErrorNotice error={save.error} />}
-          </form>
-        </Card.Body>
-        <Card.Footer
-          actions={
-            <>
-              <Button icon={<XIcon />} onClick={onClose}>
-                {text("cancel")}
-              </Button>
-              <Button
-                type="submit"
-                form="navigation-edit"
-                tone="primary"
-                icon={<FloppyDiskIcon />}
-                disabled={save.isPending}
-              >
-                {text("save")}
-              </Button>
-            </>
-          }
-        />
-      </CardDialog>
+        <Reorder.List
+          className="nav-links"
+          onMove={(from, to) => setItems((current) => moveItem(current, from, to))}
+        >
+          {items.map((item, index) => (
+            <Reorder.Item key={item.key} index={index}>
+              <NavigationItemFields
+                item={item}
+                parents={items.filter((candidate) => candidate.key !== item.key && !candidate.parentId)}
+                hasChildren={items.some((candidate) => candidate.parentId === item.id)}
+                index={index}
+                length={items.length}
+                onChange={(change) => updateItem(item.key, change)}
+                onMove={(to) => setItems((current) => moveItem(current, index, to))}
+                onRemove={() => setItems((current) => withoutItem(current, item))}
+              />
+            </Reorder.Item>
+          ))}
+        </Reorder.List>
+        <ActionButton
+          action="new"
+          disabled={items.length >= NAVIGATION_ITEMS_MAX}
+          onClick={() => setItems((current) => [...current, newNavigationItem()])}
+        >
+          {text("navigationAddLink")}
+        </ActionButton>
+      </FormDialog>
     </Translated>
   );
 }
 
+/**
+ * One link of a group in its own box: a row with the grip it is moved by, its
+ * name and the buttons that move it or remove it, and its fields beneath.
+ *
+ * @param item - The link.
+ * @param index - Its position among the group's links.
+ * @param length - How many links the group holds.
+ * @param parents - The links it may stand under, which stand at the top level themselves.
+ * @param hasChildren - Whether a link stands under this one, which keeps it at the top level.
+ * @param onChange - Replaces part of the link.
+ * @param onMove - Moves it to another position.
+ * @param onRemove - Takes it out of the group.
+ */
 function NavigationItemFields({
   item,
   index,
@@ -294,65 +253,72 @@ function NavigationItemFields({
   const textLanguage = useTextLanguage();
   const name = item.label[language] || String(index + 1);
   return (
-    <div className="nav-manager__group settings-form">
-      <Translated.Field
-        id={`navigation-${item.key}`}
-        label={text("navigationLabel")}
-        value={item.label}
-        maxLength={MaxLength.Line}
-        onChange={(label) => onChange({ label })}
-      />
-      <NavigationTarget item={item} itemKey={item.key} onChange={onChange} />
-      <Field label={text("navigationParent")} htmlFor={`navigation-${item.key}-parent`}>
-        <Select
-          id={`navigation-${item.key}-parent`}
-          value={item.parentId ?? ""}
-          disabled={hasChildren}
-          options={[
-            { value: "", label: text("navigationTopLevel") },
-            ...parents.flatMap((parent) =>
-              parent.id ? [{ value: parent.id, label: parent.label[language] || parent.id }] : [],
-            ),
-          ]}
-          onChange={(event) => onChange({ parentId: event.target.value || null })}
-        />
-      </Field>
-      <Field.Inline
-        label={text("navigationVisible")}
-        htmlFor={`navigation-${item.key}-visible-${textLanguage}`}
-      >
-        <Switch
-          id={`navigation-${item.key}-visible-${textLanguage}`}
-          aria-label={text("navigationVisible")}
-          checked={item.visible[textLanguage]}
-          onCheckedChange={(checked) => onChange({ visible: { ...item.visible, [textLanguage]: checked } })}
-        />
-      </Field.Inline>
-      <div className="actions">
+    <div className="nav-link">
+      <div className="nav-link__head">
         <Reorder.Handle index={index} label={text("moveGroup", name)} />
-        <Button.Icon
-          label={text("navigationUp", name)}
-          icon={<ArrowUpIcon />}
-          disabled={index === 0}
-          onClick={() => onMove(index - 1)}
+        <span className="nav-link__name">{name}</span>
+        <span className="actions">
+          <ActionButton.Icon
+            action="moveUp"
+            label={text("navigationUp", name)}
+            disabled={index === 0}
+            onClick={() => onMove(index - 1)}
+          />
+          <ActionButton.Icon
+            action="moveDown"
+            label={text("navigationDown", name)}
+            disabled={index === length - 1}
+            onClick={() => onMove(index + 1)}
+          />
+          <ActionButton.Icon action="remove" label={text("navigationLinkRemove", name)} onClick={onRemove} />
+        </span>
+      </div>
+      <div className="nav-link__fields">
+        <Translated.Field
+          id={`navigation-${item.key}`}
+          label={text("navigationLabel")}
+          value={item.label}
+          maxLength={MaxLength.Line}
+          onChange={(label) => onChange({ label })}
         />
-        <Button.Icon
-          label={text("navigationDown", name)}
-          icon={<ArrowDownIcon />}
-          disabled={index === length - 1}
-          onClick={() => onMove(index + 1)}
-        />
-        <Button.Icon
-          label={text("navigationLinkRemove", name)}
-          icon={<TrashIcon />}
-          tone="danger"
-          onClick={onRemove}
-        />
+        <NavigationTarget item={item} itemKey={item.key} onChange={onChange} />
+        <Field label={text("navigationParent")} htmlFor={`navigation-${item.key}-parent`}>
+          <Select
+            id={`navigation-${item.key}-parent`}
+            value={item.parentId ?? ""}
+            disabled={hasChildren}
+            options={[
+              { value: "", label: text("navigationTopLevel") },
+              ...parents.flatMap((parent) =>
+                parent.id ? [{ value: parent.id, label: parent.label[language] || parent.id }] : [],
+              ),
+            ]}
+            onChange={(event) => onChange({ parentId: event.target.value || null })}
+          />
+        </Field>
+        <Field.Inline
+          label={text("navigationVisible")}
+          htmlFor={`navigation-${item.key}-visible-${textLanguage}`}
+        >
+          <Switch
+            id={`navigation-${item.key}-visible-${textLanguage}`}
+            aria-label={text("navigationVisible")}
+            checked={item.visible[textLanguage]}
+            onCheckedChange={(checked) => onChange({ visible: { ...item.visible, [textLanguage]: checked } })}
+          />
+        </Field.Inline>
       </div>
     </div>
   );
 }
 
+/**
+ * The question before a group of links is deleted, saying how many links go with it.
+ *
+ * @param placement - Which navigation the group belongs to.
+ * @param group - The group.
+ * @param onClose - Closes the question, after the deletion as well.
+ */
 function NavigationDelete({
   placement,
   group,

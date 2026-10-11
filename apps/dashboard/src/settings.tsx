@@ -9,17 +9,19 @@ import {
   type SiteSettings,
   siteSettings,
 } from "@layered/schemas";
-import { Button, Card, Field, Input, Segmented } from "@layered/ui";
-import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@layered/ui/icons";
-import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import { Badge, Card, Field, Input, Segmented } from "@layered/ui";
+import { type ReactNode, useRef, useState } from "react";
 import { AccessTokensCard } from "./access-tokens.js";
+import { ActionButton } from "./action-button.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import type { DraftSchema } from "./checked-draft.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaField } from "./media-field.js";
+import { MailTestOutcome } from "./mail-test-outcome.js";
 import { useNotify } from "./notifications.js";
+import { PictureField } from "./picture-field.js";
+import { QueryStates } from "./query-states.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useAccount } from "./session-queries.js";
@@ -118,7 +120,7 @@ function SettingsCardDraft<Group extends SettingsGroup>({
   const form = useRef<HTMLFormElement>(null);
 
   // Command-S submits the form exactly as the Save button does, checks included,
-  // and does nothing whilst that button is disabled.
+  // and does nothing while that button is disabled.
   useSaveShortcut(() => {
     if (editable && dirty && !save.isPending) form.current?.requestSubmit();
   });
@@ -128,41 +130,39 @@ function SettingsCardDraft<Group extends SettingsGroup>({
     setProblems([]);
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const checked = checkedSettings(schema, draft, reasons);
-    if ("problems" in checked) setProblems(checked.problems);
-    else save.mutate(checked.value);
-  };
-
   const content = (
     <>
-      <Card.Body>
-        <form ref={form} id={formId} className="settings-form" onSubmit={submit} noValidate>
+      <form
+        ref={form}
+        id={formId}
+        className="dialog-form"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const checked = checkedSettings(schema, draft, reasons);
+          if ("problems" in checked) setProblems(checked.problems);
+          else save.mutate(checked.value);
+        }}
+      >
+        <Card.Stack>
           {children(draft, update, editable)}
-          {problems.length > 0 && (
-            <ul className="dashboard-error settings-form__problems" role="alert">
-              {problems.map((key) => (
-                <li key={key}>{text(key)}</li>
-              ))}
-            </ul>
-          )}
-        </form>
-      </Card.Body>
+          {problems.length > 0 && <ErrorNotice message={problems.map((key) => text(key))} />}
+        </Card.Stack>
+      </form>
       <Card.Footer
         note={editable ? note?.(dirty) : text("ownerOnly")}
         actions={
           <>
             {actions?.(dirty)}
-            <Button
+            <ActionButton
+              action="save"
               type="submit"
               form={formId}
               tone="primary"
               disabled={!editable || !dirty || save.isPending}
-              icon={<FloppyDiskIcon weight="duotone" />}
             >
               {save.isPending ? text("savePending") : text("save")}
-            </Button>
+            </ActionButton>
           </>
         }
       />
@@ -186,7 +186,8 @@ function SettingsCardDraft<Group extends SettingsGroup>({
 }
 
 /**
- * The settings once they have loaded, or the failure that stopped them.
+ * The settings once they have loaded, or a card saying they are loading or
+ * what stopped them.
  *
  * A settings screen is a form standing alone, so its cards stop at the form
  * measure rather than stretching across the content area.
@@ -200,8 +201,13 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
     <>
       <ScreenTitle title={text(area.labelKey)} />
       <div className="settings-screen">
-        {settings.isError && <ErrorNotice error={settings.error} />}
-        {settings.data && render(settings.data)}
+        {settings.data ? (
+          render(settings.data)
+        ) : (
+          <Card>
+            <QueryStates query={settings}>{() => null}</QueryStates>
+          </Card>
+        )}
       </div>
     </>
   );
@@ -257,7 +263,7 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                       }
                     />
                   </Field>
-                  <MediaField
+                  <PictureField
                     label={text("socialImage")}
                     hint={text("socialImageHint")}
                     none={text("socialImageNone")}
@@ -266,7 +272,7 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
                     editable={editable}
                     onChange={(socialImageMediaId) => update({ socialImageMediaId })}
                   />
-                  <MediaField
+                  <PictureField
                     label={text("watermark")}
                     hint={text("watermarkHint")}
                     none={text("watermarkWordmark")}
@@ -307,26 +313,26 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
               return blocker && text(blocker);
             }}
             actions={(dirty) => (
-              <Button
+              <ActionButton
+                action="send"
                 disabled={
                   testMailBlocker(apiKeyConfigured, dirty, saved.senderAddress) !== undefined ||
                   test.isPending
                 }
-                icon={<PaperPlaneTiltIcon weight="duotone" />}
                 onClick={() => test.mutate()}
               >
                 {test.isPending ? text("testMailPending") : text("testMail")}
-              </Button>
+              </ActionButton>
             )}
           >
             {(draft, update, editable) => (
               <>
                 <Field label={text("mailKey")} hint={text("mailKeyHint")}>
-                  <span className="badge" data-status={apiKeyConfigured ? "public" : "draft"}>
+                  <Badge tone={apiKeyConfigured ? "success" : "warning"}>
                     {apiKeyConfigured ? text("mailKeySet") : text("mailKeyMissing")}
-                  </span>
+                  </Badge>
                 </Field>
-                <div className="settings-form__pair">
+                <div className="field-row">
                   <Field label={text("senderAddress")} htmlFor="sender-address">
                     <Input
                       id="sender-address"
@@ -349,18 +355,7 @@ export function MailSettingsScreen({ area }: { area: DashboardArea }) {
                 </div>
                 <p className="settings-form__note">{text("mailDomainHint")}</p>
                 {test.isError && <ErrorNotice error={test.error} />}
-                {test.data && (
-                  <div className="settings-form__outcome" role="status" data-accepted={test.data.accepted}>
-                    <p>
-                      {test.data.accepted
-                        ? text("testMailAccepted", test.data.recipient)
-                        : text("testMailRefused", test.data.recipient)}
-                    </p>
-                    <p className="settings-form__answer">
-                      {text("testMailAnswer")}: <q>{test.data.answer}</q>
-                    </p>
-                  </div>
-                )}
+                {test.data && <MailTestOutcome result={test.data} />}
               </>
             )}
           </SettingsCard>
@@ -396,7 +391,7 @@ export function AnalyticsSettingsScreen({ area }: { area: DashboardArea }) {
               >
                 <Input
                   id="umami-website-id"
-                  className="settings-form__code"
+                  className="input--code"
                   value={draft.umamiWebsiteId ?? ""}
                   spellCheck={false}
                   disabled={!editable}

@@ -1,81 +1,61 @@
-import { MEDIA_KINDS, type MediaLibraryItem } from "@layered/schemas";
-import { Button, Card, Field, Input, imagePosition, Row, Select, Switch } from "@layered/ui";
-import { FilesIcon, GlobeIcon, MagnifyingGlassIcon, XIcon } from "@layered/ui/icons";
+import { ACCEPTED_IMAGE_TYPES, MEDIA_KINDS, type MediaLibraryItem } from "@layered/schemas";
+import { Card, Field, imagePosition, Select, Switch } from "@layered/ui";
 import { useId, useState } from "react";
-import { ErrorNotice } from "./error-notice.js";
-import { DATE_FORMAT, KILOBYTE_FORMAT } from "./format.js";
+import { ActionButton } from "./action-button.js";
+import { fileSize, formatInstant } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
 import { PROCESSING_TEXT } from "./media-processing.js";
 import { MEDIA_KIND_TEXT, useMediaPage, useMediaUploads } from "./media-query.js";
-import { MediaUploadButton, MediaUploadProgress } from "./media-uploads.js";
+import { FileChooserButton, MediaUploadProgress } from "./media-uploads.js";
 import { PageButtons } from "./page-buttons.js";
+import { PictureSearch } from "./picture-search.js";
+import { useSettledValue } from "./settled-value.js";
 import { UnsplashSearch } from "./unsplash-search.js";
-import "./media-browser.css";
 
-/** How many bytes the grid counts as one kilobyte. */
-const BYTES_PER_KILOBYTE = 1024;
+/** How long typing has to pause before the library is asked again, in milliseconds. */
+const SEARCH_DELAY_MS = 300;
 
-type Props = {
+/** Props for the media library. */
+interface MediaBrowserProps {
+  /** Chooses a file rather than opening it, which makes the browser a picker. */
   onChoose?: (slug: string, item: MediaLibraryItem) => void;
+  /** Closes the picker. */
   onCancel?: () => void;
+  /** Offers pictures alone, for a field that holds one. */
   imageOnly?: boolean;
+  /** The id the header's title takes, for the dialog the picker stands in. */
   labelId?: string;
-};
-
-function MediaGrid({
-  items,
-  select,
-}: {
-  items: MediaLibraryItem[];
-  select: (item: MediaLibraryItem) => void;
-}) {
-  const { text, language } = useDashboardLanguage();
-  return (
-    <div className="media-browser__grid">
-      {items.map((item) => (
-        <Row.Button key={item.id} onClick={() => select(item)} title={item.slug}>
-          <Row.Tile aria-hidden="true">
-            {item.url ? (
-              <img src={item.url} alt="" loading="lazy" style={{ objectPosition: imagePosition(item) }} />
-            ) : (
-              <FilesIcon />
-            )}
-          </Row.Tile>
-          <Row.Text
-            title={item.slug}
-            note={`${text(MEDIA_KIND_TEXT[item.kind])} · ${KILOBYTE_FORMAT[language].format(item.byteSize / BYTES_PER_KILOBYTE)} · ${DATE_FORMAT[language].format(new Date(item.uploadedAt))}`}
-          >
-            <span className="row__note">{text(PROCESSING_TEXT[item.processingState])}</span>
-          </Row.Text>
-        </Row.Button>
-      ))}
-    </div>
-  );
 }
-function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) {
-  const { text } = useDashboardLanguage();
+
+/**
+ * The media library, as its own screen and as the picker a picture field
+ * opens: a search that follows the typing, the filters, uploads by button and
+ * by dropping files, Unsplash, and the files as a grid a page at a time.
+ *
+ * A file that arrives, uploaded or taken from Unsplash, is opened or chosen at
+ * once, as if it had been found and clicked.
+ */
+export function MediaBrowser({ onChoose, onCancel, imageOnly, labelId }: MediaBrowserProps) {
+  const { text, language } = useDashboardLanguage();
   const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const settled = useSettledValue(search.trim(), SEARCH_DELAY_MS);
   const [page, setPage] = useState(1);
   const [kind, setKind] = useState("all");
   const [unused, setUnused] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const media = useMediaPage({ search: query, kind: imageOnly ? "image" : kind, page, unused });
+  const media = useMediaPage({ search: settled, kind: imageOnly ? "image" : kind, page, unused });
   const choose = (item: MediaLibraryItem) => {
     if (onChoose) onChoose(item.slug, item);
     else setDetailId(item.id);
   };
-  // A new picture, uploaded or taken from Unsplash, is shown and chosen the same way.
   const arrived = (item: MediaLibraryItem) => {
     setSearch("");
-    setQuery("");
     setPage(1);
     choose(item);
   };
   const uploads = useMediaUploads(arrived);
   const [searchingUnsplash, setSearchingUnsplash] = useState(false);
-  const searchId = useId();
   const kindId = useId();
   const unusedId = useId();
   const options = [
@@ -89,57 +69,52 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
         title={text(onChoose ? "mediaPicker" : "media")}
         actions={
           <>
-            <Button icon={<GlobeIcon />} onClick={() => setSearchingUnsplash(true)}>
+            <ActionButton action="unsplash" onClick={() => setSearchingUnsplash(true)}>
               {text("unsplash")}
-            </Button>
-            <MediaUploadButton pending={uploads.pending} start={uploads.start} />
+            </ActionButton>
+            <FileChooserButton
+              action="upload"
+              types={ACCEPTED_IMAGE_TYPES}
+              multiple
+              disabled={uploads.pending}
+              onFiles={uploads.start}
+            >
+              {text("mediaUpload")}
+            </FileChooserButton>
           </>
         }
       />
-      <Card.Body>
-        <section
-          className="media-browser"
-          aria-label={text("mediaDropHint")}
-          onDragOver={(event) => {
-            event.preventDefault();
-          }}
-          onDrop={(event) => {
-            event.preventDefault();
-            uploads.start(Array.from(event.dataTransfer.files));
+      <section
+        className="media-browser"
+        aria-label={text("mediaDropHint")}
+        onDragOver={(event) => {
+          event.preventDefault();
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          uploads.start(Array.from(event.dataTransfer.files));
+        }}
+      >
+        <PictureSearch.Controls
+          label={text("mediaSearch")}
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
           }}
         >
-          <p>{text("mediaDropHint")}</p>
-          <form
-            className="media-browser__controls"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setQuery(search.trim());
-            }}
-          >
-            <Field label={text("mediaSearch")} htmlFor={searchId}>
-              <Input
-                id={searchId}
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </Field>
-            {!imageOnly && (
-              <Field label={text("mediaKind")} htmlFor={kindId}>
-                <Select
-                  id={kindId}
-                  value={kind}
-                  options={options}
-                  onChange={(event) => {
-                    setKind(event.target.value);
-                    setPage(1);
-                  }}
-                />
-              </Field>
-            )}
-            <Button type="submit" icon={<MagnifyingGlassIcon />} aria-label={text("mediaSearch")} />
-          </form>
+          {!imageOnly && (
+            <Select
+              id={kindId}
+              aria-label={text("mediaKind")}
+              value={kind}
+              options={options}
+              onChange={(event) => {
+                setKind(event.target.value);
+                setPage(1);
+              }}
+            />
+          )}
           <Field.Inline label={text("mediaOnlyUnused")} htmlFor={unusedId}>
             <Switch
               id={unusedId}
@@ -151,20 +126,30 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
               }}
             />
           </Field.Inline>
+          <p>{text("mediaDropHint")}</p>
           <MediaUploadProgress items={uploads.progress} />
-          {media.isError && <ErrorNotice error={media.error} />}
-          {media.isPending && <p>{text("loading")}</p>}
-          {media.isSuccess && !media.data.items.length && <p>{text("mediaEmpty")}</p>}
-          {media.data && <MediaGrid items={media.data.items} select={choose} />}
-        </section>
-      </Card.Body>
+        </PictureSearch.Controls>
+        <PictureSearch.Results query={media} empty={text("mediaEmpty")}>
+          {(item) => (
+            <PictureSearch.Item
+              key={item.id}
+              title={item.slug}
+              note={`${text(MEDIA_KIND_TEXT[item.kind])} · ${fileSize(language, item.byteSize)} · ${formatInstant(language, item.uploadedAt)}`}
+              detail={text(PROCESSING_TEXT[item.processingState])}
+              thumbnail={item.url}
+              position={imagePosition(item)}
+              onChoose={() => choose(item)}
+            />
+          )}
+        </PictureSearch.Results>
+      </section>
       <Card.Footer
         actions={
           <>
             {onCancel && (
-              <Button onClick={onCancel} icon={<XIcon />}>
+              <ActionButton action="cancel" onClick={onCancel}>
                 {text("cancel")}
-              </Button>
+              </ActionButton>
             )}
             <PageButtons page={page} hasMore={media.data?.hasMore ?? false} onPage={setPage} />
           </>
@@ -183,5 +168,3 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
     </>
   );
 }
-/** The page and picker share one query, upload queue and row grid. */
-export const MediaBrowser = Object.assign(MediaBrowserContent, { Grid: MediaGrid });
