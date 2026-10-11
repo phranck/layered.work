@@ -725,11 +725,6 @@ a.chip:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--duration-slow) var(--ease);
-}
-
-.feature:hover .feature__media img {
-  transform: scale(1.04);
 }
 
 .feature__body {

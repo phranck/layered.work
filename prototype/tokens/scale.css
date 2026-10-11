@@ -165,6 +165,10 @@
      arriving from different heights read as two systems. */
   --travel: 14px;
   --travel-far: 28px;
+
+  /* How far a card that opens something rises under the pointer, its content
+     with it. */
+  --card-lift: 5px;
 }
 
 /*
