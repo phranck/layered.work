@@ -45,32 +45,34 @@ export type PictureShape = "sharing" | "home-plate" | "whole";
  * value against, so a setting added here appears in the dashboard and is
  * validated with no other code. A text is written in both languages, and an
  * empty one shows `fallback`, which the dashboard offers as the field's
- * placeholder. A picture names the shape the site shows it in. A flag that
- * `requires` another flag of the same block only has an effect while that one
- * is on, so the dashboard disables its switch while it is off.
+ * placeholder. A picture names the shape the site shows it in.
+ *
+ * A flag that `requires` another flag of the same block only has an effect
+ * while that one is on, and with `firstOnly` only on the first block of the
+ * page that has that flag on and is shown. The dashboard disables its switch
+ * everywhere else.
  */
 export type HomeBlockSetting =
   | { key: string; kind: "line"; fallback: BilingualText }
   | { key: string; kind: "paragraph"; fallback: BilingualText }
   | { key: string; kind: "number"; min: number; max: number; default: number }
-  | { key: string; kind: "flag"; default: boolean; requires?: string }
+  | { key: string; kind: "flag"; default: boolean; requires?: string; firstOnly?: boolean }
   | { key: string; kind: "choice"; options: readonly [string, ...string[]]; default: string }
   | { key: string; kind: "picture"; shape: PictureShape };
 
 /**
  * Whether the countdown's sky of nodes is drawn behind a block, and whether the
- * two washes of light the countdown shows at its top lie over the block's top.
+ * two washes of light the countdown shows at its top lie over the sky's top.
  *
  * Every kind of block declares both. The sky is off unless somebody switches it
  * on, so a page arranged before it existed looks as it did. The site draws one
- * sky behind every block that has it on, however many there are. The clouds
- * belong to the block rather than to that sky, so a run of blocks can show them
- * at its top alone; they are on by default, because every sky showed them
- * before they could be switched off.
+ * sky behind every block that has it on, however many there are, and the
+ * clouds only over the first of them, because the sky has one top. They are on
+ * by default, because the sky showed them before they could be switched off.
  */
 const SKY_SETTINGS: readonly HomeBlockSetting[] = [
   { key: "sky", kind: "flag", default: false },
-  { key: "clouds", kind: "flag", default: true, requires: "sky" },
+  { key: "clouds", kind: "flag", default: true, requires: "sky", firstOnly: true },
 ];
 
 /** What one kind of block is and what it can be set to. */

@@ -41,8 +41,9 @@ const gridKicker = (type: string) =>
     ? kicker(StackSimpleIcon, de ? "Projekte" : "Projects")
     : kicker(ArticleIcon, de ? "Beiträge" : "Posts");
 // Whether the dashboard put the countdown's sky behind a block, and its clouds over the
-// block's top. A band with the sky carries `section--sky` and shows the one sky behind
-// every such band through itself; the clouds are its own.
+// sky's top. A band with the sky carries `section--sky` and shows the one sky behind
+// every such band through itself. Only the first of them draws the clouds it asks for,
+// which the stylesheet decides, because only the page knows which band came first.
 const skySettings = (block: HomeBlock) =>
   isKnownHomeBlock(block) ? homeBlockSettings(block.type, block.settings) : {};
 const hasSky = (block: HomeBlock) => skySettings(block).sky === true;
