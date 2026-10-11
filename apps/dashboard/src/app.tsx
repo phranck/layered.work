@@ -106,7 +106,7 @@ function DashboardSidebar({
           ))}
         </nav>
         {/* Where a dragged group will land. One element for every drag, so
-            nothing is created whilst a gesture runs. */}
+            nothing is created while a gesture runs. */}
         <div ref={slot} className="drop-slot" aria-hidden="true" />
         <MoveKeysDescription id={moveKeysId} />
       </Sidebar.Body>

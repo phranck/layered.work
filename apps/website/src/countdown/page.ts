@@ -2,7 +2,7 @@
  * The countdown, as one complete document.
  *
  * It is the front of layered.work until the site opens, so it is made from the
- * project's own design: the wordmark, the typefaces, the colours, and a web of
+ * project's own design: the wordmark, the typefaces, the colors, and a web of
  * nodes behind it that turns slowly and answers the pointer.
  *
  * A document rather than a page in the site, because it is not part of the
@@ -374,10 +374,10 @@ export function countdownPage(nonce: string): string {
            turn, which is what a flat projection looks like. */
         perspective: calc(var(--h) * 1.7);
       }
-      /* The groove, in the colour of what lies behind the figures rather than in
+      /* The groove, in the color of what lies behind the figures rather than in
          a shade of black laid over them. That is the difference between a gap
-         and a veil: an opaque line in the flap's own colour interrupts the
-         figure, which is what the gap between two physical flaps does, whilst a
+         and a veil: an opaque line in the flap's own color interrupts the
+         figure, which is what the gap between two physical flaps does, while a
          transparent one darkens it and reads as ink on the card.
 
          It fades out at both ends so it stops rather than meeting the edge. */
@@ -422,7 +422,7 @@ export function countdownPage(nonce: string): string {
       /* A whole figure, clipped by the half-height face around it.
          Centring the line box is not centring the figure. Measured on the
          rendered card at 64px: the ink of a numeral ran from 16.25 to 49.75,
-         so its middle sat at 33 whilst the seam sat at 32. The lift puts the
+         so its middle sat at 33 while the seam sat at 32. The lift puts the
          two together, and it is stated in em so it holds as the card scales. */
       .glyph {
         display: block;
@@ -534,7 +534,7 @@ export function countdownPage(nonce: string): string {
         border-block-start: 1px solid var(--edge);
       }
       /* Undecorated until it is pointed at. The address reads as part of the
-         sentence, and the colour already says it is a link. */
+         sentence, and the color already says it is a link. */
       a {
         color: var(--accent);
         text-decoration: none;

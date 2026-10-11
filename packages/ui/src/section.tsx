@@ -28,11 +28,11 @@ const SectionPage = forwardRef<HTMLElement, ComponentPropsWithoutRef<"section">>
 /**
  * A section that spans the window, as one band of a page built from several.
  *
- * Its background reaches both window edges whilst its content keeps the page
+ * Its background reaches both window edges while its content keeps the page
  * measure, so a page reads as a stack of distinct parts rather than one surface
  * with headings on it. Consecutive bands alternate between the page surface and
  * the sunken one on their own, which is what lets the dashboard reorder the home
- * page's blocks without anybody choosing a colour per block.
+ * page's blocks without anybody choosing a color per block.
  */
 const SectionBand = forwardRef<HTMLElement, ComponentPropsWithoutRef<"section">>(
   ({ className, ...props }, ref) => (

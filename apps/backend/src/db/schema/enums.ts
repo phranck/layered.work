@@ -44,7 +44,7 @@ export const entryKind = pgEnum("entry_kind", ENTRY_KINDS);
  * whoever holds its address or it is not published.
  *
  * Per translation rather than per entry, because an English post can be public
- * whilst its German version is still being written.
+ * while its German version is still being written.
  */
 export const publicationState = pgEnum("publication_state", PUBLICATION_STATES);
 
@@ -105,7 +105,7 @@ export const imageFormat = pgEnum("image_format", IMAGE_FORMATS);
 
 /**
  * Where a picture's watermark sits: a corner, the middle of an edge, or the
- * centre. The column holding it is nullable, and null is a picture without one.
+ * center. The column holding it is nullable, and null is a picture without one.
  */
 export const watermarkAnchor = pgEnum("watermark_anchor", WATERMARK_ANCHORS);
 

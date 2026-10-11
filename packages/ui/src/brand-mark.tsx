@@ -10,7 +10,7 @@ export interface BrandMarkProps extends Omit<ComponentPropsWithoutRef<"span">, "
   brand: BrandName;
 }
 
-/** An unchanged Simple Icons asset, coloured by its parent's text through a CSS mask. */
+/** An unchanged Simple Icons asset, colored by its parent's text through a CSS mask. */
 export const BrandMark = forwardRef<HTMLSpanElement, BrandMarkProps>(
   ({ brand, className, ...props }, ref) => (
     <span

@@ -8,7 +8,7 @@ import { media, mediaJobs } from "../db/schema/index.js";
  *
  * The claim and the registered keys are cleared. A job still running for one of
  * these pictures then no longer owns it, publishes nothing, and its attempt is
- * cleaned up as an abandoned one, whilst the sizes being served stay in place
+ * cleaned up as an abandoned one, while the sizes being served stay in place
  * until the next run publishes their replacements. Left in place, the keys would
  * be those of the published sizes, and the next run deletes registered keys
  * before it starts.

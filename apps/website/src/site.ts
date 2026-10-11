@@ -32,7 +32,7 @@ const SITE_TIMEZONE = "Europe/Vienna";
  * The launch, written the way a reader reads it.
  *
  * Derived from `LAUNCH` rather than typed out beside it. The date has moved
- * several times whilst this page was being built, and it is now read by the
+ * several times while this page was being built, and it is now read by the
  * clock, by the sentence above it, by the description a search engine shows, by
  * the structured data and by the sharing image. One of those would eventually
  * be the one that kept the old date.
@@ -67,11 +67,11 @@ export const LAUNCH_TEXT = ((): string => {
 export const SITE_ORIGIN = "https://layered.work";
 
 /**
- * The page colour, in the two forms the site needs.
+ * The page color, in the two forms the site needs.
  *
  * The stylesheet takes the oklch, which is how this palette is written. The
  * browser chrome takes `theme-color`, which reads sRGB only, so the hex beside
- * it is that same colour read back off a painted pixel. Change one and change
+ * it is that same color read back off a painted pixel. Change one and change
  * the other.
  */
 export const PAGE_COLOR = "oklch(0.205 0.008 250)";
@@ -114,14 +114,14 @@ export function isPreviewHost(host: string | null): boolean {
  * host. The other two settle it outright: `countdown` is the way back if the
  * site goes live and something is badly wrong, without moving the date and
  * without a deployment, and `site` is how the finished site is worked on
- * locally whilst the launch is still ahead.
+ * locally while the launch is still ahead.
  */
 export type WebsiteMode = "auto" | "site" | "countdown";
 
 /**
  * Reads that setting.
  *
- * Anything unrecognised is `auto` rather than an error, because a typo in an
+ * Anything unrecognized is `auto` rather than an error, because a typo in an
  * environment variable should not take the site down.
  */
 export function websiteMode(): WebsiteMode {

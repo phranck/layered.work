@@ -148,7 +148,7 @@ runs("the public snapshot", () => {
     expect(JSON.stringify(snapshot.forms)).not.toContain("draft-form");
   });
 
-  it("leaves a draft out whilst its published sibling stays in", async () => {
+  it("leaves a draft out while its published sibling stays in", async () => {
     const database = await testDatabase();
     await writeEntry(database, { title: "Published", path: "/published/", state: "public" });
     await writeEntry(database, { title: "Draft", path: "/draft/", state: "draft" });
@@ -297,7 +297,7 @@ runs("the public snapshot", () => {
     expect(german?.translationPath).toBe("/english/");
   });
 
-  it("offers no other language whilst that language is still a draft", async () => {
+  it("offers no other language while that language is still a draft", async () => {
     const database = await testDatabase();
     const { entryId } = await writeEntry(database, {
       title: "In English",

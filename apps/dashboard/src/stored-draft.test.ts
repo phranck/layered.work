@@ -18,7 +18,7 @@ describe("whether a draft says what is stored", () => {
 });
 
 describe("the revision of a stored value", () => {
-  it("stays whilst the same value comes back as another object, and goes up when it changes", () => {
+  it("stays while the same value comes back as another object, and goes up when it changes", () => {
     const { result, rerender } = renderHook(({ value }) => useStoredRevision(value), {
       initialProps: { value: { title: "A", size: 3 } as unknown },
     });

@@ -54,7 +54,7 @@ import {
  * the current one marked as such and the rest kept beside it, which is what that
  * table is for.
  *
- * Running it twice leaves the same rows. An entry is recognised by the address
+ * Running it twice leaves the same rows. An entry is recognized by the address
  * its translation currently answers at, because that is the one value the
  * snapshot and the database both hold and neither invents.
  *
@@ -84,7 +84,7 @@ export interface SnapshotEntry {
   featured: boolean;
   onHomePage: boolean;
   readingWidth: ReadingWidth;
-  /** Listed in the other language whilst that one has no version. Absent from the migration output. */
+  /** Listed in the other language while that one has no version. Absent from the migration output. */
   showInOtherLanguage?: boolean;
   /** The picture a shared link shows, by slug. Absent from the migration output. */
   socialImage?: string | null;
@@ -498,7 +498,7 @@ async function importTopics(
  *
  * `translationPath` is the only thing that says two entries are one piece of
  * writing in two languages, and it points both ways. Each pair therefore
- * appears twice whilst walking the list, so the one already claimed is skipped.
+ * appears twice while walking the list, so the one already claimed is skipped.
  */
 function groupTranslations(snapshot: Snapshot): SnapshotEntry[][] {
   const byPath = new Map(snapshot.entries.map((entry) => [entry.path, entry]));

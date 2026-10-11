@@ -3,7 +3,7 @@
 // The values are read out of the stylesheet that is actually in force rather
 // than written down a second time. A documentation page that keeps its own copy
 // of the palette is a second answer to the same question, and it starts
-// disagreeing with the first the day somebody changes a colour. This one cannot
+// disagreeing with the first the day somebody changes a color. This one cannot
 // disagree, because there is nothing to keep in step.
 
 import { siteFooter } from "./chrome.js";
@@ -52,7 +52,7 @@ function collectFrom(rules, found) {
 /** The computed value, which is what the page actually renders. */
 const computed = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-const isColour = (value) => /^(#|rgb|hsl|oklab|oklch|color-mix)/.test(value);
+const isColor = (value) => /^(#|rgb|hsl|oklab|oklch|color-mix)/.test(value);
 const isLength = (value) => /^-?[\d.]+(px|rem|em|ch)$|^(clamp|calc|max|min)\(/.test(value);
 const isDuration = (value) => /^[\d.]+m?s$/.test(value);
 const isShadow = (value) => value.includes("px") && value.split(",").length > 1 && !value.startsWith("clamp");
@@ -69,7 +69,7 @@ const GROUPS = [
   {
     title: "Farbe",
     note: "Jeder Farbwert der Oberfläche steht hier. Keine Komponente nennt eine eigene Farbe.",
-    matches: (name, value) => isColour(value),
+    matches: (name, value) => isColor(value),
     render: (name, value) => html`
       <div class="swatch card">
         <div class="swatch__chip" style="--swatch: var(${name})"></div>

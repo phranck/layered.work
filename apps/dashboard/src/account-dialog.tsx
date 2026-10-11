@@ -42,7 +42,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   const accountPending = save.isPending || signOut.isPending;
 
   // Command-S submits the dialog as its Save button does. Registered after the
-  // screen behind it, so it is the dialog that saves whilst it is open.
+  // screen behind it, so it is the dialog that saves while it is open.
   const form = useRef<HTMLFormElement>(null);
   useSaveShortcut(() => {
     if (!accountPending) form.current?.requestSubmit();

@@ -4,7 +4,7 @@ import { contentLanguage } from "./content-editor.js";
 import { CONTENT_TAGS, contentHighlightStyle } from "./content-highlight.js";
 
 /**
- * What colour each part of a document gets.
+ * What color each part of a document gets.
  *
  * Asked of the highlighter itself over the editor's own tree, so these hold
  * whatever the browser does with the classes afterwards.
@@ -28,7 +28,7 @@ const ROLES: [letter: string, tag: Tag][] = [
 
 /**
  * The role of every character, written under the text: one letter per role,
- * and a dot where nothing colours it.
+ * and a dot where nothing colors it.
  */
 function roles(text: string): string {
   const byClass = new Map(ROLES.map(([letter, tag]) => [contentHighlightStyle.style([tag]) ?? "", letter]));
@@ -51,20 +51,20 @@ function under(text: string, line: number): string {
   return roles(text).slice(start, start + (lines[line]?.length ?? 0));
 }
 
-describe("the colours of a document", () => {
+describe("the colors of a document", () => {
   it("gives a component's name, its argument names, its values and its punctuation each their own", () => {
     const text = 'Grid(columns: 3, spacing: 4, title: "x") {\n  Text.\n}';
     expect(under(text, 0)).toBe("NNNNSAAAAAAASSKSSAAAAAAASSKSSAAAAASSQQQSSS");
     expect(under(text, 2)).toBe("S");
   });
 
-  it("colours a keyword value and leaves the prose of a body to Markdown", () => {
+  it("colors a keyword value and leaves the prose of a body to Markdown", () => {
     const text = "Note(tone: warning) {\n  Plain **bold**.\n}";
     expect(under(text, 0)).toBe("NNNNSAAAASSKKKKKKKSSS");
     expect(under(text, 1)).toBe("........BBBBBBBB.");
   });
 
-  it("colours a component written inside a fenced block as code", () => {
+  it("colors a component written inside a fenced block as code", () => {
     expect(under("```\nNote(tone: info) {\n```", 1)).toBe("C".repeat("Note(tone: info) {".length));
   });
 
@@ -76,11 +76,11 @@ describe("the colours of a document", () => {
     expect(roles("\\Grid(3) lines.")).toBe("S..............");
   });
 
-  it("colours emphasis in a paragraph, its marks included", () => {
+  it("colors emphasis in a paragraph, its marks included", () => {
     expect(roles("Was it *NeXTstep*, or not?")).toBe(".......IIIIIIIIII.........");
   });
 
-  it("colours a heading, its mark included", () => {
+  it("colors a heading, its mark included", () => {
     expect(roles("## Head")).toBe("HHHHHHH");
   });
 });

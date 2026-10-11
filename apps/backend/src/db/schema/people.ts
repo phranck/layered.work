@@ -53,7 +53,7 @@ export const users = pgTable("users", {
   /**
    * The picture beside the name.
    *
-   * Deleting it in the library is refused whilst somebody wears it, which is
+   * Deleting it in the library is refused while somebody wears it, which is
    * the same rule every other reference to a file follows: a file that is in
    * use is removed from where it is used first, and the library says where
    * that is.
@@ -164,8 +164,8 @@ export const auditLog = pgTable(
      *
      * Text rather than an enumeration, which is the one place in this schema
      * that is true. Every feature adds actions, and an enumeration would mean a
-     * migration for each; an action nobody recognises later is still a useful
-     * record, whilst a migration that was skipped is a gap.
+     * migration for each; an action nobody recognizes later is still a useful
+     * record, while a migration that was skipped is a gap.
      */
     action: text().notNull(),
 

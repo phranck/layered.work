@@ -119,7 +119,7 @@ export const Select = ({ options = [], value, id, name } = {}) => html`
  * A choice between a handful of named options, all of them visible.
  *
  * With three options a dropdown hides more than it saves, and the reader cannot
- * see what they are choosing between without opening it. That holds only whilst
+ * see what they are choosing between without opening it. That holds only while
  * every option is one short word: a name that has to be shortened to fit is a
  * name the reader cannot read, and such a choice takes a Select.
  *

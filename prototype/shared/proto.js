@@ -89,7 +89,7 @@ export const FOOTER_NAVIGATIONS = {
  * necessary.
  *
  * `brand` names a file in assets/brands. It is applied as a CSS mask, so the
- * mark takes the colour of whatever it sits on and the downloaded file itself is
+ * mark takes the color of whatever it sits on and the downloaded file itself is
  * never edited.
  */
 export const SOCIAL_ACCOUNTS = [
@@ -393,7 +393,7 @@ export function wireSearch(rootElement) {
     inlineField.select();
   };
 
-  // It has to work whilst a field has focus, which is why it is not guarded by
+  // It has to work while a field has focus, which is why it is not guarded by
   // the active element the way a bare letter key would have to be.
   const onKeyDown = (event) => {
     if (event.key === "Escape") {

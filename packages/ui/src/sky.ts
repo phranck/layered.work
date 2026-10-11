@@ -40,7 +40,7 @@ const BANDS = 7;
 const INTERVAL_MS = 1000 / 20;
 /** The brightest a line is drawn, nearest and closest together. */
 const LINE_ALPHA_MAX = 0.35;
-/** The colour of the lines and of the nodes, as RGB without alpha. */
+/** The color of the lines and of the nodes, as RGB without alpha. */
 const LINE_RGB = "150, 185, 235";
 const NODE_RGB = "186, 212, 246";
 /** One frame at sixty a second, which the physics counts its steps in. */

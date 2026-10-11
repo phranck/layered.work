@@ -26,10 +26,10 @@ export const raw = (value) => new Raw(value);
 
 const escapeText = (value) => String(value).replace(/[&<>"']/g, (character) => ESCAPES[character]);
 
-const serialise = (value) => {
+const serialize = (value) => {
   if (value === null || value === undefined || value === false) return "";
   if (value instanceof Raw) return value.value;
-  if (Array.isArray(value)) return value.map(serialise).join("");
+  if (Array.isArray(value)) return value.map(serialize).join("");
   return escapeText(value);
 };
 
@@ -39,7 +39,7 @@ const serialise = (value) => {
  * @returns A `Raw`, so templates nest without being escaped a second time.
  */
 export const html = (strings, ...values) =>
-  raw(strings.reduce((out, chunk, index) => out + chunk + serialise(values[index]), ""));
+  raw(strings.reduce((out, chunk, index) => out + chunk + serialize(values[index]), ""));
 
 /**
  * Replaces an element's children with the given markup.

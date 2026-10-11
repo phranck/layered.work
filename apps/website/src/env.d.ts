@@ -18,7 +18,7 @@ declare namespace App {
     /**
      * Whether this page draws a three-dimensional model.
      *
-     * Set by the page whilst it renders and read by the middleware once the
+     * Set by the page while it renders and read by the middleware once the
      * response exists, because it decides one directive in the content policy.
      * The page is the only place that knows: the answer is in its body, which
      * nothing has looked at when the request arrives.

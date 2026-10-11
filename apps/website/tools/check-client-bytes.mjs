@@ -3,7 +3,7 @@
  *
  * The header's client script runs on every page, so whatever it carries is paid
  * for on every page. It opens with one named import from `@layered/ui`, and a
- * barrel import is only cheap whilst the bundler is allowed to drop the rest of
+ * barrel import is only cheap while the bundler is allowed to drop the rest of
  * the barrel. That permission is the `sideEffects` field in the package, which
  * is one line and produced 872,938 bytes here when it was missing.
  *
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
  * What the header's script may weigh, uncompressed.
  *
  * Its own code is a few kilobytes. The limit leaves room for that to grow several
- * times over whilst still catching a barrel arriving whole, which is two orders
+ * times over while still catching a barrel arriving whole, which is two orders
  * of magnitude away.
  */
 const HEADER_SCRIPT_LIMIT_BYTES = 20_000;

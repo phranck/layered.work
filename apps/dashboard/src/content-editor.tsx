@@ -288,7 +288,7 @@ export interface ContentEditorProps {
  * does not carry, so saving the text and opening it again gives back the same
  * editor. A `value` that changes from outside, such as a reloaded entry,
  * replaces the document; a `value` that is only the echo of the author's own
- * typing is recognised and left alone, so the cursor does not jump.
+ * typing is recognized and left alone, so the cursor does not jump.
  */
 export function ContentEditor({
   value,

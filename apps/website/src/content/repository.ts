@@ -66,7 +66,7 @@ const entrySchema = z.object({
   featured: z.boolean().default(false),
   onHomePage: z.boolean().default(true),
   readingWidth: z.enum(READING_WIDTHS).default("normal"),
-  /** Listed in the other language as well whilst that language has no version a reader can open. */
+  /** Listed in the other language as well while that language has no version a reader can open. */
   showInOtherLanguage: z.boolean().default(false),
   /**
    * What an entry states about itself beside its prose, as the author's own

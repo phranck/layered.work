@@ -21,7 +21,7 @@ registerProbeRoutes(app);
  * Signing in, against the real database.
  *
  * A session that was deleted and an expiry that has passed are the database's
- * behaviour rather than the application's, so a test against a mock would be a
+ * behavior rather than the application's, so a test against a mock would be a
  * test of the mock.
  */
 

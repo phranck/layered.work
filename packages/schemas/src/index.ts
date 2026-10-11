@@ -5,7 +5,7 @@
  * so a form and its endpoint cannot disagree about what is acceptable. The API
  * description is generated from these rather than written by hand.
  *
- * **This package is resolved from source whilst working and from `dist` when it
+ * **This package is resolved from source while working and from `dist` when it
  * runs.** `package.json` names three conditions for that: `types` and
  * `development` both point here, so a type check and a test suite work whether
  * or not anything has been built, and `default` points at the compiled output,

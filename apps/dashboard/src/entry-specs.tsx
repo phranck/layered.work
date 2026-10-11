@@ -28,7 +28,7 @@ export function SpecsField({
 }) {
   const { text } = useDashboardLanguage();
   // The pairs carry no id, so React's keys are kept beside them and moved with
-  // them, which keeps a field's focus on its pair whilst the list changes.
+  // them, which keeps a field's focus on its pair while the list changes.
   const keys = useRef<string[]>([]);
   while (keys.current.length < specs.length) keys.current.push(crypto.randomUUID());
   keys.current.length = specs.length;

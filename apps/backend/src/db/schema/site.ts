@@ -21,7 +21,7 @@ import { homeBlockType } from "./enums.js";
  *
  * `platform` is the Simple Icons slug, such as `mastodon` or `github`, and it
  * is the only thing stored about which service this is. The set ships a title
- * and a brand colour beside every mark, so the name and the colour both follow
+ * and a brand color beside every mark, so the name and the color both follow
  * from the slug. A column holding either would be a copy of something the icon
  * set already knows, and a copy can disagree.
  */

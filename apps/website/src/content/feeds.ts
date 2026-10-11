@@ -134,7 +134,7 @@ export function sitemap(paths: string[], repository?: ContentRepository): string
  *
  * Built from `publicEntries`, like the feeds, the listings and the search index,
  * so a hidden entry stays reachable at its own address and is named nowhere a
- * crawler reads. A topic appears only whilst a public entry carries it.
+ * crawler reads. A topic appears only while a public entry carries it.
  *
  * @param repository - The site's content.
  * @returns The two language roots, then each language's public entries and topics.

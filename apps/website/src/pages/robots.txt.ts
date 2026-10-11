@@ -9,7 +9,7 @@ const ONE_HOUR_SECONDS = 3_600;
  * The sitemap is named with its full address, which the specification asks for
  * and several crawlers insist on.
  *
- * Answered whilst the site is still held back as well, because a crawler that
+ * Answered while the site is still held back as well, because a crawler that
  * is refused this file falls back to guessing.
  */
 export const GET: APIRoute = () =>

@@ -145,11 +145,11 @@ describe("where the values come from", () => {
     expect(String(spacing.default)).toBeOneOf([...SPACE_STEPS]);
   });
 
-  it("offers the palette's status colours as a note's tones", () => {
+  it("offers the palette's status colors as a note's tones", () => {
     expect(components.Note.parameters.tone.values).toBe(STATUS_TONES);
   });
 
-  it("does not offer a status colour where the question is importance", () => {
+  it("does not offer a status color where the question is importance", () => {
     // A button's tone says how much it asks to be pressed. They meet at
     // `danger` and mean the same thing there, and nowhere else.
     const tones = components.Button.parameters.tone.values;

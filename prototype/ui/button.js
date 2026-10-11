@@ -1,7 +1,7 @@
 // A button: something the reader can do, with an icon saying what.
 //
 // Every action carries an icon. A word alone has to be read; an icon beside it
-// is recognised before the word is, and the same icon on every screen makes the
+// is recognized before the word is, and the same icon on every screen makes the
 // same action findable without reading at all. The icon's class is stated by
 // the caller in full, because which family a project uses is the project's
 // choice and not this package's.

@@ -465,7 +465,7 @@ describe("dashboard shell", () => {
     expect(document.activeElement).toBe(footer);
   });
 
-  it("leaves Command-K alone whilst a text field other than a search has focus", async () => {
+  it("leaves Command-K alone while a text field other than a search has focus", async () => {
     vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
     vi.stubGlobal(
       "fetch",

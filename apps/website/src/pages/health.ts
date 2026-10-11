@@ -11,7 +11,7 @@ import type { APIRoute } from "astro";
  * deliberately touches no database and reaches nothing over the network, so a
  * dependency being slow can never be mistaken for this process being dead.
  *
- * It answers whilst the site is still held back as well, which
+ * It answers while the site is still held back as well, which
  * `src/middleware.ts` has to allow by name. A health check that the middleware
  * refuses would keep every container out of service until the launch.
  */

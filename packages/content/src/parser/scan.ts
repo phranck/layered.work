@@ -181,7 +181,7 @@ export const OPEN_ERRORS: ReadonlySet<ScanError["code"]> = new Set(["unclosed-ar
  *
  * Counts nesting and skips whole fenced code blocks, because a brace in an
  * example somebody wrote is a character rather than a delimiter. That is the
- * rule the epic states as fenced code being recognised before anything else.
+ * rule the epic states as fenced code being recognized before anything else.
  *
  * **Quotes only delimit inside an argument list.** Between the brackets a
  * string is a value, so `caption: "A } in it"` has to be read as one. Inside a
