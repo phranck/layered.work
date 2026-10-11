@@ -54,14 +54,13 @@
   height: 100%;
   object-fit: cover;
   transform: scale(1.01);
-  transition: transform var(--duration-slow) var(--ease);
 }
 
 /* --- Interactive --------------------------------------------------------------
    A card you can open lifts, because in this design height is what says a thing
    is above the page and can be reached. Only transform and shadow move, so the
-   work stays off the layout. The lift travels, and its picture zooms slower
-   still, so the card settles under the pointer. */
+   work stays off the layout. The card moves as one piece: nothing inside it,
+   its picture included, moves on its own. */
 
 .card--interactive {
   color: inherit;
@@ -74,7 +73,7 @@
 }
 
 .card--interactive:hover {
-  transform: translateY(-3px);
+  transform: translateY(calc(-1 * var(--card-lift)));
   border-color: var(--edge-strong);
   box-shadow: var(--lift-3);
 }
@@ -90,10 +89,6 @@
 .card--interactive:focus-visible {
   border-color: var(--focus-edge);
   box-shadow: var(--focus-halo);
-}
-
-.card--interactive:hover .card__media img {
-  transform: scale(1.045);
 }
 
 /* --- Caption ----------------------------------------------------------------
