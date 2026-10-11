@@ -402,7 +402,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
       )}
       {draft && (
         <Translated>
-          <Editor className="forms-editor">
+          <Editor>
             <Editor.Main>
               <FormBuilder
                 form={draft}

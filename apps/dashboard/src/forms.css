@@ -1,7 +1,3 @@
-.forms-editor .editor__main {
-  min-height: 0;
-}
-
 /* --- Builder -----------------------------------------------------------------
    The palette beside the canvas while the builder is wide enough for both, and
    above it once the builder is narrower than the two need. The builder's own
@@ -14,9 +10,24 @@
 
 .forms-builder__layout {
   display: grid;
-  grid-template-columns: 11rem minmax(0, 1fr);
+  grid-template-columns: 14rem minmax(0, 1fr);
   gap: var(--workbench-gutter);
   align-items: start;
+}
+
+/* Beside the canvas, the palette stays at the top of the editor's main column
+   whilst the builder and the preview scroll inside it, so a tile can be dragged
+   onto any row on the screen. Where the page scrolls as a whole instead, the
+   palette's scrolling box is the content area, which does not scroll then, so
+   the palette scrolls with the page. Stacked above the canvas it scrolls away
+   in every layout, or it would cover the rows. Named through the layout,
+   because the card's own rule sets a position as well and is loaded after this
+   file. */
+@container forms-builder (width >= 40rem) {
+  .forms-builder__layout > .forms-palette {
+    position: sticky;
+    top: 0;
+  }
 }
 
 .forms-builder__main {
