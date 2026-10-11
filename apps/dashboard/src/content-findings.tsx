@@ -1,5 +1,6 @@
 import type { Finding } from "@layered/content";
 import { Button, Field } from "@layered/ui";
+import { WarningIcon, WarningOctagonIcon } from "@layered/ui/icons";
 import type { CheckedContent } from "./content-validation.js";
 import { useDashboardLanguage } from "./language-context.js";
 import "./content-validation.css";
@@ -28,7 +29,10 @@ export function ContentFindings({
         <ul className="content-findings">
           {checked.validation.findings.map((finding) => (
             <li key={`${finding.from}-${finding.to}-${finding.code}`} data-severity={finding.severity}>
-              <Button onClick={() => onSelect(finding)}>
+              <Button
+                icon={finding.severity === "error" ? <WarningOctagonIcon /> : <WarningIcon />}
+                onClick={() => onSelect(finding)}
+              >
                 <span>
                   {text(finding.severity === "error" ? "contentError" : "contentWarning")}:{" "}
                   {text("contentFinding", finding)}

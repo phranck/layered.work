@@ -10,6 +10,7 @@ import { useDashboardLanguage } from "./language-context.js";
 import { MediaDetailDialog } from "./media-detail.js";
 import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { MediaUploadButton, MediaUploadProgress, useMediaUploads } from "./media-uploads.js";
+import { PageButtons } from "./page-buttons.js";
 import { queryKeys } from "./query-keys.js";
 import { UnsplashSearch } from "./unsplash-search.js";
 import "./media-browser.css";
@@ -181,12 +182,7 @@ function MediaBrowserContent({ onChoose, onCancel, imageOnly, labelId }: Props) 
                 {text("cancel")}
               </Button>
             )}
-            {page > 1 && (
-              <Button onClick={() => setPage((value) => value - 1)}>{text("previousPage")}</Button>
-            )}
-            {media.data?.hasMore && (
-              <Button onClick={() => setPage((value) => value + 1)}>{text("nextPage")}</Button>
-            )}
+            <PageButtons page={page} hasMore={media.data?.hasMore ?? false} onPage={setPage} />
           </>
         }
       />

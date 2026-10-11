@@ -5,7 +5,7 @@ import {
   saveMailTemplateBody,
 } from "@layered/schemas";
 import { Button, Card, Field, Input } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, PaperPlaneTiltIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -255,6 +255,7 @@ function MailTemplateCards({
             />
           </Field>
           <Button
+            icon={<PaperPlaneTiltIcon />}
             disabled={!recipient || test.isPending}
             onClick={() => {
               const value = checked();
