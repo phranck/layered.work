@@ -210,8 +210,12 @@
   --travel: 14px;
 
   /* How far a card that opens something rises under the pointer, its content
-     with it. */
+     with it, and how it gets there: slower than a hover and on a softer curve
+     than the design's own, so the card rises rather than jumps. Reduced motion
+     shortens it with the slow duration. */
   --card-lift: 5px;
+  --card-lift-duration: var(--duration-slow);
+  --card-lift-ease: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 /*
