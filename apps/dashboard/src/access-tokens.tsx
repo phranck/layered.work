@@ -6,13 +6,13 @@ import { useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
+import { Table } from "./table.js";
 
 /** What each permission is called in the catalogue. */
 const SCOPE_TEXT: Record<TokenScope, DashboardStringKey> = {
@@ -133,15 +133,12 @@ export function AccessTokensScreen() {
             <ErrorNotice error={tokens.error} />
           </Card.Body>
         )}
-        {tokens.isSuccess && tokens.data.length === 0 && (
-          <Card.Body>
-            <p>{text("tokensEmpty")}</p>
-          </Card.Body>
-        )}
+        {tokens.isSuccess && tokens.data.length === 0 && <Table.Empty>{text("tokensEmpty")}</Table.Empty>}
         {tokens.isSuccess && tokens.data.length > 0 && (
-          <DataTable
+          <Table
             columns={[
               { kind: "title", label: text("columnName") },
+              { kind: "text", label: text("tokenScopes") },
               { kind: "state", label: text("columnState") },
               { kind: "date", label: text("tokenLastUse") },
               { kind: "date", label: text("tokenExpires") },
@@ -149,19 +146,19 @@ export function AccessTokensScreen() {
             ]}
           >
             {tokens.data.map((token) => (
-              <DataTable.Row key={token.id}>
-                <DataTable.Cell kind="title">
-                  <DataTable.Title
-                    title={token.name}
-                    note={token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}
-                  />
-                </DataTable.Cell>
-                <DataTable.Cell kind="state">
-                  {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
-                </DataTable.Cell>
-                <DataTable.Cell kind="date">{dateOf(token.lastUsedAt)}</DataTable.Cell>
-                <DataTable.Cell kind="date">{dateOf(token.expiresAt)}</DataTable.Cell>
-                <DataTable.Actions>
+              <Table.Row key={token.id}>
+                <Table.Cell kind="title">
+                  <Table.Title title={token.name} />
+                </Table.Cell>
+                <Table.Cell>{token.scopes.map((scope) => text(SCOPE_TEXT[scope])).join(", ")}</Table.Cell>
+                <Table.Cell kind="state">
+                  <Table.Badge tone={token.revokedAt ? "neutral" : "success"}>
+                    {token.revokedAt ? text("tokenRevoked") : text("tokenActive")}
+                  </Table.Badge>
+                </Table.Cell>
+                <Table.Cell kind="date">{dateOf(token.lastUsedAt)}</Table.Cell>
+                <Table.Cell kind="date">{dateOf(token.expiresAt)}</Table.Cell>
+                <Table.Actions>
                   {!token.revokedAt && (
                     <Button.Icon
                       label={text("tokenRevoke")}
@@ -169,10 +166,10 @@ export function AccessTokensScreen() {
                       onClick={() => setRevoking(token)}
                     />
                   )}
-                </DataTable.Actions>
-              </DataTable.Row>
+                </Table.Actions>
+              </Table.Row>
             ))}
-          </DataTable>
+          </Table>
         )}
       </Card>
       {revoking && (

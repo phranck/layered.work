@@ -15,7 +15,6 @@ import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DATE_FORMAT } from "./format.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -24,6 +23,7 @@ import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
+import { Table, useTableSearch } from "./table.js";
 import { contentLanguageOptions } from "./translated.js";
 
 /**
@@ -258,7 +258,7 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           meta={counts.total}
           actions={
             <>
-              <DataTable.Search
+              <Table.Search
                 label={text("searchTitles")}
                 value={filter.search}
                 onChange={(value) => setFilter((current) => ({ ...current, search: value }))}
@@ -298,18 +298,16 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
           </Card.Body>
         )}
         {list.isSuccess && rows.length === 0 && (
-          <Card.Body>
-            <p className="unfinished">
-              {filter.state === "trash" && !filter.search.trim()
-                ? text("trashEmpty")
-                : list.data.length === 0
-                  ? text("entriesEmpty")
-                  : text("entriesNoMatch")}
-            </p>
-          </Card.Body>
+          <Table.Empty>
+            {filter.state === "trash" && !filter.search.trim()
+              ? text("trashEmpty")
+              : list.data.length === 0
+                ? text("entriesEmpty")
+                : text("entriesNoMatch")}
+          </Table.Empty>
         )}
         {rows.length > 0 && (
-          <DataTable
+          <Table
             bodyRef={search.bodyRef}
             onLeaveTop={search.onLeaveTop}
             columns={[
@@ -321,16 +319,16 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
             ]}
           >
             {rows.map((row) => (
-              <DataTable.Row key={row.id} onOpen={() => open(row)}>
-                <DataTable.Cell kind="title">
-                  <DataTable.Title title={row.title} thumbnail={row.thumbnailUrl} />
-                </DataTable.Cell>
-                <DataTable.Cell kind="state">
-                  <span className="badge" data-status={row.trashed ? "trashed" : row.state}>
+              <Table.Row key={row.id} onOpen={() => open(row)}>
+                <Table.Cell kind="title">
+                  <Table.Title title={row.title} thumbnail={row.thumbnailUrl} />
+                </Table.Cell>
+                <Table.Cell kind="state">
+                  <Table.Badge tone={row.trashed ? "danger" : STATE_TONE[row.state]}>
                     {row.trashed ? text("stateTrashed") : text(STATE_TEXT[row.state])}
-                  </span>
-                </DataTable.Cell>
-                <DataTable.Cell kind="language">
+                  </Table.Badge>
+                </Table.Cell>
+                <Table.Cell kind="language">
                   <span className="lang-tags">
                     <span className="lang-tag" data-language={row.language} lang={row.language}>
                       {row.language}
@@ -345,11 +343,11 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                       </span>
                     )}
                   </span>
-                </DataTable.Cell>
-                <DataTable.Cell kind="date">
+                </Table.Cell>
+                <Table.Cell kind="date">
                   <time dateTime={row.date}>{DATE_FORMAT[language].format(new Date(row.date))}</time>
-                </DataTable.Cell>
-                <DataTable.Actions>
+                </Table.Cell>
+                <Table.Actions>
                   {row.trashed ? (
                     <Button.Icon
                       label={text("restore")}
@@ -365,10 +363,10 @@ export function EntryListScreen({ area, kind }: { area: DashboardArea; kind: Ent
                       onClick={() => open(row)}
                     />
                   )}
-                </DataTable.Actions>
-              </DataTable.Row>
+                </Table.Actions>
+              </Table.Row>
             ))}
-          </DataTable>
+          </Table>
         )}
       </Card>
       {emptying && (

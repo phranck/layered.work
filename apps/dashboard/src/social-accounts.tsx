@@ -7,7 +7,7 @@ import {
   type SocialAccount,
   saveSocialAccountBody,
 } from "@layered/schemas";
-import { BrandMark, Button, Card, Field, Input, Row, Select, Switch } from "@layered/ui";
+import { BrandMark, Button, Card, Field, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon, XIcon } from "@layered/ui/icons";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -19,10 +19,10 @@ import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
-import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { Table } from "./table.js";
 
 type Dialog = { editing: SocialAccount | null } | { deleting: SocialAccount } | null;
 const platformOptions = SOCIAL_PLATFORMS.map((value) => ({ value, label: SOCIAL_PLATFORM_NAMES[value] }));
@@ -74,13 +74,23 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
             </Button>
           }
         />
-        <Card.Body>
-          {accounts.isError && <ErrorNotice error={accounts.error} />}
-          {accounts.isPending && <p>{text("loading")}</p>}
-          {accounts.isSuccess && !list.length && <p>{text("socialEmpty")}</p>}
-          {!owner && <p>{text("ownerOnly")}</p>}
-          <Reorder.List
-            count={list.length}
+        {(accounts.isError || accounts.isPending || !owner) && (
+          <Card.Body>
+            {accounts.isError && <ErrorNotice error={accounts.error} />}
+            {accounts.isPending && <p>{text("loading")}</p>}
+            {!owner && <p>{text("ownerOnly")}</p>}
+          </Card.Body>
+        )}
+        {accounts.isSuccess && !list.length && <Table.Empty>{text("socialEmpty")}</Table.Empty>}
+        {list.length > 0 && (
+          <Table
+            columns={[
+              { kind: "grip", label: "" },
+              { kind: "title", label: text("socialPlatform") },
+              { kind: "text", label: text("socialHandle") },
+              { kind: "switch", label: text("navigationVisible") },
+              { kind: "action", label: text("columnAction"), actions: 2 },
+            ]}
             onMove={(from, to) => {
               if (from !== to)
                 reorder.mutate(
@@ -89,42 +99,50 @@ export function SocialAccountsScreen({ area }: { area: DashboardArea }) {
             }}
           >
             {list.map((account, index) => (
-              <Reorder.Item index={index} key={account.id}>
-                <Row.Bare>
-                  <Row.Lead>
-                    <BrandMark brand={account.platform} />
-                  </Row.Lead>
-                  <Row.Text title={SOCIAL_PLATFORM_NAMES[account.platform]} note={account.handle} />
-                  <Row.Actions>
-                    <Reorder.Handle
-                      index={index}
-                      label={text("moveGroup", account.handle)}
-                      disabled={!owner || reorder.isPending}
-                    />
-                    <Switch
-                      aria-label={`${text("socialEnabled")}: ${account.handle}`}
-                      checked={account.enabled}
-                      disabled={!owner || save.isPending}
-                      onCheckedChange={(enabled) => save.mutate({ ...account, enabled })}
-                    />
-                    <Button.Icon
-                      label={text("navigationEdit", account.handle)}
-                      icon={<PencilSimpleIcon />}
-                      disabled={!owner}
-                      onClick={() => setDialog({ editing: account })}
-                    />
-                    <Button.Icon
-                      label={text("navigationDelete", account.handle)}
-                      icon={<TrashIcon />}
-                      disabled={!owner}
-                      onClick={() => setDialog({ deleting: account })}
-                    />
-                  </Row.Actions>
-                </Row.Bare>
-              </Reorder.Item>
+              <Table.Row
+                key={account.id}
+                index={index}
+                onOpen={owner ? () => setDialog({ editing: account }) : undefined}
+              >
+                <Table.Grip
+                  index={index}
+                  label={text("moveGroup", account.handle)}
+                  disabled={!owner || reorder.isPending}
+                />
+                <Table.Cell kind="title">
+                  <Table.Title
+                    title={SOCIAL_PLATFORM_NAMES[account.platform]}
+                    tile={<BrandMark brand={account.platform} />}
+                  />
+                </Table.Cell>
+                <Table.Cell>{account.handle}</Table.Cell>
+                <Table.Control kind="switch">
+                  <Switch
+                    aria-label={`${text("socialEnabled")}: ${account.handle}`}
+                    checked={account.enabled}
+                    disabled={!owner || save.isPending}
+                    onCheckedChange={(enabled) => save.mutate({ ...account, enabled })}
+                  />
+                </Table.Control>
+                <Table.Actions>
+                  <Button.Icon
+                    label={text("navigationEdit", account.handle)}
+                    icon={<PencilSimpleIcon />}
+                    disabled={!owner}
+                    tabIndex={-1}
+                    onClick={() => setDialog({ editing: account })}
+                  />
+                  <Button.Icon
+                    label={text("navigationDelete", account.handle)}
+                    icon={<TrashIcon />}
+                    disabled={!owner}
+                    onClick={() => setDialog({ deleting: account })}
+                  />
+                </Table.Actions>
+              </Table.Row>
             ))}
-          </Reorder.List>
-        </Card.Body>
+          </Table>
+        )}
       </Card>
       {dialog && "editing" in dialog && (
         <SocialEditor

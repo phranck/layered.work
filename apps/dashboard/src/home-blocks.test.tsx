@@ -96,7 +96,7 @@ describe("the blocks screen", () => {
     expect(screen.getByText("Manuell markiert")).toBeTruthy();
     expect(screen.getAllByText("6 Einträge · Neueste zuerst")).toHaveLength(2);
     expect(screen.getByText("Alle Themen mit Anzahl")).toBeTruthy();
-    expect(screen.getByText("Steht immer oben")).toBeTruthy();
+    expect(screen.getByLabelText("Steht immer oben")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "„Hero“ verschieben, mit den Pfeiltasten nach oben oder unten" }),
     ).toHaveProperty("disabled", true);
@@ -113,7 +113,8 @@ describe("the blocks screen", () => {
 
   it("draws a grid's settings from its declaration, refuses a count outside its range and saves a valid one", async () => {
     const { requests } = renderScreen();
-    fireEvent.click(await screen.findByRole("button", { name: /^Beitrags-Raster\s*6 Einträge/ }));
+    // A block opens by its row, as a row of Posts opens its entry.
+    fireEvent.click(await screen.findByRole("row", { name: /Beitrags-Raster/ }));
     // The panel shows one block's settings at a time, so its fields are unique on the screen.
     const panel = document.body;
     // The placeholder is the declaration's fallback, in the language the switch shows.

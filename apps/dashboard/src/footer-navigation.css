@@ -1,19 +1,7 @@
-.nav-manager {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
+/* One link of a navigation in its dialog: its fields in a box of their own, so
+   the links read as separate items rather than as one long form. */
 .nav-manager__group {
   padding: var(--space-3);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--card-inner-radius);
-}
-.nav-manager__items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: 0;
-  margin-block-start: var(--space-3);
-  margin-inline-start: var(--space-6);
-  list-style: none;
 }

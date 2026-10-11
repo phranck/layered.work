@@ -6,7 +6,7 @@ import {
   homeBlockTypes,
   type StoredHomeBlock,
 } from "@layered/schemas";
-import { Button, Card, Editor, Row, Switch } from "@layered/ui";
+import { Button, Card, Editor, Switch } from "@layered/ui";
 import {
   CardsIcon,
   CropIcon,
@@ -31,12 +31,12 @@ import { useDashboardLanguage } from "./language-context.js";
 import { ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
-import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSaveShortcut } from "./save-shortcut.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
 import { sameValue, useStoredRevision } from "./stored-draft.js";
+import { Table } from "./table.js";
 import { Translated } from "./translated.js";
 import "./home-blocks.css";
 
@@ -124,11 +124,21 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
         <Editor.Main>
           <Card>
             <Card.Header title={text("homeBlocksTitle")} meta={list.length} />
-            <Card.Body>
-              {blocks.isError && <ErrorNotice error={blocks.error} />}
-              {blocks.isPending && <p>{text("loading")}</p>}
-              <Reorder.List
-                count={list.length}
+            {(blocks.isError || blocks.isPending) && (
+              <Card.Body>
+                {blocks.isError && <ErrorNotice error={blocks.error} />}
+                {blocks.isPending && <p>{text("loading")}</p>}
+              </Card.Body>
+            )}
+            {list.length > 0 && (
+              <Table
+                columns={[
+                  { kind: "grip", label: "" },
+                  { kind: "title", label: text("columnName") },
+                  { kind: "text", label: text("columnContent") },
+                  { kind: "switch", label: text("navigationVisible") },
+                  { kind: "action", label: text("columnAction") },
+                ]}
                 onMove={(from, to) => {
                   const target = allowedTarget(list, to);
                   if (from !== target)
@@ -142,51 +152,48 @@ export function HomeBlocksScreen({ area }: { area: DashboardArea }) {
                   const locked = HOME_BLOCKS[block.type].locked;
                   const Icon = BLOCK_ICONS[block.type];
                   return (
-                    <Reorder.Item index={index} key={block.id}>
-                      <Row data-active={block.id === open?.id || undefined}>
-                        <Reorder.Handle
-                          index={index}
-                          label={text("moveGroup", name)}
-                          disabled={!owner || locked || reorder.isPending}
+                    <Table.Row
+                      key={block.id}
+                      index={index}
+                      active={block.id === open?.id}
+                      onOpen={() => setOpenId(block.id)}
+                    >
+                      <Table.Grip
+                        index={index}
+                        label={text("moveGroup", name)}
+                        disabled={!owner || locked || reorder.isPending}
+                      />
+                      <Table.Cell kind="title">
+                        <Table.Title title={name} tile={<Icon aria-hidden="true" />} />
+                      </Table.Cell>
+                      <Table.Cell>{blockSummary(text, block, language)}</Table.Cell>
+                      <Table.Control kind="switch">
+                        <Switch
+                          aria-label={text("homeBlockEnabled", name)}
+                          checked={block.enabled}
+                          disabled={!owner || toggle.isPending}
+                          onCheckedChange={() => toggle.mutate(block)}
                         />
-                        <Row.Tile>
-                          <Icon aria-hidden="true" />
-                        </Row.Tile>
-                        <button
-                          type="button"
-                          className="home-block__select"
-                          aria-pressed={block.id === open?.id}
-                          onClick={() => setOpenId(block.id)}
-                        >
-                          <Row.Text title={name} note={blockSummary(text, block, language)} />
-                        </button>
-                        <Row.Actions>
-                          {locked ? (
-                            <span className="chip">
-                              <LockSimpleIcon aria-hidden="true" />
-                              {text("homeBlockLocked")}
-                            </span>
-                          ) : (
-                            <Button.Icon
-                              label={text("homeBlockRemove", name)}
-                              icon={<TrashIcon />}
-                              disabled={!owner}
-                              onClick={() => setRemoving(block)}
-                            />
-                          )}
-                          <Switch
-                            aria-label={text("homeBlockEnabled", name)}
-                            checked={block.enabled}
-                            disabled={!owner || toggle.isPending}
-                            onCheckedChange={() => toggle.mutate(block)}
+                      </Table.Control>
+                      <Table.Actions>
+                        {locked ? (
+                          <Table.Mark label={text("homeBlockLocked")}>
+                            <LockSimpleIcon />
+                          </Table.Mark>
+                        ) : (
+                          <Button.Icon
+                            label={text("homeBlockRemove", name)}
+                            icon={<TrashIcon />}
+                            disabled={!owner}
+                            onClick={() => setRemoving(block)}
                           />
-                        </Row.Actions>
-                      </Row>
-                    </Reorder.Item>
+                        )}
+                      </Table.Actions>
+                    </Table.Row>
                   );
                 })}
-              </Reorder.List>
-            </Card.Body>
+              </Table>
+            )}
             <Card.Footer
               note={text("homeBlockPickHint")}
               actions={

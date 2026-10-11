@@ -15,13 +15,13 @@ import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { DataTable, useTableSearch } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import type { DashboardArea } from "./routes.js";
+import { Table, useTableSearch } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -109,7 +109,7 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
             meta={list.data?.length}
             actions={
               <>
-                <DataTable.Search
+                <Table.Search
                   label={text("searchTopics")}
                   value={search}
                   onChange={setSearch}
@@ -125,11 +125,7 @@ export function TopicsScreen({ area }: { area: DashboardArea }) {
             </Card.Body>
           )}
           {list.isSuccess && rows.length === 0 && (
-            <Card.Body>
-              <p className="unfinished">
-                {list.data.length === 0 ? text("topicsEmpty") : text("topicsNoMatch")}
-              </p>
-            </Card.Body>
+            <Table.Empty>{list.data.length === 0 ? text("topicsEmpty") : text("topicsNoMatch")}</Table.Empty>
           )}
           {rows.length > 0 && (
             <TopicTable
@@ -188,11 +184,12 @@ function TopicTable({
   const { text } = useDashboardLanguage();
   const language = useTextLanguage();
   return (
-    <DataTable
+    <Table
       bodyRef={search.bodyRef}
       onLeaveTop={search.onLeaveTop}
       columns={[
         { kind: "title", label: text("topicName") },
+        { kind: "text", label: text("topicSlug") },
         { kind: "count", label: text("columnEntries") },
         { kind: "action", label: text("columnAction"), actions: 3 },
       ]}
@@ -200,18 +197,17 @@ function TopicTable({
       {rows.map((topic) => {
         const named = topic[language];
         return (
-          <DataTable.Row key={topic.id} onOpen={() => onOpen({ kind: "edit", topic })}>
-            <DataTable.Cell kind="title" lang={language}>
+          <Table.Row key={topic.id} onOpen={() => onOpen({ kind: "edit", topic })}>
+            <Table.Cell kind="title" lang={language}>
               {named ? (
-                <DataTable.Title title={named.name} note={named.slug} />
+                <Table.Title title={named.name} />
               ) : (
-                <span className="badge" data-status="draft">
-                  {text("topicNameMissing")}
-                </span>
+                <Table.Badge tone="warning">{text("topicNameMissing")}</Table.Badge>
               )}
-            </DataTable.Cell>
-            <DataTable.Cell kind="count">{topic.entryCount}</DataTable.Cell>
-            <DataTable.Actions>
+            </Table.Cell>
+            <Table.Cell>{named?.slug}</Table.Cell>
+            <Table.Cell kind="count">{topic.entryCount}</Table.Cell>
+            <Table.Actions>
               <Button.Icon
                 label={text("editTopic")}
                 icon={<PencilSimpleIcon />}
@@ -229,11 +225,11 @@ function TopicTable({
                 icon={<TrashIcon />}
                 onClick={() => onOpen({ kind: "delete", topic })}
               />
-            </DataTable.Actions>
-          </DataTable.Row>
+            </Table.Actions>
+          </Table.Row>
         );
       })}
-    </DataTable>
+    </Table>
   );
 }
 
