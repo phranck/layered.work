@@ -112,8 +112,7 @@ export function AccessTokensCard() {
             />
           </Field>
         </div>
-        <fieldset className="settings-form__group">
-          <legend className="field__label">{text("tokenScopes")}</legend>
+        <Field.Set label={text("tokenScopes")}>
           <Field.InlineGroup>
             {TOKEN_SCOPES.map((scope) => (
               <Field.Inline key={scope} label={text(SCOPE_TEXT[scope])} htmlFor={`token-scope-${scope}`}>
@@ -130,7 +129,7 @@ export function AccessTokensCard() {
               </Field.Inline>
             ))}
           </Field.InlineGroup>
-        </fieldset>
+        </Field.Set>
       </Card.Stack>
       <Card.Footer
         note={text("tokenOwnerNote")}

@@ -1,4 +1,5 @@
 import { isProcessing, type MediaDetail } from "@layered/schemas";
+import { Field, FieldHint } from "@layered/ui";
 import { useDashboardLanguage } from "./language-context.js";
 import { useDeleteMedia } from "./media-query.js";
 import { ConfirmDialog } from "./modal.js";
@@ -34,29 +35,30 @@ function SettingsUse({ use }: { use: MediaUse }) {
  *
  * @param uses - The uses, as the API lists them.
  */
-
 export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
   const { text } = useDashboardLanguage();
   return (
-    <section>
-      <h3>{text("mediaUses")}</h3>
-      {!uses.length && <p>{text("mediaUnused")}</p>}
-      <ul>
-        {uses.map((use) => (
-          <li key={`${use.kind}-${use.id}-${use.language}-${use.settingsGroup ?? ""}`}>
-            {use.kind === "account" ? (
-              `${use.title} (${text("account")})`
-            ) : use.kind === "settings" ? (
-              <SettingsUse use={use} />
-            ) : (
-              <a href={entryPath(use.kind, use.id)}>
-                {use.title} ({use.language.toUpperCase()})
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Field label={text("mediaUses")}>
+      {uses.length === 0 ? (
+        <FieldHint as="p">{text("mediaUnused")}</FieldHint>
+      ) : (
+        <ul>
+          {uses.map((use) => (
+            <li key={`${use.kind}-${use.id}-${use.language}-${use.settingsGroup ?? ""}`}>
+              {use.kind === "account" ? (
+                `${use.title} (${text("account")})`
+              ) : use.kind === "settings" ? (
+                <SettingsUse use={use} />
+              ) : (
+                <a href={entryPath(use.kind, use.id)}>
+                  {use.title} ({use.language.toUpperCase()})
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Field>
   );
 }
 
@@ -68,7 +70,6 @@ export function MediaUses({ uses }: { uses: MediaDetail["uses"] }) {
  * @param onClose - Closes the question without deleting.
  * @param onDeleted - Runs once the file is gone, after the notification.
  */
-
 export function MediaDeleteDialog({
   detail,
   onClose,

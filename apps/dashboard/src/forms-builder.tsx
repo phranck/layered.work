@@ -9,7 +9,7 @@ import {
   fieldSpan,
   formFields,
 } from "@layered/schemas";
-import { Card } from "@layered/ui";
+import { Card, FieldHint } from "@layered/ui";
 import {
   CalendarBlankIcon,
   CaretCircleDownIcon,
@@ -158,7 +158,7 @@ function FieldFace({ field, language }: { field: FormField; language: ContentLan
           </span>
         )}
       </span>
-      <small className="forms-field__type">{text(FIELD_TYPE_TEXT[field.type])}</small>
+      <FieldHint className="forms-field__type">{text(FIELD_TYPE_TEXT[field.type])}</FieldHint>
     </>
   );
 }
@@ -499,8 +499,8 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
       >
         <Card className="forms-palette">
           <Card.Header title={text("formPalette")} />
-          <Card.Body>
-            <p className="forms-palette__hint">{text("formPaletteHint")}</p>
+          <Card.Stack>
+            <FieldHint as="p">{text("formPaletteHint")}</FieldHint>
             <div className="forms-palette__tiles">
               {FORM_FIELD_TYPES.map((type) => {
                 const Icon = FIELD_TYPE_ICON[type];
@@ -522,7 +522,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
                 );
               })}
             </div>
-          </Card.Body>
+          </Card.Stack>
         </Card>
         <div className="forms-builder__main">
           <Card>

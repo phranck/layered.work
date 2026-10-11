@@ -1,5 +1,5 @@
 import { ENTRY_SPEC_LENGTH, type EntrySpec, entrySpecs, MAX_ENTRY_SPECS } from "@layered/schemas";
-import { Field, Input } from "@layered/ui";
+import { Field, FieldHint, Input } from "@layered/ui";
 import { useRef, useState } from "react";
 import { ActionButton } from "./action-button.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -89,9 +89,9 @@ export function SpecsField({
         })}
       </Reorder.List>
       {!entrySpecs.safeParse(specs).success && (
-        <p className="spec-pairs__problem" role="status">
+        <FieldHint as="p" role="status" data-tone="warning">
           {text("editorSpecsIncomplete")}
-        </p>
+        </FieldHint>
       )}
       <ActionButton action="new" disabled={specs.length >= MAX_ENTRY_SPECS} onClick={add}>
         {text("editorSpecAdd")}

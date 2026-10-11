@@ -182,8 +182,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
   }
   if (field.type === "singleChoice" || field.type === "multipleChoice") {
     return (
-      <div className="forms-options">
-        <strong>{text("formOptions")}</strong>
+      <Field.Set label={text("formOptions")}>
         {field.options.map((option, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Option order is fixed and inputs are controlled; values are editable.
           <div key={index} className="forms-option">
@@ -216,7 +215,7 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
         >
           {text("formOptionAdd")}
         </ActionButton>
-      </div>
+      </Field.Set>
     );
   }
   if (field.type === "consent") {

@@ -1,5 +1,5 @@
 import type { PictureShape } from "@layered/schemas";
-import { Field, imagePosition } from "@layered/ui";
+import { Field, FieldHint, imagePosition } from "@layered/ui";
 import { useState } from "react";
 import { ActionButton } from "./action-button.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -48,9 +48,17 @@ export function PictureField({ label, hint, none, mediaId, shape, editable, onCh
             style={shape === "home-plate" ? { objectPosition: imagePosition(shown) } : undefined}
           />
         )}
-        <span className="picture-field__name" data-empty={shown?.slug ? undefined : ""}>
-          {mediaId === null ? none : (shown?.slug ?? (picture.isError ? mediaId : text("loading")))}
-        </span>
+        <FieldHint className="picture-field__name">
+          {mediaId === null ? (
+            none
+          ) : shown?.slug ? (
+            <code>{shown.slug}</code>
+          ) : picture.isError ? (
+            <code>{mediaId}</code>
+          ) : (
+            text("loading")
+          )}
+        </FieldHint>
         <span className="actions picture-field__actions">
           <ActionButton action="choosePicture" disabled={!editable} onClick={() => setPicking(true)}>
             {text("mediaPicker")}

@@ -65,7 +65,7 @@ it("credits a picture from Unsplash and offers it no watermark", async () => {
   expect(author.getAttribute("href")).toBe(
     "https://unsplash.com/@janedoe?utm_source=layered_work&utm_medium=referral",
   );
-  expect(author.closest("small")?.textContent).toBe("Foto von Jane Doe auf Unsplash");
+  expect(author.closest(".field__hint")?.textContent).toBe("Foto von Jane Doe auf Unsplash");
   expect(screen.queryByLabelText("Wasserzeichen")).toBeNull();
 });
 

@@ -36,12 +36,49 @@
   text-wrap: pretty;
 }
 
+/* A hint that says why something cannot be done, such as a pair that cannot
+   be saved, in the tone `tone.css` binds for its `data-tone`. */
+.field__hint[data-tone] {
+  color: var(--tone);
+}
+
+/* A code in a label or a hint, such as an address, a file name or a
+   placeholder, in the face a code field is set in. */
+:where(.field__label, .field__hint) code {
+  font-family: var(--font-mono);
+}
+
+/* A link in a hint, such as the other language of an entry or the author of a
+   picture, reads as a link in the accent and underlines under the pointer. */
+.field__hint a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.field__hint a:hover {
+  text-decoration: underline;
+}
+
 /* In a stacked field the label stands over a rounded control and the hint
    under it, so both begin where the control's curve gives way to its straight
-   edge. An inline field's label stands beside its control and meets no curve,
-   so it keeps the edge. */
-.field:not(.field--inline) > :where(.field__label, .field__hint) {
+   edge. A hint standing on its own in a card's stack of fields lines up with
+   their labels the same way. An inline field's label stands beside its
+   control and meets no curve, so it keeps the edge. */
+:is(.field:not(.field--inline), .card__body--stack) > :where(.field__label, .field__hint) {
   padding-inline-start: var(--control-text-inset);
+}
+
+/* A fieldset loses the browser's frame and indent. Its legend is laid out
+   apart from the children that share the field's gap, so its margin keeps the
+   same distance to the first of them. */
+.field--set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field--set > legend {
+  margin-block-end: var(--space-2);
 }
 
 /* Inline fields one under another share two columns, the labels as wide as the

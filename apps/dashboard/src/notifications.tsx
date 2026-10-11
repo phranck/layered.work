@@ -1,3 +1,4 @@
+import { FieldHint } from "@layered/ui";
 import { TONE_ICONS } from "@layered/ui/icons";
 import {
   createContext,
@@ -170,7 +171,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             <Icon className="notification__icon" />
             <span className="notification__text">
               <span className="notification__message">{shown.message}</span>
-              {shown.detail && <span className="notification__detail">{shown.detail}</span>}
+              {shown.detail && <FieldHint>{shown.detail}</FieldHint>}
             </span>
             {urgent && (
               <ActionButton.Icon

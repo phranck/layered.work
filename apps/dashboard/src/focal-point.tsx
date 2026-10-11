@@ -1,5 +1,5 @@
 import type { FocalPoint } from "@layered/schemas";
-import { imagePosition } from "@layered/ui";
+import { Field, FieldHint, imagePosition } from "@layered/ui";
 import { type KeyboardEvent, type PointerEvent, useId } from "react";
 import { useDashboardLanguage } from "./language-context.js";
 import "./focal-point.css";
@@ -85,7 +85,7 @@ function FocalPreviews({ src, point }: Pick<EditorProps, "src" | "point">) {
             alt={text(crop.label)}
             style={{ aspectRatio: crop.ratio, objectPosition: imagePosition({ focalPoint: point }) }}
           />
-          <figcaption>{text(crop.label)}</figcaption>
+          <FieldHint as="figcaption">{text(crop.label)}</FieldHint>
         </figure>
       ))}
     </div>
@@ -95,14 +95,16 @@ function FocalContent(props: EditorProps) {
   const { text } = useDashboardLanguage();
   const hintId = useId();
   return (
-    <div className="focal-point">
-      <p id={hintId}>{text("mediaFocalHint")}</p>
+    <Field label={text("mediaFocal")}>
+      <FieldHint as="p" id={hintId}>
+        {text("mediaFocalHint")}
+      </FieldHint>
       <FocalRoot {...props} hintId={hintId} />
-      <output aria-live="polite">
+      <FieldHint as="output" aria-live="polite">
         {Math.round(props.point.x * 100)}%, {Math.round(props.point.y * 100)}%
-      </output>
+      </FieldHint>
       <FocalPreviews {...props} />
-    </div>
+    </Field>
   );
 }
 /** Shared coordinate editor with composable source and ratio previews. */

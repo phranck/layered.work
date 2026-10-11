@@ -1,6 +1,6 @@
 import { validateContent } from "@layered/content";
 import type { EntryDetail, SaveEntryBody } from "@layered/schemas";
-import { Badge, Editor, Section } from "@layered/ui";
+import { Badge, Editor, FieldHint, Section } from "@layered/ui";
 import { useEffect, useRef, useState } from "react";
 import { useBlocker, useLocation, useNavigate, useParams } from "react-router";
 import { ActionButton } from "./action-button.js";
@@ -218,9 +218,9 @@ function EntryEditor({
         </HeaderEnd>
       ) : (
         <HeaderEnd>
-          <span className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
+          <FieldHint className="entry-editor__status" role="status" data-unsaved={dirty ? "" : undefined}>
             {status}
-          </span>
+          </FieldHint>
           <ActionButton
             action="save"
             tone={saved.state === "public" && draft.state === "public" ? "primary" : "secondary"}

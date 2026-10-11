@@ -48,12 +48,6 @@
 
 /* --- Palette ------------------------------------------------------------------ */
 
-.forms-palette__hint {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
 .forms-palette__tiles {
   display: grid;
   gap: var(--space-1);
@@ -218,11 +212,6 @@
   color: var(--state-danger);
 }
 
-.forms-field__type {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
 /* The remove button sits on the card's corner, shown while the card is
    pointed at or anything in it has the focus, so the keyboard finds it too.
    Shown and hidden by its visibility, so that the button's own opacity still
@@ -334,13 +323,9 @@
 
 /* --- Field settings ---------------------------------------------------------- */
 
-.forms-options,
 .forms-option {
   display: grid;
   gap: var(--space-2);
-}
-
-.forms-option {
   padding-block: var(--space-3);
   border-block-start: 1px solid var(--edge-hairline);
 }

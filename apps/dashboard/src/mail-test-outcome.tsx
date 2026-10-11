@@ -1,4 +1,5 @@
 import type { TestMailResult } from "@layered/schemas";
+import { FieldHint } from "@layered/ui";
 import { useDashboardLanguage } from "./language-context.js";
 
 /**
@@ -20,9 +21,9 @@ export function MailTestOutcome({ result }: { result: TestMailResult }) {
           ? text("testMailAccepted", result.recipient)
           : text("testMailRefused", result.recipient)}
       </p>
-      <p className="mail-test-outcome__answer">
+      <FieldHint as="p">
         {text("testMailAnswer")}: <q>{result.answer}</q>
-      </p>
+      </FieldHint>
     </div>
   );
 }

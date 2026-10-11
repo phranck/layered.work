@@ -20,12 +20,3 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-
-/* Set in from the edge as a field's hint is, in the tone the editor's own
-   unsaved state uses, because it says why Save is not available. */
-.spec-pairs__problem {
-  margin: 0;
-  padding-inline-start: var(--control-text-inset);
-  font-size: var(--text-sm);
-  color: var(--state-warning);
-}
