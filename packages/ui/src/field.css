@@ -44,6 +44,28 @@
   padding-inline-start: var(--control-text-inset);
 }
 
+/* Inline fields one under another share two columns, the labels as wide as the
+   longest, so their switches start on one line instead of each where its own
+   label ends. Each field takes both columns and hands them to its label and its
+   control. The rows keep the gap of the stack the group stands in, so grouping
+   fields changes no spacing. */
+.field-group {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: inherit;
+}
+
+.field-group > .field--inline {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.field-group > .field--inline > .field__hint {
+  grid-column: 1 / -1;
+}
+
 /* --- Input ----------------------------------------------------------------- */
 
 .input {

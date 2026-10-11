@@ -356,6 +356,22 @@ const blockField = (setting) => {
 };
 
 /**
+ * A block's settings in their order, with every run of switches that follow
+ * one another in one group, so the switches start on one line.
+ */
+const blockFields = (settings) => {
+  const runs = [];
+  for (const setting of settings) {
+    const last = runs.at(-1);
+    if (setting.type === "switch" && last?.[0]?.type === "switch") last.push(setting);
+    else runs.push([setting]);
+  }
+  return runs.map((run) =>
+    run[0].type === "switch" ? Field.InlineGroup(run.map(blockField)) : blockField(run[0]),
+  );
+};
+
+/**
  * The landing page builder.
  *
  * The list on the left says what the page is made of and in what order, the
@@ -413,7 +429,7 @@ const landingBuilder = (area, blockId) => {
         title: t(open.typeKey),
         actions: action("save", { tone: "primary" }),
       },
-      ...open.settings.map(blockField),
+      ...blockFields(open.settings),
     ),
   );
 };

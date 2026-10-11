@@ -53,20 +53,42 @@ export function HomeBlockSettingsFields({
   onChange: (key: string, value: unknown) => void;
   editable: boolean;
 }) {
+  const control = (setting: HomeBlockSetting) => (
+    <SettingControl
+      key={setting.key}
+      setting={setting}
+      value={draft[setting.key]}
+      onChange={(value) => onChange(setting.key, value)}
+      editable={editable}
+      idPrefix={`home-${type}`}
+    />
+  );
   return (
     <>
-      {HOME_BLOCKS[type].settings.map((setting) => (
-        <SettingControl
-          key={setting.key}
-          setting={setting}
-          value={draft[setting.key]}
-          onChange={(value) => onChange(setting.key, value)}
-          editable={editable}
-          idPrefix={`home-${type}`}
-        />
-      ))}
+      {settingRuns(HOME_BLOCKS[type].settings).flatMap((run) =>
+        run[0]?.kind === "flag"
+          ? [<Field.InlineGroup key={run[0].key}>{run.map(control)}</Field.InlineGroup>]
+          : run.map(control),
+      )}
     </>
   );
+}
+
+/**
+ * A block's settings in the order they are declared, with every run of flags
+ * that follow one another held together, so their switches can share one
+ * column. Every other setting is a run of its own.
+ *
+ * @param settings - The settings a block declares.
+ */
+export function settingRuns(settings: readonly HomeBlockSetting[]): HomeBlockSetting[][] {
+  const runs: HomeBlockSetting[][] = [];
+  for (const setting of settings) {
+    const last = runs.at(-1);
+    if (setting.kind === "flag" && last?.[0]?.kind === "flag") last.push(setting);
+    else runs.push([setting]);
+  }
+  return runs;
 }
 
 /** One setting, as the control its kind calls for. Exported for the test of a kind no control knows. */

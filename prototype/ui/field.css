@@ -15,12 +15,13 @@
 }
 
 /* A label and its control on one line, for a switch: the two read as one
-   sentence, and a label stacked above a toggle spends a line saying so. */
+   sentence, and a label stacked above a toggle spends a line saying so. They
+   stand together, because a switch at the far end of a wide row is read as
+   belonging to whatever stands nearest to it. */
 .field--inline {
   flex-direction: row;
   gap: var(--space-3);
   align-items: center;
-  justify-content: space-between;
 }
 
 .field__label {
@@ -33,6 +34,24 @@
   font-size: var(--text-sm);
   color: var(--text-faint);
   text-wrap: pretty;
+}
+
+/* Inline fields one under another share two columns, the labels as wide as the
+   longest, so their switches start on one line instead of each where its own
+   label ends. Each field takes both columns and hands them to its label and its
+   control. The rows keep the gap of the stack the group stands in, so grouping
+   fields changes no spacing. */
+.field-group {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: inherit;
+}
+
+.field-group > .field--inline {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
 }
 
 /* --- Input ----------------------------------------------------------------- */

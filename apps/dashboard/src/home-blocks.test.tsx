@@ -1,4 +1,10 @@
-import { homeBlockSettings, homeBlockTypes, type StoredHomeBlock } from "@layered/schemas";
+import {
+  HOME_BLOCKS,
+  type HomeBlockType,
+  homeBlockSettings,
+  homeBlockTypes,
+  type StoredHomeBlock,
+} from "@layered/schemas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,7 +12,7 @@ import { createDashboardApi } from "./api.js";
 import { DashboardApiProvider } from "./dashboard-context.js";
 import { dashboardText } from "./dashboard-i18n.js";
 import { declaredKeys, segmentsFit } from "./home-block-labels.js";
-import { SettingControl } from "./home-block-settings.js";
+import { SettingControl, settingRuns } from "./home-block-settings.js";
 import { HomeBlocksScreen } from "./home-blocks.js";
 import { DashboardLanguageProvider } from "./language-context.js";
 import { queryKeys } from "./query-keys.js";
@@ -127,7 +133,11 @@ describe("the blocks screen", () => {
     );
     // Three multi-word options are a dropdown, never a segmented control.
     expect(within(panel).getByLabelText("Sortierung").tagName).toBe("SELECT");
-    expect(within(panel).getByRole("switch", { name: "Hervorgehobenen auslassen" })).toBeTruthy();
+    // The two flags the grid declares one after the other share a column.
+    const group = within(panel)
+      .getByRole("switch", { name: "Hervorgehobenen auslassen" })
+      .closest(".field-group");
+    expect(group && within(group as HTMLElement).getAllByRole("switch")).toHaveLength(2);
 
     fireEvent.change(within(panel).getByLabelText("Anzahl"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -161,6 +171,20 @@ describe("the controls a declaration calls for", () => {
     for (const language of ["de", "en"] as const)
       for (const key of declaredKeys())
         expect(dashboardText(language, key), `${language} ${key}`).not.toBe(key);
+  });
+
+  it("holds flags that follow one another together, and every other setting apart", () => {
+    const keys = (type: HomeBlockType) =>
+      settingRuns(HOME_BLOCKS[type].settings).map((run) => run.map((setting) => setting.key));
+    expect(keys("post_grid")).toEqual([["title"], ["limit"], ["order"], ["excludeFeatured", "sky"]]);
+    expect(keys("hero")).toEqual([
+      ["eyebrow"],
+      ["title"],
+      ["description"],
+      ["showPicture"],
+      ["picture"],
+      ["sky"],
+    ]);
   });
 
   it("sets options side by side only where each is one short word", () => {
