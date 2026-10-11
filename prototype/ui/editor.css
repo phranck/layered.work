@@ -5,7 +5,7 @@
  * panel column has a fixed width, because a column of fields does not improve by
  * being wider, and the main column takes everything else.
  *
- * The syntax colours of the writing surface are the one place a component reads
+ * The syntax colors of the writing surface are the one place a component reads
  * a token that is not semantic. They are declared with the workbench scope, and
  * the reason they follow no palette is written there.
  */
@@ -24,7 +24,7 @@
   min-width: 0;
 }
 
-/* The panel stays in view whilst the main side scrolls. Offset by the same step
+/* The panel stays in view while the main side scrolls. Offset by the same step
    the workbench pads its main area with, so it stops where the content starts. */
 .editor__panel {
   position: sticky;
@@ -59,7 +59,7 @@
   min-width: var(--control-height);
   height: var(--control-height);
   /* Two pixels above and none below: the lettering is set in Fira Code, whose
-     ascent outweighs its descent, and a line box centred on the em box hangs
+     ascent outweighs its descent, and a line box centered on the em box hangs
      the caps a pixel high. Measured at 0.9px on 15px. */
   padding-block: 2px 0;
   padding-inline: var(--space-2);

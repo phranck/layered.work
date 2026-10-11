@@ -22,7 +22,7 @@ import {
 import type { SyntaxNode } from "@lezer/common";
 
 /**
- * Keeping a table's rows in step with its columns whilst the author writes.
+ * Keeping a table's rows in step with its columns while the author writes.
  *
  * A column added gives every row its field, a column removed takes the field
  * out of every row, and a column whose field is renamed renames it in every row

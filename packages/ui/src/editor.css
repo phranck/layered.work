@@ -5,7 +5,7 @@
  * panel column is `--panel-width`, the width every panel of the workbench
  * takes, and the main column takes everything else.
  *
- * The syntax colours of the writing surface are drawn by the editor that is
+ * The syntax colors of the writing surface are drawn by the editor that is
  * mounted in it, from the `--md-*` properties of the workbench scope, where the
  * reason they follow no palette is written.
  */
@@ -91,7 +91,7 @@
    the edge of its own hover shape. */
 .editor__tool--text {
   /* Two pixels above and none below: the lettering is set in Fira Code, whose
-     ascent outweighs its descent, and a line box centred on the em box hangs
+     ascent outweighs its descent, and a line box centered on the em box hangs
      the caps a pixel high. Measured at 0.9px on 15px. */
   padding-block: 2px 0;
   padding-inline: var(--space-3);
@@ -162,7 +162,7 @@
 }
 
 /* --- Wide viewports --------------------------------------------------------
-   Whilst the panel stands beside the text, the editor fills the content area's
+   While the panel stands beside the text, the editor fills the content area's
    height and no more: the writing surface takes what the column leaves and its
    text scrolls inside it, and the panel and the main column each scroll inside
    themselves, so the page never grows taller than the window. The surface keeps

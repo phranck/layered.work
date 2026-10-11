@@ -99,7 +99,7 @@ type Press = { source: DragSource; element: HTMLElement; pointer: number; start:
 /**
  * A drag in progress.
  *
- * @property rows - The rows as they stood when the drag began, in the canvas's own pixels. Every target is worked out against these, so the canvas making room whilst the drag lasts never moves the targets under the pointer.
+ * @property rows - The rows as they stood when the drag began, in the canvas's own pixels. Every target is worked out against these, so the canvas making room while the drag lasts never moves the targets under the pointer.
  * @property grab - Where in the carried item it was taken hold of, in its own pixels, so the copy under the pointer stays held at that place.
  * @property size - The carried item's size, in its own pixels.
  * @property layer - The workbench, which the copy is drawn in, so that no scrolling column clips it and the workbench's sizes apply to it.
@@ -118,7 +118,7 @@ type Drag = {
 };
 
 /**
- * What the canvas shows whilst a drag lasts: the form as the drop would leave
+ * What the canvas shows while a drag lasts: the form as the drop would leave
  * it, and where the carried item would stand in it.
  */
 type Preview = {
@@ -165,7 +165,7 @@ function FieldFace({ field, language }: { field: FormField; language: ContentLan
 }
 
 /**
- * The copy that follows the pointer whilst something is dragged, drawn as the
+ * The copy that follows the pointer while something is dragged, drawn as the
  * thing itself: a tile as a tile, a field as its card, a row as its fields on
  * the row's columns.
  */
@@ -229,7 +229,7 @@ function Carried({
  * by its grip, dragged or with the arrow keys, and the grip of a row holding one
  * field carries that field, so it can also be set beside another.
  *
- * Whilst something is dragged, a copy of it follows the pointer, and the canvas
+ * While something is dragged, a copy of it follows the pointer, and the canvas
  * shows the form as the drop would leave it, with the carried item drawn as a
  * slot where it would stand and at the width it would take. That form comes
  * from the same change `forms-model.ts` makes on the drop, so what is shown is
@@ -357,7 +357,7 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
   };
 
   // The pointer is followed on the window rather than on the element pressed,
-  // because the canvas redraws whilst the drag lasts and the element pressed
+  // because the canvas redraws while the drag lasts and the element pressed
   // can move to another row or leave the canvas. The handlers read the render
   // they were last given.
   const pointer = useRef({

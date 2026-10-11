@@ -47,7 +47,7 @@ function show() {
 /** The notification as it stands in the bar, or null once it has gone. */
 const pill = () => document.querySelector(".notification");
 
-it("stays whilst it fades, and goes when the fade ends", () => {
+it("stays while it fades, and goes when the fade ends", () => {
   fade = document.createElement("style");
   // Written out in its parts, because the test document does not read them out of `transition`.
   fade.textContent = ".notification { transition-property: opacity; transition-duration: 160ms; }";

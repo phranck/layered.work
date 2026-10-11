@@ -100,8 +100,8 @@ describe("reading a Publii status", () => {
   });
 });
 
-describe("recognising a migrated overview", () => {
-  it("recognises only a page at a listing address", () => {
+describe("recognizing a migrated overview", () => {
+  it("recognizes only a page at a listing address", () => {
     expect(overviewForPubliiPost("projects", "published,is-page")).toBe("project");
     expect(overviewForPubliiPost("posts", "published,is-page")).toBe("post");
     expect(overviewForPubliiPost("projects", "published")).toBeUndefined();

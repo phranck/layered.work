@@ -11,7 +11,7 @@ import * as schema from "../db/schema/index.js";
  * ones a mock cannot have.
  *
  * A session that was deleted, an expiry that has passed, a unique index that
- * refuses a second row: every one of those is the database's behaviour rather
+ * refuses a second row: every one of those is the database's behavior rather
  * than the application's, and a test against a mock of it tests the mock.
  *
  * **It is a separate database, not a separate schema in the shared one.**

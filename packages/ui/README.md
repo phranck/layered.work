@@ -45,6 +45,6 @@ Source revisions, licences and the regeneration command are recorded in [the fon
 
 Import interface components from `@layered/ui/icons`, for example `MagnifyingGlassIcon`, `PlusIcon` and `SquaresFourIcon`. These are direct Phosphor React exports, with `size`, `weight` and `color` props. Their default `1em` size follows existing component tokens: a `Row.Lead` uses 17 px in the sidebar and 19 px in workbench content. Add explicit Phosphor submodule exports when screens need more icons; do not copy SVG paths or load an icon stylesheet.
 
-`BrandMark` is separate: `<BrandMark brand="github" />` renders a decorative CSS mask from the unchanged Simple Icons asset. The surrounding social link supplies the accessible name and text colour. Only Mastodon, GitHub, YouTube, Instagram and Xing ship. CSS rules choose same-origin masks without inline styles, so the strict dashboard policy also permits them.
+`BrandMark` is separate: `<BrandMark brand="github" />` renders a decorative CSS mask from the unchanged Simple Icons asset. The surrounding social link supplies the accessible name and text color. Only Mastodon, GitHub, YouTube, Instagram and Xing ship. CSS rules choose same-origin masks without inline styles, so the strict dashboard policy also permits them.
 
 See [icon notices](assets/ICON_NOTICES.md) for pinned sources, licences and the steps for adding a social brand.

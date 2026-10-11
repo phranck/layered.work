@@ -8,7 +8,7 @@
 //
 // The panel is a Card, because that is what it is. What this compound adds is
 // the arrangement: a wide side that scrolls with the page, a narrow side that
-// stays in view whilst you work, and a toolbar above a writing surface where
+// stays in view while you work, and a toolbar above a writing surface where
 // there is one.
 //
 // In the real project:
@@ -83,7 +83,7 @@ Editor.Surface = (...children) => html`<div class="editor__surface">${children}<
  * they are here and not in the panel's footer.
  *
  * @param destructive An action pushed to the far left, away from the others, so
- *                    nobody reaches it whilst aiming for the primary one.
+ *                    nobody reaches it while aiming for the primary one.
  * @param actions     The rest, in order of weight with the primary one last.
  */
 Editor.Actions = ({ destructive, actions } = {}) => html`
@@ -97,8 +97,8 @@ Editor.Actions = ({ destructive, actions } = {}) => html`
  * The properties beside the thing being worked on.
  *
  * A Card, so it announces itself and closes itself the way every other card in
- * the product does. It stays in view whilst the main side scrolls, because the
- * properties are what you reach for whilst working rather than after it.
+ * the product does. It stays in view while the main side scrolls, because the
+ * properties are what you reach for while working rather than after it.
  *
  * @param eyebrow Rubric above the title.
  * @param title   What the panel is for.

@@ -5,7 +5,7 @@ import { useState } from "react";
  * still say the same thing, and when the stored value changed so the draft has
  * to start again from it.
  *
- * Both compare field by field. Serialising both sides builds two strings on
+ * Both compare field by field. Serializing both sides builds two strings on
  * every render, and it compares the order keys were written in as well, so two
  * values holding the same pairs in another order would read as a change.
  */

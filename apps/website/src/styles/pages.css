@@ -55,7 +55,7 @@ b {
   color: var(--text-muted);
 }
 
-/* All capitals take no lift, so the glyph is centred on the box. It is a step
+/* All capitals take no lift, so the glyph is centered on the box. It is a step
    larger than the letters, because a duotone mark at cap height reads as a
    smudge rather than a picture. */
 .eyebrow__icon {
@@ -118,7 +118,7 @@ b {
 
 /* The first band opens a shade lighter than the page and sinks into it, so the
    first screen has a horizon rather than an edge. It ends on the page's own
-   colour, which is what makes the join with the band beneath invisible. */
+   color, which is what makes the join with the band beneath invisible. */
 .hero {
   --band-fill: linear-gradient(180deg, var(--surface-raised), var(--surface-page));
   display: grid;
@@ -355,7 +355,7 @@ b {
 /* Two stops and nothing between them, so the darkening is even the whole way
    down. A middle stop near the scrim's own strength reads as a flat block
    rather than as a gradient, because the last stretch from there to full cover
-   is a difference the eye cannot see. It ends on the page colour itself, which
+   is a difference the eye cannot see. It ends on the page color itself, which
    is what makes it darker than the scrim token without bending the curve. */
 .project-hero__scrim {
   position: absolute;

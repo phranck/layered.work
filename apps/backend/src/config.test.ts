@@ -6,7 +6,7 @@ import { readConfig } from "./config.js";
  *
  * These are checked against `readConfig` rather than against a running process
  * because the value the process uses is read at import time, which is the point:
- * a service that cannot be configured must fail whilst starting.
+ * a service that cannot be configured must fail while starting.
  */
 
 /** Enough of an environment to be valid, which each test then breaks in one way. */

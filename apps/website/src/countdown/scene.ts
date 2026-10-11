@@ -8,7 +8,7 @@
  *
  * The web and the card share one pointer and one frame loop. Two loops reading
  * the same pointer would be two answers to one question, and the card has to
- * follow at the rate the pointer moves whilst the web is content with a fifth
+ * follow at the rate the pointer moves while the web is content with a fifth
  * of that.
  *
  * Written as a string because it is served inline: the page is one document and
@@ -230,7 +230,7 @@ export const SCENE_SCRIPT = `
   // place. That was worth about ten degrees of lean at the corners.
   //
   // So: whenever it changes size, once the typefaces have settled, and at most
-  // twice a second whilst the pointer is about. One rect read per half second
+  // twice a second while the pointer is about. One rect read per half second
   // costs nothing and nothing can drift for longer than that.
   if (card && window.ResizeObserver) {
     new ResizeObserver(measureCard).observe(card);
@@ -330,7 +330,7 @@ export const SCENE_SCRIPT = `
     //
     // The corner still travels a long way: it sits about 434px from the middle
     // on this card, and the two rotations add there, so the near corner comes
-    // roughly 120px forward whilst the opposite one goes the same distance
+    // roughly 120px forward while the opposite one goes the same distance
     // back. Measured rather than worked out, because the sign conventions of
     // the two rotations are easy to get the wrong way round.
     if (Math.abs(tiltX) < 0.01 && Math.abs(tiltY) < 0.01 && Math.abs(spin) < 0.005) {
@@ -353,7 +353,7 @@ export const SCENE_SCRIPT = `
    * moves part of its width into its depth, so a node can end up further away
    * than the box is deep, and the figure that is meant to run from 0 to 1 runs
    * past both ends. At the far end it goes negative, and a negative brightness
-   * only dims whilst a negative radius is an error the canvas throws: that
+   * only dims while a negative radius is an error the canvas throws: that
    * exception left the rest of the frame's nodes undrawn.
    */
   function clamp01(value) {

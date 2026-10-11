@@ -155,7 +155,7 @@
   border-spacing: 0;
 }
 /* Shallower than it is wide: a row is scanned down a column, so the lines want
-   to sit close enough to be compared, whilst the columns still want air between
+   to sit close enough to be compared, while the columns still want air between
    them. The header takes the same figures, because a row of labels reads as one
    of the rows. */
 .content-table :where(th, td) {
@@ -176,7 +176,7 @@
   font-variant-numeric: tabular-nums;
 }
 /* The caption names the table above its head, as a label rather than a heading,
-   so it stands inside the frame and takes the head's colour. */
+   so it stands inside the frame and takes the head's color. */
 .content-table caption {
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);

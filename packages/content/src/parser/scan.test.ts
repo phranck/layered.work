@@ -131,7 +131,7 @@ describe("a call with a body", () => {
   });
 
   it("ignores a brace inside a fenced code block", () => {
-    // The rule the epic states as fenced code being recognised first. The
+    // The rule the epic states as fenced code being recognized first. The
     // example is deliberately unbalanced: a balanced one closes at the right
     // place by accident, whether the fence is understood or not, and a test
     // built on it proves nothing.

@@ -1,7 +1,7 @@
 /*
  * Layer 4 of the token system: the workbench scope.
  *
- * The dashboard takes its colours and its shapes from the site, so it overrides
+ * The dashboard takes its colors and its shapes from the site, so it overrides
  * nothing about them and simply inherits. What it does state is density: a page
  * is read once and a workbench is worked in for hours, so the spacing steps are
  * tighter and everything clickable shares one height.
@@ -18,7 +18,7 @@
 .workbench {
   /* --- Density ------------------------------------------------------------
      Tighter than the site from the middle of the scale up, because a workbench
-     shows many rows at once whilst a page shows few things large. The first two
+     shows many rows at once while a page shows few things large. The first two
      steps stay close to the site's, since a gap of a few pixels means the same
      thing in both. */
   --space-1: 3px;
@@ -47,7 +47,7 @@
   /* --- Geometry -----------------------------------------------------------
      The site's card geometry at workbench scale. Both numbers are chosen and
      everything else derives from them, exactly as on the site, so the two stay
-     recognisably the same family of shapes. The derivations are restated here
+     recognizably the same family of shapes. The derivations are restated here
      because a property containing var() resolves where it is declared. */
   --card-radius: 18px;
   --card-padding: 12px;

@@ -30,7 +30,7 @@ export const Sidebar = (...parts) => html`<aside class="sidebar">${parts}</aside
 /**
  * The top of the sidebar, where the mark sits.
  *
- * Centred rather than aligned with the entries below, because it is the sign
+ * Centered rather than aligned with the entries below, because it is the sign
  * above the column rather than the first item in it.
  */
 Sidebar.Header = (...children) => html`<div class="sidebar__header">${children}</div>`;

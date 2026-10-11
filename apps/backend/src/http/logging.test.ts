@@ -14,8 +14,8 @@ registerProbeRoutes(app);
  * what the application actually writes.
  */
 
-/** Captures what was logged whilst something runs. */
-async function linesWhilst(run: () => Response | Promise<Response>) {
+/** Captures what was logged while something runs. */
+async function linesWhile(run: () => Response | Promise<Response>) {
   const { logger } = await import("../logger.js");
   const written: { level: string; fields: Record<string, unknown>; message: string }[] = [];
 
@@ -35,7 +35,7 @@ async function linesWhilst(run: () => Response | Promise<Response>) {
 
 describe("a request that failed", () => {
   it("is explained by exactly one line, which carries the route and the cause", async () => {
-    const { response, written } = await linesWhilst(() => app.request("/test/throws-unexpectedly"));
+    const { response, written } = await linesWhile(() => app.request("/test/throws-unexpectedly"));
     const id = response.headers.get(REQUEST_ID_HEADER);
 
     const mentioning = written.filter((line) => line.fields.requestId === id);
@@ -53,8 +53,8 @@ describe("a request that failed", () => {
   });
 
   it("is recorded at error when it is a fault and at info when it is the caller", async () => {
-    const fault = await linesWhilst(() => app.request("/test/throws-unexpectedly"));
-    const refusal = await linesWhilst(() =>
+    const fault = await linesWhile(() => app.request("/test/throws-unexpectedly"));
+    const refusal = await linesWhile(() =>
       app.request("/test/validated", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -69,7 +69,7 @@ describe("a request that failed", () => {
   });
 
   it("records a deliberate failure without a stack, because nothing went wrong here", async () => {
-    const { written } = await linesWhilst(() => app.request("/test/throws-deliberately"));
+    const { written } = await linesWhile(() => app.request("/test/throws-deliberately"));
     const explaining = written.filter((line) => line.fields.code === ErrorCode.Conflict);
 
     expect(explaining).toHaveLength(1);
@@ -79,7 +79,7 @@ describe("a request that failed", () => {
 
 describe("every request", () => {
   it("leaves one line with the method, the route, the status and how long it took", async () => {
-    const { written } = await linesWhilst(() => app.request("/health"));
+    const { written } = await linesWhile(() => app.request("/health"));
     const access = written.filter((line) => line.message === "request");
 
     expect(access).toHaveLength(1);
@@ -90,7 +90,7 @@ describe("every request", () => {
   it("records the route rather than the path, so one line per address is not one per visitor", async () => {
     // `/entries/:slug` groups; `/entries/the-soundbox` does not, and a path is
     // also where somebody's data ends up in a log by accident.
-    const { written } = await linesWhilst(() => app.request("/nothing-here"));
+    const { written } = await linesWhile(() => app.request("/nothing-here"));
     const access = written.find((line) => line.message === "request");
 
     expect(access?.fields.route).not.toContain("nothing-here");

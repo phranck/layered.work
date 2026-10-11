@@ -142,7 +142,7 @@ export const mediaProcessing = z.object({
 export type MediaProcessing = z.infer<typeof mediaProcessing>;
 
 /**
- * Where a watermark sits on a picture: a corner, the middle of an edge, or the centre.
+ * Where a watermark sits on a picture: a corner, the middle of an edge, or the center.
  *
  * The database enum, the API and the dashboard's select all read this list, so a
  * position offered in one is accepted by the others.

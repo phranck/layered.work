@@ -98,7 +98,7 @@ export function BackToList({ area, title }: { area: DashboardArea; title?: strin
   );
 }
 
-/** Puts its children in the centre of the bar: what just happened. */
+/** Puts its children in the center of the bar: what just happened. */
 export function HeaderCenter({ children }: { children: ReactNode }) {
   const { center } = use(SlotsContext);
   return center ? createPortal(children, center) : null;

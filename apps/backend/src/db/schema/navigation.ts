@@ -10,7 +10,7 @@ import { language, navigationPlacement } from "./enums.js";
  * **An item points at a thing, not at an address.** Choosing an entry stores
  * that entry's identifier, and the renderer asks for its current path in the
  * language being read. Renaming the entry therefore leaves every link working
- * with no redirect hop, and the German menu reaches the German article whilst
+ * with no redirect hop, and the German menu reaches the German article while
  * the English one reaches the English article, from a single row.
  *
  * An external address is the exception and is stored as written, because
@@ -51,7 +51,7 @@ export const navigations = pgTable(
  * for one and does not draw it, which is a fact about the design rather than
  * about the row, so it is stored either way.
  *
- * Both languages are expected. That one may not be left empty whilst the other
+ * Both languages are expected. That one may not be left empty while the other
  * is filled is a rule the API holds, because no constraint can see a row that
  * was never written.
  */

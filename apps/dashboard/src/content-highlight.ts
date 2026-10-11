@@ -4,14 +4,14 @@ import { styleTags, Tag, tags } from "@lezer/highlight";
 import type { MarkdownConfig } from "@lezer/markdown";
 
 /**
- * How the writing surface colours what is written.
+ * How the writing surface colors what is written.
  *
- * Every colour is chosen by a node of the parse tree, never by a pattern over
- * the text, so the colouring cannot disagree with the parser: a brace inside a
+ * Every color is chosen by a node of the parse tree, never by a pattern over
+ * the text, so the coloring cannot disagree with the parser: a brace inside a
  * fenced block is code because the parser says it is, and a component the
  * parser could not read is marked because the parser marked it.
  *
- * The colours are the `--md-*` properties of the workbench scope. They are the
+ * The colors are the `--md-*` properties of the workbench scope. They are the
  * one set that deliberately follows no palette, because each role has to stay
  * distinguishable from the others, which a palette cannot promise.
  */
@@ -33,7 +33,7 @@ export const CONTENT_TAGS = {
  *
  * A tag here covers only the node's own characters between its children, which
  * is exactly what makes `Component` the braces, `ComponentArguments` the
- * brackets and commas, and `ComponentArgument` the colon, whilst the names, the
+ * brackets and commas, and `ComponentArgument` the colon, while the names, the
  * values and the body keep tags of their own. A props-only extension, so the
  * tree it is added to is the tree the server parses.
  */
@@ -59,15 +59,15 @@ export const componentHighlighting: MarkdownConfig = {
   ],
 };
 
-/** A colour of the workbench's syntax scheme, by its role's property. */
+/** A color of the workbench's syntax scheme, by its role's property. */
 const scheme = (role: string) => `var(--md-${role})`;
 
 /**
- * The colour, weight and line of every tag, Markdown's and the language's.
+ * The color, weight and line of every tag, Markdown's and the language's.
  *
- * Markdown's marks share one muted colour so the words they mark stay the thing
+ * Markdown's marks share one muted color so the words they mark stay the thing
  * read. Bold and italic keep their meaning as weight and slant as well as
- * colour, because colour alone asks a reader to compare two hues.
+ * color, because color alone asks a reader to compare two hues.
  */
 export const contentHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: scheme("heading"), fontWeight: "var(--weight-semibold)" },
@@ -92,7 +92,7 @@ export const contentHighlightStyle = HighlightStyle.define([
   { tag: tags.invalid, class: "content-invalid" },
 ]);
 
-/** The colouring, as one extension for the surface. */
+/** The coloring, as one extension for the surface. */
 export function contentHighlighting() {
   return syntaxHighlighting(contentHighlightStyle);
 }

@@ -23,14 +23,14 @@ export function spaceToken(step: SpaceStep): string {
 }
 
 /**
- * The status colours, as they are declared in `palettes.css`.
+ * The status colors, as they are declared in `palettes.css`.
  *
  * What a component means when it says a thing went well, is worth knowing, is
  * worth care, or has gone wrong. The content language's `Note` offers exactly
  * these, so adding a fifth to the palette offers it to authors with nothing
  * else edited.
  *
- * The accent is not among them on purpose: it is the site's own colour rather
+ * The accent is not among them on purpose: it is the site's own color rather
  * than a statement about something, and a status that shared its hue would read
  * as the accent wherever the two met.
  */

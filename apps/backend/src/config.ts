@@ -172,7 +172,7 @@ function productionOnly(environment: NodeJS.ProcessEnv): string[] {
  * The configuration this process runs on.
  *
  * Read at import time on purpose, so that a service which cannot be configured
- * fails whilst it is starting rather than whilst it is serving.
+ * fails while it is starting rather than while it is serving.
  */
 export const config = readConfig();
 

@@ -234,7 +234,7 @@ dialog.card-dialog::backdrop {
 
 /* A figure that counts one publication state takes that state's tone, in the
    fill and the edge the chosen state has in the editor, so the two read as the
-   same colour for the same thing. */
+   same color for the same thing. */
 .stat[data-tone] {
   background: color-mix(in oklab, var(--tone) 16%, var(--card-surface));
   border-color: color-mix(in oklab, var(--tone) 34%, transparent);
@@ -370,9 +370,9 @@ dialog.card-dialog::backdrop {
   border-radius: var(--radius-pill);
 }
 /* --- Notifications ---------------------------------------------------------
-   One at a time in the centre of the bar. It arrives at once and fades when it
+   One at a time in the center of the bar. It arrives at once and fades when it
    leaves, so news is seen the moment it happens and does not snap away. The
-   tone is carried by the icon as well as the colour. */
+   tone is carried by the icon as well as the color. */
 .notification {
   /* The message and the icon share one ink, so the two read as one sign: the
      tone lightened towards the text color until it reads on the tinted pill,

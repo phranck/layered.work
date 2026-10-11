@@ -30,7 +30,7 @@ export function rasterImage(): SQL {
  * until the caller's transaction ends.
  *
  * A setting that names a picture is a JSON value rather than a foreign key, so
- * nothing in the schema stops the picture being deleted whilst it is saved. The
+ * nothing in the schema stops the picture being deleted while it is saved. The
  * `key share` lock is what does: deleting a file takes its row `for update`,
  * which waits for this lock, and then finds the saved setting among the file's
  * uses. A deletion that got there first leaves no row, and this refuses.

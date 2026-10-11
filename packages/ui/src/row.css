@@ -45,7 +45,7 @@
   background: var(--hover-tint);
 }
 
-/* The current row carries the accent and a tint of it, because colour alone asks
+/* The current row carries the accent and a tint of it, because color alone asks
    a reader to compare two greys. Hovering it must not replace that tint with the
    neutral one. */
 .row[data-current] {

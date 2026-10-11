@@ -25,14 +25,14 @@
 }
 
 /* --- Band -------------------------------------------------------------------
-   A section whose background spans the window whilst its content keeps the
+   A section whose background spans the window while its content keeps the
    page measure. The fill is a border image with a horizontal outset rather
    than a wider box, because an outset paints beyond the element without
    counting towards anybody's width, so the page never gains a horizontal
    scroll and the content needs no inner wrapper to get back to the measure.
 
    Bands alternate by position among themselves, so the order the home page's
-   blocks are arranged in never has to say which colour each one takes. A band
+   blocks are arranged in never has to say which color each one takes. A band
    that brings a fill of its own, such as a hero's gradient, sets
    `--band-fill` and still counts towards the alternation. */
 

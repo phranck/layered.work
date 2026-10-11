@@ -5,7 +5,7 @@
 // nothing in this directory knows whether it is on a page or in a workbench.
 //
 // The one rule that keeps that true is the same one the tokens have. A component
-// reads a semantic token and never a colour, a step of a ramp or a literal. The
+// reads a semantic token and never a color, a step of a ramp or a literal. The
 // moment one of them names a value directly, it stops following the design in
 // one of the two places and nobody notices until the other one moves.
 //

@@ -24,7 +24,7 @@ import { settings } from "./site.js";
  *
  * **Content names a file, never a path.** A body writes `Image("soundbox-front")`
  * and the renderer turns that into whatever address the file has today. That one
- * indirection is what lets the bucket be reorganised, the variants regenerated,
+ * indirection is what lets the bucket be reorganized, the variants regenerated,
  * or the whole store replaced without a single entry being edited, which is the
  * thing the old site could not do: there the path was written into the body, so
  * moving a file meant finding every article that mentioned it.
@@ -89,7 +89,7 @@ export const media = pgTable(
 
     /**
      * Which part of the picture matters, as two fractions of its width and
-     * height. The centre is the default because it is right more often than
+     * height. The center is the default because it is right more often than
      * anything else, and a crop that respects it is the same crop everywhere:
      * every surface reads these two numbers and applies them as
      * `object-position`, so nothing does the arithmetic at the call site.
@@ -101,7 +101,7 @@ export const media = pgTable(
      * A very small blurred version, inline.
      *
      * It sits on the row rather than in the bucket so that showing something
-     * whilst the real image loads costs no second request, which would make the
+     * while the real image loads costs no second request, which would make the
      * placeholder arrive at about the same time as the thing it stands in for.
      */
     placeholder: text(),

@@ -82,7 +82,7 @@ export const entryTranslations = pgTable(
 
     /**
      * Whether the other language's listings, feeds and search show this
-     * translation as well, marked with its language, whilst that language has
+     * translation as well, marked with its language, while that language has
      * no published version of its own. A German reader still finds an English
      * post that was never translated.
      */
@@ -96,7 +96,7 @@ export const entryTranslations = pgTable(
      */
     specs: jsonb().$type<EntrySpec[]>().notNull().default([]),
 
-    /** When it first became public. Null whilst it never has been. */
+    /** When it first became public. Null while it never has been. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
 
     /**
@@ -114,7 +114,7 @@ export const entryTranslations = pgTable(
     socialCardMediaId: uuid("social_card_media_id").references(() => media.id, { onDelete: "restrict" }),
 
     /**
-     * When it was moved to the trash, or null whilst it is not there.
+     * When it was moved to the trash, or null while it is not there.
      *
      * A column rather than a fourth publication state, because the state is
      * what it returns to when it is restored. In the trash it is gone from the

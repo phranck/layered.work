@@ -56,7 +56,7 @@
 
 /* --- Tones ------------------------------------------------------------------
    Every button with a fill carries the sheen, laid over that fill. Hovering
-   raises the sheen rather than swapping the fill, so the face keeps the colour
+   raises the sheen rather than swapping the fill, so the face keeps the color
    it has and the contrast of the label cannot move with it. */
 
 .button--primary,
@@ -151,7 +151,7 @@
   display: block;
 }
 
-/* A lone glyph centres on the control, not on a label's cap line. Its square
+/* A lone glyph centers on the control, not on a label's cap line. Its square
    uses the same line box and symmetric padding as a labelled button. */
 .button--icon {
   padding: var(--button-padding-block);
@@ -176,7 +176,7 @@
   justify-content: flex-end;
 }
 
-/* A destructive action stands away from the others, so nobody reaches it whilst
+/* A destructive action stands away from the others, so nobody reaches it while
    aiming for the primary one. */
 .actions__aside {
   margin-inline-end: auto;

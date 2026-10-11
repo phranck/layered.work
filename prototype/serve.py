@@ -2,7 +2,7 @@
 """Static server for the design prototypes.
 
 Plain `http.server` answers with 304, and a browser keeps ES modules in a cache
-of its own on top of that, so an edit can sit on disk whilst the page still runs
+of its own on top of that, so an edit can sit on disk while the page still runs
 the previous version. That failure looks like a code error rather than a stale
 file, which costs far more than the caching saves on a local prototype.
 """

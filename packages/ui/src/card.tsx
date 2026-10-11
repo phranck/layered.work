@@ -115,7 +115,7 @@ export interface CardCollapsibleProps extends Omit<ComponentPropsWithoutRef<"sec
  * A card whose header opens and closes what follows it.
  *
  * The whole header is the button, with a caret that turns as the content opens.
- * The content stays in the document whilst closed, so its height can animate in
+ * The content stays in the document while closed, so its height can animate in
  * both directions, and it is inert then, so neither the keyboard nor a screen
  * reader reaches what cannot be seen. Its children are the card's own parts,
  * such as `Card.Body` and `Card.Footer`.

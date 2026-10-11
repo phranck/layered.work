@@ -84,7 +84,7 @@ export function visibleText(root, skip = () => false) {
  * Unicode compatibility forms are folded and invisible characters removed, so
  * a non-breaking space and an ordinary one are the same gap. Typographic
  * quotation marks become straight ones, because Publii curled the straight
- * marks its authors typed whilst rendering, so the curl is the old renderer's
+ * marks its authors typed while rendering, so the curl is the old renderer's
  * and not a difference in what was written. Nothing else is changed.
  *
  * @param text - Any text.
