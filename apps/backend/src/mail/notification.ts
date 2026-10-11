@@ -14,7 +14,7 @@ import type { MailTemplateValues } from "./templates.js";
  * independent of later form edits.
  */
 export function formMailValues(
-  form: FormDetail,
+  form: Pick<FormDetail, "name" | "fields">,
   values: FormSubmissionValues,
   language: ContentLanguage,
   consents: FormConsent[],

@@ -53,11 +53,14 @@ runs("mail template API", () => {
       body: JSON.stringify({ template, language: "de" }),
     });
     expect(preview.status).toBe(200);
-    expect(((await preview.json()) as { data: unknown }).data).toMatchObject({
+    const { data } = (await preview.json()) as { data: { text: string } };
+    expect(data).toMatchObject({
       subject: expect.stringContaining("Contact"),
       text: expect.stringContaining("Vielen Dank"),
       html: expect.stringContaining("<strong>Contact</strong>"),
     });
+    // The sample submission is dated as a real one is, in the preview's language.
+    expect(data.text).toContain("5. Oktober 2026");
   });
 
   it("returns the unknown variable name and refuses an unconfigured live test send", async () => {

@@ -73,6 +73,17 @@ export const mailSettings = body({
 });
 export type MailSettings = z.infer<typeof mailSettings>;
 
+/**
+ * The sender a mail goes out under, as its From line writes it, or null while
+ * no sender address is saved. The API sends with it and the dashboard's mail
+ * preview shows it.
+ *
+ * @param mail - The mail settings.
+ */
+export function mailSenderLine(mail: MailSettings): string | null {
+  return mail.senderAddress ? `${mail.senderName} <${mail.senderAddress}>` : null;
+}
+
 /** The Umami website the site reports to. Null switches analytics off. */
 export const analyticsSettings = body({
   umamiWebsiteId: z.uuid().nullable(),

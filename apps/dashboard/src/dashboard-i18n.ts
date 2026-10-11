@@ -627,6 +627,12 @@ const de = {
   mailTemplateTest: "Test senden",
   mailTemplateAccepted: "SMTP2GO hat die Testnachricht angenommen.",
   mailTemplateRefused: "SMTP2GO hat die Testnachricht abgewiesen.",
+  mailPreviewFrom: "Von",
+  mailPreviewTo: "An",
+  mailPreviewMessage: "Die Nachricht, wie sie ankommt",
+  mailRecipientNotification: "Die Benachrichtigungsadresse des Formulars",
+  mailRecipientConfirmation: "Die Adresse der einsendenden Person",
+  mailSenderMissing: "Noch keine Absenderadresse gespeichert",
 
   // Form editor
   formNew: "Neues Formular",
@@ -1211,6 +1217,12 @@ const en: Catalogue = {
   mailTemplateTest: "Send test",
   mailTemplateAccepted: "SMTP2GO accepted the test message.",
   mailTemplateRefused: "SMTP2GO refused the test message.",
+  mailPreviewFrom: "From",
+  mailPreviewTo: "To",
+  mailPreviewMessage: "The message as it arrives",
+  mailRecipientNotification: "The form's notification address",
+  mailRecipientConfirmation: "The address of whoever sent the form",
+  mailSenderMissing: "No sender address saved yet",
 
   formNew: "New form",
   formFieldCount: (count) => (count === 1 ? "1 field" : `${count} fields`),

@@ -82,12 +82,21 @@ it("edits both languages and previews and test-sends the current draft", async (
   await writeInEditor("Body", "Hello **{{formName}}**");
   chooseTextLanguage("de");
   await writeInEditor("Body", "Hallo **{{formName}}**");
-  fireEvent.click(screen.getByRole("button", { name: "Preview" }));
-  expect(await screen.findByText("Hello Contact", { selector: "pre" })).toBeTruthy();
-  // The German preview does not stand under the English fields.
-  chooseTextLanguage("en");
-  expect(screen.queryByText("Hello Contact", { selector: "pre" })).toBeNull();
-  chooseTextLanguage("de");
+  // The preview follows the text without being asked, in the language the
+  // switch shows, and draws the HTML part in a frame of its own.
+  const lastPreview = () =>
+    JSON.parse(String(requests.filter(({ url }) => url.endsWith("/preview")).at(-1)?.init?.body ?? "null"));
+  await waitFor(() =>
+    expect(lastPreview()).toMatchObject({
+      language: "de",
+      template: { body: { de: "Hallo **{{formName}}**" } },
+    }),
+  );
+  const frame = await screen.findByTitle("The message as it arrives");
+  expect(frame.getAttribute("sandbox")).not.toContain("allow-scripts");
+  await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("<p>Hello Contact</p>"));
+  expect(screen.getByText("Thank you Contact")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Plain text" }));
   expect(screen.getByText("Hello Contact", { selector: "pre" })).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Test recipient"), { target: { value: "reader@example.test" } });
   fireEvent.click(screen.getByRole("button", { name: "Send test" }));
@@ -99,9 +108,7 @@ it("edits both languages and previews and test-sends the current draft", async (
       requests.some(({ url, init }) => url.endsWith("/submission_confirmation") && init?.method === "PUT"),
     ).toBe(true),
   );
-  // The preview and the test go out in the language the switch shows.
-  const previewRequest = requests.find(({ url }) => url.endsWith("/preview"));
-  expect(JSON.parse(String(previewRequest?.init?.body))).toMatchObject({ language: "de" });
+  // The test goes out in the language the switch shows.
   const testRequest = requests.find(({ url }) => url.endsWith("/test"));
   expect(JSON.parse(String(testRequest?.init?.body))).toMatchObject({
     language: "de",

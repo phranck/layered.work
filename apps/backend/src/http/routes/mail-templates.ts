@@ -1,6 +1,8 @@
 import {
   type ContentLanguage,
   ErrorCode,
+  type FormDetail,
+  type FormSubmissionValues,
   mailTemplate,
   mailTemplateKind,
   mailTemplateList,
@@ -14,6 +16,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../../db/connect.js";
 import { logger } from "../../logger.js";
+import { formMailValues } from "../../mail/notification.js";
 import { requireMailConfiguration } from "../../mail/sender.js";
 import { sendThroughSmtp2go } from "../../mail/smtp2go.js";
 import {
@@ -31,13 +34,55 @@ import { HttpError, ok } from "../response.js";
 import { validate } from "../validate.js";
 
 const kindParam = z.object({ kind: mailTemplateKind });
-/** What a preview fills the placeholders with. The notification uses every one there is. */
-const samples: MailTemplateValues<"submission_notification"> = {
-  formName: "Contact",
-  submittedAt: "5 October 2026, 10:00",
-  fields: "Name: Ada\nEmail: ada@example.test",
-  consents: "Consent v1: I agree",
+
+/**
+ * The submission a preview and a test message pretend arrived. It goes through
+ * the same `formMailValues` a real submission does, so the date, the field
+ * labels and the consent read in the preview's language exactly as they would
+ * in a real mail.
+ */
+const SAMPLE_FORM: Pick<FormDetail, "name" | "fields"> = {
+  name: "Contact",
+  fields: [
+    {
+      key: "name",
+      type: "shortText",
+      label: { en: "Name", de: "Name" },
+      hint: { en: "", de: "" },
+      required: true,
+      minLength: 1,
+      maxLength: 120,
+      pattern: null,
+    },
+    {
+      key: "email",
+      type: "email",
+      label: { en: "Email", de: "E-Mail" },
+      hint: { en: "", de: "" },
+      required: true,
+      minLength: 3,
+      maxLength: 254,
+      pattern: null,
+    },
+  ],
 };
+const SAMPLE_VALUES: FormSubmissionValues = { name: "Ada Lovelace", email: "ada@example.test" };
+const SAMPLE_CONSENT: Record<ContentLanguage, string> = {
+  en: "I agree that my message is stored.",
+  de: "Ich bin einverstanden, dass meine Nachricht gespeichert wird.",
+};
+const SAMPLE_TIME = new Date("2026-10-05T08:00:00Z");
+
+/** What a preview fills the placeholders with, in its language. The notification uses every one there is. */
+function samples(language: ContentLanguage): MailTemplateValues<"submission_notification"> {
+  return formMailValues(
+    SAMPLE_FORM,
+    SAMPLE_VALUES,
+    language,
+    [{ key: "consent", revision: "1", notice: SAMPLE_CONSENT[language] }],
+    SAMPLE_TIME,
+  );
+}
 
 function rendered(
   kind: z.infer<typeof mailTemplateKind>,
@@ -45,7 +90,7 @@ function rendered(
   language: ContentLanguage,
 ) {
   try {
-    return renderMailTemplate(mailTemplateDraft(kind, value), language, samples);
+    return renderMailTemplate(mailTemplateDraft(kind, value), language, samples(language));
   } catch (error) {
     throw new HttpError(ErrorCode.InvalidRequest, (error as Error).message);
   }

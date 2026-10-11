@@ -1,9 +1,5 @@
 import {
   type BilingualText,
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  MAIL_ELEMENTS,
-  MAIL_LINK,
   type MailTemplateKind,
   type SaveMailTemplateBody,
   saveMailTemplateBody,
@@ -11,42 +7,18 @@ import {
 import { Button, Card, Field, Input } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createElement, type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
+import { MailPreview } from "./mail-preview.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
-
-const MAIL_TAGS: ReadonlySet<string> = new Set(MAIL_ELEMENTS);
-
-/** Rebuild the API's preview with email-safe tags rather than injecting HTML. */
-function SafeMailPreview({ html }: { html: string }) {
-  const document = new DOMParser().parseFromString(html, "text/html");
-  function nodeToReact(node: ChildNode, key: number): ReactNode {
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
-    if (!(node instanceof Element)) return null;
-    const tag = node.tagName.toLowerCase();
-    if (!MAIL_TAGS.has(tag)) return null;
-    const props: Record<string, unknown> = { key };
-    if (tag === "a") {
-      const href = node.getAttribute("href") ?? "";
-      if (!MAIL_LINK.test(href)) return null;
-      props.href = href;
-      props.rel = "noopener noreferrer";
-    }
-    if (tag === "div" && CONTENT_LANGUAGES.some((language) => language === node.getAttribute("lang"))) {
-      props.lang = node.getAttribute("lang");
-    }
-    return createElement(tag, props, ...Array.from(node.childNodes).map(nodeToReact));
-  }
-  return <div>{Array.from(document.body.childNodes).map(nodeToReact)}</div>;
-}
 
 /** Fixed template kinds, with their editable bilingual content. */
 export function MailTemplatesScreen() {
@@ -226,14 +198,6 @@ function MailTemplateCards({
     () => allowedVariables.map((name) => ({ name, value: "" })),
     [allowedVariables],
   );
-  const preview = useMutation({
-    mutationFn: (request: { value: SaveMailTemplateBody; language: ContentLanguage }) =>
-      api.previewMailTemplate(kind, request.value, request.language),
-    onError: (error) => notifyError(error),
-  });
-  // A preview rendered in the other language is not shown, so what stands under
-  // the fields is always the language they are in.
-  const rendered = preview.variables?.language === language ? preview.data : undefined;
   const test = useMutation({
     mutationFn: (value: SaveMailTemplateBody) => api.testMailTemplate(kind, value, language, recipient),
     onError: (error) => notifyError(error),
@@ -274,25 +238,7 @@ function MailTemplateCards({
       <Card>
         <Card.Header title={text("preview")} />
         <Card.Body>
-          <Button
-            onClick={() => {
-              const value = checked();
-              if (value) preview.mutate({ value, language });
-            }}
-          >
-            {text("preview")}
-          </Button>
-          {rendered && (
-            <>
-              <p>
-                {text("mailTemplateSubject")}: {rendered.subject}
-              </p>
-              <h3>{text("mailTemplateHtml")}</h3>
-              <SafeMailPreview html={rendered.html} />
-              <h3>{text("mailTemplatePlain")}</h3>
-              <pre>{rendered.text}</pre>
-            </>
-          )}
+          <MailPreview kind={kind} draft={draft} language={language} />
           <Field label={text("mailTemplateRecipient")} htmlFor="mail-test-recipient">
             <Input
               id="mail-test-recipient"

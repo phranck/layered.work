@@ -1,0 +1,68 @@
+/*
+ * A mail as it arrives: a head in the dashboard's own face, as a mail client
+ * draws its own, and the message under it on the light page a mail client
+ * gives it. The page takes the system's light canvas colors, so no color of
+ * the dashboard reaches the message and none is written down a second time.
+ */
+
+.mail-preview {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* The head on the left and the choice between the two parts on the right. */
+.mail-preview__bar {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mail-preview__head {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.mail-preview__head dt {
+  color: var(--text-muted);
+}
+
+.mail-preview__head dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.mail-preview__frame,
+.mail-preview__text {
+  display: block;
+  width: 100%;
+  color-scheme: light;
+  background: Canvas;
+  border: 1px solid var(--edge-hairline);
+  border-radius: var(--radius-control);
+}
+
+/* As tall as the message once it has loaded. Until then it holds a few lines,
+   so the card does not jump from nothing. */
+.mail-preview__frame {
+  min-height: 120px;
+}
+
+/* The plain-text part, as a client without HTML shows it: the system's face,
+   the lines as written, on the same page as the HTML part. */
+.mail-preview__text {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 20px 24px;
+  font-family: system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: CanvasText;
+  white-space: pre-wrap;
+}
