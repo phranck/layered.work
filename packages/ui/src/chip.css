@@ -3,8 +3,9 @@
  *
  * Shared by the site, where topics are links, and the dashboard, where an
  * entry's topics are shown beside its text and a block is added from one. A
- * chip that is a link or a button brightens under the pointer at once, because
- * hover is not a change of state.
+ * chip that is a link or a button brightens under the pointer, over
+ * `--hover-duration`: it travels on the site and arrives at once in the
+ * dashboard.
  */
 
 .chip {
@@ -20,6 +21,10 @@
   background: var(--chip-fill);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-chip);
+  transition:
+    color var(--hover-duration) var(--ease),
+    background-color var(--hover-duration) var(--ease),
+    border-color var(--hover-duration) var(--ease);
 }
 
 /* A chip that does something when pressed, such as adding a block. */
@@ -52,8 +57,8 @@ button.chip:focus-visible {
 
 /* The button that takes a chip away, inside it at its end: the icon alone, as
    high as the chip's text. It removes, so under the pointer or the focus it
-   takes the danger color at once. At rest it stays faint, because every chip
-   has one and a row of them in red would outweigh the names. */
+   takes the danger color. At rest it stays faint, because every chip has one
+   and a row of them in red would outweigh the names. */
 .chip__remove {
   display: inline-grid;
   place-items: center;
@@ -65,6 +70,7 @@ button.chip:focus-visible {
   background: none;
   border: 0;
   border-radius: var(--radius-chip);
+  transition: color var(--hover-duration) var(--ease);
 }
 
 .chip__remove:hover {
