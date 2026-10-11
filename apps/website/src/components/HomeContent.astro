@@ -33,7 +33,7 @@ const kicker = (icon: typeof StarIcon, label: string) =>
   createElement(
     ReactFragment,
     null,
-    createElement(icon, { weight: "duotone", "aria-hidden": true, className: "eyebrow__icon" }),
+    createElement(icon, { "aria-hidden": true, className: "eyebrow__icon" }),
     label,
   );
 const gridKicker = (type: string) =>
@@ -78,14 +78,10 @@ if (unknown.length)
               />
             </p>
             <div class="actions">
-              <Button.Link
-                href={`${root}projects/`}
-                tone="primary"
-                icon={createElement(StackSimpleIcon, { weight: "duotone" })}
-              >
+              <Button.Link href={`${root}projects/`} tone="primary" icon={createElement(StackSimpleIcon)}>
                 {de ? "Projekte ansehen" : "Explore projects"}
               </Button.Link>
-              <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon, { weight: "duotone" })}>
+              <Button.Link href={`${root}posts/`} icon={createElement(ArticleIcon)}>
                 {de ? "Beiträge lesen" : "Read the posts"}
               </Button.Link>
             </div>
@@ -151,7 +147,7 @@ if (unknown.length)
             </div>
             <h3 class="title-page">{featured.title}</h3>
             <p class="lede">{summaryOf(featured)}</p>
-            <Button.Inert icon={createElement(ArticleIcon, { weight: "duotone" })} tone="primary">
+            <Button.Inert icon={createElement(ArticleIcon)} tone="primary">
               {de ? "Weiterlesen" : "Read more"}
             </Button.Inert>
           </div>
@@ -170,7 +166,7 @@ if (unknown.length)
             title={homeBlockText(type, homeBlockSettings(type, block.settings), "title", language)}
             actions={createElement(
               Button.Link,
-              { href: `${root}${gridPath(type)}/`, icon: createElement(ArticleIcon, { weight: "duotone" }) },
+              { href: `${root}${gridPath(type)}/`, icon: createElement(ArticleIcon) },
               de ? "Alle ansehen" : "View all",
             )}
           />

@@ -1,12 +1,11 @@
 import type { PropsOf } from "@layered/content";
-import { ArrowsInIcon } from "@phosphor-icons/react/dist/ssr/ArrowsIn";
-import { ArrowsOutIcon } from "@phosphor-icons/react/dist/ssr/ArrowsOut";
 import { createElement } from "react";
 import { Button } from "./button.js";
 import { ContentPlaceholder } from "./content-placeholder.js";
 import { InlineContent } from "./content-renderer.js";
 import { contentUrl, type MediaProps } from "./content-shared.js";
 import { Figure } from "./figure.js";
+import { ArrowsInIcon, ArrowsOutIcon } from "./icons.js";
 /** Model parameters and the library that resolves its source. */
 export type ModelProps = PropsOf<"Model"> & MediaProps;
 /** Server-renderable viewer upgraded by the website's model-viewer island. */
@@ -45,8 +44,8 @@ export function Model({ slug, alt, caption, poster, media }: ModelProps) {
             disabled
             icon={
               <>
-                <ArrowsOutIcon className="content-model__expand" weight="duotone" />
-                <ArrowsInIcon className="content-model__collapse" weight="duotone" />
+                <ArrowsOutIcon className="content-model__expand" />
+                <ArrowsInIcon className="content-model__collapse" />
               </>
             }
           />

@@ -2,8 +2,9 @@
  * A chip: a short label in a pill, such as a topic.
  *
  * Shared by the site, where topics are links, and the dashboard, where an
- * entry's topics are shown beside its text. A chip that is a link brightens
- * under the pointer at once, because hover is not a change of state.
+ * entry's topics are shown beside its text and a block is added from one. A
+ * chip that is a link or a button brightens under the pointer at once, because
+ * hover is not a change of state.
  */
 
 .chip {
@@ -16,12 +17,28 @@
   line-height: 1;
   color: var(--text-secondary);
   white-space: nowrap;
-  background: rgb(255 255 255 / 4%);
+  background: var(--chip-fill);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-chip);
 }
 
-a.chip:hover {
+/* A chip that does something when pressed, such as adding a block. */
+button.chip {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.chip:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
+
+button.chip:focus-visible {
+  border-color: var(--focus-edge);
+  box-shadow: var(--focus-halo);
+}
+
+:is(a, button).chip:hover:not(:disabled) {
   color: var(--text-primary);
   background: var(--hover-tint);
   border-color: var(--edge-strong);

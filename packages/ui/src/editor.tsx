@@ -63,6 +63,25 @@ const EditorTool = forwardRef<HTMLButtonElement, EditorToolProps>(
 const EditorSurface = forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
   <div ref={ref} className={join("editor__surface", className)} {...props} />
 ));
+/** Props for the actions under the writing surface. */
+export interface EditorActionsProps extends DivProps {
+  /** An action that removes or destroys, set apart at the start of the row. */
+  destructive?: ReactNode;
+}
+/**
+ * The actions under the writing surface. They belong to the text rather than
+ * to the properties beside it, so they stand under the text, with the
+ * destructive one set apart at the start so nobody reaches it while aiming for
+ * the others.
+ */
+const EditorActions = forwardRef<HTMLDivElement, EditorActionsProps>(
+  ({ children, className, destructive, ...props }, ref) => (
+    <div ref={ref} className={join("actions", className)} {...props}>
+      {destructive && <span className="actions__aside">{destructive}</span>}
+      {children}
+    </div>
+  ),
+);
 /** The editor properties panel. */
 const EditorPanel = forwardRef<HTMLDivElement, EditorPanelProps>(
   ({ actions, children, className, eyebrow, headerActions, note, title, ...props }, ref) => (
@@ -81,5 +100,6 @@ export const Editor = Object.assign(EditorRoot, {
   Toolbar: EditorToolbar,
   Tool: EditorTool,
   Surface: EditorSurface,
+  Actions: EditorActions,
   Panel: EditorPanel,
 });

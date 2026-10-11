@@ -195,6 +195,13 @@
   margin-inline-start: auto;
 }
 
+/* A row holding an action set apart, such as a sign-out or a delete, takes the
+   rest of the footer, so the set-apart action stands at its start rather than
+   beside the others. */
+.card__footer .actions:has(> .actions__aside) {
+  flex: 1;
+}
+
 .card__note {
   max-width: 52ch;
   font-size: var(--text-sm);

@@ -48,37 +48,31 @@ const STATE_OPTIONS: Record<PublicationState, { label: DashboardStringKey; note:
 
 /**
  * The panel beside the writing surface: what the validator found, the state,
- * the preview, the address, the language and its counterpart, the reading
- * width, the topics, a project's specification, and the move to the trash.
+ * the address, the language and its counterpart, the reading width, the
+ * topics and a project's specification.
  *
  * Everything here is decided about the entry rather than written into it, so
  * an author never leaves the text to change how it is published. A change goes
- * into the draft through `update` and is saved with the text.
+ * into the draft through `update` and is saved with the text. The preview and
+ * the move to the trash act on the text, so they stand under it instead.
  *
  * @param entry - The translation as it is stored.
  * @param draft - What the editor holds.
  * @param checked - The validator's findings for the body.
  * @param area - The list the entry belongs to, for the counterpart's address.
  * @param update - Replaces part of the draft.
- * @param previewPending - Whether a preview is being made.
- * @param openPreview - Opens the preview of the draft.
  * @param translationPending - Whether the other language is being created.
  * @param onTranslate - Creates the other language.
- * @param onTrash - Asks before the entry goes to the trash.
  * @param onSelectFinding - Selects a finding's place in the text.
  */
-
 export function EntryProperties({
   entry,
   draft,
   checked,
   area,
   update,
-  previewPending,
-  openPreview,
   translationPending,
   onTranslate,
-  onTrash,
   onSelectFinding,
 }: {
   entry: EntryDetail;
@@ -86,11 +80,8 @@ export function EntryProperties({
   checked: CheckedContent;
   area: DashboardArea;
   update: (change: Partial<SaveEntryBody>) => void;
-  previewPending: boolean;
-  openPreview: () => void;
   translationPending: boolean;
   onTranslate: () => void;
-  onTrash: () => void;
   onSelectFinding: (finding: Finding) => void;
 }) {
   const { text } = useDashboardLanguage();
@@ -120,13 +111,6 @@ export function EntryProperties({
           ))}
         </Choice>
       </Field>
-      {/* Under the state, because what a reader would see is the question the
-              state raises, whichever state it is. */}
-      <div className="entry-editor__action">
-        <ActionButton action="preview" disabled={previewPending} onClick={openPreview}>
-          {previewPending ? text("previewPending") : text("preview")}
-        </ActionButton>
-      </div>
       <Field label={text("editorSlug")} htmlFor="entry-address">
         <AddressField
           inputId="entry-address"
@@ -170,7 +154,7 @@ export function EntryProperties({
           </>
         )}
       </Field>
-      {/* Only whilst there is no other language to show instead. */}
+      {/* Only while there is no other language to show instead. */}
       {!entry.counterpart && (
         <Field
           label={text("editorShowInOtherLanguage", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
@@ -205,13 +189,6 @@ export function EntryProperties({
       </Field>
       {/* Only a project page shows the pairs, so nothing else is offered them. */}
       {entry.kind === "project" && <SpecsField specs={draft.specs} onChange={(specs) => update({ specs })} />}
-      {!entry.trashed && (
-        <div className="entry-editor__action entry-editor__action--apart">
-          <ActionButton action="delete" onClick={onTrash}>
-            {text("trash")}
-          </ActionButton>
-        </div>
-      )}
     </Editor.Panel>
   );
 }

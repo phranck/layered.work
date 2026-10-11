@@ -1,3 +1,12 @@
+/* A navigation's links in its row, each a chip, as the mockup lists them. The
+   row stays one line, so links past the column's end are cut off by it. */
+.nav-chips {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  vertical-align: middle;
+}
+
 /* The links of a navigation in its dialog, one under another. */
 .nav-links {
   display: flex;

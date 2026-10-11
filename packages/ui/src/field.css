@@ -245,6 +245,12 @@
    option is as wide as the longest label and none is shortened, whereas equal
    flex items share the width of the sum and cut the longest one. */
 .segmented {
+  /* How far the pill stands in from the control's edge, and the radius that
+     keeps it concentric with the control: the control's radius less its
+     hairline and the inset. The options share the pill's corners. */
+  --segment-inset: 2px;
+  --segment-radius: max(calc(var(--radius-control) - 1px - var(--segment-inset)), 0px);
+
   position: relative;
   display: grid;
   grid-auto-columns: 1fr;
@@ -252,7 +258,7 @@
   /* As high as every other control, so a row of them lines up and the control
      takes no more room than a button beside it. */
   height: var(--control-height, auto);
-  padding: 2px;
+  padding: var(--segment-inset);
   background: var(--surface-sunken);
   border: 1px solid var(--edge-hairline);
   border-radius: var(--radius-control);
@@ -269,13 +275,13 @@
  */
 .segmented::before {
   position: absolute;
-  inset-block: 2px;
-  inset-inline-start: 2px;
-  width: calc((100% - 4px) / var(--segment-count, 1));
+  inset-block: var(--segment-inset);
+  inset-inline-start: var(--segment-inset);
+  width: calc((100% - 2 * var(--segment-inset)) / var(--segment-count, 1));
   content: "";
   background: var(--accent-tint);
   border: 1px solid var(--accent-line);
-  border-radius: var(--radius-chip);
+  border-radius: var(--segment-radius);
   transform: translateX(calc(var(--segment-index, 0) * 100%));
   transition: transform var(--duration) var(--ease);
 }
@@ -305,7 +311,7 @@
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: var(--radius-chip);
+  border-radius: var(--segment-radius);
 }
 
 .segmented button:hover {

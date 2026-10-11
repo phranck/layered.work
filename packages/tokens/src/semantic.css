@@ -79,6 +79,9 @@
   --hover-tint: rgb(255 255 255 / 4%);
   --press-tint: rgb(0 0 0 / 18%);
 
+  /* A chip's own fill at rest: the faintest lift off whatever it stands on. */
+  --chip-fill: rgb(255 255 255 / 4%);
+
   /* A control that cannot be used right now: faded far enough to read as out
      of reach, not so far that its label stops being legible. */
   --disabled-opacity: 0.45;

@@ -1,5 +1,5 @@
-import { Button, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
-import { DotsSixVerticalIcon, SignOutIcon, UserCircleIcon } from "@layered/ui/icons";
+import { Card, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
+import { CaretUpDownIcon, DotsSixVerticalIcon, UserCircleIcon, WrenchIcon } from "@layered/ui/icons";
 import { useId, useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
@@ -12,7 +12,7 @@ import { MoveKeysDescription } from "./reorder.js";
 import { dashboardGroups, START_PATH } from "./routes.js";
 import { SaveShortcutProvider } from "./save-shortcut.js";
 import { SearchProvider } from "./search.js";
-import { useAccount, useSession, useSignOut } from "./session-queries.js";
+import { useAccount, useSession } from "./session-queries.js";
 import { useSidebarOrder } from "./sidebar-order.js";
 import { type SidebarHandleProps, useSidebarWidth } from "./sidebar-width.js";
 
@@ -38,7 +38,7 @@ function AreaLink({
       data-current={active ? "true" : undefined}
     >
       <Row.Lead aria-hidden="true">
-        <Icon weight="duotone" />
+        <Icon />
       </Row.Lead>
       <Row.Text title={label} />
       {count !== null && count !== undefined && <Row.Meta>{count}</Row.Meta>}
@@ -59,7 +59,6 @@ function DashboardSidebar({
   const handleLogoClick = useLinkClickHandler(START_PATH);
   const session = useSession();
   const account = useAccount();
-  const signOut = useSignOut();
   const counts = useDashboardCounts();
   const visibleCounts = session.isSuccess && session.data ? counts.data : undefined;
   const sidebar = useRef<HTMLElement>(null);
@@ -69,7 +68,7 @@ function DashboardSidebar({
   return (
     <Sidebar ref={sidebar}>
       <Sidebar.Header>
-        <Logo href={START_PATH} inkHeight="32px" onClick={handleLogoClick} />
+        <Logo href={START_PATH} inkHeight="26px" onClick={handleLogoClick} />
       </Sidebar.Header>
       <Sidebar.Body>
         {session.isError && <ErrorNotice error={session.error} />}
@@ -112,47 +111,36 @@ function DashboardSidebar({
         <MoveKeysDescription id={moveKeysId} />
       </Sidebar.Body>
       <Sidebar.Footer>
-        {signOut.isError && <ErrorNotice error={signOut.error} />}
-        {/* Two targets side by side rather than one inside the other: the row
-            opens the account, and the button at its end signs out. */}
-        <div className="sidebar-account">
-          <Row.Button
-            onClick={onOpenAccount}
-            disabled={!account.data}
-            aria-haspopup="dialog"
-            aria-expanded={accountOpen}
-          >
-            <Row.Tile aria-hidden="true">
-              {account.data?.avatarUrl ? (
-                <img src={account.data.avatarUrl} alt="" />
-              ) : (
-                <UserCircleIcon weight="duotone" />
-              )}
-            </Row.Tile>
-            <Row.Text
-              title={
-                session.isPending
-                  ? text("loadingSession")
-                  : session.isError
-                    ? text("unavailableSession")
-                    : (account.data?.displayName ?? text("signedOut"))
-              }
-              note={
-                account.data
-                  ? account.data.role === "owner"
-                    ? text("roleOwner")
-                    : text("roleEditor")
-                  : undefined
-              }
-            />
-          </Row.Button>
-          <Button.Icon
-            label={signOut.isPending ? text("signOutPending") : text("signOut")}
-            icon={<SignOutIcon weight="duotone" />}
-            disabled={!account.data || signOut.isPending}
-            onClick={() => signOut.mutate()}
+        {/* The account opens as a dialog, which also holds the way out. */}
+        <Row.Button
+          onClick={onOpenAccount}
+          disabled={!account.data}
+          aria-haspopup="dialog"
+          aria-expanded={accountOpen}
+        >
+          <Row.Tile aria-hidden="true">
+            {account.data?.avatarUrl ? <img src={account.data.avatarUrl} alt="" /> : <UserCircleIcon />}
+          </Row.Tile>
+          <Row.Text
+            title={
+              session.isPending
+                ? text("loadingSession")
+                : session.isError
+                  ? text("unavailableSession")
+                  : (account.data?.displayName ?? text("signedOut"))
+            }
+            note={
+              account.data
+                ? account.data.role === "owner"
+                  ? text("roleOwner")
+                  : text("roleEditor")
+                : undefined
+            }
           />
-        </div>
+          <Row.Actions aria-hidden="true">
+            <CaretUpDownIcon />
+          </Row.Actions>
+        </Row.Button>
       </Sidebar.Footer>
       <Sidebar.Handle
         className="dashboard-sidebar__separator"
@@ -214,6 +202,14 @@ export function DashboardShell() {
   );
 }
 
+/**
+ * An area of the sidebar that is not built yet, as the mockup draws one: a
+ * card with a wrench at its center and a line saying so, rather than an empty
+ * page.
+ *
+ * @param titleKey - The area's name, which the bar shows.
+ */
+
 export function AreaScreen({
   titleKey,
 }: {
@@ -221,12 +217,13 @@ export function AreaScreen({
 }) {
   const { text } = useDashboardLanguage();
   return (
-    <Section>
+    <>
       <ScreenTitle title={text(titleKey)} />
-      <Section.Body>
+      <Card className="area-placeholder">
+        <WrenchIcon className="area-placeholder__mark" aria-hidden="true" />
         <p className="unfinished">{text("unfinished")}</p>
-      </Section.Body>
-    </Section>
+      </Card>
+    </>
   );
 }
 

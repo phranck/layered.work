@@ -4,7 +4,8 @@
   width: 100%;
   padding: 0;
   border: 1px solid var(--edge-hairline);
-  border-radius: var(--radius-control);
+  /* A box inside the dialog's body, so its corners are the card's inner radius. */
+  border-radius: var(--card-inner-radius);
   background: var(--surface-sunken);
   overflow: hidden;
   cursor: crosshair;
