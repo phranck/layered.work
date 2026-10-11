@@ -52,7 +52,7 @@ export function SpecsField({
   };
 
   return (
-    <Field label={text("editorSpecs")} hint={text("editorSpecsHint", MAX_ENTRY_SPECS)}>
+    <Field label={text("editorSpecs")}>
       <Reorder.List className="spec-pairs" onMove={move}>
         {specs.map((pair, index) => {
           const key = keys.current[index] ?? String(index);

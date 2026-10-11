@@ -4,12 +4,14 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
 import { ActionButton } from "./action-button.js";
 import { beginDrag, type DragState, endDrag, followPointer, positionsOf, travelHome } from "./drag-order.js";
+import { useDashboardLanguage } from "./language-context.js";
 import "./reorder.css";
 
 /**
@@ -111,12 +113,29 @@ function Item({ index, children }: { index: number; children: ReactNode }) {
 }
 
 /**
+ * What the arrow keys do on a grip, for a screen reader, which reads it as the
+ * grip's description. It is hidden, because the interface explains nothing it
+ * shows: the grip's tooltip names only what it moves.
+ *
+ * @param id - The id the grip's `aria-describedby` names.
+ */
+export function MoveKeysDescription({ id }: { id: string }) {
+  const { text } = useDashboardLanguage();
+  return (
+    <span id={id} hidden>
+      {text("moveKeys")}
+    </span>
+  );
+}
+
+/**
  * The handle an item is moved by, at the item's start: dragged with the
  * pointer, or moved one place with the arrow keys.
  */
 function Handle({ index, label, disabled }: { index: number; label: string; disabled?: boolean }) {
   const order = useOrder();
   const drag = useRef<DragState | null>(null);
+  const keysId = useId();
   const finish = (event: PointerEvent<HTMLButtonElement>) => {
     const state = drag.current;
     drag.current = null;
@@ -127,35 +146,39 @@ function Handle({ index, label, disabled }: { index: number; label: string; disa
     if (to !== index) order.move(index, to);
   };
   return (
-    <ActionButton.Icon
-      action="move"
-      className="reorder-handle"
-      label={label}
-      disabled={disabled}
-      onPointerDown={(event) => {
-        if (event.button !== 0 || disabled) return;
-        const elements = Array.from({ length: order.elements.size }, (_, position) =>
-          order.elements.get(position),
-        );
-        if (elements.some((element) => !element)) return;
-        event.preventDefault();
-        event.currentTarget.focus();
-        drag.current = beginDrag(elements as HTMLElement[], index, event.pointerId, event.clientY);
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        const state = drag.current;
-        if (state && state.pointerId === event.pointerId) followPointer(state, event.clientY);
-      }}
-      onPointerUp={finish}
-      onPointerCancel={finish}
-      onKeyDown={(event) => {
-        const to = event.key === "ArrowUp" ? index - 1 : event.key === "ArrowDown" ? index + 1 : -1;
-        if (to < 0 || to >= order.elements.size) return;
-        event.preventDefault();
-        order.move(index, to);
-      }}
-    />
+    <>
+      <ActionButton.Icon
+        action="move"
+        className="reorder-handle"
+        label={label}
+        aria-describedby={keysId}
+        disabled={disabled}
+        onPointerDown={(event) => {
+          if (event.button !== 0 || disabled) return;
+          const elements = Array.from({ length: order.elements.size }, (_, position) =>
+            order.elements.get(position),
+          );
+          if (elements.some((element) => !element)) return;
+          event.preventDefault();
+          event.currentTarget.focus();
+          drag.current = beginDrag(elements as HTMLElement[], index, event.pointerId, event.clientY);
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const state = drag.current;
+          if (state && state.pointerId === event.pointerId) followPointer(state, event.clientY);
+        }}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+        onKeyDown={(event) => {
+          const to = event.key === "ArrowUp" ? index - 1 : event.key === "ArrowDown" ? index + 1 : -1;
+          if (to < 0 || to >= order.elements.size) return;
+          event.preventDefault();
+          order.move(index, to);
+        }}
+      />
+      <MoveKeysDescription id={keysId} />
+    </>
   );
 }
 export const Reorder = Object.assign(List, { List, Scope, Item, Handle });

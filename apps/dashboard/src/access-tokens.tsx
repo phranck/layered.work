@@ -132,7 +132,6 @@ export function AccessTokensCard() {
         </Field.Set>
       </Card.Stack>
       <Card.Footer
-        note={text("tokenOwnerNote")}
         actions={
           <ActionButton
             action="issueToken"

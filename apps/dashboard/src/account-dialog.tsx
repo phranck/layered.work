@@ -154,7 +154,7 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                     }
                   />
                 </Field>
-                <Field label={text("accountScale")} hint={text("accountScaleHint")}>
+                <Field label={text("accountScale")}>
                   <Segmented
                     aria-label={text("accountScale")}
                     value={scaleDraft}

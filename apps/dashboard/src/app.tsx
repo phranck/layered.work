@@ -1,6 +1,6 @@
 import { Button, Logo, Row, RowList, Section, Sidebar } from "@layered/ui";
 import { DotsSixVerticalIcon, SignOutIcon, UserCircleIcon } from "@layered/ui/icons";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Outlet, useLinkClickHandler, useMatch, useRouteError } from "react-router";
 import { AccountDialog } from "./account-dialog.js";
 import { AppBarSlotsProvider, ScreenTitle } from "./app-bar-slots.js";
@@ -8,6 +8,7 @@ import { useDashboardCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
 import { DashboardLanguageProvider, useDashboardLanguage } from "./language-context.js";
 import { NotificationProvider } from "./notifications.js";
+import { MoveKeysDescription } from "./reorder.js";
 import { dashboardGroups, START_PATH } from "./routes.js";
 import { SaveShortcutProvider } from "./save-shortcut.js";
 import { SearchProvider } from "./search.js";
@@ -64,6 +65,7 @@ function DashboardSidebar({
   const sidebar = useRef<HTMLElement>(null);
   const slot = useRef<HTMLDivElement>(null);
   const groups = useSidebarOrder(dashboardGroups, sidebar, slot);
+  const moveKeysId = useId();
   return (
     <Sidebar ref={sidebar}>
       <Sidebar.Header>
@@ -82,6 +84,7 @@ function DashboardSidebar({
                     type="button"
                     className="section__grip"
                     aria-label={text("moveGroup", text(group.labelKey))}
+                    aria-describedby={moveKeysId}
                     {...groups.grip(group.id)}
                   >
                     <DotsSixVerticalIcon aria-hidden="true" />
@@ -106,6 +109,7 @@ function DashboardSidebar({
         {/* Where a dragged group will land. One element for every drag, so
             nothing is created whilst a gesture runs. */}
         <div ref={slot} className="drop-slot" aria-hidden="true" />
+        <MoveKeysDescription id={moveKeysId} />
       </Sidebar.Body>
       <Sidebar.Footer>
         {signOut.isError && <ErrorNotice error={signOut.error} />}

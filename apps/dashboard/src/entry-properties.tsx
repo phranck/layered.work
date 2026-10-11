@@ -175,7 +175,6 @@ export function EntryProperties({
         <Field
           label={text("editorShowInOtherLanguage", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
           htmlFor="entry-show-in-other-language"
-          hint={text("editorShowInOtherLanguageHint", text(LANGUAGE_TEXT[otherLanguage(entry.language)]))}
         >
           <Switch
             id="entry-show-in-other-language"

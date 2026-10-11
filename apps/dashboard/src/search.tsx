@@ -273,7 +273,6 @@ export function SearchDialog({ onClose }: { onClose: () => void }) {
           {group("entries", text("searchEntries"))}
           {group("media", text("media"))}
         </div>
-        {!settled && <p className="unfinished">{text("searchHint")}</p>}
         {settled && results.isSuccess && hits.length === 0 && (
           <p className="unfinished">{text("searchNothing")}</p>
         )}

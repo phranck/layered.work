@@ -1,6 +1,7 @@
 import { Button, Switch } from "@layered/ui";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { dashboardText } from "./dashboard-i18n.js";
 import { Table } from "./table.js";
 
 afterEach(cleanup);
@@ -58,6 +59,21 @@ function drawOrdered(move: (from: number, to: number) => void, open: () => void,
     </Table>,
   );
 }
+
+it("names only what a grip moves in its tooltip, and leaves the arrow keys to a screen reader", () => {
+  drawOrdered(
+    () => {},
+    () => {},
+    () => {},
+  );
+  const grip = screen.getByRole("button", { name: "Move One" });
+  expect(grip.getAttribute("title")).toBe("Move One");
+  const description = document.getElementById(grip.getAttribute("aria-describedby") ?? "");
+  expect(description?.hidden).toBe(true);
+  expect([dashboardText("en", "moveKeys"), dashboardText("de", "moveKeys")]).toContain(
+    description?.textContent,
+  );
+});
 
 it("opens a row by click, Enter and Space, and moves between rows with the arrow keys", () => {
   const open = vi.fn();

@@ -101,9 +101,7 @@ describe("the blocks screen", () => {
     expect(screen.getAllByText("6 Einträge · Neueste zuerst")).toHaveLength(2);
     expect(screen.getByText("Alle Themen mit Anzahl")).toBeTruthy();
     expect(screen.getByLabelText("Steht immer oben")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "„Hero“ verschieben, mit den Pfeiltasten nach oben oder unten" }),
-    ).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "„Hero“ verschieben" })).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "„Hero“ entfernen" })).toBeNull();
   });
 

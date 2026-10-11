@@ -144,7 +144,7 @@ function ValueEditor({ value, onClose }: { value: NamedValue | null; onClose: ()
           onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
         />
       </Field>
-      <Field label={text("valueText")} hint={text("valueTextHint")} htmlFor="value-text">
+      <Field label={text("valueText")} htmlFor="value-text">
         <Input
           id="value-text"
           value={draft.value}

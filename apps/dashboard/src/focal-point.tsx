@@ -96,9 +96,9 @@ function FocalContent(props: EditorProps) {
   const hintId = useId();
   return (
     <Field label={text("mediaFocal")}>
-      <FieldHint as="p" id={hintId}>
+      <p id={hintId} hidden>
         {text("mediaFocalHint")}
-      </FieldHint>
+      </p>
       <FocalRoot {...props} hintId={hintId} />
       <FieldHint as="output" aria-live="polite">
         {Math.round(props.point.x * 100)}%, {Math.round(props.point.y * 100)}%
