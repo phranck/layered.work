@@ -1,36 +1,40 @@
 import {
   type CreateFormBody,
   createFormBody,
+  FORM_COLUMNS,
   FORM_FIELD_COUNT,
   FORM_FIELD_TYPES,
   FORM_OPTION_COUNT,
   type FormField,
   type FormFieldType,
+  fieldSpan,
   formFields,
 } from "@layered/schemas";
 import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
+import { FormBuilder } from "./forms-builder.js";
 import {
-  addField,
   FIELD_TYPE_TEXT,
+  type FieldPlace,
+  fieldAt,
   newField,
   newForm,
   newOption,
-  removeFieldAt,
-  reorderFields,
-  replaceFieldAt,
+  removeField,
+  replaceField,
+  setFieldSpan,
+  widestSpan,
 } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
-import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
@@ -256,7 +260,56 @@ function FieldRules({ field, update }: { field: FormField; update: (field: FormF
   return null;
 }
 
-/** One form, with the existing Editor compound layout and one selected field's settings. */
+/**
+ * A field's width, one step per column of its row, filled up to the width it
+ * has. A step wider than the other fields of the row leave cannot be pressed,
+ * so a row never holds more than its columns.
+ *
+ * @param span - The columns the field takes.
+ * @param widest - The most it may take beside the other fields of its row.
+ * @param onChange - Called with the width pressed.
+ */
+function SpanControl({
+  span,
+  widest,
+  onChange,
+}: {
+  span: number;
+  widest: number;
+  onChange: (span: number) => void;
+}) {
+  const { text } = useDashboardLanguage();
+  return (
+    <Field label={text("formFieldWidth")} hint={text("formSpanOf", span, FORM_COLUMNS)}>
+      {/* biome-ignore lint/a11y/useSemanticElements: A group of toggle buttons, like the segmented control, where a fieldset would add browser layout to the grid. */}
+      <div
+        className="forms-span"
+        role="group"
+        aria-label={text("formFieldWidth")}
+        style={{ "--columns": FORM_COLUMNS } as CSSProperties}
+      >
+        {Array.from({ length: FORM_COLUMNS }, (_, index) => index + 1).map((step) => (
+          <button
+            key={step}
+            type="button"
+            className="forms-span__step"
+            aria-label={text("formSpanOf", step, FORM_COLUMNS)}
+            aria-pressed={step === span}
+            data-filled={step <= span || undefined}
+            disabled={step > widest}
+            onClick={() => onChange(step)}
+          />
+        ))}
+      </div>
+    </Field>
+  );
+}
+
+/**
+ * One form in the Editor layout: the builder and the site's own preview in the
+ * main column, and in the panel either the selected field's settings or, with
+ * nothing selected, the form's.
+ */
 export function FormEditorScreen({ area }: { area: DashboardArea }) {
   const { id } = useParams();
   const isNew = id === "new";
@@ -271,8 +324,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     enabled: Boolean(id && !isNew),
   });
   const [draft, setDraft] = useState<CreateFormBody | null>(isNew ? newForm(text("formNew")) : null);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [addType, setAddType] = useState<FormFieldType>("shortText");
+  const [selected, setSelected] = useState<FieldPlace | null>(null);
   const [problem, setProblem] = useState("");
 
   useEffect(() => {
@@ -325,14 +377,12 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
     setDraft(next);
     setProblem("");
   };
-  const updateField = (index: number, field: FormField) => {
+  const updateField = (place: FieldPlace, field: FormField) => {
     if (!draft) return;
-    change(replaceFieldAt(draft, index, field));
+    change(replaceField(draft, place, field));
   };
-  // The fields in reading order, row by row, which the list shows and a
-  // selection counts in.
   const fields = draft ? formFields(draft) : [];
-  const selectedField = selected === null ? null : fields[selected];
+  const selectedField = draft && selected ? fieldAt(draft, selected) : undefined;
   const typeOptions = FORM_FIELD_TYPES.map((type) => ({ value: type, label: text(FIELD_TYPE_TEXT[type]) }));
 
   return (
@@ -354,73 +404,29 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
         <Translated>
           <Editor className="forms-editor">
             <Editor.Main>
-              <Card>
-                <Card.Header
-                  title={draft.name || text("formNew")}
-                  meta={fields.length}
-                  actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
-                />
-                <Card.Body>
-                  <Reorder.List
-                    className="forms-fields"
-                    onMove={(from, to) => {
-                      const next = reorderFields(draft, from, to);
-                      const moved = fields[from]?.key;
-                      change(next);
-                      setSelected(formFields(next).findIndex((field) => field.key === moved));
-                    }}
-                  >
-                    {fields.map((field, index) => (
-                      <Reorder.Item key={field.key} index={index}>
-                        <div className="forms-fields__row" data-selected={selected === index || undefined}>
-                          <Reorder.Handle
-                            index={index}
-                            label={text("moveGroup", field.label[language] || field.key)}
-                          />
-                          <button
-                            type="button"
-                            className="forms-fields__select"
-                            onClick={() => setSelected(index)}
-                          >
-                            <span>{field.label[language] || field.key}</span>
-                            <small>
-                              {text(FIELD_TYPE_TEXT[field.type])} · {field.key}
-                            </small>
-                          </button>
-                        </div>
-                      </Reorder.Item>
-                    ))}
-                  </Reorder.List>
-                </Card.Body>
-                <Card.Footer
-                  actions={
-                    <div className="forms-add">
-                      <Select
-                        aria-label={text("formField")}
-                        value={addType}
-                        options={typeOptions}
-                        onChange={(event) => setAddType(event.target.value as FormFieldType)}
-                      />
-                      <Button
-                        icon={<PlusIcon />}
-                        disabled={fields.length >= FORM_FIELD_COUNT.max}
-                        onClick={() => {
-                          change(addField(draft, addType));
-                          setSelected(fields.length);
-                        }}
-                      >
-                        {text("formFieldAdd")}
-                      </Button>
-                    </div>
-                  }
-                />
-              </Card>
-              <Card>
-                <Card.Header title={text("preview")} />
-                <Card.Body>
-                  <FormPreview form={draft} />
-                </Card.Body>
-              </Card>
+              <FormBuilder
+                form={draft}
+                selected={selected}
+                onSelect={setSelected}
+                onChange={(next, place) => {
+                  change(next);
+                  setSelected(place);
+                }}
+                header={
+                  <Card.Header
+                    title={draft.name || text("formNew")}
+                    meta={fields.length}
+                    actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
+                  />
+                }
+              >
+                <Card>
+                  <Card.Header title={text("preview")} />
+                  <Card.Body>
+                    <FormPreview form={draft} />
+                  </Card.Body>
+                </Card>
+              </FormBuilder>
             </Editor.Main>
             <Editor.Panel
               title={
@@ -428,7 +434,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
               }
               headerActions={<Translated.Switch />}
             >
-              {selectedField && selected !== null ? (
+              {selectedField && selected ? (
                 <>
                   <Field label={text("formField")} htmlFor="form-type">
                     <Select
@@ -446,6 +452,11 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                       }}
                     />
                   </Field>
+                  <SpanControl
+                    span={fieldSpan(selectedField)}
+                    widest={widestSpan(draft, selected)}
+                    onChange={(span) => change(setFieldSpan(draft, selected, span))}
+                  />
                   <Field label={text("formFieldKey")} htmlFor="form-key">
                     <Input
                       id="form-key"
@@ -479,7 +490,7 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   <Button
                     disabled={fields.length <= FORM_FIELD_COUNT.min}
                     onClick={() => {
-                      change(removeFieldAt(draft, selected));
+                      change(removeField(draft, selected));
                       setSelected(null);
                     }}
                   >
