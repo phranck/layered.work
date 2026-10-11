@@ -36,11 +36,15 @@
    Sits one step in from the edge, so it takes the radius derived from that inset
    rather than the one derived from the body's padding. */
 
+/* The width is stated rather than left to the card's column: Safari derives the
+   height of a stretched item from its width before the inset is taken off, so
+   at a 4px inset a 338px picture came out 5px taller than its crop. */
 .card__media {
   position: relative;
+  width: calc(100% - 2 * var(--card-media-inset));
   margin: var(--card-media-inset);
   overflow: hidden;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: var(--crop-card);
   background: var(--surface-sunken);
   border-radius: var(--card-media-radius);
 }

@@ -1,4 +1,4 @@
-import { ErrorCode } from "@layered/schemas";
+import { ErrorCode, mailSenderLine } from "@layered/schemas";
 import { config } from "../config.js";
 import type { Database } from "../db/connect.js";
 import { HttpError } from "../http/response.js";
@@ -31,11 +31,7 @@ export async function readMailConfiguration(
   db: Database,
 ): Promise<{ ready: true; apiKey: string; sender: string } | { ready: false; reason: "key" | "sender" }> {
   if (!config.SMTP2GO_API_KEY) return { ready: false, reason: "key" };
-  const { mail } = await readSettings(db);
-  if (!mail.senderAddress) return { ready: false, reason: "sender" };
-  return {
-    ready: true,
-    apiKey: config.SMTP2GO_API_KEY,
-    sender: `${mail.senderName} <${mail.senderAddress}>`,
-  };
+  const sender = mailSenderLine((await readSettings(db)).mail);
+  if (!sender) return { ready: false, reason: "sender" };
+  return { ready: true, apiKey: config.SMTP2GO_API_KEY, sender };
 }

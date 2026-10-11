@@ -755,14 +755,26 @@ dialog.card-dialog::backdrop {
   border-radius: var(--radius-control);
 }
 
-/* Shown in the shape a social card has, 1200 by 630, so the crop is the one a
-   shared link will show. */
+/* The picture in the shape the site gives it, so the crop is the one a reader
+   will see. A sharing picture takes the card of a shared link, 1200 by 630,
+   cropped around the middle as the platforms crop it. */
 .media-field img {
   flex: none;
   height: var(--control-height);
   aspect-ratio: 1200 / 630;
   object-fit: cover;
   border-radius: var(--radius-chip);
+}
+
+/* The home page's plate, around the focal point the field sets inline. */
+.media-field img[data-shape="home-plate"] {
+  aspect-ratio: var(--crop-home-plate);
+}
+
+/* A watermark is laid into pictures whole, so it is shown whole. */
+.media-field img[data-shape="whole"] {
+  aspect-ratio: auto;
+  object-fit: contain;
 }
 
 .media-field__name {

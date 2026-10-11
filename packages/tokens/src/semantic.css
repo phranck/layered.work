@@ -139,6 +139,15 @@
      text of the fields above and below it. */
   --input-padding: 10px 13px;
 
+  /* --- Crops --------------------------------------------------------------
+     The shapes the site cuts a picture to, named by where it does. The
+     dashboard previews a focal point in the same shapes, so they are stated
+     here once and both read them. */
+  --crop-card: 16 / 10;
+  --crop-project-hero: 21 / 9;
+  --crop-project-hero-narrow: 4 / 3;
+  --crop-home-plate: 4 / 3.4;
+
   /* Ligatures are off by default in most browsers for monospace, so they are
      asked for explicitly. Stated once here and applied by whatever sets the
      monospace family, rather than repeated at every code block. */

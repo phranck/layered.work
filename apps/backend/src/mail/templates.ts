@@ -60,6 +60,17 @@ export const DEFAULT_MAIL_TEMPLATES: Record<MailTemplateKind, MailTemplate> = {
 };
 
 const keyOf = (kind: MailTemplateKind) => `mail-template:${kind}`;
+
+/**
+ * The type a mail states for itself, on the element around its body.
+ *
+ * Without it every mail client draws the message in its own default face, a
+ * serif in some of them, and the dashboard's preview cannot show what arrives.
+ * It is inline, because a mail carries no stylesheet, and its faces are the ones
+ * the common systems ship.
+ */
+const MAIL_TYPE =
+  "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.55; color: #1f2328;";
 const pattern = new RegExp(`{{\\s*(${MAIL_PLACEHOLDER_NAME_SOURCE})\\s*}}`, "g");
 
 function substitute(source: string, allowed: readonly string[], values?: Record<string, string>): string {
@@ -215,7 +226,7 @@ export function renderMailTemplate(
   return {
     subject,
     text: blocks.map((block) => block.text).join("\n\n"),
-    html: `<div lang="${language}">${blocks.map((block) => block.html).join("")}</div>`,
+    html: `<div lang="${language}" style="${MAIL_TYPE}">${blocks.map((block) => block.html).join("")}</div>`,
   };
 }
 

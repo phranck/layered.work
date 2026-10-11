@@ -26,7 +26,6 @@ function storedBlocks(): StoredHomeBlock[] {
     enabled: true,
     sortOrder,
     settings: homeBlockSettings(type, {}),
-    pictureUrls: {},
   }));
 }
 
@@ -48,7 +47,6 @@ function renderScreen() {
         enabled: true,
         sortOrder: 9,
         settings: homeBlockSettings(body.type, {}),
-        pictureUrls: {},
       };
       blocks = [...blocks, added];
       return Response.json({ data: added });
