@@ -8,6 +8,7 @@ import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { refreshMediaQueries } from "./media-uploads.js";
 import { CardDialog } from "./modal.js";
+import { PageButtons } from "./page-buttons.js";
 import { queryKeys } from "./query-keys.js";
 
 /** Props for the Unsplash search. */
@@ -106,12 +107,7 @@ export function UnsplashSearch({ onChoose, onCancel }: UnsplashSearchProps) {
             <Button onClick={onCancel} icon={<XIcon />}>
               {text("cancel")}
             </Button>
-            {page > 1 && (
-              <Button onClick={() => setPage((value) => value - 1)}>{text("previousPage")}</Button>
-            )}
-            {results.data?.hasMore && (
-              <Button onClick={() => setPage((value) => value + 1)}>{text("nextPage")}</Button>
-            )}
+            <PageButtons page={page} hasMore={results.data?.hasMore ?? false} onPage={setPage} />
           </>
         }
       />

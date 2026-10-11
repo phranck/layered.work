@@ -11,7 +11,7 @@ import {
   formFields,
 } from "@layered/schemas";
 import { Button, Card, Editor, Field, FormEmbed, Input, Select, Switch } from "@layered/ui";
-import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, GearIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -418,7 +418,11 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                   <Card.Header
                     title={draft.name || text("formNew")}
                     meta={fields.length}
-                    actions={<Button onClick={() => setSelected(null)}>{text("formSettings")}</Button>}
+                    actions={
+                      <Button icon={<GearIcon />} onClick={() => setSelected(null)}>
+                        {text("formSettings")}
+                      </Button>
+                    }
                   />
                 }
               >

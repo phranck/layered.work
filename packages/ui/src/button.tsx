@@ -9,8 +9,13 @@ function buttonClasses(tone: Tone, className?: string): string {
 
 /** Props shared by labelled button shapes. */
 export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
-  /** Optional icon rendered before the label. */
-  icon?: ReactNode;
+  /**
+   * The icon that says what the button does, before the label. Required,
+   * because every action carries one: an icon is recognized before a word is
+   * read, and a button left without one is a type error rather than something
+   * a reviewer has to spot.
+   */
+  icon: ReactNode;
   /** Visual emphasis. */
   tone?: Tone;
 }

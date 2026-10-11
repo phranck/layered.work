@@ -9,7 +9,7 @@ import {
   type WatermarkAnchor,
 } from "@layered/schemas";
 import { Button, Card, Field, Input, MediaCredit, Select, Switch } from "@layered/ui";
-import { TrashIcon } from "@layered/ui/icons";
+import { FloppyDiskIcon, TrashIcon, XIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
@@ -209,8 +209,16 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
             >
               {text("mediaDelete")}
             </Button>
-            <Button onClick={onClose}>{text("cancel")}</Button>
-            <Button type="submit" form={formId} tone="primary" disabled={save.isPending}>
+            <Button icon={<XIcon />} onClick={onClose}>
+              {text("cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form={formId}
+              tone="primary"
+              icon={<FloppyDiskIcon />}
+              disabled={save.isPending}
+            >
               {text(save.isPending ? "savePending" : "save")}
             </Button>
           </>
