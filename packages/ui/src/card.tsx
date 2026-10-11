@@ -32,6 +32,16 @@ const CardLink = forwardRef<HTMLAnchorElement, ComponentPropsWithoutRef<"a">>(
   ),
 );
 /** The card heading and actions. */
+/**
+ * The count or note beside a card's title, whenever there is one. A count of
+ * none is a count, so `0` is drawn as one rather than dropped, and never as a
+ * bare digit run into the title.
+ */
+function CardMeta({ meta }: { meta: ReactNode }) {
+  if (meta === undefined || meta === null || meta === false || meta === "") return null;
+  return <span className="card__meta">{meta}</span>;
+}
+
 const CardHeader = forwardRef<HTMLElement, CardHeaderProps>(
   ({ actions, children, className, eyebrow, meta, title, ...props }, ref) => (
     <header ref={ref} className={join("card__header", className)} {...props}>
@@ -40,7 +50,7 @@ const CardHeader = forwardRef<HTMLElement, CardHeaderProps>(
         {title && (
           <h2 className="card__title">
             {title}
-            {meta && <span className="card__meta">{meta}</span>}
+            <CardMeta meta={meta} />
           </h2>
         )}
         {children}
@@ -132,7 +142,7 @@ const CardCollapsible = forwardRef<HTMLElement, CardCollapsibleProps>(
               <CaretDownIcon className="card__caret" aria-hidden="true" />
               {title}
             </button>
-            {meta && <span className="card__meta">{meta}</span>}
+            <CardMeta meta={meta} />
           </h2>
           {open && actions && <div className="actions">{actions}</div>}
         </header>

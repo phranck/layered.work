@@ -257,7 +257,8 @@ describe("dashboard shell", () => {
     const links = within(navigation).getAllByRole("link");
     // One link per area the dashboard declares, whichever areas those are.
     expect(links).toHaveLength(dashboardAreas.length);
-    expect(within(navigation).getByRole("link", { name: "API-Tokens" })).toBeTruthy();
+    // The tokens are a card on Settings, not an area of their own.
+    expect(within(navigation).queryByRole("link", { name: "API-Tokens" })).toBeNull();
     const settings = within(navigation).getByRole("link", { name: "Einstellungen" });
     fireEvent.click(settings);
 

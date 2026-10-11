@@ -49,6 +49,18 @@ describe("static compounds", () => {
     expect(markup).not.toContain("<script>");
   });
 
+  it("draws a count of none beside a card's title as a count, and nothing where there is no count", () => {
+    expect(renderToStaticMarkup(<Card.Header title="Tokens" meta={0} />)).toContain(
+      '<h2 class="card__title">Tokens<span class="card__meta">0</span></h2>',
+    );
+    expect(renderToStaticMarkup(<Card.Header title="Tokens" />)).toContain(
+      '<h2 class="card__title">Tokens</h2>',
+    );
+    expect(
+      renderToStaticMarkup(<Card.Collapsible title="Tokens" meta={0} open onOpenChange={() => {}} />),
+    ).toContain('<span class="card__meta">0</span>');
+  });
+
   it("renders a band as a section the page stylesheet can alternate", () => {
     const markup = renderToStaticMarkup(
       <Section.Band id="projects">

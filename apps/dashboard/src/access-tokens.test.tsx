@@ -1,3 +1,4 @@
+import { DEFAULT_LISTING } from "@layered/schemas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider } from "react-router";
@@ -15,6 +16,34 @@ const account = {
   avatarMediaId: null,
   avatarUrl: null,
 };
+const settings = {
+  site: {
+    title: { en: "LAYERED.work", de: "LAYERED.work" },
+    footerLine: { en: "", de: "" },
+    defaultLanguage: "en",
+    socialImageMediaId: null,
+    watermarkMediaId: null,
+  },
+  mail: { senderAddress: "hello@layered.work", senderName: "LAYERED.work", apiKeyConfigured: true },
+  analytics: { umamiWebsiteId: null },
+  postListing: DEFAULT_LISTING,
+  projectListing: DEFAULT_LISTING,
+};
+const counts = {
+  posts: 0,
+  pages: 0,
+  projects: 0,
+  tags: 0,
+  media: 0,
+  values: 0,
+  blocks: 0,
+  mainNav: 0,
+  footerNav: 0,
+  social: 0,
+  forms: 0,
+  submissions: 0,
+  mailTemplates: 2,
+};
 const secret = `lwpat_${"x".repeat(43)}`;
 const id = "0199f064-43b7-79a8-917f-eefc8c852497";
 const json = (data: unknown) =>
@@ -26,29 +55,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("issues a scoped token, shows its value once and revokes it", async () => {
+/**
+ * Opens the Settings screen as the given account, against an API that keeps
+ * the tokens it issues, and returns every request the screen made.
+ */
+function openSettings(role: "owner" | "editor") {
   let tokens: unknown[] = [];
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     requests.push({ url, init });
-    if (url.endsWith("/auth/me") || url.endsWith("/account")) return json(account);
-    if (url.endsWith("/dashboard/counts"))
-      return json({
-        posts: 0,
-        pages: 0,
-        projects: 0,
-        tags: 0,
-        media: 0,
-        values: 0,
-        blocks: 0,
-        mainNav: 0,
-        footerNav: 0,
-        social: 0,
-        forms: 0,
-        submissions: 0,
-        mailTemplates: 2,
-      });
+    if (url.endsWith("/auth/me") || url.endsWith("/account")) return json({ ...account, role });
+    if (url.endsWith("/dashboard/counts")) return json(counts);
+    if (url.endsWith("/settings")) return json(settings);
     if (url.endsWith("/access-tokens") && init?.method === "POST") {
       const created = {
         id,
@@ -70,7 +89,7 @@ it("issues a scoped token, shows its value once and revokes it", async () => {
   vi.stubGlobal("fetch", fetcher);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const api = createDashboardApi(queryClient, () => undefined);
-  const router = createDashboardMemoryRouter({ api, queryClient, initialEntries: ["/api-tokens"] });
+  const router = createDashboardMemoryRouter({ api, queryClient, initialEntries: ["/settings"] });
   render(
     <QueryClientProvider client={queryClient}>
       <DashboardApiProvider api={api}>
@@ -78,7 +97,11 @@ it("issues a scoped token, shows its value once and revokes it", async () => {
       </DashboardApiProvider>
     </QueryClientProvider>,
   );
+  return requests;
+}
 
+it("issues a scoped token on the Settings screen, shows its value once and revokes it", async () => {
+  const requests = openSettings("owner");
   fireEvent.change(await screen.findByLabelText("Token name"), { target: { value: "Agent writer" } });
   fireEvent.click(screen.getByRole("switch", { name: "Write content" }));
   fireEvent.click(screen.getByRole("button", { name: "Create token" }));
@@ -95,4 +118,11 @@ it("issues a scoped token, shows its value once and revokes it", async () => {
       requests.some(({ url, init }) => url.endsWith(`/access-tokens/${id}`) && init?.method === "DELETE"),
     ).toBe(true),
   );
+});
+
+it("shows an editor no tokens and asks the API for none", async () => {
+  const requests = openSettings("editor");
+  expect(await screen.findByText("The site")).toBeTruthy();
+  expect(screen.queryByText("API tokens")).toBeNull();
+  expect(requests.some(({ url }) => url.includes("/access-tokens"))).toBe(false);
 });
