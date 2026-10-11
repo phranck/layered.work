@@ -3,6 +3,7 @@ import {
   CONTENT_LANGUAGES,
   type ContentLanguage,
   MAIL_LINK,
+  MAIL_PLACEHOLDER_NAME_SOURCE,
   type MailTemplate,
   type MailTemplateKind,
   type RenderedMail,
@@ -59,7 +60,7 @@ export const DEFAULT_MAIL_TEMPLATES: Record<MailTemplateKind, MailTemplate> = {
 };
 
 const keyOf = (kind: MailTemplateKind) => `mail-template:${kind}`;
-const pattern = /{{\s*([A-Za-z][A-Za-z0-9]*)\s*}}/g;
+const pattern = new RegExp(`{{\\s*(${MAIL_PLACEHOLDER_NAME_SOURCE})\\s*}}`, "g");
 
 function substitute(source: string, allowed: readonly string[], values?: Record<string, string>): string {
   if (source.includes("{{") && !source.replace(pattern, "").includes("{{")) {
@@ -102,9 +103,8 @@ function renderInline(
   let text = "";
   let cursor = node.from;
   for (const child of children(node)) {
-    // The content language reads a lower-case placeholder such as `{{fields}}`
-    // as a reference to a named value. In a mail it is this template's own
-    // placeholder, so it stays in the text and `substitute` fills it in.
+    // The mail profile reads a placeholder such as `{{formName}}` as a node of
+    // its own. It stays in the text, and `substitute` fills it in.
     if (child.name === NODE.ValueReference) continue;
     const before = substitute(source.slice(cursor, child.from), allowed, values);
     html += escapeMarkup(before).replace(/\n/g, "<br>");
@@ -139,13 +139,13 @@ function renderBlock(
   if (node.name === "BulletList" || node.name === "OrderedList") {
     const items = children(node).map((item, index) => {
       if (item.name !== "ListItem") throw new Error(`Mail content does not support ${item.name}.`);
-      const paragraph = children(item).find((child) => child.name === "Paragraph");
-      if (!paragraph) throw new Error("Mail list items need text.");
-      const content = renderInline(paragraph, source, allowed, values);
-      return {
-        html: `<li>${content.html}</li>`,
-        text: `${node.name === "BulletList" ? "-" : `${index + 1}.`} ${content.text}`,
-      };
+      return renderListItem(
+        item,
+        node.name === "BulletList" ? "-" : `${index + 1}.`,
+        source,
+        allowed,
+        values,
+      );
     });
     const tag = node.name === "BulletList" ? "ul" : "ol";
     return {
@@ -156,13 +156,46 @@ function renderBlock(
   throw new Error(`Mail content does not support ${node.name}.`);
 }
 
+/**
+ * One item of a list, with everything it holds: its line, a paragraph that
+ * continues it, and a list nested under it. The mail profile admits all three,
+ * so the mail draws all three rather than its first line alone.
+ *
+ * In the plain text a nested line is indented under the item's marker, which is
+ * how a list reads without markup.
+ */
+function renderListItem(
+  item: Node,
+  marker: string,
+  source: string,
+  allowed: readonly string[],
+  values?: Record<string, string>,
+): { html: string; text: string } {
+  let html = "";
+  const lines: string[] = [];
+  for (const child of children(item)) {
+    if (child.name === "ListMark") continue;
+    if (child.name === "Paragraph") {
+      const content = renderInline(child, source, allowed, values);
+      html += html ? `<br>${content.html}` : content.html;
+      lines.push(content.text);
+    } else {
+      const block = renderBlock(child, source, allowed, values);
+      html += block.html;
+      lines.push(block.text);
+    }
+  }
+  if (lines.length === 0) throw new Error("Mail list items need text.");
+  return { html: `<li>${html}</li>`, text: `${marker} ${lines.join("\n").replace(/\n/g, "\n  ")}` };
+}
+
 /** Only paragraphs, emphasis, lists and HTTP links can enter email HTML. */
 export function validateMailTemplate(template: MailTemplate): void {
   for (const language of CONTENT_LANGUAGES) {
     substitute(template.subject[language], VARIABLES[template.kind]);
     substitute(template.body[language], VARIABLES[template.kind]);
     const source = template.body[language];
-    const tree = parseContent(source);
+    const tree = parseContent(source, "mail");
     for (const block of children(tree.topNode)) renderBlock(block, source, VARIABLES[template.kind]);
   }
 }
@@ -175,7 +208,7 @@ export function renderMailTemplate(
   validateMailTemplate(template);
   const allowed = VARIABLES[template.kind];
   const source = template.body[language];
-  const blocks = children(parseContent(source).topNode).map((block) =>
+  const blocks = children(parseContent(source, "mail").topNode).map((block) =>
     renderBlock(block, source, allowed, values),
   );
   const subject = substitute(template.subject[language], allowed, values).replace(/[\r\n]/g, " ");
