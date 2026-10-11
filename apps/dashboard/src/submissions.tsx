@@ -86,7 +86,7 @@ export function SubmissionsScreen({ area: _area }: { area: DashboardArea }) {
   return (
     <>
       <ScreenTitle title={text("formSubmissions")} />
-      <div className="submissions-layout">
+      <div className="submissions-layout" data-open={selected && form ? "" : undefined}>
         <Card>
           <Card.Header
             title={text("formSubmissions")}

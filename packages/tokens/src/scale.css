@@ -90,14 +90,21 @@
 
   /* A mixed-case label in a box hangs low when its capitals are centred, because
      most of its ink is lowercase and the lowercase mass sits lower. The label is
-     lifted by a quarter of the distance between the cap height and the x-height,
-     measured on Barlow: 0.74em against 0.54em. Applied as an offset of the
-     vertical padding, so the box keeps its height. */
-  --label-lift: 0.06em;
+     lifted so its cap midline stands a quarter of the distance between the cap
+     height and the x-height above the box's center: 0.70em against 0.51em on
+     Barlow, which is 0.047em. That comes on top of the offset that centers
+     Barlow's capitals in the first place. Applied as an offset of the vertical
+     padding, so the box keeps its height. Measured in Safari Technology Preview
+     on "Neu" in a button and "NeXT" in a chip: the cap midline stands 0.6px to
+     0.75px above the center at 15px, against the 0.71px asked for. */
+  --label-lift: calc(var(--icon-cap-offset) + 0.047em);
 
-  /* Barlow capitals centre 0.05em below the middle of a 1.2em control line.
-     Measured from rendered H pixels; SVGs use this after removing their
-     inline baseline box. Icon-only controls have no text to align with. */
+  /* Barlow capitals center 0.05em below the middle of their line box, at a line
+     height of one as much as in a 1.2em control line. Measured from rendered H
+     pixels, and again in Safari Technology Preview on badges and counts drawn
+     four times larger. A label of capitals or figures is moved up by it, and an
+     SVG after removing its inline baseline box. Icon-only controls have no text
+     to align with. */
   --icon-cap-offset: 0.05em;
 
   /* The condensed face runs narrower at the same size, so the tracking that

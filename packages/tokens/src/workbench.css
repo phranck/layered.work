@@ -87,6 +87,18 @@
      color of the scheme no other role takes. */
   --md-value: var(--syntax-sky);
 
+  /* --- Panels and forms ---------------------------------------------------
+     The width of every panel beside the content, in the editors and beside a
+     list. One value, so a panel is the same width on every screen. It is the
+     narrowest at which no control in any panel breaks its line: below 380px the
+     picture field's "Bild auswählen" takes a second line.
+
+     And the most a form standing alone on a screen takes, such as a settings
+     card. A column of fields reads worse the further it is stretched, so the
+     card stops at a measure rather than at the window's edge. */
+  --panel-width: 380px;
+  --form-measure: 720px;
+
   /* --- Sidebar ------------------------------------------------------------
      The width is a property rather than a fixed track, because the drag handle
      writes to it and the stored value is read back into it on load. The bounds

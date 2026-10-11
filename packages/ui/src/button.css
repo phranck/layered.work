@@ -23,6 +23,10 @@
   font-weight: var(--weight-semibold);
   line-height: 1.2;
   letter-spacing: -0.01em;
+  /* A label is read whole, on one line. A button whose label wraps doubles its
+     height and no longer lines up with the controls beside it, so a place too
+     narrow for a label is a layout to fix, not a label to break. */
+  white-space: nowrap;
   /* A button rendered as a link is a button, so it drops the line a link
      takes by default; the face and the edge already say it can be pressed. */
   text-decoration: none;

@@ -533,6 +533,9 @@ dialog.card-dialog::backdrop {
   display: inline-flex;
   align-items: center;
   height: var(--control-height);
+  /* A mixed-case label, lifted as a button's is: the height is fixed and the
+     label centered, so padding below alone moves it up by the lift. */
+  padding-block: 0 calc(2 * var(--label-lift));
   padding-inline: var(--space-3);
   color: var(--state-warning);
   background: color-mix(in oklab, var(--state-warning) 14%, transparent);
@@ -656,6 +659,16 @@ dialog.card-dialog::backdrop {
 /* --- Settings ---------------------------------------------------------------
    One card per group, its fields in a column, with the two languages of one
    value side by side so a reader compares them as a pair. */
+
+/* A settings screen is a form standing alone, so its cards stop at the form
+   measure rather than at the window's edge. */
+.settings-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--workbench-gutter);
+  width: 100%;
+  max-width: var(--form-measure);
+}
 
 .settings-form {
   display: flex;

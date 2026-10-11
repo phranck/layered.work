@@ -198,6 +198,9 @@ function SettingsCardDraft<Group extends SettingsGroup>({
 /**
  * The settings once they have loaded, or the failure that stopped them.
  *
+ * A settings screen is a form standing alone, so its cards stop at the form
+ * measure rather than stretching across the content area.
+ *
  * @param render - Draws the screen from the loaded settings.
  */
 function WithSettings({ area, render }: { area: DashboardArea; render: (view: SettingsView) => ReactNode }) {
@@ -207,8 +210,10 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
   return (
     <>
       <ScreenTitle title={text(area.labelKey)} />
-      {settings.isError && <ErrorNotice error={settings.error} />}
-      {settings.data && render(settings.data)}
+      <div className="settings-screen">
+        {settings.isError && <ErrorNotice error={settings.error} />}
+        {settings.data && render(settings.data)}
+      </div>
     </>
   );
 }
