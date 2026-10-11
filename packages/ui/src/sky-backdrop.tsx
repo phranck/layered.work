@@ -40,8 +40,8 @@ export function SkyBackdrop() {
  * It covers that element from edge to edge of the window, and a band carrying
  * `section--sky` lets it show through while every other band covers it with
  * its own fill, so bands that show it show one sky rather than one each. Its
- * canvas is at most one window tall and stays in the window while the layer
- * is in view, so a long page costs no more than one screen.
+ * canvas fills the window and stands still in it while the bands scroll over
+ * it, and the layer's clip keeps it behind the bands.
  */
 export function SkyBands() {
   return <SkyLayer className="sky--bands" />;

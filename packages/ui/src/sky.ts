@@ -88,8 +88,8 @@ export interface SkyOptions {
 /**
  * Draws the web on a canvas and keeps it moving until stopped.
  *
- * The canvas is drawn at the size its stylesheet gives it: the window behind a
- * whole screen, or at most one window's height behind the bands of a page.
+ * The canvas is drawn at the size its stylesheet gives it, which is the window,
+ * whether it lies behind a whole screen or behind the bands of a page.
  * Under `prefers-reduced-motion: reduce` one frame is drawn and nothing moves;
  * in a hidden tab, or while nothing it shows through is in view, nothing is
  * drawn at all.
