@@ -33,7 +33,7 @@
 }
 
 /* The site names a publication state; the dashboard names the tone of any state
-   it shows. Both reach the same colours here, so a state looks the same
+   it shows. Both reach the same colors here, so a state looks the same
    wherever it stands, and a badge without either stays neutral. */
 .badge[data-status="public"],
 .badge[data-tone="success"] {

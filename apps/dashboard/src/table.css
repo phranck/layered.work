@@ -96,7 +96,7 @@
   width: max(100px, calc(2 * var(--space-5) + var(--actions, 1) * (var(--control-height) + var(--space-3))));
 }
 
-/* A cell of controls holds them on the row's centre line, as an action cell
+/* A cell of controls holds them on the row's center line, as an action cell
    holds its buttons. */
 .table__control {
   display: flex;
@@ -104,7 +104,7 @@
 }
 
 /* A mark takes the square of the icon button it stands in for, so the column
-   keeps its alignment, and the faint colour of an affordance that is absent. */
+   keeps its alignment, and the faint color of an affordance that is absent. */
 .table__mark {
   display: inline-grid;
   place-items: center;

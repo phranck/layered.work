@@ -238,7 +238,7 @@ function TableTitle({ title, thumbnail, tile }: TableTitleProps) {
   );
 }
 
-/** The tones a badge in a table takes, as the state colours name them. */
+/** The tones a badge in a table takes, as the state colors name them. */
 export type BadgeTone = "success" | "warning" | "info" | "danger" | "neutral";
 
 /** A state, drawn as the badge of the Posts list: a dot and a word in a tone. */
