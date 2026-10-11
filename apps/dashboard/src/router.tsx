@@ -103,8 +103,8 @@ export function dashboardRouteObjects({
             return {
               path: area.path,
               children: [
-                { index: true, element: <MailTemplatesScreen /> },
-                { path: ":kind", element: <MailTemplateEditorScreen /> },
+                { index: true, element: <MailTemplatesScreen area={area} /> },
+                { path: ":kind", element: <MailTemplateEditorScreen area={area} /> },
               ],
             };
           if (!kind) return { path: area.path, element: <AreaScreen titleKey={area.labelKey} /> };

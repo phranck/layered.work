@@ -15,7 +15,7 @@ import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
+import { BackToList, HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
 import { ErrorNotice } from "./error-notice.js";
@@ -387,9 +387,8 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
 
   return (
     <>
-      <ScreenTitle title={draft?.name || text("formNew")} />
+      <BackToList area={area} title={draft ? draft.name || text("formNew") : text("loading")} />
       <HeaderEnd>
-        <Button onClick={() => navigate(`/${area.path}`)}>{text("forms")}</Button>
         <Button tone="primary" icon={<FloppyDiskIcon />} disabled={!draft || save.isPending} onClick={submit}>
           {save.isPending ? text("savePending") : text("save")}
         </Button>
