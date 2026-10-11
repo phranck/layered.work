@@ -102,7 +102,15 @@ export type TokenPrincipal = {
   scopes: TokenScope[];
 };
 
-/** Checks only PATs, and looks up revocation and expiry on every request. */
+/**
+ * Checks only PATs, and looks up revocation and expiry on every request.
+ *
+ * A token counts only while the account that issued it is the owner. Only the
+ * owner can see and revoke tokens, so one whose issuer is any other account,
+ * whether it was issued before that rule or its issuer stopped being the
+ * owner, is one nobody could manage, and it is refused rather than left
+ * working.
+ */
 export async function verifyAccessToken(db: Database, value: string): Promise<TokenPrincipal | null> {
   if (!TOKEN_PATTERN.test(value)) return null;
   const now = new Date();
@@ -120,6 +128,7 @@ export async function verifyAccessToken(db: Database, value: string): Promise<To
     .where(
       and(
         eq(accessTokens.tokenHash, digest(value)),
+        eq(users.role, "owner"),
         isNull(accessTokens.revokedAt),
         or(isNull(accessTokens.expiresAt), gt(accessTokens.expiresAt, now)),
       ),

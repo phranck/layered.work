@@ -694,6 +694,23 @@ dialog.card-dialog::backdrop {
   padding-inline-start: var(--space-6);
 }
 
+/* Switches under one label, such as a token's permissions. The label stands
+   where a field's label stands, and the switches keep the step of a list. */
+.settings-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-form__group > legend {
+  margin-block-end: var(--space-2);
+  padding-inline-start: var(--control-text-inset);
+}
+
 /* A sentence about the whole form, set in from the edge as a field's hint is,
    so it lines up with the labels above it rather than with the inputs. */
 .settings-form__note {

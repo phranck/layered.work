@@ -9,7 +9,6 @@ import {
   ArticleIcon,
   BracketsCurlyIcon,
   ChartLineIcon,
-  CodeIcon,
   EnvelopeSimpleIcon,
   FilesIcon,
   GearIcon,
@@ -142,7 +141,6 @@ export const dashboardGroups: DashboardGroup[] = [
     areas: [
       { id: "smtp", path: "smtp", labelKey: "smtp", icon: PaperPlaneTiltIcon },
       { id: "analytics", path: "analytics", labelKey: "analytics", icon: ChartLineIcon },
-      { id: "api-tokens", path: "api-tokens", labelKey: "apiTokens", icon: CodeIcon },
       { id: "settings", path: "settings", labelKey: "settings", icon: GearIcon },
     ],
   },

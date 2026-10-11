@@ -579,6 +579,7 @@ const de = {
   tokenScopeUpload: "Medien hochladen",
   tokenSecret: "Kopiere diesen Wert jetzt. Er wird nicht erneut angezeigt.",
   tokenCreated: "Token erstellt",
+  tokenOwnerNote: "Ein Token handelt mit deinen Rechten, beschränkt auf die gewählten Berechtigungen.",
   tokenRevoke: "Widerrufen",
   tokenRevokeTitle: (name: string) => `„${name}“ widerrufen`,
   tokenRevokeBody:
@@ -1172,6 +1173,7 @@ const en: Catalogue = {
   tokenScopeUpload: "Upload media",
   tokenSecret: "Copy this value now. It will not be shown again.",
   tokenCreated: "Token created",
+  tokenOwnerNote: "A token acts for you, within the permissions chosen for it.",
   tokenRevoke: "Revoke",
   tokenRevokeTitle: (name) => `Revoke “${name}”`,
   tokenRevokeBody: "Whatever uses this token loses access at once. A revoked token cannot be restored.",

@@ -3,12 +3,19 @@ import { Hono } from "hono";
 import { issueAccessToken, listAccessTokens, revokeAccessToken } from "../../auth/access-token.js";
 import { database } from "../../db/connect.js";
 import { responds } from "../api-metadata.js";
-import { principalOf, requireSession } from "../require-session.js";
+import { principalOf, requireOwner, requireSession } from "../require-session.js";
 import { ok } from "../response.js";
 import { validate } from "../validate.js";
 
+/**
+ * Issuing, listing and revoking personal access tokens, for the owner alone.
+ *
+ * `requireSession` reads the session cookie and nothing else, so a bearer token
+ * never reaches these routes and cannot issue another token, whatever its
+ * scopes. `requireOwner` refuses every other account.
+ */
 export const accessTokenRoutes = new Hono();
-accessTokenRoutes.use("*", requireSession);
+accessTokenRoutes.use("*", requireSession, requireOwner);
 
 accessTokenRoutes.get("/", responds(tokenList), async (c) =>
   ok(c, await listAccessTokens(database(), principalOf(c).userId)),

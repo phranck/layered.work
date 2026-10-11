@@ -13,6 +13,7 @@ import { Button, Card, Field, Input, Segmented } from "@layered/ui";
 import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@layered/ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import { AccessTokensCard } from "./access-tokens.js";
 import { ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
@@ -218,14 +219,18 @@ function WithSettings({ area, render }: { area: DashboardArea; render: (view: Se
   );
 }
 
-/** The site's name, its footer line, its language, its fallback sharing picture and its watermark. */
+/**
+ * The site's name, its footer line, its language, its fallback sharing picture
+ * and its watermark, and for the owner the API tokens an agent writes with.
+ */
 export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
   const { text } = useDashboardLanguage();
+  const owner = useAccount().data?.role === "owner";
   return (
     <WithSettings
       area={area}
-      render={(view) => {
-        return (
+      render={(view) => (
+        <>
           <Translated>
             <SettingsCard<"site">
               group="site"
@@ -286,8 +291,9 @@ export function SiteSettingsScreen({ area }: { area: DashboardArea }) {
               )}
             </SettingsCard>
           </Translated>
-        );
-      }}
+          {owner && <AccessTokensCard />}
+        </>
+      )}
     />
   );
 }

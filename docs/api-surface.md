@@ -60,9 +60,9 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `deleteHomeBlock` | DELETE /home-blocks/:id | Owner browser session |
 | `saveSettings` | PUT /settings/site, /settings/mail, /settings/analytics, /settings/postListing or /settings/projectListing | Owner browser session |
 | `sendTestMail` | POST /settings/mail/test | Owner browser session |
-| `fetchAccessTokens` | GET /access-tokens | Browser session |
-| `issueAccessToken` | POST /access-tokens | Browser session |
-| `revokeAccessToken` | DELETE /access-tokens/:id | Browser session |
+| `fetchAccessTokens` | GET /access-tokens | Owner browser session |
+| `issueAccessToken` | POST /access-tokens | Owner browser session |
+| `revokeAccessToken` | DELETE /access-tokens/:id | Owner browser session |
 | `fetchMailTemplates` | GET /mail-templates | Browser session |
 | `saveMailTemplate` | PUT /mail-templates/:kind | Owner browser session |
 | `previewMailTemplate` | POST /mail-templates/:kind/preview | Browser session |

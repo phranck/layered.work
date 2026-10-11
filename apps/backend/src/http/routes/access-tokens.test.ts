@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { entryDetail, issuedToken, tokenList } from "@layered/schemas";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { issueAccessToken } from "../../auth/access-token.js";
 import { SESSION_COOKIE } from "../../auth/cookie.js";
 import { openSession } from "../../auth/session.js";
 import { closeDatabase } from "../../db/connect.js";
@@ -16,6 +17,7 @@ let entryId = "";
 let translationId = "";
 let cookie = "";
 const tokenIds: string[] = [];
+const editorIds: string[] = [];
 
 runs("scoped bearer requests", () => {
   beforeAll(async () => {
@@ -40,9 +42,9 @@ runs("scoped bearer requests", () => {
       await db.delete(auditLog).where(inArray(auditLog.subjectId, tokenIds));
       await db.delete(accessTokens).where(inArray(accessTokens.id, tokenIds));
     }
-    if (userId) {
-      await db.delete(sessions).where(eq(sessions.userId, userId));
-      await db.delete(users).where(eq(users.id, userId));
+    for (const id of [userId, ...editorIds].filter(Boolean)) {
+      await db.delete(sessions).where(eq(sessions.userId, id));
+      await db.delete(users).where(eq(users.id, id));
     }
     await closeDatabase();
     await closeTestDatabase();
@@ -142,6 +144,53 @@ runs("scoped bearer requests", () => {
         })
       ).status,
     ).toBe(401);
+  });
+
+  it("refuses an editor every token route, and every token an editor holds", async () => {
+    const db = await testDatabase();
+    const [editor] = await db
+      .insert(users)
+      .values({
+        email: `scoped-editor-${randomUUID()}@example.test`,
+        passwordHash: "test-only",
+        displayName: "Scoped editor",
+        role: "editor",
+      })
+      .returning({ id: users.id });
+    const editorId = editor?.id ?? "";
+    editorIds.push(editorId);
+    const editorCookie = `${SESSION_COOKIE}=${(await openSession(db, editorId, null)).cookieValue}`;
+    const owned = await issue(`owned-${randomUUID()}`, ["content:read"]);
+
+    const listed = await app.request("/access-tokens", { headers: { cookie: editorCookie } });
+    expect(listed.status).toBe(403);
+    const issued = await app.request("/access-tokens", {
+      method: "POST",
+      headers: { cookie: editorCookie, "content-type": "application/json" },
+      body: JSON.stringify({ name: `editor-${randomUUID()}`, scopes: ["content:read"], expiresAt: null }),
+    });
+    expect(issued.status).toBe(403);
+    const revoked = await app.request(`/access-tokens/${owned.id}`, {
+      method: "DELETE",
+      headers: { cookie: editorCookie },
+    });
+    expect(revoked.status).toBe(403);
+
+    // A token an editor was issued before only the owner could issue one.
+    const held = await issueAccessToken(db, editorId, {
+      name: `held-${randomUUID()}`,
+      scopes: ["content:read"],
+      expiresAt: null,
+    });
+    tokenIds.push(held.id);
+    const used = await app.request("/entries?kind=page", {
+      headers: { authorization: `Bearer ${held.value}` },
+    });
+    expect(used.status).toBe(401);
+    expect(
+      (await app.request("/entries?kind=page", { headers: { authorization: `Bearer ${owned.value}` } }))
+        .status,
+    ).toBe(200);
   });
 
   it("limits bearer requests by source and by token across sources", async () => {
