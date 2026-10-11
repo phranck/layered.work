@@ -54,26 +54,62 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** One field of a saved form, as the editor sends it. */
+type SentField = { type: string; label: unknown; span?: number };
+
+/**
+ * The new-form editor against an API that answers a save and keeps the request,
+ * and a way to read the form the next press of Save sends.
+ */
+function mountRecording() {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    requests.push({ url, init });
+    if (url.endsWith("/auth/me") || url.endsWith("/account")) return json(account);
+    if (url.endsWith("/dashboard/counts")) return json(counts);
+    if (url.endsWith("/forms") && init?.method === "POST")
+      return json({
+        ...JSON.parse(String(init.body)),
+        id: "0199f064-43b7-79a8-917f-eefc8c852497",
+        createdAt: "2026-10-04T00:00:00.000Z",
+        modifiedAt: "2026-10-04T00:00:00.000Z",
+      });
+    if (url.endsWith("/forms")) return json([]);
+    return json(null);
+  });
+  mount(fetcher as typeof fetch);
+  return async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(requests.some(({ url, init }) => url.endsWith("/forms") && init?.method === "POST")).toBe(true),
+    );
+    const sent = requests.find(({ url, init }) => url.endsWith("/forms") && init?.method === "POST");
+    return JSON.parse(String(sent?.init?.body)) as { name: string; rows: { fields: SentField[] }[] };
+  };
+}
+
+/** Gives an element the box the layout would give it, which the test environment does not lay out. */
+function placeAt(
+  element: Element | undefined,
+  box: { left: number; top: number; width: number; height: number },
+) {
+  if (!element) throw new Error("Missing element to place");
+  Object.defineProperty(element, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      ...box,
+      x: box.left,
+      y: box.top,
+      right: box.left + box.width,
+      bottom: box.top + box.height,
+    }),
+  });
+}
+
 describe("form builder", () => {
   it("creates a form with bilingual fields in the order and at the width chosen by the keyboard", async () => {
-    const requests: Array<{ url: string; init?: RequestInit }> = [];
-    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      requests.push({ url, init });
-      if (url.endsWith("/auth/me")) return json(account);
-      if (url.endsWith("/account")) return json(account);
-      if (url.endsWith("/dashboard/counts")) return json(counts);
-      if (url.endsWith("/forms") && init?.method === "POST")
-        return json({
-          ...JSON.parse(String(init.body)),
-          id: "0199f064-43b7-79a8-917f-eefc8c852497",
-          createdAt: "2026-10-04T00:00:00.000Z",
-          modifiedAt: "2026-10-04T00:00:00.000Z",
-        });
-      if (url.endsWith("/forms")) return json([]);
-      return json(null);
-    });
-    mount(fetcher as typeof fetch);
+    const save = mountRecording();
 
     fireEvent.change(await screen.findByLabelText("Form name"), { target: { value: "Demo" } });
     // A click on a palette tile adds its field at the end and selects it.
@@ -86,19 +122,56 @@ describe("form builder", () => {
       key: "ArrowUp",
     });
     fireEvent.click(screen.getByRole("button", { name: "6 of 12" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() =>
-      expect(requests.some(({ url, init }) => url.endsWith("/forms") && init?.method === "POST")).toBe(true),
-    );
-    const sent = requests.find(({ url, init }) => url.endsWith("/forms") && init?.method === "POST");
-    const body = JSON.parse(String(sent?.init?.body));
+    const body = await save();
     expect(body.name).toBe("Demo");
     // The new field went into a row of its own above the first, at the width pressed.
-    const sentRows = body.rows as { fields: { type: string; label: unknown; span?: number }[] }[];
-    expect(sentRows.map((row) => row.fields.map((field) => field.type))).toEqual([["email"], ["shortText"]]);
-    expect(sentRows[0]?.fields[0]?.label).toEqual({ en: "Email address", de: "E-Mail-Adresse" });
-    expect(sentRows[0]?.fields[0]?.span).toBe(6);
+    expect(body.rows.map((row) => row.fields.map((field) => field.type))).toEqual([["email"], ["shortText"]]);
+    expect(body.rows[0]?.fields[0]?.label).toEqual({ en: "Email address", de: "E-Mail-Adresse" });
+    expect(body.rows[0]?.fields[0]?.span).toBe(6);
+  });
+
+  it("sets the only field of a row beside a field at half width by the row's grip, showing what is carried and where it lands", async () => {
+    const save = mountRecording();
+    fireEvent.click(await screen.findByRole("button", { name: "Email" }));
+    fireEvent.click(screen.getByRole("button", { name: "6 of 12" }));
+
+    // The canvas as a browser lays it out: the short text across the first row,
+    // the email at half width in the second, with six columns free beside it.
+    placeAt(document.querySelector(".forms-rows") ?? undefined, { left: 0, top: 0, width: 600, height: 100 });
+    const [first, second] = document.querySelectorAll(".forms-row__grid");
+    placeAt(first, { left: 0, top: 0, width: 600, height: 40 });
+    placeAt(second, { left: 0, top: 60, width: 600, height: 40 });
+    const [shortText, email] = document.querySelectorAll(".forms-field");
+    placeAt(shortText, { left: 0, top: 0, width: 600, height: 40 });
+    placeAt(email, { left: 0, top: 60, width: 295, height: 40 });
+
+    const grip = screen.getByRole("button", { name: "Move row 1 up or down with the arrow keys" });
+    fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientX: -20, clientY: 20 });
+    fireEvent.pointerMove(window, { pointerId: 1, buttons: 1, clientX: 450, clientY: 80 });
+    expect(document.querySelector(".forms-builder__carried")).not.toBeNull();
+    expect(document.querySelector(".forms-row[data-target] .forms-field[data-landing]")).not.toBeNull();
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 450, clientY: 80 });
+    expect(document.querySelector(".forms-builder__carried")).toBeNull();
+
+    const body = await save();
+    expect(body.rows.map((row) => row.fields.map((field) => [field.type, field.span]))).toEqual([
+      [
+        ["email", 6],
+        ["shortText", 6],
+      ],
+    ]);
+  });
+
+  it("moves a row with the arrow keys on its grip", async () => {
+    const save = mountRecording();
+    fireEvent.click(await screen.findByRole("button", { name: "Email" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Move row 1 up or down with the arrow keys" }), {
+      key: "ArrowDown",
+    });
+
+    const body = await save();
+    expect(body.rows.map((row) => row.fields.map((field) => field.type))).toEqual([["email"], ["shortText"]]);
   });
 
   it("hands the focus to a clicked field, so the arrow keys move it", async () => {

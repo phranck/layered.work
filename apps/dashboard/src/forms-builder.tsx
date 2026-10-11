@@ -1,8 +1,10 @@
 import {
+  type ContentLanguage,
   type CreateFormBody,
   FORM_COLUMNS,
   FORM_FIELD_COUNT,
   FORM_FIELD_TYPES,
+  type FormField,
   type FormFieldType,
   fieldSpan,
   formFields,
@@ -12,6 +14,7 @@ import {
   CalendarBlankIcon,
   CaretCircleDownIcon,
   CheckSquareIcon,
+  DotsSixVerticalIcon,
   EnvelopeSimpleIcon,
   HashIcon,
   type IconProps,
@@ -33,12 +36,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { type DragSource, dropTarget, type Gaps, type Marker, markerFor, type RowBox } from "./forms-drag.js";
+import { createPortal } from "react-dom";
+import {
+  type DragSource,
+  dropTarget,
+  gripSource,
+  type Point,
+  type RowBox,
+  rowDropIndex,
+} from "./forms-drag.js";
 import {
   FIELD_TYPE_TEXT,
   type FieldDirection,
   type FieldPlace,
-  type FieldTarget,
+  fieldAt,
   freeColumns,
   insertField,
   keyTarget,
@@ -47,8 +58,8 @@ import {
   type PlacedChange,
   removeField,
 } from "./forms-model.js";
+import { zoomOf } from "./interface-scale.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { Reorder } from "./reorder.js";
 import { useTextLanguage } from "./text-language.js";
 
 /** The mark each kind of field is shown with, in the palette and on the canvas. */
@@ -70,9 +81,6 @@ const FIELD_TYPE_ICON: Record<FormFieldType, ComponentType<IconProps>> = {
  */
 const DRAG_THRESHOLD = 6;
 
-/** How thick the line is that shows where a drop lands. */
-const MARKER_THICKNESS = 3;
-
 /** The direction each arrow key moves a selected field in. */
 const ARROW_DIRECTIONS: Readonly<Record<string, FieldDirection>> = {
   ArrowLeft: "left",
@@ -81,29 +89,40 @@ const ARROW_DIRECTIONS: Readonly<Record<string, FieldDirection>> = {
   ArrowDown: "down",
 };
 
-/** A press on a tile or a field, which turns into a drag once the pointer has travelled. */
-type Press = {
-  source: DragSource;
-  label: string;
-  pointer: number;
-  startX: number;
-  startY: number;
-  dragging: boolean;
-};
+/** The step each arrow key moves a row by its grip. */
+const ROW_STEPS: Readonly<Record<string, number>> = { ArrowUp: -1, ArrowDown: 1 };
 
-/** What a drag in progress shows: the label under the pointer, and the line where it would land. */
-type DragView = { source: DragSource; label: string; x: number; y: number; marker?: Marker };
+/** A press on a tile, a field or a grip, which becomes a drag once the pointer has travelled. */
+type Press = { source: DragSource; element: HTMLElement; pointer: number; start: Point };
 
 /**
- * The canvas as measured at one moment, how to bring the pointer into its
- * coordinates, and where the pointer stands in the builder's own, which the
- * label under the pointer is placed in.
+ * A drag in progress.
+ *
+ * @property rows - The rows as they stood when the drag began, in the canvas's own pixels. Every target is worked out against these, so the canvas making room whilst the drag lasts never moves the targets under the pointer.
+ * @property grab - Where in the carried item it was taken hold of, in its own pixels, so the copy under the pointer stays held at that place.
+ * @property size - The carried item's size, in its own pixels.
+ * @property layer - The workbench, which the copy is drawn in, so that no scrolling column clips it and the workbench's sizes apply to it.
+ * @property inLayer - Where the pointer is, in the window's pixels divided by the interface scale, which the fixed copy is placed in.
+ * @property inCanvas - Where the pointer is, in the canvas's own pixels, which the rows were measured in.
  */
-type Measured = {
+type Drag = {
+  source: DragSource;
+  pointer: number;
   rows: RowBox[];
-  gaps: Gaps;
-  local: (clientX: number, clientY: number) => { x: number; y: number };
-  inBuilder: (clientX: number, clientY: number) => { x: number; y: number };
+  grab: Point;
+  size: { width: number; height: number };
+  layer: HTMLElement;
+  inLayer: Point;
+  inCanvas: Point;
+};
+
+/**
+ * What the canvas shows whilst a drag lasts: the form as the drop would leave
+ * it, and where the carried item would stand in it.
+ */
+type Preview = {
+  form: CreateFormBody;
+  landing: { kind: "field"; place: FieldPlace } | { kind: "row"; row: number };
 };
 
 /** Props for the form builder's palette and canvas. */
@@ -121,16 +140,100 @@ export interface FormBuilderProps {
 }
 
 /**
+ * A field as the canvas shows it: its kind's mark, its label with the mark of
+ * a required field, and the name of its kind. The canvas's card and the copy
+ * carried under the pointer both draw it, so the two look alike.
+ */
+function FieldFace({ field, language }: { field: FormField; language: ContentLanguage }) {
+  const { text } = useDashboardLanguage();
+  const Icon = FIELD_TYPE_ICON[field.type];
+  return (
+    <>
+      <Icon className="forms-field__icon" aria-hidden="true" />
+      <span className="forms-field__label">
+        {field.label[language] || field.key}
+        {field.required && (
+          <span className="forms-field__required" title={text("formRequired")}>
+            {" *"}
+          </span>
+        )}
+      </span>
+      <small className="forms-field__type">{text(FIELD_TYPE_TEXT[field.type])}</small>
+    </>
+  );
+}
+
+/**
+ * The copy that follows the pointer whilst something is dragged, drawn as the
+ * thing itself: a tile as a tile, a field as its card, a row as its fields on
+ * the row's columns.
+ */
+function Carried({
+  source,
+  form,
+  language,
+}: {
+  source: DragSource;
+  form: CreateFormBody;
+  language: ContentLanguage;
+}) {
+  const { text } = useDashboardLanguage();
+  if (source.kind === "palette") {
+    const Icon = FIELD_TYPE_ICON[source.type];
+    return (
+      <span className="forms-palette__tile">
+        <Icon aria-hidden="true" />
+        <span>{text(FIELD_TYPE_TEXT[source.type])}</span>
+      </span>
+    );
+  }
+  if (source.kind === "field") {
+    const field = fieldAt(form, source.place);
+    return field ? (
+      <span className="forms-field__select">
+        <FieldFace field={field} language={language} />
+      </span>
+    ) : null;
+  }
+  const row = form.rows[source.row];
+  return row ? (
+    <div className="forms-row">
+      <span className="forms-row__grip" aria-hidden="true">
+        <DotsSixVerticalIcon />
+      </span>
+      <div className="forms-row__grid" style={{ "--columns": FORM_COLUMNS } as CSSProperties}>
+        {row.fields.map((field) => (
+          <div
+            key={field.key}
+            className="forms-field"
+            style={{ "--span": fieldSpan(field) } as CSSProperties}
+          >
+            <span className="forms-field__select">
+              <FieldFace field={field} language={language} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+}
+
+/**
  * The palette of field types beside the canvas of the form's rows, as in lmaa's
  * builder.
  *
  * A tile adds its field in a row of its own at the end when clicked, and where
  * it is dropped when dragged. A field moves within its row and between rows by
- * dragging, or with the arrow keys once it has the focus; a row moves by its
- * grip. While something is dragged, a line shows where it would land, worked
- * out by `dropTarget` from the boxes measured at that moment. Every change goes
- * through the model in `forms-model.ts`, so a row can never hold more than its
- * twelve columns.
+ * dragging its card, or with the arrow keys once it has the focus. A row moves
+ * by its grip, dragged or with the arrow keys, and the grip of a row holding one
+ * field carries that field, so it can also be set beside another.
+ *
+ * Whilst something is dragged, a copy of it follows the pointer, and the canvas
+ * shows the form as the drop would leave it, with the carried item drawn as a
+ * slot where it would stand and at the width it would take. That form comes
+ * from the same change `forms-model.ts` makes on the drop, so what is shown is
+ * what happens. The targets are worked out against the rows as they stood when
+ * the drag began, so the canvas making room does not move them.
  */
 export function FormBuilder({ form, selected, onSelect, onChange, header, children }: FormBuilderProps) {
   const { text } = useDashboardLanguage();
@@ -139,14 +242,17 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
   const hintId = useId();
   const builder = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
+  const rowElements = useRef(new Map<number, HTMLElement>());
   const rowGrids = useRef(new Map<number, HTMLElement>());
   const fieldBoxes = useRef(new Map<string, HTMLElement>());
   const fieldButtons = useRef(new Map<string, HTMLButtonElement>());
   const press = useRef<Press | null>(null);
+  const dragging = useRef<Drag | null>(null);
   const pressEndedInDrag = useRef(false);
-  const [drag, setDrag] = useState<DragView | null>(null);
+  const [drag, setDragState] = useState<Drag | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const fieldCount = formFields(form).length;
+  const selectedKey = selected ? fieldAt(form, selected)?.key : undefined;
 
   // A field moved by the keyboard is drawn anew in its new row, so the focus is
   // handed to it again once it stands there.
@@ -156,115 +262,191 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
     setFocusKey(null);
   }, [focusKey]);
 
-  const apply = (change: PlacedChange) => onChange(change.form, change.place);
+  /** Keeps the drag in a ref for the pointer handlers and in state for drawing. */
+  const setDrag = (next: Drag | null) => {
+    dragging.current = next;
+    setDragState(next);
+  };
 
-  /** The rows and their fields as they stand on the screen now. */
-  const measure = (): Measured | undefined => {
-    const container = canvas.current;
-    if (!container) return undefined;
-    const box = container.getBoundingClientRect();
-    // The dashboard's interface scale zooms the document, so a box on the screen
-    // is this many times its size in the canvas's own pixels.
-    const zoom = container.offsetWidth > 0 ? box.width / container.offsetWidth : 1;
-    const x = (clientX: number) => (clientX - box.left) / zoom;
-    const y = (clientY: number) => (clientY - box.top) / zoom;
-    const rows = form.rows.map((row, index): RowBox => {
-      const element = rowGrids.current.get(index);
-      const grid = element?.getBoundingClientRect();
-      const outer = element?.closest(".forms-row")?.getBoundingClientRect() ?? grid;
+  /** A point of the window in an element's own pixels, which the interface scale divides by its zoom. */
+  const within = (element: HTMLElement, clientX: number, clientY: number): Point => {
+    const box = element.getBoundingClientRect();
+    const zoom = zoomOf(element);
+    return { x: (clientX - box.left) / zoom, y: (clientY - box.top) / zoom };
+  };
+
+  /** The rows and their fields as they stand on the screen now, in the canvas's own pixels. */
+  const measureRows = (container: HTMLElement): RowBox[] =>
+    form.rows.map((row, index): RowBox => {
+      const grid = rowGrids.current.get(index)?.getBoundingClientRect();
+      const top = within(container, 0, grid?.top ?? 0).y;
+      const bottom = within(container, 0, grid?.bottom ?? 0).y;
       return {
-        top: y(grid?.top ?? 0),
-        bottom: y(grid?.bottom ?? 0),
-        left: x(grid?.left ?? 0),
-        right: x(grid?.right ?? 0),
-        outerTop: y(outer?.top ?? 0),
-        outerBottom: y(outer?.bottom ?? 0),
+        top,
+        bottom,
         fields: row.fields.map((_, column) => {
           const field = fieldBoxes.current.get(`${index}:${column}`)?.getBoundingClientRect();
-          return { start: x(field?.left ?? 0), end: x(field?.right ?? 0) };
+          return {
+            start: within(container, field?.left ?? 0, 0).x,
+            end: within(container, field?.right ?? 0, 0).x,
+          };
         }),
         free: freeColumns(row),
       };
     });
-    const firstGrid = rowGrids.current.get(0);
-    const list = firstGrid?.closest(".forms-rows");
-    const gaps = {
-      column: firstGrid ? Number.parseFloat(getComputedStyle(firstGrid).columnGap) || 0 : 0,
-      row: list ? Number.parseFloat(getComputedStyle(list).rowGap) || 0 : 0,
-    };
-    const builderBox = builder.current?.getBoundingClientRect() ?? box;
-    return {
-      rows,
-      gaps,
-      local: (clientX, clientY) => ({ x: x(clientX), y: y(clientY) }),
-      inBuilder: (clientX, clientY) => ({
-        x: (clientX - builderBox.left) / zoom,
-        y: (clientY - builderBox.top) / zoom,
-      }),
-    };
+
+  /** The element a source is drawn by, whose size and place the carried copy takes. */
+  const carriedElement = (current: Press): HTMLElement | undefined => {
+    const { source } = current;
+    if (source.kind === "palette") return current.element;
+    if (source.kind === "field") return fieldBoxes.current.get(`${source.place.row}:${source.place.column}`);
+    return rowElements.current.get(source.row);
   };
 
-  /** What a drop at a point does to the form. */
-  const dropped = (source: DragSource, target: FieldTarget): PlacedChange =>
-    source.kind === "palette"
-      ? insertField(form, source.type, target)
-      : moveField(form, source.place, target);
+  /** The form a drag would leave, and where the carried item would stand. Nothing where the drop would change nothing. */
+  const previewOf = (current: Drag): Preview | undefined => {
+    const { source } = current;
+    if (source.kind === "row") {
+      const to = rowDropIndex(current.rows, current.inCanvas, source.row);
+      return { form: moveRow(form, source.row, to), landing: { kind: "row", row: to } };
+    }
+    const target = dropTarget(current.rows, current.inCanvas, source);
+    const change: PlacedChange =
+      source.kind === "palette"
+        ? insertField(form, source.type, target)
+        : moveField(form, source.place, target);
+    return change.form === form
+      ? undefined
+      : { form: change.form, landing: { kind: "field", place: change.place } };
+  };
 
-  /** The pointer handlers that let a tile or a field be dragged. */
-  const draggable = (source: DragSource, label: string) => ({
-    onPointerDown(event: PointerEvent<HTMLElement>) {
-      if (event.button !== 0) return;
-      // A browser that sends no click after a drag would otherwise leave the
-      // flag standing, and the next real click would be lost.
-      pressEndedInDrag.current = false;
-      press.current = {
-        source,
-        label,
-        pointer: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        dragging: false,
-      };
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    onPointerMove(event: PointerEvent<HTMLElement>) {
+  /** Moves a row, keeping the selected field selected. */
+  const moveRowTo = (from: number, to: number) => {
+    const next = moveRow(form, from, to);
+    if (!selected) return onChange(next, null);
+    const row =
+      selected.row === from
+        ? to
+        : from < selected.row && to >= selected.row
+          ? selected.row - 1
+          : from > selected.row && to <= selected.row
+            ? selected.row + 1
+            : selected.row;
+    onChange(next, { row, column: selected.column });
+  };
+
+  /** Applies a finished drag, as its preview showed it. */
+  const drop = (current: Drag) => {
+    const preview = previewOf(current);
+    if (!preview) return;
+    if (preview.landing.kind === "row" && current.source.kind === "row")
+      return moveRowTo(current.source.row, preview.landing.row);
+    if (preview.landing.kind === "field") onChange(preview.form, preview.landing.place);
+  };
+
+  /** Ends a press or a drag without dropping. */
+  const release = () => {
+    const current = dragging.current;
+    if (current && builder.current?.hasPointerCapture(current.pointer))
+      builder.current.releasePointerCapture(current.pointer);
+    press.current = null;
+    setDrag(null);
+  };
+
+  // The pointer is followed on the window rather than on the element pressed,
+  // because the canvas redraws whilst the drag lasts and the element pressed
+  // can move to another row or leave the canvas. The handlers read the render
+  // they were last given.
+  const pointer = useRef({
+    move: (_event: globalThis.PointerEvent) => {},
+    up: (_event: globalThis.PointerEvent) => {},
+    cancel: () => {},
+  });
+  pointer.current = {
+    move(event) {
       const current = press.current;
       if (!current || current.pointer !== event.pointerId) return;
-      if (
-        !current.dragging &&
-        Math.hypot(event.clientX - current.startX, event.clientY - current.startY) < DRAG_THRESHOLD
-      )
-        return;
-      current.dragging = true;
-      const measured = measure();
-      if (!measured) return;
-      const target = dropTarget(measured.rows, measured.local(event.clientX, event.clientY), source);
+      // A button released outside the window sends no pointerup here.
+      if (event.buttons === 0) return release();
+      const root = builder.current;
+      const container = canvas.current;
+      if (!root || !container) return;
+      let active = dragging.current;
+      if (!active) {
+        if (Math.hypot(event.clientX - current.start.x, event.clientY - current.start.y) < DRAG_THRESHOLD)
+          return;
+        const element = carriedElement(current);
+        if (!element) return;
+        const box = element.getBoundingClientRect();
+        const zoom = zoomOf(element);
+        // Taken by the builder from here on, so the pointer is not lost to the
+        // element pressed when the canvas redraws it.
+        root.setPointerCapture(event.pointerId);
+        const layer = root.closest<HTMLElement>(".workbench") ?? document.body;
+        active = {
+          source: current.source,
+          pointer: event.pointerId,
+          rows: measureRows(container),
+          grab: { x: (current.start.x - box.left) / zoom, y: (current.start.y - box.top) / zoom },
+          size: { width: box.width / zoom, height: box.height / zoom },
+          layer,
+          inLayer: { x: 0, y: 0 },
+          inCanvas: { x: 0, y: 0 },
+        };
+      }
+      const layerZoom = zoomOf(active.layer);
       setDrag({
-        source,
-        label,
-        ...measured.inBuilder(event.clientX, event.clientY),
-        marker: markerFor(measured.rows, target, source, measured.gaps, MARKER_THICKNESS),
+        ...active,
+        inLayer: { x: event.clientX / layerZoom, y: event.clientY / layerZoom },
+        inCanvas: within(container, event.clientX, event.clientY),
       });
     },
-    onPointerUp(event: PointerEvent<HTMLElement>) {
+    up(event) {
       const current = press.current;
-      press.current = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId))
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      setDrag(null);
-      if (!current?.dragging) return;
+      if (!current || current.pointer !== event.pointerId) return;
+      const active = dragging.current;
+      const container = canvas.current;
+      release();
+      if (!active || !container) return;
       pressEndedInDrag.current = true;
-      const measured = measure();
-      if (measured)
-        apply(
-          dropped(source, dropTarget(measured.rows, measured.local(event.clientX, event.clientY), source)),
-        );
+      drop({ ...active, inCanvas: within(container, event.clientX, event.clientY) });
     },
-    onPointerCancel() {
-      press.current = null;
-      setDrag(null);
+    cancel() {
+      release();
     },
-  });
+  };
+  useEffect(() => {
+    const move = (event: globalThis.PointerEvent) => pointer.current.move(event);
+    const up = (event: globalThis.PointerEvent) => pointer.current.up(event);
+    const cancel = () => pointer.current.cancel();
+    const cancelOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && dragging.current) pointer.current.cancel();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", cancelOnEscape);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", cancelOnEscape);
+    };
+  }, []);
+
+  /** The press that lets a tile, a field or a grip be dragged. */
+  const pressed = (source: DragSource) => (event: PointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    // A browser that sends no click after a drag would otherwise leave the
+    // flag standing, and the next real click would be lost.
+    pressEndedInDrag.current = false;
+    press.current = {
+      source,
+      element: event.currentTarget,
+      pointer: event.pointerId,
+      start: { x: event.clientX, y: event.clientY },
+    };
+  };
 
   /** A click handler that does nothing for the click a finished drag leaves behind. */
   const clicked =
@@ -283,28 +465,29 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
     event.preventDefault();
     const target = keyTarget(form, place, direction);
     if (!target) return;
-    apply(moveField(form, place, target));
+    const change = moveField(form, place, target);
+    onChange(change.form, change.place);
     setFocusKey(key);
   };
 
-  /** Moves a row by its grip, keeping the selected field selected. */
-  const moveRowTo = (from: number, to: number) => {
-    const next = moveRow(form, from, to);
-    if (!selected) return onChange(next, null);
-    const row =
-      selected.row === from
-        ? to
-        : from < selected.row && to >= selected.row
-          ? selected.row - 1
-          : from > selected.row && to <= selected.row
-            ? selected.row + 1
-            : selected.row;
-    onChange(next, { row, column: selected.column });
+  /** Moves a row one step with an arrow key on its grip. */
+  const moveRowByKey = (event: KeyboardEvent<HTMLButtonElement>, row: number) => {
+    const step = ROW_STEPS[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    const to = row + step;
+    if (to < 0 || to >= form.rows.length) return;
+    moveRowTo(row, to);
   };
 
+  const preview = drag ? previewOf(drag) : undefined;
+  const shown = preview?.form ?? form;
+  const landingField = preview?.landing.kind === "field" ? preview.landing.place : undefined;
+  const landingRow = preview?.landing.kind === "row" ? preview.landing.row : undefined;
   const full = fieldCount >= FORM_FIELD_COUNT.max;
+
   return (
-    <div ref={builder} className="forms-builder">
+    <div ref={builder} className="forms-builder" data-dragging={drag ? true : undefined}>
       {/* Escape is handled where it reaches the builder, so it clears the
           selection from wherever the focus is inside it. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: The builder only listens for Escape bubbling up from its own controls. */}
@@ -321,20 +504,20 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
             <div className="forms-palette__tiles">
               {FORM_FIELD_TYPES.map((type) => {
                 const Icon = FIELD_TYPE_ICON[type];
-                const label = text(FIELD_TYPE_TEXT[type]);
                 return (
                   <button
                     key={type}
                     type="button"
                     className="forms-palette__tile"
                     disabled={full}
-                    {...draggable({ kind: "palette", type }, label)}
-                    onClick={clicked(() =>
-                      apply(insertField(form, type, { kind: "new-row", row: form.rows.length })),
-                    )}
+                    onPointerDown={pressed({ kind: "palette", type })}
+                    onClick={clicked(() => {
+                      const change = insertField(form, type, { kind: "new-row", row: form.rows.length });
+                      onChange(change.form, change.place);
+                    })}
                   >
                     <Icon aria-hidden="true" />
-                    <span>{label}</span>
+                    <span>{text(FIELD_TYPE_TEXT[type])}</span>
                   </button>
                 );
               })}
@@ -348,122 +531,122 @@ export function FormBuilder({ form, selected, onSelect, onChange, header, childr
               <p id={hintId} hidden>
                 {text("formFieldMoveHint")}
               </p>
-              <div ref={canvas} className="forms-canvas">
-                <Reorder.List className="forms-rows" onMove={moveRowTo}>
-                  {form.rows.map((row, rowIndex) => {
-                    const free = freeColumns(row);
-                    return (
-                      <Reorder.Item key={row.fields.map((field) => field.key).join(" ")} index={rowIndex}>
-                        <div className="forms-row">
-                          <Reorder.Handle index={rowIndex} label={text("formRowMove", rowIndex + 1)} />
-                          <div
-                            ref={(element) => {
-                              if (element) rowGrids.current.set(rowIndex, element);
-                              else rowGrids.current.delete(rowIndex);
-                            }}
-                            className="forms-row__grid"
-                            style={{ "--columns": FORM_COLUMNS } as CSSProperties}
-                          >
-                            {row.fields.map((field, column) => {
-                              const place = { row: rowIndex, column };
-                              const isSelected = selected?.row === rowIndex && selected.column === column;
-                              const isDragged =
-                                drag?.source.kind === "field" &&
-                                drag.source.place.row === rowIndex &&
-                                drag.source.place.column === column;
-                              const Icon = FIELD_TYPE_ICON[field.type];
-                              const label = field.label[language] || field.key;
-                              return (
-                                <div
-                                  key={field.key}
-                                  ref={(element) => {
-                                    if (element) fieldBoxes.current.set(`${rowIndex}:${column}`, element);
-                                    else fieldBoxes.current.delete(`${rowIndex}:${column}`);
-                                  }}
-                                  className="forms-field"
-                                  data-selected={isSelected || undefined}
-                                  data-dragged={isDragged || undefined}
-                                  style={{ "--span": fieldSpan(field) } as CSSProperties}
-                                >
-                                  <button
-                                    type="button"
-                                    ref={(element) => {
-                                      if (element) fieldButtons.current.set(field.key, element);
-                                      else fieldButtons.current.delete(field.key);
-                                    }}
-                                    className="forms-field__select"
-                                    aria-pressed={isSelected}
-                                    aria-describedby={hintId}
-                                    {...draggable({ kind: "field", place }, label)}
-                                    onClick={clicked((event) => {
-                                      // Safari leaves a clicked button without the focus, and the
-                                      // arrow keys and Escape act on the focused field.
-                                      event.currentTarget.focus();
-                                      onSelect(place);
-                                    })}
-                                    onKeyDown={(event) => moveByKey(event, place, field.key)}
-                                  >
-                                    <Icon className="forms-field__icon" aria-hidden="true" />
-                                    <span className="forms-field__label">
-                                      {label}
-                                      {field.required && (
-                                        <span className="forms-field__required" title={text("formRequired")}>
-                                          {" *"}
-                                        </span>
-                                      )}
-                                    </span>
-                                    <small className="forms-field__type">
-                                      {text(FIELD_TYPE_TEXT[field.type])}
-                                    </small>
-                                  </button>
-                                  <Button.Icon
-                                    className="forms-field__remove"
-                                    label={text("formFieldRemove")}
-                                    icon={<XIcon />}
-                                    disabled={fieldCount <= FORM_FIELD_COUNT.min}
-                                    onClick={() => onChange(removeField(form, place), null)}
-                                  />
-                                </div>
-                              );
-                            })}
-                            {free > 0 && (
-                              <div
-                                className="forms-row__free"
-                                style={{ "--span": free } as CSSProperties}
-                                role="img"
-                                aria-label={text("formFreeColumns", free, FORM_COLUMNS)}
+              <div ref={canvas} className="forms-rows">
+                {shown.rows.map((row, rowIndex) => {
+                  const free = freeColumns(row);
+                  return (
+                    <div
+                      key={row.fields.map((field) => field.key).join(" ")}
+                      ref={(element) => {
+                        if (element) rowElements.current.set(rowIndex, element);
+                        else rowElements.current.delete(rowIndex);
+                      }}
+                      className="forms-row"
+                      data-landing={landingRow === rowIndex || undefined}
+                      data-target={landingField?.row === rowIndex || undefined}
+                    >
+                      <Button.Icon
+                        className="forms-row__grip"
+                        label={text("formRowMove", rowIndex + 1)}
+                        icon={<DotsSixVerticalIcon />}
+                        onPointerDown={pressed(gripSource(form, rowIndex))}
+                        onKeyDown={(event) => moveRowByKey(event, rowIndex)}
+                      />
+                      <div
+                        ref={(element) => {
+                          if (element) rowGrids.current.set(rowIndex, element);
+                          else rowGrids.current.delete(rowIndex);
+                        }}
+                        className="forms-row__grid"
+                        style={{ "--columns": FORM_COLUMNS } as CSSProperties}
+                      >
+                        {row.fields.map((field, column) => {
+                          const place = { row: rowIndex, column };
+                          const isLanding = landingField?.row === rowIndex && landingField.column === column;
+                          const isDragged =
+                            !preview &&
+                            drag?.source.kind === "field" &&
+                            drag.source.place.row === rowIndex &&
+                            drag.source.place.column === column;
+                          return (
+                            <div
+                              key={field.key}
+                              ref={(element) => {
+                                if (element) fieldBoxes.current.set(`${rowIndex}:${column}`, element);
+                                else fieldBoxes.current.delete(`${rowIndex}:${column}`);
+                              }}
+                              className="forms-field"
+                              data-selected={(!drag && field.key === selectedKey) || undefined}
+                              data-landing={isLanding || undefined}
+                              data-dragged={isDragged || undefined}
+                              style={{ "--span": fieldSpan(field) } as CSSProperties}
+                            >
+                              <button
+                                type="button"
+                                ref={(element) => {
+                                  if (element) fieldButtons.current.set(field.key, element);
+                                  else fieldButtons.current.delete(field.key);
+                                }}
+                                className="forms-field__select"
+                                aria-pressed={field.key === selectedKey}
+                                aria-describedby={hintId}
+                                onPointerDown={pressed({ kind: "field", place })}
+                                onClick={clicked((event) => {
+                                  // Safari leaves a clicked button without the focus, and the
+                                  // arrow keys and Escape act on the focused field.
+                                  event.currentTarget.focus();
+                                  onSelect(place);
+                                })}
+                                onKeyDown={(event) => moveByKey(event, place, field.key)}
                               >
-                                {free}/{FORM_COLUMNS}
-                              </div>
-                            )}
+                                <FieldFace field={field} language={language} />
+                              </button>
+                              <Button.Icon
+                                className="forms-field__remove"
+                                label={text("formFieldRemove")}
+                                icon={<XIcon />}
+                                disabled={fieldCount <= FORM_FIELD_COUNT.min}
+                                onClick={() => onChange(removeField(form, place), null)}
+                              />
+                            </div>
+                          );
+                        })}
+                        {free > 0 && (
+                          <div
+                            className="forms-row__free"
+                            style={{ "--span": free } as CSSProperties}
+                            role="img"
+                            aria-label={text("formFreeColumns", free, FORM_COLUMNS)}
+                          >
+                            {free}/{FORM_COLUMNS}
                           </div>
-                        </div>
-                      </Reorder.Item>
-                    );
-                  })}
-                </Reorder.List>
-                {drag?.marker && (
-                  <div
-                    className="forms-canvas__marker"
-                    style={{
-                      left: drag.marker.left,
-                      top: drag.marker.top,
-                      width: drag.marker.width,
-                      height: drag.marker.height,
-                    }}
-                  />
-                )}
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </Card.Body>
           </Card>
           {children}
         </div>
       </div>
-      {drag && (
-        <div className="forms-builder__ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
-          {drag.label}
-        </div>
-      )}
+      {drag &&
+        createPortal(
+          <div
+            className="forms-builder__carried"
+            style={{
+              left: drag.inLayer.x - drag.grab.x,
+              top: drag.inLayer.y - drag.grab.y,
+              width: drag.size.width,
+              height: drag.size.height,
+            }}
+            aria-hidden="true"
+          >
+            <Carried source={drag.source} form={form} language={language} />
+          </div>,
+          drag.layer,
+        )}
     </div>
   );
 }

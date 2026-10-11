@@ -4,7 +4,6 @@
    width decides, because the editor's panel takes a share of the window. */
 
 .forms-builder {
-  position: relative;
   container: forms-builder / inline-size;
 }
 
@@ -96,10 +95,6 @@
 
 /* --- Canvas ------------------------------------------------------------------- */
 
-.forms-canvas {
-  position: relative;
-}
-
 .forms-rows {
   display: grid;
   gap: var(--space-2);
@@ -117,12 +112,37 @@
   border-radius: var(--radius-control);
 }
 
+/* The grip is dragged, so it says so, and like a tile it keeps a touch for the
+   drag. Two classes for the button, because the UI package's button rule sets
+   the pointer with the weight of one; one for the grip drawn in a carried row,
+   which is no button. */
+.button.forms-row__grip,
+.forms-row__grip {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
 .forms-row__grid {
   display: grid;
   flex: 1;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* The row a dragged field would land in. */
+.forms-row[data-target] {
+  border-color: var(--accent-line);
+}
+
+/* A row dragged by its grip, standing where the drop would put it. */
+.forms-row[data-landing] {
+  background: var(--accent-tint);
+  border: 1px dashed var(--focus-edge);
 }
 
 .forms-field {
@@ -162,6 +182,17 @@
 .forms-field[data-selected] .forms-field__select {
   background: var(--accent-tint);
   border-color: var(--focus-edge);
+}
+
+/* Where a dragged field would land, at the width it would take there, drawn as
+   a slot rather than as the field, since the field itself is under the pointer. */
+.forms-field[data-landing] .forms-field__select {
+  background: var(--accent-tint);
+  border: 1px dashed var(--focus-edge);
+}
+
+.forms-field[data-landing] .forms-field__select > * {
+  opacity: 0.5;
 }
 
 .forms-field__icon {
@@ -225,26 +256,41 @@
   border-radius: var(--radius-chip);
 }
 
-/* Where a drop lands: upright between two fields, or across between two rows. */
-.forms-canvas__marker {
-  position: absolute;
+/* --- Drag ---------------------------------------------------------------------
+   The copy under the pointer is the dragged tile, card or row itself, at the
+   size it has on the canvas and held where it was taken hold of, lifted off the
+   page and edged in the accent so it reads as the thing being carried. */
+
+/* Drawn in the workbench rather than in the builder, and fixed to the window,
+   because the editor's main column scrolls and would cut off a copy dragged
+   past its edge. Above the bar, which stands at 20 whilst the page scrolls
+   under it, and below a dialog, which stands at 300. */
+.forms-builder__carried {
+  position: fixed;
+  z-index: 200;
   pointer-events: none;
-  background: var(--accent-500);
-  border-radius: var(--radius-pill);
 }
 
-/* The label under the pointer while something is dragged. */
-.forms-builder__ghost {
-  position: absolute;
-  z-index: 10;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
-  pointer-events: none;
+/* The shadow on the copy itself, so it follows the copy's own corners: a
+   tile's and a card's are a chip's, a row's are a control's. */
+.forms-builder__carried > * {
+  width: 100%;
+  height: 100%;
+  border-color: var(--focus-edge);
+  box-shadow: var(--lift-4);
+}
+
+.forms-builder__carried .forms-field__select,
+.forms-builder__carried .forms-palette__tile {
   background: var(--surface-overlay);
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--radius-chip);
-  box-shadow: var(--lift-3);
-  transform: translate(var(--space-3), var(--space-3));
+}
+
+/* Whilst something is dragged, everything shows the hand holding it, and no
+   text is selected as the pointer passes over it. */
+.forms-builder[data-dragging],
+.forms-builder[data-dragging] * {
+  cursor: grabbing;
+  user-select: none;
 }
 
 /* --- Width -------------------------------------------------------------------
