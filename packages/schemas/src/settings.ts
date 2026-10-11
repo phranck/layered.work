@@ -193,10 +193,7 @@ export const DEFAULT_SETTINGS = {
 
 /** Everything the settings screens show, as the API answers it. */
 export const settingsView = z.object({
-  site: siteSettings.extend({
-    /** Where the dashboard can show each picture the site settings name, or null where none is chosen. */
-    pictureUrls: z.record(z.enum(SITE_PICTURE_SETTINGS), z.string().nullable()),
-  }),
+  site: siteSettings,
   mail: mailSettings.extend({
     /** Whether an SMTP2GO key reached the API. The key itself is never sent. */
     apiKeyConfigured: z.boolean(),

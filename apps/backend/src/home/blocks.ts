@@ -10,7 +10,6 @@ import {
   type StoredHomeBlock,
 } from "@layered/schemas";
 import { asc, eq, sql } from "drizzle-orm";
-import { mediaContentUrl } from "../account/repository.js";
 import type { Database, Transaction } from "../db/connect.js";
 import { type Position, writePositions } from "../db/positions.js";
 import { auditLog, homeBlocks } from "../db/schema/index.js";
@@ -41,19 +40,12 @@ export const HOME_PICTURE_KEYS: readonly string[] = [
 
 /** One row as the dashboard reads it, every declared setting present. */
 function stored(row: Row): StoredHomeBlock {
-  const settings = homeBlockSettings(row.type, row.settings);
-  const pictureUrls = Object.fromEntries(
-    HOME_PICTURE_KEYS.flatMap((key) =>
-      typeof settings[key] === "string" ? [[key, mediaContentUrl(settings[key])]] : [],
-    ),
-  );
   return {
     id: row.id,
     type: row.type,
     enabled: row.enabled,
     sortOrder: row.sortOrder,
-    settings,
-    pictureUrls,
+    settings: homeBlockSettings(row.type, row.settings),
   };
 }
 

@@ -150,7 +150,7 @@ b {
  */
 .plate-stack {
   position: relative;
-  aspect-ratio: 4 / 3.4;
+  aspect-ratio: var(--crop-home-plate);
   perspective: 1400px;
 }
 
@@ -342,7 +342,7 @@ b {
   position: relative;
   margin-block: var(--space-6) var(--space-8);
   overflow: hidden;
-  aspect-ratio: 21 / 9;
+  aspect-ratio: var(--crop-project-hero);
   border: var(--line-width) solid var(--edge-hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--lift-3);
@@ -390,7 +390,7 @@ b {
 }
 @media (width < 720px) {
   .project-hero {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--crop-project-hero-narrow);
   }
   .project-hero__copy {
     inset-inline: var(--space-5);

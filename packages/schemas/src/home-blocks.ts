@@ -26,6 +26,18 @@ export type BilingualText = Record<ContentLanguage, string>;
 export const HOME_GRID_LIMIT = { min: 1, max: 24 } as const;
 
 /**
+ * The shape the site gives a picture a setting names, which the dashboard shows
+ * the picture in.
+ *
+ * - `sharing`: the card of a shared link, 1200 by 630, which the platforms crop
+ *   around the middle whatever the picture's focal point says.
+ * - `home-plate`: the plate the home page's hero shows, cropped around the
+ *   picture's focal point.
+ * - `whole`: the picture uncropped, as a watermark is laid into a picture.
+ */
+export type PictureShape = "sharing" | "home-plate" | "whole";
+
+/**
  * One setting a block declares: its key, what kind of value it holds, and what
  * the block does without one.
  *
@@ -33,7 +45,7 @@ export const HOME_GRID_LIMIT = { min: 1, max: 24 } as const;
  * value against, so a setting added here appears in the dashboard and is
  * validated with no other code. A text is written in both languages, and an
  * empty one shows `fallback`, which the dashboard offers as the field's
- * placeholder.
+ * placeholder. A picture names the shape the site shows it in.
  */
 export type HomeBlockSetting =
   | { key: string; kind: "line"; fallback: BilingualText }
@@ -41,7 +53,7 @@ export type HomeBlockSetting =
   | { key: string; kind: "number"; min: number; max: number; default: number }
   | { key: string; kind: "flag"; default: boolean }
   | { key: string; kind: "choice"; options: readonly [string, ...string[]]; default: string }
-  | { key: string; kind: "picture" };
+  | { key: string; kind: "picture"; shape: PictureShape };
 
 /**
  * Whether the countdown's sky of nodes is drawn behind a block.
@@ -89,7 +101,7 @@ export const HOME_BLOCKS: Readonly<Record<HomeBlockType, HomeBlockDeclaration>> 
         },
       },
       { key: "showPicture", kind: "flag", default: true },
-      { key: "picture", kind: "picture" },
+      { key: "picture", kind: "picture", shape: "home-plate" },
       SKY_SETTING,
     ],
   },
@@ -304,19 +316,13 @@ export function unknownHomeBlocks(blocks: readonly HomeBlock[]): string[] {
   return [...new Set(blocks.filter((block) => !isKnownHomeBlock(block)).map((block) => block.type))].sort();
 }
 
-/**
- * One stored block, as the dashboard reads and edits it.
- *
- * @property pictureUrls - Where the dashboard can show each picture the
- *   settings name, by setting key, so it never builds a media address itself.
- */
+/** One stored block, as the dashboard reads and edits it. */
 export const homeBlock = z.object({
   id: z.uuid(),
   type: z.enum(homeBlockTypes),
   enabled: z.boolean(),
   sortOrder: z.number().int(),
   settings: z.record(z.string(), z.unknown()),
-  pictureUrls: z.record(z.string(), z.string()),
 });
 export type StoredHomeBlock = z.infer<typeof homeBlock>;
 export const homeBlockList = z.array(homeBlock);

@@ -10,12 +10,10 @@ import {
   type SettingsValues,
   type SettingsView,
   SITE_PICTURE_SETTINGS,
-  type SitePictureSetting,
   type SiteSettings,
 } from "@layered/schemas";
 import { asc, eq, inArray } from "drizzle-orm";
 import type { ZodType } from "zod";
-import { mediaContentUrl } from "../account/repository.js";
 import { config } from "../config.js";
 import type { Database } from "../db/connect.js";
 import { auditLog, media, mediaVariants, settings, socialAccounts } from "../db/schema/index.js";
@@ -54,8 +52,8 @@ function readGroup<Group extends SettingsGroup>(
  * Every group, as the settings screens show it.
  *
  * @param db - The database.
- * @returns The values, the address of the sharing picture, and whether a mail
- *   key is configured, which is all the dashboard is told about the key.
+ * @returns The values, and whether a mail key is configured, which is all the
+ *   dashboard is told about the key.
  */
 export async function readSettings(db: Database): Promise<SettingsView> {
   const rows = await db
@@ -63,14 +61,8 @@ export async function readSettings(db: Database): Promise<SettingsView> {
     .from(settings)
     .where(inArray(settings.key, Object.keys(SETTINGS_SCHEMAS)));
   const stored = new Map(rows.map((row) => [row.key, row.value]));
-  const site = readGroup("site", stored);
   return {
-    site: {
-      ...site,
-      pictureUrls: Object.fromEntries(
-        SITE_PICTURE_SETTINGS.map((key) => [key, site[key] ? mediaContentUrl(site[key]) : null]),
-      ) as Record<SitePictureSetting, string | null>,
-    },
+    site: readGroup("site", stored),
     mail: { ...readGroup("mail", stored), apiKeyConfigured: Boolean(config.SMTP2GO_API_KEY) },
     analytics: readGroup("analytics", stored),
     postListing: readGroup("postListing", stored),

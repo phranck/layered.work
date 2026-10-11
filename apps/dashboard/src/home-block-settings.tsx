@@ -6,12 +6,10 @@ import {
   type HomeBlockType,
   MaxLength,
 } from "@layered/schemas";
-import { Button, Field, Input, Segmented, Select, Switch } from "@layered/ui";
-import { ImagesIcon, XIcon } from "@layered/ui/icons";
-import { useState } from "react";
+import { Field, Input, Segmented, Select, Switch } from "@layered/ui";
 import { optionKey, segmentsFit, settingKey } from "./home-block-labels.js";
 import { useDashboardLanguage } from "./language-context.js";
-import { MediaPicker } from "./media-picker.js";
+import { MediaField } from "./media-field.js";
 import { Translated } from "./translated.js";
 
 /**
@@ -21,8 +19,9 @@ import { Translated } from "./translated.js";
  * `@layered/schemas` appears here because its kind says which control it gets:
  * a switch for a flag, a segmented control for a choice whose options are each
  * one short word and a dropdown for any other choice, a number field, a text
- * field and a text area in the language the panel's switch shows, and the
- * media picker for a picture. The panel holds `Translated` around them.
+ * field and the Markdown editor in the language the panel's switch shows, and
+ * a picture field in the shape the site gives the picture. The panel holds
+ * `Translated` around them.
  */
 
 /** What every control needs to read and change its value. */
@@ -31,8 +30,6 @@ interface ControlProps {
   value: unknown;
   onChange: (value: unknown) => void;
   editable: boolean;
-  /** The address of the chosen picture, for the picture control. */
-  pictureUrl?: string;
   /** Prefixes each control's id, so two blocks on one screen cannot share one. */
   idPrefix: string;
 }
@@ -44,20 +41,17 @@ interface ControlProps {
  * @param draft - The values being edited, every declared key present.
  * @param onChange - Replaces one setting's value in the draft.
  * @param editable - Whether the signed-in account may change them.
- * @param pictureUrls - Where each chosen picture can be shown, by setting key.
  */
 export function HomeBlockSettingsFields({
   type,
   draft,
   onChange,
   editable,
-  pictureUrls,
 }: {
   type: HomeBlockType;
   draft: HomeBlockSettings;
   onChange: (key: string, value: unknown) => void;
   editable: boolean;
-  pictureUrls: Record<string, string>;
 }) {
   return (
     <>
@@ -68,7 +62,6 @@ export function HomeBlockSettingsFields({
           value={draft[setting.key]}
           onChange={(value) => onChange(setting.key, value)}
           editable={editable}
-          pictureUrl={pictureUrls[setting.key]}
           idPrefix={`home-${type}`}
         />
       ))}
@@ -191,41 +184,19 @@ function ChoiceControl({ setting, value, onChange, editable, idPrefix }: Control
 }
 
 /** A picture from the library, or none. */
-function PictureControl({ setting, value, onChange, editable, pictureUrl }: ControlProps) {
+function PictureControl({ setting, value, onChange, editable }: ControlProps) {
   const { text } = useDashboardLanguage();
-  const [picking, setPicking] = useState(false);
-  const [chosenUrl, setChosenUrl] = useState<string | null>(null);
-  const url = chosenUrl ?? pictureUrl;
+  if (setting.kind !== "picture") return null;
   return (
-    <Field label={text(settingKey(setting.key))} hint={text("homeSettingPictureHint")}>
-      <div className="media-field">
-        {typeof value === "string" && url ? (
-          <img src={url} alt="" />
-        ) : (
-          <span className="media-field__name">{text("homeSettingPictureNone")}</span>
-        )}
-        <span className="actions media-field__actions">
-          {typeof value === "string" && (
-            <Button disabled={!editable} icon={<XIcon />} onClick={() => onChange(null)}>
-              {text("remove")}
-            </Button>
-          )}
-          <Button disabled={!editable} icon={<ImagesIcon />} onClick={() => setPicking(true)}>
-            {text("mediaPicker")}
-          </Button>
-        </span>
-      </div>
-      {picking && (
-        <MediaPicker
-          onCancel={() => setPicking(false)}
-          onChoose={(item) => {
-            onChange(item.id);
-            setChosenUrl(item.url);
-            setPicking(false);
-          }}
-        />
-      )}
-    </Field>
+    <MediaField
+      label={text(settingKey(setting.key))}
+      hint={text("homeSettingPictureHint")}
+      none={text("homeSettingPictureNone")}
+      mediaId={typeof value === "string" ? value : null}
+      shape={setting.shape}
+      editable={editable}
+      onChange={onChange}
+    />
   );
 }
 

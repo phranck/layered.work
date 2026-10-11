@@ -98,7 +98,6 @@ const settings = {
     defaultLanguage: "en",
     socialImageMediaId: null,
     watermarkMediaId: null,
-    pictureUrls: { socialImageMediaId: null, watermarkMediaId: null },
   },
   mail: { senderAddress: "hello@layered.work", senderName: "LAYERED.work", apiKeyConfigured: true },
   analytics: { umamiWebsiteId: "3e266ac6-8103-4bef-bedb-7d127ed75cc4" },

@@ -288,7 +288,6 @@ function BlockPanel({ block, editable }: { block: StoredHomeBlock; editable: boo
           type={block.type}
           draft={draft}
           editable={editable}
-          pictureUrls={block.pictureUrls}
           onChange={(key, value) => {
             setDraft((current) => ({ ...current, [key]: value }));
             setProblem(null);
