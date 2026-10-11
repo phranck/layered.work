@@ -182,9 +182,10 @@
 /* --- Wide viewports --------------------------------------------------------
    Whilst the panel stands beside the text, the editor fills the content area's
    height and no more: the writing surface takes what the column leaves and its
-   text scrolls inside it, and the panel scrolls inside itself, so the page
-   never grows taller than the window. The surface keeps its least height, so a
-   very short window scrolls the page rather than squeezing the text away. */
+   text scrolls inside it, and the panel and the main column each scroll inside
+   themselves, so the page never grows taller than the window. The surface keeps
+   its least height, so a very short window scrolls the main column rather than
+   squeezing the text away. */
 
 @media (width >= 1100px) {
   .editor {
@@ -194,8 +195,22 @@
     min-height: 0;
   }
 
+  /* A main column taller than the room, such as a form's builder over its
+     preview, scrolls here. Left to overflow the editor's box instead, it would
+     run past the content area's bottom padding to the window's edge, because
+     that padding follows the area's own children and not what overflows them.
+     At its sides the scrolling area reaches into the gutter by a card shadow's
+     reach and is padded by as much, so the cards keep their shadows. At the top
+     and the bottom it ends where the panel ends, so scrolled content is cut on
+     the same lines as the panel's. */
   .editor__main {
+    --editor-scroll-room: var(--space-3);
+
     min-height: 0;
+    margin-inline: calc(-1 * var(--editor-scroll-room));
+    padding-inline: var(--editor-scroll-room);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .editor__surface {

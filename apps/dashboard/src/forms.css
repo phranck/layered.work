@@ -1,7 +1,3 @@
-.forms-editor .editor__main {
-  min-height: 0;
-}
-
 /* --- Builder -----------------------------------------------------------------
    The palette beside the canvas while the builder is wide enough for both, and
    above it once the builder is narrower than the two need. The builder's own
