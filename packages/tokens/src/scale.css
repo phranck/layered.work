@@ -200,6 +200,11 @@
   --duration: 260ms;
   --duration-slow: 460ms;
 
+  /* How long what a pointer changes takes to arrive and to leave: a tint, a
+     color, an edge, a lift. On the site every hover travels, apart from a
+     table's rows; the workbench sets this to nothing. */
+  --hover-duration: var(--duration-fast);
+
   /* How far anything travels when it arrives. Stated once, because two elements
      arriving from different heights read as two systems. */
   --travel: 14px;

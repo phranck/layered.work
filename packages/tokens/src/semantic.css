@@ -14,6 +14,14 @@
  * declared, and one declared elsewhere resolves to nothing at all.
  */
 
+/* Registered, so a change of strength travels like any other value: a browser
+   swaps an unregistered custom property from one value to the next at once. */
+@property --sheen-strength {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 7%;
+}
+
 :root {
   /* --- The neutral ramp ---------------------------------------------------
      Lightness from scale.css, chroma and hue from the palette. */
@@ -97,20 +105,11 @@
 
   /* --- Sheen --------------------------------------------------------------
      Light falls from above, so anything standing off the page is brighter along
-     its top edge. Stated once and laid over whatever fill a control has, rather
-     than written as a gradient between two named colors, which would have to be
-     restated for every fill and every palette.
-
-     The strength is a variable, so a control can lean into it on hover without a
-     second gradient existing anywhere. An element that changes the strength has
-     to restate the gradient too, for the resolution reason at the top of this
-     file. */
+     its top edge. The strength is stated here; the gradient it drives is
+     declared on the button, the one control that carries a sheen, so it reads
+     the strength the button states and a hover that raises the strength
+     brightens the face. */
   --sheen-strength: 7%;
-  --control-sheen: linear-gradient(
-    180deg,
-    rgb(255 255 255 / var(--sheen-strength)),
-    rgb(255 255 255 / 0%) 68%
-  );
 
   /* --- Emboss -------------------------------------------------------------
      The pressed-in lettering of the early iPhone. CSS has no inner shadow for

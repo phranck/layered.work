@@ -13,6 +13,14 @@
   --button-padding-block: 7px;
   --button-padding-inline: 12px;
 
+  /* The sheen laid over a filled face, declared on the button so it reads the
+     strength this button states rather than the one on the root. */
+  --control-sheen: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--sheen-strength)),
+    rgb(255 255 255 / 0%) 68%
+  );
+
   display: inline-flex;
   gap: var(--space-2);
   align-items: center;
@@ -34,9 +42,17 @@
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: var(--radius-chip);
-  /* Only opacity, which changes when the button becomes disabled. Hover changes
-     the sheen and is meant to appear at once. */
-  transition: opacity var(--duration-fast) var(--ease);
+  /* Opacity changes when the button becomes disabled. The rest is what hover
+     and focus change, which travels on the site and appears at once in the
+     dashboard, as `--hover-duration` decides. */
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    color var(--hover-duration) var(--ease),
+    background-color var(--hover-duration) var(--ease),
+    border-color var(--hover-duration) var(--ease),
+    box-shadow var(--hover-duration) var(--ease),
+    text-shadow var(--hover-duration) var(--ease),
+    --sheen-strength var(--hover-duration) var(--ease);
 }
 
 .button:active {

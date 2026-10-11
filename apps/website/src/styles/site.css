@@ -197,6 +197,9 @@ main h1::before {
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
   border-radius: var(--radius-chip);
+  transition:
+    color var(--hover-duration) var(--ease),
+    background-color var(--hover-duration) var(--ease);
 }
 .site-nav a:hover {
   color: var(--text-primary);
@@ -262,6 +265,9 @@ main h1::before {
   background: var(--surface-sunken);
   border: var(--line-width) solid var(--edge-hairline);
   border-radius: var(--radius-control);
+  transition:
+    color var(--hover-duration) var(--ease),
+    border-color var(--hover-duration) var(--ease);
 }
 .search-trigger svg {
   flex: none;
@@ -287,6 +293,9 @@ main h1::before {
   letter-spacing: var(--tracking-wide);
   color: var(--text-faint);
   border-radius: var(--control-inner-radius);
+  transition:
+    color var(--hover-duration) var(--ease),
+    background-color var(--hover-duration) var(--ease);
 }
 .lang-switch__option[aria-current] {
   color: var(--text-primary);
@@ -315,6 +324,7 @@ a.lang-switch__option:hover {
   box-shadow: var(--lift-2);
   pointer-events: none;
   opacity: 0;
+  transition: opacity var(--hover-duration) var(--ease);
 }
 .lang-switch:has([aria-disabled]:hover, [aria-disabled]:focus) .lang-switch__explanation {
   opacity: 1;
@@ -426,6 +436,7 @@ a.lang-switch__option:hover {
   align-items: baseline;
   padding: var(--space-3);
   border-radius: var(--card-inner-radius);
+  transition: background-color var(--hover-duration) var(--ease);
 }
 .search-result:hover,
 .search-result:focus-visible {
@@ -498,6 +509,7 @@ a.lang-switch__option:hover {
 .footer-nav a {
   font-size: var(--text-base);
   color: var(--text-muted);
+  transition: color var(--hover-duration) var(--ease);
 }
 .footer-nav a:hover {
   color: var(--text-primary);
@@ -534,6 +546,11 @@ a.lang-switch__option:hover {
   background: var(--surface-raised);
   border: var(--line-width) solid var(--edge-hairline);
   border-radius: var(--radius-control);
+  transition:
+    color var(--hover-duration) var(--ease),
+    transform var(--hover-duration) var(--ease),
+    border-color var(--hover-duration) var(--ease),
+    background-color var(--hover-duration) var(--ease);
 }
 .social-row__link--text {
   width: auto;
