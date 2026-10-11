@@ -10,7 +10,6 @@ import { Button, Card, Field, Input } from "@layered/ui";
 import { FloppyDiskIcon, PencilSimpleIcon, PlusIcon, TrashIcon, XIcon } from "@layered/ui/icons";
 import { type FormEvent, useState } from "react";
 import { ScreenTitle } from "./app-bar-slots.js";
-import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { CardDialog, ConfirmDialog } from "./modal.js";
@@ -22,6 +21,7 @@ import {
 } from "./named-values-query.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
+import { Table } from "./table.js";
 
 /**
  * The named values: lines of text kept once, which content refers to as
@@ -65,31 +65,33 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
             </Button>
           }
         />
-        {(values.isError || values.isPending || (values.isSuccess && !list.length) || !owner) && (
+        {(values.isError || values.isPending || !owner) && (
           <Card.Body>
             {values.isError && <ErrorNotice error={values.error} />}
             {values.isPending && <p>{text("loading")}</p>}
-            {values.isSuccess && !list.length && <p>{text("valuesEmpty")}</p>}
             {!owner && <p>{text("ownerOnly")}</p>}
           </Card.Body>
         )}
+        {values.isSuccess && !list.length && <Table.Empty>{text("valuesEmpty")}</Table.Empty>}
         {list.length > 0 && (
-          <DataTable
+          <Table
             columns={[
               { kind: "title", label: text("valueName") },
+              { kind: "text", label: text("valueText") },
               { kind: "text", label: text("columnUses") },
               { kind: "action", label: text("columnAction"), actions: 2 },
             ]}
           >
             {list.map((value) => (
-              <DataTable.Row key={value.id} onOpen={owner ? () => setDialog({ editing: value }) : undefined}>
-                <DataTable.Cell kind="title">
-                  <DataTable.Title title={writeValueReference(value.name)} note={value.value} />
-                </DataTable.Cell>
-                <DataTable.Cell>
+              <Table.Row key={value.id} onOpen={owner ? () => setDialog({ editing: value }) : undefined}>
+                <Table.Cell kind="title">
+                  <Table.Title title={writeValueReference(value.name)} />
+                </Table.Cell>
+                <Table.Cell>{value.value}</Table.Cell>
+                <Table.Cell>
                   {value.usedBy.length ? text("valueUsedIn", value.usedBy.length) : text("valueUnused")}
-                </DataTable.Cell>
-                <DataTable.Actions>
+                </Table.Cell>
+                <Table.Actions>
                   <Button.Icon
                     label={text("navigationEdit", value.name)}
                     icon={<PencilSimpleIcon />}
@@ -103,10 +105,10 @@ export function NamedValuesScreen({ area }: { area: DashboardArea }) {
                     disabled={!owner}
                     onClick={() => setDialog({ deleting: value })}
                   />
-                </DataTable.Actions>
-              </DataTable.Row>
+                </Table.Actions>
+              </Table.Row>
             ))}
-          </DataTable>
+          </Table>
         )}
       </Card>
       {dialog && "editing" in dialog && (

@@ -15,7 +15,6 @@ import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
 import { refreshCounts } from "./dashboard-counts.js";
-import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { addField, FIELD_TYPE_TEXT, newField, newForm, newOption, reorderFields } from "./forms-model.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -23,6 +22,7 @@ import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
 import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
+import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./forms.css";
@@ -48,15 +48,12 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
             <ErrorNotice error={list.error} />
           </Card.Body>
         )}
-        {list.isSuccess && list.data.length === 0 && (
-          <Card.Body>
-            <p className="unfinished">{text("formsEmpty")}</p>
-          </Card.Body>
-        )}
+        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("formsEmpty")}</Table.Empty>}
         {list.isSuccess && list.data.length > 0 && (
-          <DataTable
+          <Table
             columns={[
               { kind: "title", label: text("columnName") },
+              { kind: "text", label: text("formSlug") },
               { kind: "count", label: text("columnFields") },
               { kind: "action", label: text("columnAction") },
             ]}
@@ -64,23 +61,24 @@ export function FormsScreen({ area }: { area: DashboardArea }) {
             {list.data.map((form) => {
               const open = () => navigate(`/${area.path}/${form.id}`);
               return (
-                <DataTable.Row key={form.id} onOpen={open}>
-                  <DataTable.Cell kind="title">
-                    <DataTable.Title title={form.name} note={form.slug} />
-                  </DataTable.Cell>
-                  <DataTable.Cell kind="count">{form.fields.length}</DataTable.Cell>
-                  <DataTable.Actions>
+                <Table.Row key={form.id} onOpen={open}>
+                  <Table.Cell kind="title">
+                    <Table.Title title={form.name} />
+                  </Table.Cell>
+                  <Table.Cell>{form.slug}</Table.Cell>
+                  <Table.Cell kind="count">{form.fields.length}</Table.Cell>
+                  <Table.Actions>
                     <Button.Icon
                       label={text("editForm")}
                       icon={<PencilSimpleIcon />}
                       tabIndex={-1}
                       onClick={open}
                     />
-                  </DataTable.Actions>
-                </DataTable.Row>
+                  </Table.Actions>
+                </Table.Row>
               );
             })}
-          </DataTable>
+          </Table>
         )}
       </Card>
     </>
@@ -355,7 +353,6 @@ export function FormEditorScreen({ area }: { area: DashboardArea }) {
                 <Card.Body>
                   <Reorder.List
                     className="forms-fields"
-                    count={draft.fields.length}
                     onMove={(from, to) => {
                       change(reorderFields(draft, from, to));
                       setSelected(to);

@@ -13,7 +13,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useDashboardApi } from "./dashboard-context.js";
 import type { DashboardStringKey } from "./dashboard-i18n.js";
-import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { FocalPointEditor } from "./focal-point.js";
 import { useDashboardLanguage } from "./language-context.js";
@@ -21,6 +20,7 @@ import { MediaDeleteDialog, MediaUses } from "./media-deletion.js";
 import { PROCESSING_TEXT, pollWhileProcessing } from "./media-processing.js";
 import { CardDialog } from "./modal.js";
 import { queryKeys } from "./query-keys.js";
+import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -173,7 +173,7 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
               </p>
             )}
             {detail.processing.variants.length > 0 && (
-              <DataTable
+              <Table
                 columns={[
                   { kind: "text", label: text("columnFormat") },
                   { kind: "title", label: text("mediaDimensions") },
@@ -181,15 +181,15 @@ function MediaMetadataEditor({ detail, onClose }: { detail: MediaDetail; onClose
                 ]}
               >
                 {detail.processing.variants.map((variant) => (
-                  <DataTable.Row key={`${variant.format}-${variant.width}`}>
-                    <DataTable.Cell>{variant.format.toUpperCase()}</DataTable.Cell>
-                    <DataTable.Cell kind="title">
+                  <Table.Row key={`${variant.format}-${variant.width}`}>
+                    <Table.Cell>{variant.format.toUpperCase()}</Table.Cell>
+                    <Table.Cell kind="title">
                       {variant.width} × {variant.height}
-                    </DataTable.Cell>
-                    <DataTable.Cell kind="count">{variant.byteSize} B</DataTable.Cell>
-                  </DataTable.Row>
+                    </Table.Cell>
+                    <Table.Cell kind="count">{variant.byteSize} B</Table.Cell>
+                  </Table.Row>
                 ))}
-              </DataTable>
+              </Table>
             )}
           </section>
           <MediaUses uses={detail.uses} />

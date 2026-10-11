@@ -32,15 +32,21 @@
   border-radius: 50%;
 }
 
-.badge[data-status="public"] {
+/* The site names a publication state; the dashboard names the tone of any state
+   it shows. Both reach the same colours here, so a state looks the same
+   wherever it stands, and a badge without either stays neutral. */
+.badge[data-status="public"],
+.badge[data-tone="success"] {
   --badge-colour: var(--state-success);
 }
 
-.badge[data-status="draft"] {
+.badge[data-status="draft"],
+.badge[data-tone="warning"] {
   --badge-colour: var(--state-warning);
 }
 
-.badge[data-status="hidden"] {
+.badge[data-status="hidden"],
+.badge[data-tone="info"] {
   --badge-colour: var(--state-info);
 }
 
@@ -48,6 +54,7 @@
   --badge-colour: var(--accent-400);
 }
 
-.badge[data-status="trashed"] {
+.badge[data-status="trashed"],
+.badge[data-tone="danger"] {
   --badge-colour: var(--state-danger);
 }

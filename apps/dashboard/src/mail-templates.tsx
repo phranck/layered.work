@@ -15,11 +15,11 @@ import { createElement, type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { HeaderEnd, ScreenTitle } from "./app-bar-slots.js";
 import { useDashboardApi } from "./dashboard-context.js";
-import { DataTable } from "./data-table.js";
 import { ErrorNotice } from "./error-notice.js";
 import { useDashboardLanguage } from "./language-context.js";
 import { useNotify } from "./notifications.js";
 import { queryKeys } from "./query-keys.js";
+import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 
@@ -64,13 +64,9 @@ export function MailTemplatesScreen() {
             <ErrorNotice error={list.error} />
           </Card.Body>
         )}
-        {list.isSuccess && list.data.length === 0 && (
-          <Card.Body>
-            <p>{text("mailTemplatesEmpty")}</p>
-          </Card.Body>
-        )}
+        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("mailTemplatesEmpty")}</Table.Empty>}
         {list.isSuccess && list.data.length > 0 && (
-          <DataTable
+          <Table
             columns={[
               { kind: "title", label: text("columnName") },
               { kind: "action", label: text("columnAction") },
@@ -79,22 +75,22 @@ export function MailTemplatesScreen() {
             {list.data.map((template) => {
               const open = () => navigate(`/mail-templates/${template.kind}`);
               return (
-                <DataTable.Row key={template.kind} onOpen={open}>
-                  <DataTable.Cell kind="title">
-                    <DataTable.Title title={template.name[language]} />
-                  </DataTable.Cell>
-                  <DataTable.Actions>
+                <Table.Row key={template.kind} onOpen={open}>
+                  <Table.Cell kind="title">
+                    <Table.Title title={template.name[language]} />
+                  </Table.Cell>
+                  <Table.Actions>
                     <Button.Icon
                       label={text("editMailTemplate")}
                       icon={<PencilSimpleIcon />}
                       tabIndex={-1}
                       onClick={open}
                     />
-                  </DataTable.Actions>
-                </DataTable.Row>
+                  </Table.Actions>
+                </Table.Row>
               );
             })}
-          </DataTable>
+          </Table>
         )}
       </Card>
     </>

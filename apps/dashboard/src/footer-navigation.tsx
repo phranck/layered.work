@@ -6,7 +6,7 @@ import {
   type SaveFooterNavigationBody,
   saveFooterNavigationBody,
 } from "@layered/schemas";
-import { Button, Card, Field, Row, Select, Switch } from "@layered/ui";
+import { Button, Card, Field, Select, Switch } from "@layered/ui";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -31,6 +31,7 @@ import { Reorder } from "./reorder.js";
 import type { DashboardArea } from "./routes.js";
 import { useSession } from "./session-queries.js";
 import { moveItem } from "./sidebar-order.js";
+import { Table } from "./table.js";
 import { useTextLanguage } from "./text-language.js";
 import { Translated } from "./translated.js";
 import "./footer-navigation.css";
@@ -78,69 +79,70 @@ export function FooterNavigationScreen({ area }: { area: DashboardArea }) {
             </Button>
           }
         />
-        <Card.Body>
-          {list.isError && <ErrorNotice error={list.error} />}
-          {list.isPending && <p>{text("loading")}</p>}
-          {list.isSuccess && list.data.length === 0 && (
-            <p className="unfinished">{text("navigationEmpty")}</p>
-          )}
-          {!owner && <p>{text("ownerOnly")}</p>}
-          <div className="nav-manager">
-            {list.data?.map((group, index, groups) => {
-              const name = group.title[language];
-              const changeOrder = (to: number) =>
+        {(list.isError || list.isPending || !owner) && (
+          <Card.Body>
+            {list.isError && <ErrorNotice error={list.error} />}
+            {list.isPending && <p>{text("loading")}</p>}
+            {!owner && <p>{text("ownerOnly")}</p>}
+          </Card.Body>
+        )}
+        {list.isSuccess && list.data.length === 0 && <Table.Empty>{text("navigationEmpty")}</Table.Empty>}
+        {list.isSuccess && list.data.length > 0 && (
+          <Table
+            columns={[
+              { kind: "grip", label: "" },
+              { kind: "title", label: text("columnName") },
+              { kind: "text", label: text("columnLinks") },
+              { kind: "action", label: text("columnAction"), actions: 2 },
+            ]}
+            onMove={(from, to) => {
+              if (from !== to)
                 reorder.mutate(
-                  moveItem(groups, index, to).map((item, sortOrder) => ({ id: item.id, sortOrder })),
+                  moveItem(list.data, from, to).map((item, sortOrder) => ({ id: item.id, sortOrder })),
                 );
+            }}
+          >
+            {list.data.map((group, index) => {
+              const name = group.title[language];
+              const broken = group.items.some((item) => !item.entryId && !item.topicId && !item.href);
               return (
-                <div key={group.id} className="nav-manager__group">
-                  <Row.Bare>
-                    <Row.Text title={name} />
-                    <Row.Meta>{group.items.length}</Row.Meta>
-                    <Row.Actions>
-                      <Button.Icon
-                        label={text("navigationUp", name)}
-                        icon={<ArrowUpIcon />}
-                        disabled={!owner || index === 0 || reorder.isPending}
-                        onClick={() => changeOrder(index - 1)}
-                      />
-                      <Button.Icon
-                        label={text("navigationDown", name)}
-                        icon={<ArrowDownIcon />}
-                        disabled={!owner || index === groups.length - 1 || reorder.isPending}
-                        onClick={() => changeOrder(index + 1)}
-                      />
-                      <Button.Icon
-                        label={text("navigationEdit", name)}
-                        icon={<PencilSimpleIcon />}
-                        disabled={!owner}
-                        onClick={() => setDialog({ editing: group })}
-                      />
-                      <Button.Icon
-                        label={text("navigationDelete", name)}
-                        icon={<TrashIcon />}
-                        disabled={!owner}
-                        onClick={() => setDialog({ deleting: group })}
-                      />
-                    </Row.Actions>
-                  </Row.Bare>
-                  <ul className="nav-manager__items" aria-label={name}>
-                    {group.items.map((item) => (
-                      <li key={item.id} className="chip">
-                        {item.label[language]}
-                        {!item.entryId && !item.topicId && !item.href && (
-                          <span className="badge" data-status="draft">
-                            {text("navigationBroken")}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <Table.Row
+                  key={group.id}
+                  index={index}
+                  onOpen={owner ? () => setDialog({ editing: group }) : undefined}
+                >
+                  <Table.Grip
+                    index={index}
+                    label={text("moveGroup", name)}
+                    disabled={!owner || reorder.isPending}
+                  />
+                  <Table.Cell kind="title">
+                    <Table.Title title={name} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    {broken && <Table.Badge tone="warning">{text("navigationBroken")}</Table.Badge>}{" "}
+                    {group.items.map((item) => item.label[language]).join(", ")}
+                  </Table.Cell>
+                  <Table.Actions>
+                    <Button.Icon
+                      label={text("navigationEdit", name)}
+                      icon={<PencilSimpleIcon />}
+                      disabled={!owner}
+                      tabIndex={-1}
+                      onClick={() => setDialog({ editing: group })}
+                    />
+                    <Button.Icon
+                      label={text("navigationDelete", name)}
+                      icon={<TrashIcon />}
+                      disabled={!owner}
+                      onClick={() => setDialog({ deleting: group })}
+                    />
+                  </Table.Actions>
+                </Table.Row>
               );
             })}
-          </div>
-        </Card.Body>
+          </Table>
+        )}
       </Card>
       {dialog && "editing" in dialog && (
         <NavigationEditor
@@ -219,10 +221,7 @@ function NavigationEditor({
               maxLength={MaxLength.Line}
               onChange={setTitle}
             />
-            <Reorder.List
-              count={items.length}
-              onMove={(from, to) => setItems((current) => moveItem(current, from, to))}
-            >
+            <Reorder.List onMove={(from, to) => setItems((current) => moveItem(current, from, to))}>
               {items.map((item, index) => (
                 <Reorder.Item key={item.key} index={index}>
                   <NavigationItemFields
