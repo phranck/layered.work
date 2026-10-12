@@ -34,7 +34,7 @@
 }
 
 /* Emphasis in running text takes the semibold the interface already loads.
-   Barlow's bold is a file of its own, and on most pages nothing but emphasis
+   The text face's bold is a file of its own, and on most pages nothing but emphasis
    asked for it, so one bold phrase cost the page a whole face. */
 strong,
 b {

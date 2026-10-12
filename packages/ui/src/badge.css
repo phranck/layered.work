@@ -11,9 +11,9 @@
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  /* The label is capitals, which take no lift, but Barlow's caps sit low in
-     their line box, so the padding moves them up by the offset that centers
-     them. */
+  /* The label is capitals, which take no lift, but a face's caps can sit low
+     in their line box, so the padding moves them up by the offset that
+     centers them. */
   padding: calc(4px - var(--icon-cap-offset)) 9px calc(4px + var(--icon-cap-offset)) 7px;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);

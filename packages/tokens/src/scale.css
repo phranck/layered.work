@@ -42,7 +42,9 @@
   --l-200: 0.905;
   --l-100: 0.963;
 
-  /* --- Type --------------------------------------------------------------- */
+  /* --- Type ---------------------------------------------------------------
+     Barlow is the workbench's text face. The site restates the text face and
+     the two values measured on it in `.site-scope`, below. */
   --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Barlow Condensed", "Barlow", ui-sans-serif, system-ui, sans-serif;
   /* Fira Code, with its ligatures on. The ligatures are the reason for the
@@ -92,11 +94,12 @@
      most of its ink is lowercase and the lowercase mass sits lower. The label is
      lifted so its cap midline stands a quarter of the distance between the cap
      height and the x-height above the box's center: 0.70em against 0.51em on
-     Barlow, which is 0.047em. That comes on top of the offset that centers
-     Barlow's capitals in the first place. Applied as an offset of the vertical
-     padding, so the box keeps its height. Measured in Safari Technology Preview
-     on "Neu" in a button and "NeXT" in a chip: the cap midline stands 0.6px to
-     0.75px above the center at 15px, against the 0.71px asked for. */
+     Barlow, the workbench's face, which is 0.047em. That comes on top of the
+     offset that centers Barlow's capitals in the first place. Applied as an
+     offset of the vertical padding, so the box keeps its height. Measured in
+     Safari Technology Preview on "Neu" in a button and "NeXT" in a chip: the
+     cap midline stands 0.6px to 0.75px above the center at 15px, against the
+     0.71px asked for. */
   --label-lift: calc(var(--icon-cap-offset) + 0.047em);
 
   /* Barlow capitals center 0.05em below the middle of their line box, at a line
@@ -157,6 +160,29 @@
   --duration-fast: 160ms;
   --duration-reveal: 720ms;
   --travel-far: 28px;
+}
+
+/*
+ * The site's text face: Inter Tight, chosen by phranck on 13 October 2026 for
+ * all of the site's text apart from its headlines, which keep the display face.
+ * The site's body carries `.site-scope`, and so does a piece of the site shown
+ * inside the workbench, which therefore reads as it does on the site.
+ */
+.site-scope {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+
+  /* Inter Tight centers its capitals in their line box: with its ascender of
+     1984 and descender of 494 on 2048 units, the middle of its 1490-unit cap
+     height falls on the middle of the box. Measured in WebKit on an H at 200px
+     in a line box of height one: 0px from the middle. */
+  --icon-cap-offset: 0em;
+
+  /* A quarter of the distance between the cap height and the x-height, 0.728em
+     against 0.546em, as for the workbench's face above. Measured in WebKit at
+     15px: the cap midline of "Explore projects" in a button and of "NeXT" in a
+     chip stands 0.67px and 0.68px above the center, against the 0.68px asked
+     for. */
+  --label-lift: calc(var(--icon-cap-offset) + 0.045em);
 }
 
 /*
