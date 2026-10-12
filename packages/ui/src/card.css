@@ -147,7 +147,7 @@
 /* A count beside the title. It belongs to the title rather than sitting in the
    action row, because it says what the card holds, not what it does. */
 .card__meta {
-  /* Figures sit as low in their line box as Barlow's capitals do, so the
+  /* Figures sit as low in their line box as the face's capitals do, so the
      padding moves them up by the offset that centers them. */
   padding: calc(2px - var(--icon-cap-offset)) 8px calc(2px + var(--icon-cap-offset));
   font-family: var(--font-sans);

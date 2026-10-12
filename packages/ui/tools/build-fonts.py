@@ -44,6 +44,13 @@ PUA_UNICODES = "U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD"
 # keeps every feature, because its ligatures are what a code block is set with.
 BARLOW_FEATURES = "ccmp,dnom,frac,kern,liga,locl,mark,mkmk,numr,ordn,pnum,sups,tnum"
 
+# The features a browser applies by default, and the figures and fractions a
+# stylesheet can ask for. Inter Tight's stylistic sets and character variants
+# are left out, because no stylesheet sets one.
+INTER_TIGHT_FEATURES = (
+    "calt,case,ccmp,dnom,frac,kern,liga,locl,mark,mkmk,numr,ordn,pnum,sups,tnum"
+)
+
 
 @dataclass(frozen=True)
 class FontSource:
@@ -53,6 +60,9 @@ class FontSource:
     text_output: str
     symbols_output: str | None = None
     layout_features: str = "*"
+    # The source is a variable font, so the weight is cut from it as a static
+    # instance before subsetting, and each weight stays a file of its own.
+    variable: bool = False
 
     @property
     def extended_output(self) -> str:
@@ -94,6 +104,19 @@ def text_sources() -> list[FontSource]:
                 )
             )
 
+    # Upstream ships Inter Tight as one variable font only.
+    for weight in WEIGHTS:
+        sources.append(
+            FontSource(
+                family="Inter Tight",
+                weight=weight,
+                source_url=f"{GOOGLE_FONTS_BASE}/ofl/intertight/InterTight%5Bwght%5D.ttf",
+                text_output=f"inter-tight-{weight}.woff2",
+                layout_features=INTER_TIGHT_FEATURES,
+                variable=True,
+            )
+        )
+
     for weight, style in ((400, "Regular"), (700, "Bold")):
         sources.append(
             FontSource(
@@ -115,6 +138,7 @@ LICENSES = {
     "BarlowCondensed-OFL-1.1.txt": (
         f"{GOOGLE_FONTS_BASE}/ofl/barlowcondensed/OFL.txt"
     ),
+    "InterTight-OFL-1.1.txt": f"{GOOGLE_FONTS_BASE}/ofl/intertight/OFL.txt",
     "FiraCode-OFL-1.1.txt": (
         f"{NERD_FONTS_BASE}/patched-fonts/FiraCode/LICENSE"
     ),
@@ -128,6 +152,14 @@ def download(url: str, destination: Path) -> None:
         if response.status != 200:
             raise RuntimeError(f"Download failed ({response.status}): {url}")
         destination.write_bytes(response.read())
+
+
+def instance(fonttools: str, source: Path, output: Path, weight: int) -> None:
+    """Cut one static weight out of a variable font."""
+    subprocess.run(
+        [fonttools, "varLib.instancer", str(source), f"wght={weight}", f"--output={output}"],
+        check=True,
+    )
 
 
 def subset(
@@ -185,7 +217,7 @@ python3 packages/ui/tools/build-fonts.py
 
 ## Sources and versions
 
-- [Barlow](https://github.com/google/fonts/tree/{GOOGLE_FONTS_REVISION}/ofl/barlow) and [Barlow Condensed](https://github.com/google/fonts/tree/{GOOGLE_FONTS_REVISION}/ofl/barlowcondensed) come from `google/fonts` revision `{GOOGLE_FONTS_REVISION}`, licensed under the SIL Open Font License 1.1. The pinned source directories contain the exact TTF files and their respective `OFL.txt` license files.
+- [Barlow](https://github.com/google/fonts/tree/{GOOGLE_FONTS_REVISION}/ofl/barlow), [Barlow Condensed](https://github.com/google/fonts/tree/{GOOGLE_FONTS_REVISION}/ofl/barlowcondensed) and [Inter Tight](https://github.com/google/fonts/tree/{GOOGLE_FONTS_REVISION}/ofl/intertight) come from `google/fonts` revision `{GOOGLE_FONTS_REVISION}`, licensed under the SIL Open Font License 1.1. The pinned source directories contain the exact TTF files and their respective `OFL.txt` license files.
 - [Fira Code Nerd Font](https://github.com/ryanoasis/nerd-fonts/tree/{NERD_FONTS_REVISION}/patched-fonts/FiraCode) comes from `ryanoasis/nerd-fonts` tag `{NERD_FONTS_REVISION}`. It is based on Fira Code, patched by Nerd Fonts, and licensed under the SIL Open Font License 1.1. See the pinned [font license](https://github.com/ryanoasis/nerd-fonts/blob/{NERD_FONTS_REVISION}/patched-fonts/FiraCode/LICENSE) and the [Nerd Fonts root license](https://github.com/ryanoasis/nerd-fonts/blob/{NERD_FONTS_REVISION}/LICENSE).
 - Nerd Fonts tooling and repository notices are covered by the upstream root license, which includes MIT and OFL terms and Ryan L. McIntyre's notice.
 
@@ -196,6 +228,8 @@ The complete upstream license texts are retained in `font-licenses/`.
 Each face is split into two files. The first holds Basic Latin, Latin-1 Supplement, dotless i, the ligatures Œ and œ, General Punctuation, the euro and trademark signs, four arrows, the minus sign and the division slash. The second holds the rest of Latin Extended-A, Combining Diacritical Marks, Arrows and Mathematical Operators, and a browser fetches it only for a page that writes one of those characters. The two `unicode-range` descriptors do not overlap.
 
 Barlow and Barlow Condensed leave out their small capitals, which no stylesheet sets. Fira Code keeps every layout feature, so its ligatures continue to shape.
+
+Inter Tight is published as one variable font. Each weight from 400 to 800 is cut from it as a static instance with fontTools' `varLib.instancer` and then subset like Barlow, so a page loads only the weights it sets. It keeps the features a browser applies by default and the figure, fraction and case features, and leaves out its stylistic sets and character variants, which no stylesheet sets.
 
 The private-use glyphs of Fira Code Nerd Font are split into separate files covering the BMP, supplementary and plane 16 private-use ranges, and a browser fetches each only for a page that writes one of its characters. The text and symbol `unicode-range` descriptors do not overlap.
 
@@ -214,6 +248,9 @@ def main() -> None:
     pyftsubset = shutil.which("pyftsubset")
     if pyftsubset is None:
         raise RuntimeError("pyftsubset is required but was not found on PATH")
+    fonttools = shutil.which("fonttools")
+    if fonttools is None:
+        raise RuntimeError("fonttools is required but was not found on PATH")
 
     sources = text_sources()
     expected_fonts = {
@@ -232,9 +269,18 @@ def main() -> None:
     faces: list[str] = []
     with tempfile.TemporaryDirectory(prefix="layered-fonts-") as temporary:
         temporary_dir = Path(temporary)
+        downloaded: dict[str, Path] = {}
         for index, source in enumerate(sources):
-            source_path = temporary_dir / f"source-{index}.ttf"
-            download(source.source_url, source_path)
+            # The variable source serves every weight, so it is fetched once.
+            if source.source_url not in downloaded:
+                path = temporary_dir / f"source-{index}.ttf"
+                download(source.source_url, path)
+                downloaded[source.source_url] = path
+            source_path = downloaded[source.source_url]
+            if source.variable:
+                static_path = temporary_dir / f"instance-{index}.ttf"
+                instance(fonttools, source_path, static_path, source.weight)
+                source_path = static_path
             for output, unicodes in (
                 (source.text_output, CORE_UNICODES),
                 (source.extended_output, EXTENDED_UNICODES),

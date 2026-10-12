@@ -302,7 +302,7 @@
   place-items: center;
   /* The options are mostly codes and letters in capitals, centered in a box of
      fixed height, so padding below alone moves them up by the offset that
-     centers Barlow's capitals. */
+     centers the face's capitals. */
   padding: 0 10px calc(2 * var(--icon-cap-offset));
   font: inherit;
   font-size: var(--text-sm);

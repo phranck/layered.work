@@ -43,6 +43,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* A piece of the site states the face again, because what it inherits is the
+   family its surroundings already chose rather than the site's token. */
+.site-scope {
+  font-family: var(--font-sans);
+}
+
 button,
 input,
 select,

@@ -37,7 +37,7 @@ The prototype's design values remain intact. Logo derives `--logo-height` at com
 
 `assets/` holds the original logo, shared WOFF2 files, their `fonts.css` declarations and licence notices. Application build scripts call `copyUiAssets(publicRoot)` from `@layered/ui/copy-assets`, then link to the assets on their own host. Website development and builds populate `public/` automatically; those copies are generated and not committed. The dashboard copies the same assets directly into `dist/`.
 
-Barlow and Barlow Condensed provide the design token weights. FiraCode Nerd Font supplies code text and ligatures, with patched symbols in a separate subset loaded only when needed. All faces use `font-display: swap`. The website preloads Barlow 400 and Barlow Condensed 700; other faces remain lazy.
+Barlow Condensed sets the headlines everywhere. The website sets the rest of its text in Inter Tight, and the dashboard in Barlow. A piece of the site shown inside the dashboard carries `.site-scope` and takes the site's face. FiraCode Nerd Font supplies code text and ligatures, with patched symbols in a separate subset loaded only when needed. All faces use `font-display: swap`. The website preloads Inter Tight 400 and Barlow Condensed 700; other faces remain lazy.
 
 Source revisions, licences and the regeneration command are recorded in [the font notices](assets/THIRD_PARTY_NOTICES.md).
 
