@@ -1,5 +1,6 @@
 /* Site compositions ported from prototype/schichtung. Shared surfaces remain in @layered/ui. */
-/* No weight here: the heading level sets it, in base.css. */
+/* No weight here: the heading level sets it, in base.css, apart from a card's
+   title below. */
 .title-hero,
 .title-page,
 .title-section,
@@ -20,9 +21,11 @@
 }
 
 /* A card's title is a heading of the third level, a step above the text
-   beneath it, which is how the Previously page sets a card. */
+   beneath it, which is how the Previously page sets a card. It is bold whatever
+   its level, as every card's title is, which phranck decided on 13 October 2026. */
 .title-card {
   font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
   line-height: var(--leading-snug);
 }
 
