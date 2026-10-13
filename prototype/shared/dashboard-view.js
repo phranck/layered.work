@@ -445,9 +445,20 @@ const landingBuilder = (area, blockId) => {
  * The portrait is the subject of this card, so it is large and its control sits
  * beneath it, centered under the thing it changes. A label over a picture and a
  * hint under a button would only name what both already show.
+ *
+ * The password fields stand in a column of their own, so the card grows wider
+ * rather than taller and keeps its buttons in a laptop's window. The way out is
+ * set apart at the start of the footer.
  */
+const passwordField = (key, autocomplete) =>
+  Field({
+    label: t(`account.${key}`),
+    htmlFor: `account-${key}`,
+    control: html`<input class="input" id="account-${key}" type="password" autocomplete="${autocomplete}" />`,
+  });
+
 const accountOverlay = () => html`
-  <div class="card-overlay" data-open data-account-overlay>
+  <div class="card-overlay card-dialog--wide" data-open data-account-overlay>
     ${Card(
       Card.Header({ title: t("heading.accountTitle") }),
       Card.Body(html`
@@ -477,18 +488,34 @@ const accountOverlay = () => html`
 
             ${Field({
               label: t("account.language"),
+              hint: t("account.languageHint"),
               control: Segmented({
                 name: "account-language",
                 value: dashboardLanguage(),
                 options: DASHBOARD_LANGUAGES.map((language) => ({ value: language.id, label: language.label })),
               }),
             })}
+
+            ${Field({
+              label: t("account.scale"),
+              control: Segmented({
+                name: "account-scale",
+                value: "m",
+                options: ["s", "m", "l", "xl"].map((scale) => ({ value: scale, label: scale.toUpperCase() })),
+              }),
+            })}
+          </div>
+
+          <div class="account__fields">
+            ${passwordField("passwordCurrent", "current-password")}
+            ${passwordField("passwordNew", "new-password")}
+            ${passwordField("passwordRepeat", "new-password")}
           </div>
         </div>
       `),
       Card.Footer({
-        note: t("account.languageHint"),
         actions: [
+          html`<span class="actions__aside">${Button({ label: t("action.signOut"), icon: "ph-duotone ph-sign-out", tone: "danger", size: "small" })}</span>`,
           action("cancel", { attributes: { "data-close-account": true } }),
           action("save", { tone: "primary", attributes: { "data-save-account": true } }),
         ],
@@ -827,7 +854,7 @@ export function wireDashboard(root, rerender) {
     // The language buttons only mark a choice, and marking it is a state change
     // like any other, so the pill travels to it. Nothing is applied until the
     // card is saved, which is what makes Cancel mean something.
-    const languageChoice = event.target.closest("[data-account-language] button");
+    const languageChoice = event.target.closest("[data-account-language] button, [data-account-scale] button");
     if (languageChoice) {
       selectSegment(languageChoice);
       return;

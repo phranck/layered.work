@@ -253,6 +253,12 @@
   align-items: flex-start;
 }
 
+/* Room for two columns of fields beside the portrait, so the account stays
+   within a laptop's window rather than scrolling its own buttons away. */
+.card-dialog--wide.card-overlay > .card {
+  width: min(800px, 100%);
+}
+
 .account__portrait {
   display: flex;
   flex: none;
