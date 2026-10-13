@@ -68,6 +68,7 @@ Browser sessions use a cookie. Personal access tokens use `Authorization: Bearer
 | `previewMailTemplate` | POST /mail-templates/:kind/preview | Browser session |
 | `testMailTemplate` | POST /mail-templates/:kind/test | Owner browser session |
 | `updateAccount` | PATCH /account | Browser session |
+| `changePassword` | POST /account/password | Browser session; asks for the current password and ends the account's other sessions |
 | `uploadMedia` | POST /media/uploads, PUT the returned upload URL, POST /media/uploads/complete | media:write |
 | `signIn` | POST /auth/sign-in | Credentials establish a browser session |
 | `signOut` | POST /auth/sign-out | Clears a browser session |
@@ -80,7 +81,7 @@ The upload URL is either an API route (`PUT /media/uploads/:token/content`, used
 
 ## Session-bound operations
 
-Account profile, session management and token issuance or revocation require the account's browser session. An editorial token is not authority to change its owner's identity or issue another credential.
+Account profile, password, session management and token issuance or revocation require the account's browser session. An editorial token is not authority to change its owner's identity or issue another credential.
 
 The navigation methods retain their existing names and accept an optional `placement` of `main` or `footer`; omitting it selects the footer routes.
 

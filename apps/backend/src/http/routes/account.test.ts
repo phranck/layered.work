@@ -9,6 +9,7 @@ const repository = vi.hoisted(() => ({
   updateAccountProfile: vi.fn(),
 }));
 const storage = vi.hoisted(() => ({ readMediaObject: vi.fn() }));
+const password = vi.hoisted(() => ({ changeAccountPassword: vi.fn() }));
 const readSession = vi.hoisted(() => vi.fn());
 
 vi.mock("../../auth/session.js", async (importOriginal) => ({
@@ -17,8 +18,11 @@ vi.mock("../../auth/session.js", async (importOriginal) => ({
 }));
 vi.mock("../../account/repository.js", () => repository);
 vi.mock("../../media/storage.js", () => storage);
+vi.mock("../../account/password.js", () => password);
 
 const { app } = await import("../app.js");
+const { forgetRateLimits } = await import("../rate-limit.js");
+const { HttpError } = await import("../response.js");
 
 const userId = "0199f064-43b7-79a8-917f-eefc8c852497";
 const avatarMediaId = "0199f064-43b7-79a8-917f-eefc8c852498";
@@ -138,6 +142,81 @@ describe("the account API", () => {
     expect(readApiError(JSON.parse(text))?.code).toBe(ErrorCode.Conflict);
     expect(text).not.toContain("users_email_unique");
     expect(text).not.toContain("taken@example.com");
+  });
+
+  describe("changing the password", () => {
+    const change = { currentPassword: "old secret", newPassword: "new secret" };
+    const send = (body: unknown, cookie = "layered_session=signed") =>
+      app.request("/account/password", {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+    beforeEach(() => forgetRateLimits());
+
+    it("changes it for the session's own account, keeping that session", async () => {
+      readSession.mockResolvedValue(principal);
+      password.changeAccountPassword.mockResolvedValue({ otherSessionsEnded: 2 });
+      const info = vi.spyOn(logger, "info").mockImplementation(() => undefined as never);
+
+      const response = await send(change);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ data: { otherSessionsEnded: 2 } });
+      expect(password.changeAccountPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        userId,
+        principal.sessionId,
+        change,
+      );
+      // Neither password reaches the log.
+      expect(JSON.stringify(info.mock.calls)).not.toContain("secret");
+    });
+
+    it("refuses a wrong current password as forbidden, so the dashboard keeps its session", async () => {
+      readSession.mockResolvedValue(principal);
+      password.changeAccountPassword.mockRejectedValue(
+        new HttpError(ErrorCode.Forbidden, "The current password is not correct."),
+      );
+      vi.spyOn(logger, "info").mockImplementation(() => undefined as never);
+
+      const response = await send(change);
+
+      expect(response.status).toBe(403);
+      expect(readApiError(await response.json())?.code).toBe(ErrorCode.Forbidden);
+    });
+
+    it("refuses a body with a field it does not declare, or with an empty new password", async () => {
+      readSession.mockResolvedValue(principal);
+
+      expect((await send({ ...change, userId: "0199f064-43b7-79a8-917f-eefc8c852500" })).status).toBe(400);
+      expect((await send({ ...change, newPassword: "" })).status).toBe(400);
+      expect(password.changeAccountPassword).not.toHaveBeenCalled();
+    });
+
+    it("refuses an unauthenticated request before reading the body", async () => {
+      readSession.mockResolvedValue(null);
+
+      expect((await send(change)).status).toBe(401);
+      expect(password.changeAccountPassword).not.toHaveBeenCalled();
+    });
+
+    it("stops guessing at the password in use after eight attempts", async () => {
+      readSession.mockResolvedValue(principal);
+      password.changeAccountPassword.mockRejectedValue(
+        new HttpError(ErrorCode.Forbidden, "The current password is not correct."),
+      );
+      vi.spyOn(logger, "info").mockImplementation(() => undefined as never);
+      vi.spyOn(logger, "warn").mockImplementation(() => undefined as never);
+
+      const statuses = [];
+      for (let attempt = 0; attempt < 9; attempt += 1) statuses.push((await send(change)).status);
+
+      expect(statuses.slice(0, 8)).toEqual(Array(8).fill(403));
+      expect(statuses[8]).toBe(429);
+      expect(password.changeAccountPassword).toHaveBeenCalledTimes(8);
+    });
   });
 
   it("streams a stored raster image through the authenticated API with private headers", async () => {

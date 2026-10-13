@@ -3,11 +3,13 @@ import {
   type AddHomeBlockBody,
   accountProfile,
   addHomeBlockBody,
+  type ChangePasswordBody,
   type ContentLanguage,
   type CreateEntryBody,
   type CreateFormBody,
   type CreateNamedValueBody,
   type CreateTopicBody,
+  changePasswordBody,
   createEntryBody,
   createFormBody,
   createNamedValueBody,
@@ -62,7 +64,9 @@ import {
   type NavigationPlacement,
   namedValue,
   namedValueList,
+  type PasswordChanged,
   type PreviewEntryBody,
+  passwordChanged,
   previewEntryBody,
   type RenderedMail,
   type ReorderBody,
@@ -276,6 +280,8 @@ export interface DashboardApi {
     recipient: string,
   ): Promise<TestMailResult>;
   updateAccount(input: UpdateAccountBody): Promise<AccountProfile>;
+  /** Changes the signed-in author's password, which ends their other sessions. */
+  changePassword(input: ChangePasswordBody): Promise<PasswordChanged>;
   /**
    * Puts a file into the media library: asks for an upload, sends the bytes to
    * the address the answer names, and says it is done.
@@ -637,6 +643,10 @@ export function createDashboardApi(queryClient: QueryClient, onSessionExpired: (
     async updateAccount(input) {
       const sent = jsonBody("PATCH", updateAccountBody.parse(input));
       return dataOf(await request("/account", sent, true), accountProfile);
+    },
+    async changePassword(input) {
+      const sent = jsonBody("POST", changePasswordBody.parse(input));
+      return dataOf(await request("/account/password", sent, true), passwordChanged);
     },
     async uploadMedia(file, progress) {
       const asked = createUploadBody.safeParse({ filename: file.name, type: file.type, size: file.size });

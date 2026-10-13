@@ -1775,4 +1775,97 @@ describe("dashboard shell", () => {
     expect(alert.textContent).toContain("logout-1");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
+
+  /** The account dialog's three password fields, filled as given. */
+  function fillPasswords(current: string, next: string, repeat: string) {
+    fireEvent.change(screen.getByLabelText("Aktuelles Passwort"), { target: { value: current } });
+    fireEvent.change(screen.getByLabelText("Neues Passwort"), { target: { value: next } });
+    fireEvent.change(screen.getByLabelText("Neues Passwort wiederholen"), { target: { value: repeat } });
+  }
+
+  it("changes the password before it saves the rest of the account", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/account/password") && init?.method === "POST")
+        return Promise.resolve(json({ data: { otherSessionsEnded: 1 } }));
+      if (url.endsWith("/account") && init?.method === "PATCH")
+        return Promise.resolve(json({ data: account }));
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    expect(screen.getByLabelText("Neues Passwort").getAttribute("autocomplete")).toBe("new-password");
+    fillPasswords("old secret", "new secret", "new secret");
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const sent = request.mock.calls.map(([input, init]) => `${init?.method ?? "GET"} ${String(input)}`);
+    const password = sent.findIndex((call) => call.endsWith("/account/password"));
+    const profile = sent.findIndex((call) => call.startsWith("PATCH") && call.endsWith("/account"));
+    expect(password).toBeGreaterThan(-1);
+    expect(profile).toBeGreaterThan(password);
+    expect(JSON.parse(String(request.mock.calls[password]?.[1]?.body))).toEqual({
+      currentPassword: "old secret",
+      newPassword: "new secret",
+    });
+  });
+
+  it("says why a new password cannot be sent, and keeps the session when the current one is wrong", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/account/password") && init?.method === "POST")
+        return Promise.resolve(
+          json({ error: { code: "forbidden", message: "Wrong.", id: "password-1" } }, 403),
+        );
+      return Promise.resolve(successfulGet(input));
+    });
+    vi.stubGlobal("fetch", request);
+    const { router } = renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    const save = () =>
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
+
+    fillPasswords("", "new secret", "new secret");
+    save();
+    expect((await screen.findByRole("alert")).textContent).toContain("das aktuelle und das neue zweimal");
+
+    fillPasswords("old secret", "new secret", "new secert");
+    save();
+    expect((await screen.findByRole("alert")).textContent).toContain("stimmen nicht überein");
+    expect(request.mock.calls.some(([input]) => String(input).endsWith("/account/password"))).toBe(false);
+
+    fillPasswords("not it", "new secret", "new secret");
+    save();
+    const alert = await screen.findByText(/Das aktuelle Passwort stimmt nicht/);
+    expect(alert.closest('[role="alert"]')?.textContent).toContain("password-1");
+    expect(
+      request.mock.calls.some(
+        ([input, init]) => String(input).endsWith("/account") && init?.method === "PATCH",
+      ),
+    ).toBe(false);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/posts");
+  });
+
+  it("saves the account alone where only the current password was filled in", async () => {
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        String(input).endsWith("/account") && init?.method === "PATCH"
+          ? json({ data: account })
+          : successfulGet(input),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Frank Gregor/ }));
+    // A password manager may fill this one as the dialog opens.
+    fireEvent.change(screen.getByLabelText("Aktuelles Passwort"), { target: { value: "filled in" } });
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(request.mock.calls.some(([input]) => String(input).endsWith("/account/password"))).toBe(false);
+  });
 });

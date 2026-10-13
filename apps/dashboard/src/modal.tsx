@@ -12,15 +12,20 @@ import { useDashboardLanguage } from "./language-context.js";
  *
  * @param labelId - The id of the element that names the dialog, usually its title.
  * @param onClose - Called for Escape and for a click beside the card.
+ * @param wide - Gives the card room for its fields side by side rather than
+ *   one long column, for a dialog that would otherwise outgrow a laptop's
+ *   window.
  */
 export function CardDialog({
   children,
   labelId,
   onClose,
+  wide = false,
 }: {
   children: ReactNode;
   labelId: string;
   onClose: () => void;
+  wide?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocusRef = useRef(
@@ -46,7 +51,7 @@ export function CardDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="card-overlay card-dialog"
+      className={wide ? "card-overlay card-dialog card-dialog--wide" : "card-overlay card-dialog"}
       data-open
       aria-labelledby={labelId}
       onCancel={(event) => {

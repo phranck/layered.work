@@ -1,4 +1,10 @@
-import { type AccountProfile, MaxLength, type UpdateAccountBody } from "@layered/schemas";
+import {
+  type AccountProfile,
+  type ChangePasswordBody,
+  MAX_PASSWORD_LENGTH,
+  MaxLength,
+  type UpdateAccountBody,
+} from "@layered/schemas";
 import { Badge, Card, Field, Input, Segmented } from "@layered/ui";
 import { UserCircleIcon } from "@layered/ui/icons";
 import { type FormEvent, useRef, useState } from "react";
@@ -16,9 +22,44 @@ import { useSaveShortcut } from "./save-shortcut.js";
 /** The interface sizes as the segmented control offers them, labeled like the reading width's steps. */
 const SCALE_OPTIONS = INTERFACE_SCALES.map((scale) => ({ value: scale, label: scale.toUpperCase() }));
 
+/** The three password fields as the dialog holds them, empty until somebody types. */
+interface PasswordDraft {
+  current: string;
+  next: string;
+  repeat: string;
+}
+
+const NO_PASSWORD: PasswordDraft = { current: "", next: "", repeat: "" };
+
 /**
- * The signed-in author's account in a dialog: portrait, name, address, role,
- * interface language and size, a save, and signing out.
+ * The password change the dialog's save sends, a sentence saying why it cannot,
+ * or nothing where no new password was typed.
+ *
+ * Only the two new fields decide whether a change is meant. A password manager
+ * may fill the password in use as soon as the dialog opens, and a save of the
+ * name alone must not be refused for it.
+ *
+ * @param draft - The three fields.
+ * @returns The body to send, the catalogue key of the problem, or null.
+ */
+function passwordChange(
+  draft: PasswordDraft,
+):
+  | { change: ChangePasswordBody }
+  | { problem: "accountPasswordIncomplete" | "accountPasswordMismatch" }
+  | null {
+  if (!draft.next && !draft.repeat) return null;
+  if (!draft.current || !draft.next || !draft.repeat) return { problem: "accountPasswordIncomplete" };
+  if (draft.next !== draft.repeat) return { problem: "accountPasswordMismatch" };
+  return { change: { currentPassword: draft.current, newPassword: draft.next } };
+}
+
+/**
+ * The signed-in author's account in a dialog: portrait, name, address, a new
+ * password, role, interface language and size, a save, and signing out.
+ *
+ * The password fields stay empty unless the author types a new password, and
+ * the dialog's one save then changes it before it stores the rest.
  *
  * @param account - The account as it is stored.
  * @param onClose - Closes the dialog, after a save as well.
@@ -38,8 +79,28 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
   // account's own changes when the dialog is saved, as the language is.
   const [scale, chooseScale] = useInterfaceScale();
   const [scaleDraft, setScaleDraft] = useState(scale);
-  const { save, signOut, running, saveDraft, signOutOnce } = useAccountActions();
-  const accountPending = save.isPending || signOut.isPending;
+  const [passwords, setPasswords] = useState<PasswordDraft>(NO_PASSWORD);
+  const [passwordProblem, setPasswordProblem] = useState<string | null>(null);
+  const { save, changePassword, signOut, running, saveDraft, signOutOnce } = useAccountActions();
+  const accountPending = save.isPending || changePassword.isPending || signOut.isPending;
+  const failure = changePassword.error ?? save.error ?? signOut.error;
+
+  /** One of the three password fields, which also clears a problem it has answered. */
+  const passwordField = (key: keyof PasswordDraft, label: string, autoComplete: string) => (
+    <Field label={label} htmlFor={`account-password-${key}`}>
+      <Input
+        id={`account-password-${key}`}
+        type="password"
+        autoComplete={autoComplete}
+        value={passwords[key]}
+        maxLength={MAX_PASSWORD_LENGTH}
+        onChange={(event) => {
+          setPasswords((current) => ({ ...current, [key]: event.target.value }));
+          setPasswordProblem(null);
+        }}
+      />
+    </Field>
+  );
 
   // Command-S submits the dialog as its Save button does. Registered after the
   // screen behind it, so it is the dialog that saves while it is open.
@@ -54,7 +115,12 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!(await saveDraft(draft))) return;
+    const password = passwordChange(passwords);
+    if (password && "problem" in password) {
+      setPasswordProblem(text(password.problem));
+      return;
+    }
+    if (!(await saveDraft(draft, password?.change))) return;
     chooseScale(scaleDraft);
     notify({ tone: "success", message: text("saved") });
     onClose();
@@ -62,10 +128,10 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
 
   return (
     <>
-      <CardDialog labelId="account-dialog-title" onClose={dismiss}>
+      <CardDialog labelId="account-dialog-title" onClose={dismiss} wide>
         <Card.Header id="account-dialog-title" title={text("account")} />
         <form ref={form} onSubmit={submit}>
-          <Card.Body>
+          <Card.Stack>
             <div className="account">
               <div className="account__portrait">
                 {avatarUrl ? (
@@ -129,15 +195,31 @@ export function AccountDialog({ account, onClose }: { account: AccountProfile; o
                     onValueChange={(value) => setScaleDraft(restoredScale(value))}
                   />
                 </Field>
-                {(save.error || signOut.error) && (
-                  <ErrorNotice
-                    error={save.error ?? signOut.error}
-                    keyFor={(failure) => (failure.code === "conflict" ? "accountEmailTaken" : undefined)}
-                  />
-                )}
+              </div>
+              {/* A column of its own, so the dialog grows wider rather than taller. */}
+              <div className="account__fields">
+                {passwordField("current", text("accountPasswordCurrent"), "current-password")}
+                {passwordField("next", text("accountPasswordNew"), "new-password")}
+                {passwordField("repeat", text("accountPasswordRepeat"), "new-password")}
               </div>
             </div>
-          </Card.Body>
+            {passwordProblem ? (
+              <ErrorNotice message={passwordProblem} />
+            ) : (
+              failure && (
+                <ErrorNotice
+                  error={failure}
+                  keyFor={(known) =>
+                    known.code === "conflict"
+                      ? "accountEmailTaken"
+                      : known.code === "forbidden"
+                        ? "accountPasswordWrong"
+                        : undefined
+                  }
+                />
+              )
+            )}
+          </Card.Stack>
           <Card.Footer
             actions={
               <>
