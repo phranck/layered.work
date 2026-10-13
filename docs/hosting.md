@@ -2,7 +2,7 @@
 
 The project runs on [Zerops](https://zerops.io) in the `LAYERED` organization, alongside lmaa.space, musiccloud.io, velvet.li and the Umami instance.
 
-Nothing in this file is a secret. `zcli project env` prints the database password and the generated session secret in clear text, so no value from that output is ever copied into this repository.
+Nothing in this file is a secret, and no value from `zcli project env` is ever copied into this repository. zcli prints the secret values as `REDACTED`, so a password has to be read in the Zerops interface.
 
 **Nor is any Zerops identifier.** A service's id is the whole of the address Zerops exposes its build trigger at, `…/api/rest/public/service-stack/<id>/github-webhook`, and that endpoint answers a request carrying no signature: posting an empty body to it returns a validation error about the branch name rather than a refusal. Whoever knows the id can therefore reach the trigger. The ids are in the Zerops interface and in `zcli service list`, and they stay out of this repository.
 
@@ -275,7 +275,11 @@ Zerops exposes a service's own variables to its siblings, prefixed by the hostna
 
 Until the site is finished, production holds what the local database holds. Content and schema change locally, `db:migrate` runs locally, and the local state then replaces the Zerops database. A difference between the two is a fault on production, and the next push removes it.
 
-`scripts/db-push` makes the replacement. It checks that both connections are the expected roles and neither is a superuser, refuses when production holds a table the local database lacks, restores a dump of the local database into production in one transaction, and compares the rows of every table afterwards. `--check` does everything up to the restore and writes nothing to production. It reads `ZEROPS_DB_URL` from `.env.local` and needs the Zerops VPN, which `zcli vpn up` opens and which asks for phranck's password.
+`scripts/db-push` makes the replacement. It checks that both connections are the expected roles and neither is a superuser, refuses when production holds a table the local database lacks, restores a dump of the local database into production in one transaction, and compares the rows of every table afterwards. `--check` does everything up to the restore and writes nothing to production. It reads `ZEROPS_DB_URL` from `.env.local` and needs the Zerops VPN, which `zcli vpn up` opens and which asks for phranck's password. The script accepts the URL only in this form, with the `password` of the `postgres` service from the Zerops interface:
+
+```bash
+ZEROPS_DB_URL="postgresql://db:<password>@postgres.zerops:5432/db"
+```
 
 ```bash
 zcli vpn up
