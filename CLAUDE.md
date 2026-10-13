@@ -12,7 +12,7 @@ GitHub Issues and the `layered.work` project board, and nowhere else. Each epic 
 
 ## Design
 
-`prototype/` is the design study that settles the visual language. It is not a dependency and it does not ship, but `prototype/tokens/` and `prototype/ui/` are written to be moved into the real packages unchanged. When the built product and the prototype disagree about a value, the product is wrong until somebody decides otherwise.
+`prototype/` is the design study of the visual language. It is not a dependency and it does not ship. It links the product's fonts, tokens and component styles from `packages/` and keeps no copy of them, so it cannot show those differently from the product. Its own files hold its views, the site's and the dashboard's compositions it draws them with, and what only the prototype has, such as its view switcher.
 
 **Every design change made in the product reaches the prototype in the same change**, whether phranck asked for it or a fix needed it. The two never disagree, so the prototype can always be followed as it stands. phranck decided this on 13 October 2026, after following the mockup had undone two of his decisions: "Einfacher waere es, du passt das Mockup dynamisch an, wenn es Anpassungen gibt."
 

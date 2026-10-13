@@ -33,6 +33,49 @@
   min-width: 0;
 }
 
+/* --- Bar title --------------------------------------------------------------
+   The title of what is open, as the dashboard's `app.css` sets it. */
+
+.app-bar-title {
+  min-width: 0;
+  /* Further from the way back than the bar's items are from each other, so the
+     title reads as the page's name rather than as the button's label. */
+  margin: 0 0 0 var(--space-3);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-bar-title:first-child {
+  margin-inline-start: 0;
+}
+
+/* --- Sample text ------------------------------------------------------------
+   The editor's surface shows a fixed sample here rather than the product's
+   CodeMirror, so its syntax colors are spans of its own, in the product's
+   Markdown tokens. */
+
+.editor__surface .md {
+  color: var(--md-heading);
+}
+.editor__surface .sc {
+  color: var(--md-shortcode-brace);
+}
+.editor__surface .sc-name {
+  color: var(--md-shortcode-token);
+}
+.editor__surface .sc-attr {
+  color: var(--md-shortcode-attribute);
+}
+.editor__surface .sc-str {
+  color: var(--md-shortcode-string);
+}
+
 /* --- Statistics -----------------------------------------------------------
    The figures above a list: the name at the top left with its line of
    explanation under it, and the number at the top right, in a tabular face, so

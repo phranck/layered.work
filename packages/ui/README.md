@@ -1,6 +1,6 @@
 # Shared UI
 
-React compounds shared by the website and the editorial dashboard. The markup and stylesheet rules come from `prototype/ui/`; component styles keep the existing token scopes and import order.
+React compounds shared by the website and the editorial dashboard. The stylesheets here are the only copy: the prototype links them directly, and its components in `prototype/ui/` draw the same markup in plain JavaScript. Component styles keep the existing token scopes and import order.
 
 ```tsx
 import { Card, Row, Section } from "@layered/ui";

@@ -2,7 +2,7 @@
 
 The token system for layered.work, in four layers. The stylesheets are the source: nothing outside this directory restates a value, and what TypeScript needs is derived from them by `scripts/derive.mjs`, which the build runs.
 
-It came here from `prototype/tokens/` unchanged, which is why the prototype still has its own copy and why the two should be compared rather than edited apart. The prototype is a design study; this is the package that ships.
+The prototype links this directory directly and keeps no copy of its own, so a change here shows in the prototype as well. The prototype is a design study; this is the package that ships.
 
 ## Using it
 
