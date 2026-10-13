@@ -94,12 +94,12 @@
   --sidebar-max: 420px;
 
   /* --- Frame --------------------------------------------------------------
-     The gutter is the sidebar's padding and the space above and below what the
-     bar holds. The content area is padded by the content gutter, and the bar's
-     sides take it as well, so what the bar holds starts where the content
-     beneath it starts. */
+     The one step the frame is spaced by: the sidebar's padding, the content
+     area's padding, the gaps between the parts of a screen and between the
+     cards in a row, and the padding all round the bar, so what the bar holds
+     starts where the content beneath it starts. phranck decided it on 2
+     October 2026 and restated it on 13 October. */
   --workbench-gutter: var(--space-4);
-  --content-gutter: var(--space-6);
   --app-bar-height: calc(var(--control-height) + 2 * var(--workbench-gutter));
 
   /* Entries sit a shade under the workbench's own text: a navigation column is
