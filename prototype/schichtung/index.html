@@ -3,23 +3,25 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Schichtung — LAYERED.work</title>
+    <title>Schichtung · LAYERED.work</title>
     <meta name="robots" content="noindex" />
     <link rel="icon" href="../assets/logo.svg" type="image/svg+xml" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
-    />
     <!-- Phosphor, the project's icon system, in its build for pages without a
          bundler. Same family and same metrics as @phosphor-icons/react, and in
          the duotone weight alone, as the product draws every icon. -->
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
 
-    <link rel="stylesheet" href="../tokens/index.css" />
-    <link rel="stylesheet" href="../ui/index.css" />
+    <!-- The product's own fonts, tokens and component styles, read where they
+         live, so the prototype's components cannot look other than the
+         product's. -->
+    <link rel="stylesheet" href="../../packages/ui/assets/fonts.css" />
+    <link rel="stylesheet" href="../../packages/tokens/src/index.css" />
+    <link rel="stylesheet" href="../../packages/ui/src/index.css" />
+
+    <!-- The compositions of the site and of the dashboard, which the prototype
+         still keeps itself, because its views are built from markup of their
+         own. -->
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="../shared/dashboard.css" />
     <link rel="stylesheet" href="../shared/proto-bar.css" />

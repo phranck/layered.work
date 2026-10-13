@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Static server for the design prototypes.
+"""Static server for the design prototype.
+
+It serves the repository rather than this directory, because the prototype
+links the product's fonts, tokens and component styles from `packages/`. The
+prototype opens at /prototype/.
 
 Plain `http.server` answers with 304, and a browser keeps ES modules in a cache
 of its own on top of that, so an edit can sit on disk while the page still runs
@@ -14,7 +18,7 @@ import socketserver
 import sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 4317
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -46,5 +50,5 @@ class ReusableServer(socketserver.ThreadingTCPServer):
 if __name__ == "__main__":
     handler = functools.partial(NoCacheHandler, directory=ROOT)
     with ReusableServer(("127.0.0.1", PORT), handler) as server:
-        print(f"design proposals on http://localhost:{PORT}")
+        print(f"design prototype on http://localhost:{PORT}/prototype/")
         server.serve_forever()
