@@ -16,10 +16,11 @@ figure {
   margin: 0;
 }
 
-/* The level decides the weight, and nothing else states one. A heading's class
-   says how large it is and where it sits; whether it is set bold follows from
-   being the page's one first-level heading. Anything that wants a different
-   weight is not a heading. */
+/* The level decides the weight. A heading's class says how large it is and
+   where it sits; whether it is set bold follows from being the page's one
+   first-level heading. The one exception is a card's title, which is bold at
+   any level, as phranck decided on 13 October 2026; card.css and the site's
+   pages.css state it. */
 h1 {
   font-weight: var(--weight-bold);
 }
