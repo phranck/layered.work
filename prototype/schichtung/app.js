@@ -387,6 +387,8 @@ function show(view, dashboardArea, editingId, openBlockId, accountOpen) {
   if (shown === undefined) document.documentElement.style.removeProperty("--reading-measure");
   else applyReadingWidth(shown);
 
+  // The site's views take the site's text face; the dashboard keeps its own.
+  root.classList.toggle("site-scope", view !== "dashboard");
   render(
     root,
     view === "dashboard"

@@ -176,6 +176,24 @@
 }
 
 /*
+ * The site's text face: Inter Tight, chosen by phranck on 13 October 2026 for
+ * all of the site's text apart from its headlines, which keep the display face.
+ * The site's views carry `.site-scope`; the dashboard keeps Barlow.
+ */
+.site-scope {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+
+  /* Inter Tight centers its capitals in their line box: with its ascender of
+     1984 and descender of 494 on 2048 units, the middle of its 1490-unit cap
+     height falls on the middle of the box. */
+  --icon-cap-offset: 0em;
+
+  /* A quarter of the distance between the cap height and the x-height, 0.728em
+     against 0.546em. */
+  --label-lift: calc(var(--icon-cap-offset) + 0.045em);
+}
+
+/*
  * Reduced motion removes the travel and shortens what remains. Durations are not
  * set to zero, because an instant color change reads as a glitch rather than as
  * a response.

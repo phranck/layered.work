@@ -86,6 +86,7 @@ const STRINGS = {
     "action.edit": "Bearbeiten",
     "action.navigation": "Navigation",
     "action.account": "Konto",
+    "action.signOut": "Abmelden",
 
     // Editor
     "editor.publication": "Veröffentlichung",
@@ -158,10 +159,14 @@ const STRINGS = {
     "account.name": "Name",
     "account.email": "E-Mail",
     "account.role": "Rolle",
-    "account.roleAdmin": "Administrator",
+    "account.roleAdmin": "Owner",
     "account.language": "Sprache des Dashboards",
     "account.languageHint": "Nur diese Oberfläche, nicht die Website.",
-    "account.avatarChange": "Bild wählen",
+    "account.avatarChange": "Bild auswählen",
+    "account.scale": "Größe der Oberfläche",
+    "account.passwordCurrent": "Aktuelles Passwort",
+    "account.passwordNew": "Neues Passwort",
+    "account.passwordRepeat": "Neues Passwort wiederholen",
 
     // Sidebar
     "sidebar.resize": "Seitenleiste breiter oder schmaler ziehen",
@@ -196,7 +201,7 @@ const STRINGS = {
     "heading.landing": "Home page",
     "heading.structure": "Structure",
     "heading.blocks": "Arrange the blocks",
-    "heading.accountTitle": "Your account",
+    "heading.accountTitle": "User account",
 
     "stat.published": "Published",
     "stat.publishedNote": "visible on the site",
@@ -234,6 +239,7 @@ const STRINGS = {
     "action.edit": "Edit",
     "action.navigation": "Navigation",
     "action.account": "Account",
+    "action.signOut": "Sign out",
 
     "editor.publication": "Publication",
     "editor.language": "Language",
@@ -303,10 +309,14 @@ const STRINGS = {
     "account.name": "Name",
     "account.email": "Email",
     "account.role": "Role",
-    "account.roleAdmin": "Administrator",
+    "account.roleAdmin": "Owner",
     "account.language": "Dashboard language",
     "account.languageHint": "This interface only, not the website.",
     "account.avatarChange": "Choose a picture",
+    "account.scale": "Interface size",
+    "account.passwordCurrent": "Current password",
+    "account.passwordNew": "New password",
+    "account.passwordRepeat": "Repeat the new password",
 
     "sidebar.resize": "Drag to widen or narrow the sidebar",
 

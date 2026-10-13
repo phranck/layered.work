@@ -14,6 +14,8 @@ GitHub Issues and the `layered.work` project board, and nowhere else. Each epic 
 
 `prototype/` is the design study that settles the visual language. It is not a dependency and it does not ship, but `prototype/tokens/` and `prototype/ui/` are written to be moved into the real packages unchanged. When the built product and the prototype disagree about a value, the product is wrong until somebody decides otherwise.
 
+**Every design change made in the product reaches the prototype in the same change**, whether phranck asked for it or a fix needed it. The two never disagree, so the prototype can always be followed as it stands. phranck decided this on 13 October 2026, after following the mockup had undone two of his decisions: "Einfacher waere es, du passt das Mockup dynamisch an, wenn es Anpassungen gibt."
+
 The `web-app-ui` skill governs everything visual. Icons are Phosphor for the interface and Simple Icons for brand marks, decided for this project. Phosphor icons are duotone and nothing else, which `packages/ui/src/icons.ts` enforces: take icons from there, where any other weight is a type error. phranck decided this on 2 October 2026.
 
 A card's header and footer are a shade darker than its body, on every surface. phranck chose darker over lighter on 2 October 2026, after seeing both side by side.
