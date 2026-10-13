@@ -28,34 +28,37 @@
 .workbench__main {
   display: flex;
   flex-direction: column;
-  gap: var(--content-gutter);
-  padding: var(--content-gutter);
+  gap: var(--workbench-gutter);
+  padding: var(--workbench-gutter);
   min-width: 0;
 }
 
-/* --- Statistics ----------------------------------------------------------- */
+/* --- Statistics -----------------------------------------------------------
+   The figures above a list: the name at the top left with its line of
+   explanation under it, and the number at the top right, in a tabular face, so
+   the numbers line up from one card to the next. Two lines tall, which phranck
+   settled on 3 October 2026 and restated on 13 October. */
 
 .stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
+  gap: var(--workbench-gutter);
 }
 
-/*
- * A stat card is a figure with a label above and a note below, and the figure is
- * compared against the one in the next card. That comparison is what right
- * alignment is for, and the label and note follow the figure so the card reads
- * as one block rather than as a figure with text pinned to the other side.
- */
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "note value";
+  column-gap: var(--space-3);
+  align-content: start;
   padding: var(--card-padding);
-  text-align: right;
+  line-height: var(--leading-snug);
 }
 
 .stat__label {
+  grid-area: label;
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: var(--tracking-caps);
@@ -63,14 +66,21 @@
   color: var(--text-faint);
 }
 
+/* The number's digits reach from the cap line of the name to the baseline of
+   the explanation, as the dashboard measures it on Barlow. */
 .stat__value {
-  font-size: var(--text-2xl);
+  grid-area: value;
+  align-self: start;
+  margin-block: -0.075em -0.25em;
+  font-size: 2.4375rem;
   font-weight: 700;
-  line-height: var(--leading-tight);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .stat__note {
+  grid-area: note;
   font-size: var(--text-sm);
   color: var(--text-muted);
 }

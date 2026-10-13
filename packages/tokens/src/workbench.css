@@ -123,20 +123,17 @@
      narrow the sidebar may get. */
   --sidebar-width: 248px;
 
-  /* The step the frame is spaced by: the sidebar's padding, the space above
-     and below what the bar holds, and the gap between the two columns of an
-     editor or of a list with its panel. */
+  /* The one step the frame is spaced by: the sidebar's padding, the content
+     area's padding, the gaps between the parts of a screen and between the
+     cards in a row, and the padding all round the bar. One value, so no two
+     distances on a screen can differ. phranck decided it on 2 October 2026 and
+     restated it on 13 October: the padding is as large as the gaps. */
   --workbench-gutter: var(--space-4);
 
-  /* The content area's padding and the gap between the parts of a screen, as
-     the mockup spaces them. The bar's sides take it as well, so what the bar
-     holds starts where the content beneath it starts. */
-  --content-gutter: var(--space-6);
-
   /* The bar across the top of the content: a control with the gutter above and
-     below it. The sidebar's mark area is the same band less the sidebar's
-     padding, so the two are one line across the window; a change here moves
-     both. */
+     below it, so its padding is the gutter on every side. The sidebar's mark
+     area is the same band less the sidebar's padding, so the two are one line
+     across the window; a change here moves both. */
   --app-bar-height: calc(var(--control-height) + 2 * var(--workbench-gutter));
   --sidebar-min: 190px;
   --sidebar-max: 420px;

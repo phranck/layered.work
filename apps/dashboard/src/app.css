@@ -47,11 +47,11 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--content-gutter);
+  gap: var(--workbench-gutter);
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: var(--content-gutter);
+  padding: var(--workbench-gutter);
 }
 
 .workbench > .sidebar {
@@ -200,25 +200,32 @@ dialog.card-dialog::backdrop {
 }
 
 /* --- Entry lists -----------------------------------------------------------
-   The figures above a list. Each is compared with the one in the next card, so
-   it stands right-aligned in a tabular face, and its name above and its line
-   of explanation below follow it, so the card reads as one column. */
+   The figures above a list: the name at the top left with its line of
+   explanation under it, and the number at the top right, in a tabular face, so
+   the numbers line up from one card to the next. Two lines tall, which phranck
+   settled on 3 October 2026 and restated on 13 October. The cards stand the
+   frame's one gutter apart. */
 
 .stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
+  gap: var(--workbench-gutter);
 }
 
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "note value";
+  column-gap: var(--space-3);
+  align-content: start;
   padding: var(--card-padding);
-  text-align: right;
+  line-height: var(--leading-snug);
 }
 
 .stat__label {
+  grid-area: label;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
@@ -226,14 +233,26 @@ dialog.card-dialog::backdrop {
   color: var(--text-faint);
 }
 
+/* The number is as tall as the two lines beside it: its digits reach from the
+   cap line of the name to the baseline of the explanation. Measured on Barlow:
+   the two lines span 27.8px of ink and a bold digit is 0.713em high, which
+   makes 39px. At a line height of one the digits begin 0.185em below the box
+   and the name's capitals 4.3px below the row, so the box moves up by the
+   difference. The negative bottom margin keeps the number from stretching the
+   rows it stands beside. */
 .stat__value {
-  font-size: var(--text-2xl);
+  grid-area: value;
+  align-self: start;
+  margin-block: -0.075em -0.25em;
+  font-size: 2.4375rem;
   font-weight: var(--weight-bold);
-  line-height: var(--leading-tight);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .stat__note {
+  grid-area: note;
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
@@ -579,7 +598,7 @@ dialog.card-dialog::backdrop {
 .settings-screen {
   display: flex;
   flex-direction: column;
-  gap: var(--content-gutter);
+  gap: var(--workbench-gutter);
   width: 100%;
   max-width: var(--form-measure);
 }
