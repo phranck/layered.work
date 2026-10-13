@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PASSWORD_LENGTH } from "./auth.js";
 import type { ContentLanguage } from "./entries.js";
 import { focalPoint, mediaProcessingState } from "./media.js";
 import { body, emailAddress, MaxLength, text } from "./request.js";
@@ -45,6 +46,30 @@ export const updateAccountBody = body({
 });
 
 export type UpdateAccountBody = z.infer<typeof updateAccountBody>;
+
+/**
+ * What changing the signed-in author's password sends: the password in use, as
+ * proof that whoever holds the session also knows it, and the new one.
+ *
+ * Both are bounded like every password, and the new one has no minimum and no
+ * character rules, for the reason `MAX_PASSWORD_LENGTH` gives.
+ */
+export const changePasswordBody = body({
+  currentPassword: z.string().min(1).max(MAX_PASSWORD_LENGTH),
+  newPassword: z.string().min(1).max(MAX_PASSWORD_LENGTH),
+});
+
+export type ChangePasswordBody = z.infer<typeof changePasswordBody>;
+
+/**
+ * What a password change answers: how many other sessions of the account it
+ * ended. The session that made the change stays signed in.
+ */
+export const passwordChanged = z.object({
+  otherSessionsEnded: z.number().int().nonnegative(),
+});
+
+export type PasswordChanged = z.infer<typeof passwordChanged>;
 
 /** One raster image offered by the account portrait chooser. */
 export const accountMediaItem = z.object({
