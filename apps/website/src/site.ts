@@ -15,9 +15,10 @@ import { CONTENT_LOCALES, DEFAULT_UMAMI_WEBSITE_ID } from "@layered/schemas";
  *
  * Written with its offset rather than as a bare local time, because a countdown
  * whose target depends on the reader's own clock counts to a different moment
- * for every reader. Bregenz is UTC+2 until the last Sunday in October.
+ * for every reader. Bregenz is UTC+1 from the last Sunday in October, which
+ * the moment falls after.
  */
-export const LAUNCH = "2026-10-15T15:10:00+02:00";
+export const LAUNCH = "2026-11-01T11:01:00+01:00";
 
 /**
  * The zone the site keeps time in.
