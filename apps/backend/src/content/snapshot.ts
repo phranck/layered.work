@@ -37,6 +37,7 @@ import {
 import { HOME_PICTURE_KEYS, pictureIdsOf } from "../home/blocks.js";
 import { deliveredFile } from "../media/delivery.js";
 import { referencedMediaIds } from "../media/references.js";
+import { variantMimeType } from "../media/variants.js";
 import { mainNavigationFromGroups, readPublicNavigation } from "../navigation/public.js";
 import { readListingSettings, readPublicSiteFrame } from "../settings/repository.js";
 import { unsplashImageUrl, unsplashSrcSet } from "../unsplash/client.js";
@@ -92,6 +93,16 @@ function namedFiles(
   for (const body of otherBodies) for (const id of referencedMediaIds(body, assets)) named.add(id);
   return named;
 }
+
+/**
+ * The formats a picture is offered in, best first.
+ *
+ * A browser takes the first of them it can read, so this order is what decides
+ * which file a reader actually loads. AVIF is the smaller of the two at the
+ * same quality, and the WebP below it is read by everything that cannot read
+ * AVIF.
+ */
+const DELIVERY_FORMATS = ["avif", "webp"] as const;
 
 /**
  * The files some translations name, in the shape the site parses, and every
@@ -179,12 +190,22 @@ export async function publicMedia(
         if (photo)
           return { ...unsplashMedia(asset, photo), translations: localized, ...described(localized) };
         const sizes = variantsByMedia.get(asset.id) ?? [];
-        const format = sizes.some((variant) => variant.format === "webp") ? "webp" : sizes[0]?.format;
-        const srcSet = sizes
-          .filter((variant) => variant.format === format)
-          .sort((left, right) => left.width - right.width)
-          .map((variant) => `/${variant.storageKey} ${variant.width}w`)
-          .join(", ");
+        const offered = DELIVERY_FORMATS.filter((candidate) =>
+          sizes.some((variant) => variant.format === candidate),
+        );
+        // The last format offered is the one that asks least of a browser, so it
+        // is what the `img` carries. Everything above it is offered beside it.
+        const format = offered.at(-1) ?? sizes[0]?.format;
+        const srcSetOf = (wanted: string) =>
+          sizes
+            .filter((variant) => variant.format === wanted)
+            .sort((left, right) => left.width - right.width)
+            .map((variant) => `/${variant.storageKey} ${variant.width}w`)
+            .join(", ");
+        const srcSet = format ? srcSetOf(format) : "";
+        const sources = offered
+          .slice(0, -1)
+          .map((candidate) => ({ type: variantMimeType(candidate), srcSet: srcSetOf(candidate) }));
         const delivered = deliveredFile(asset, sizes);
         return {
           slug: asset.slug,
@@ -200,6 +221,7 @@ export async function publicMedia(
           translations: localized,
           ...described(localized),
           ...(srcSet ? { srcSet } : {}),
+          ...(sources.length ? { sources } : {}),
           ...(asset.placeholder ? { placeholder: asset.placeholder } : {}),
         };
       }),
