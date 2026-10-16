@@ -1,6 +1,6 @@
 ---
 import { homeBlockSettings, homeBlockText, isKnownHomeBlock, type HomeBlock } from "@layered/schemas";
-import { Button, Card, InlineContent, MediaCredit, Section, imagePosition } from "@layered/ui";
+import { Button, Card, InlineContent, MediaCredit, MediaImage, Section } from "@layered/ui";
 import { ArticleIcon, StackSimpleIcon, StarIcon, TagIcon } from "@layered/ui/icons";
 import { createElement, Fragment as ReactFragment } from "react";
 import HomeSky from "./HomeSky.astro";
@@ -100,16 +100,7 @@ if (unknown.length)
                 <div class="plate plate--back"></div>
                 <div class="plate plate--middle"></div>
                 <div class="plate plate--front">
-                  <img
-                    style={`object-position:${imagePosition(heroImage)}`}
-                    src={heroImage.src}
-                    srcset={heroImage.srcSet}
-                    sizes={heroImage.sizes}
-                    width={heroImage.width}
-                    height={heroImage.height}
-                    alt={heroImage.alt ?? ""}
-                    fetchpriority="high"
-                  />
+                  <MediaImage asset={heroImage} sizes={heroImage.sizes} fetchPriority="high" />
                   {heroImage.credit && <MediaCredit credit={heroImage.credit} overlay linked={false} />}
                   <div class="plate__caption">
                     <strong>{hero.title}</strong>
@@ -135,16 +126,7 @@ if (unknown.length)
           <div class="feature">
             {featureImage && (
               <div class="feature__media">
-                <img
-                  style={`object-position:${imagePosition(featureImage)}`}
-                  src={featureImage.src}
-                  srcset={featureImage.srcSet}
-                  sizes="(max-width: 1039px) 100vw, 50vw"
-                  width={featureImage.width}
-                  height={featureImage.height}
-                  alt={featureImage.alt ?? ""}
-                  loading="lazy"
-                />
+                <MediaImage asset={featureImage} sizes="(max-width: 1039px) 100vw, 50vw" loading="lazy" />
                 {featureImage.credit && <MediaCredit credit={featureImage.credit} overlay linked={false} />}
               </div>
             )}

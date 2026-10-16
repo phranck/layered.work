@@ -66,6 +66,12 @@ const publicMedia = z.object({
   caption: z.string().optional(),
   translations: mediaDescriptions.optional(),
   srcSet: z.string().optional(),
+  /**
+   * The formats this picture is offered in besides the one `srcSet` carries,
+   * best first, so a browser takes the first it can read and falls through to
+   * `srcSet` when it knows none of them.
+   */
+  sources: z.array(z.object({ type: z.string(), srcSet: z.string() })).optional(),
   placeholder: z.string().optional(),
   focalPoint: focalPoint.optional(),
   /** Who took a picture that comes from Unsplash, which every page showing it credits. */

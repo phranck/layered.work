@@ -98,6 +98,12 @@ const mediaSchema = z.object({
   width: z.number().positive().optional(),
   height: z.number().positive().optional(),
   srcSet: z.string().optional(),
+  /**
+   * The formats the same picture is offered in beside the one `srcSet` carries,
+   * best first. A snapshot written before the site offered more than one format
+   * has none, and the picture is then drawn from `srcSet` alone.
+   */
+  sources: z.array(z.object({ type: z.string(), srcSet: z.string() })).optional(),
   mime: z.string().optional(),
   filename: z.string().optional(),
   placeholder: z
@@ -428,6 +434,9 @@ export function createRepository(input: unknown) {
         : {}),
       src: mediaUrl(asset.src),
       ...(asset.srcSet ? { srcSet: mediaSrcSet(asset.srcSet) } : {}),
+      ...(asset.sources
+        ? { sources: asset.sources.map((source) => ({ ...source, srcSet: mediaSrcSet(source.srcSet) })) }
+        : {}),
       sizes: ARTICLE_IMAGE_SIZES,
       credit: asset.credit ? unsplashCreditLine(asset.credit, locale) : undefined,
     };

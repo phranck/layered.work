@@ -394,9 +394,67 @@ runs("the public snapshot", () => {
       .where(eq(entryTranslations.id, translationId));
 
     const snapshot = await readPublicSnapshot(database);
-    expect(snapshot.media.find((asset) => asset.slug === "responsive-cover")?.srcSet).toBe(
-      "/migration/responsive-cover-variant-480.webp 480w",
+    const published = snapshot.media.find((asset) => asset.slug === "responsive-cover");
+    expect(published?.srcSet).toBe("/migration/responsive-cover-variant-480.webp 480w");
+    // One format, so there is nothing to offer beside it.
+    expect(published?.sources).toBeUndefined();
+  });
+
+  it("offers the better format beside the one every browser reads", async () => {
+    const database = await testDatabase();
+    const [picture] = await database
+      .insert(media)
+      .values({
+        slug: "two-formats",
+        kind: "image",
+        mimeType: "image/jpeg",
+        storageKey: "uploads/two-formats.jpg",
+        byteSize: 5000,
+        checksum: "b".repeat(64),
+        width: 1200,
+        height: 600,
+      })
+      .returning({ id: media.id });
+    if (!picture) throw new Error("no picture");
+    await database.insert(mediaVariants).values(
+      [
+        { format: "webp" as const, width: 348 },
+        { format: "webp" as const, width: 696 },
+        { format: "avif" as const, width: 348 },
+        { format: "avif" as const, width: 696 },
+      ].map(({ format, width }) => ({
+        mediaId: picture.id,
+        format,
+        width,
+        height: width / 2,
+        byteSize: width,
+        storageKey: `variants/${picture.id}/token/${format}-${width}.${format}`,
+      })),
     );
+    const { translationId } = await writeEntry(database, {
+      title: "Two formats",
+      path: "/two-formats/",
+      state: "public",
+    });
+    await database
+      .update(entryTranslations)
+      .set({ featuredMediaId: picture.id })
+      .where(eq(entryTranslations.id, translationId));
+
+    const published = (await readPublicSnapshot(database)).media.find(
+      (asset) => asset.slug === "two-formats",
+    );
+    // The `img` keeps the format every browser reads, so a browser that knows
+    // no source still draws the picture.
+    expect(published?.srcSet).toBe(
+      `/variants/${picture.id}/token/webp-348.webp 348w, /variants/${picture.id}/token/webp-696.webp 696w`,
+    );
+    expect(published?.sources).toEqual([
+      {
+        type: "image/avif",
+        srcSet: `/variants/${picture.id}/token/avif-348.avif 348w, /variants/${picture.id}/token/avif-696.avif 696w`,
+      },
+    ]);
   });
 
   it("names a home page block's picture by its slug, and publishes that file", async () => {

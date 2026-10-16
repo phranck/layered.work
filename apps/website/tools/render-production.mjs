@@ -39,8 +39,14 @@ export async function renderPages(snapshot, paths) {
 /** The preload the head carries for a picture. */
 export const IMAGE_PRELOAD = /<link rel="preload" as="image"[^>]*>/;
 
-/** The picture a page draws first, which is the one it marks as urgent. */
-export const OPENING_PICTURE = /<img[^>]*fetchpriority="high"[^>]*>/;
+/**
+ * The picture a page draws first, which is the one it marks as urgent.
+ *
+ * Matched without regard for case, because an image rendered from a React
+ * component writes `fetchPriority` and `srcSet` as they are spelled in the
+ * source, and an HTML attribute name means the same whichever case it carries.
+ */
+export const OPENING_PICTURE = /<img[^>]*fetchpriority="high"[^>]*>/i;
 
 /**
  * One attribute of the first element matching a pattern, as the page wrote it.
@@ -52,7 +58,7 @@ export const OPENING_PICTURE = /<img[^>]*fetchpriority="high"[^>]*>/;
  */
 export function attributeOf(html, element, name) {
   const tag = element.exec(html)?.[0] ?? "";
-  return new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+  return new RegExp(`\\s${name}="([^"]*)"`, "i").exec(tag)?.[1];
 }
 
 /** The page's head and its body, apart. */

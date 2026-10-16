@@ -62,6 +62,21 @@ img {
   max-width: 100%;
 }
 
+/* A picture offered in several formats wraps its image, and that wrapper takes
+   no part in the layout: the image stays the flex or grid item its surroundings
+   place, whether or not the library holds a second format for it. */
+picture {
+  display: contents;
+}
+
+/* A source names a file and draws nothing, and the HTML stylesheet does not
+   hide it. Without this it becomes an item of the surrounding layout once the
+   wrapper above steps out of the way, and a figure drawn as a column puts a gap
+   between that empty item and the picture. */
+picture > source {
+  display: none;
+}
+
 .eyebrow {
   font-family: var(--font-display);
   font-size: var(--text-sm);
