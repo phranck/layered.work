@@ -73,7 +73,7 @@ describe("derived image sizes", () => {
     expect(metadata.height).toBe(6);
   });
 
-  it("keeps animation in WebP while using the first frame for AVIF and the placeholder", async () => {
+  it("offers an animation as WebP alone, with every frame, so no reader is given a still", async () => {
     const second = await sharp({ create: { width: 400, height: 200, channels: 3, background: "#f06543" } })
       .png()
       .toBuffer();
@@ -82,6 +82,7 @@ describe("derived image sizes", () => {
       .gif({ delay: [100, 200], loop: 0 })
       .toBuffer();
     const result = await deriveImageVariants(original);
+    expect(result.variants.map(({ format, width }) => [format, width])).toEqual([["webp", 348]]);
     const webp = result.variants.find(({ format }) => format === "webp");
     expect(webp?.height).toBe(174);
     const metadata = await sharp(webp?.bytes, { animated: true }).metadata();
