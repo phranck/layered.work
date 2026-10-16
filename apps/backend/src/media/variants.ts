@@ -160,11 +160,19 @@ export async function deriveImageVariants(
   const { width, height } = metadata.autoOrient;
   const widths: number[] = IMAGE_WIDTHS.filter((step) => step <= width);
   if (watermark && !widths.includes(width)) widths.push(width);
+  /*
+   * WebP keeps every frame of an animation and nothing else here does: the blur
+   * is one frame, and so is a watermarked WebP, because the mark is laid over
+   * one picture. An unmarked animation is therefore offered as WebP alone, or a
+   * browser picking the AVIF out of the formats on offer would draw a still
+   * where the page means an animation. A watermarked animation is a still in
+   * both formats and keeps its AVIF.
+   */
+  const animated = (metadata.pages ?? 1) > 1;
+  const formats = animated && !watermark ? (["webp"] as const) : (["avif", "webp"] as const);
   const variants: ImageVariant[] = [];
   for (const step of widths) {
-    for (const format of ["avif", "webp"] as const) {
-      // WebP retains all animation frames. AVIF and the blur use the first frame,
-      // and so does a watermarked WebP, because the mark is laid over one picture.
+    for (const format of formats) {
       let source = sharp(bytes, { animated: format === "webp" && !watermark })
         .autoOrient()
         .resize({ width: step, withoutEnlargement: true });
