@@ -5,8 +5,9 @@ import { ContentPlaceholder } from "./content-placeholder.js";
 // that circle is read while rendering and never while loading, so none is met
 // unfinished.
 import { InlineContent } from "./content-renderer.js";
-import { contentUrl, imagePosition, type MediaAsset, type MediaProps } from "./content-shared.js";
+import { contentUrl, type MediaAsset, type MediaProps } from "./content-shared.js";
 import { MediaCredit } from "./media-credit.js";
+import { MediaImage } from "./media-image.js";
 /** A library image and the author overrides declared in the register. */
 export type FigureProps = PropsOf<"Image"> & MediaProps;
 /** The shared semantic media frame. */
@@ -25,26 +26,15 @@ function FigureImage({ asset, alt }: { asset: MediaAsset; alt?: string }) {
     asset.placeholder && /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(asset.placeholder)
       ? asset.placeholder
       : undefined;
-  const srcSet = asset.srcSet
-    ?.split(",")
-    .every((candidate) => contentUrl(candidate.trim().split(/\s+/)[0], true))
-    ? asset.srcSet
-    : undefined;
   return (
-    <img
+    <MediaImage
+      asset={{ ...asset, src }}
+      alt={alt}
+      sizes={asset.sizes ?? "100vw"}
       className="content-figure__image"
-      src={src}
-      srcSet={srcSet}
-      sizes={srcSet ? (asset.sizes ?? "100vw") : undefined}
-      alt={alt ?? asset.alt ?? ""}
-      width={asset.width}
-      height={asset.height}
       loading="lazy"
       decoding="async"
-      style={{
-        objectPosition: imagePosition(asset),
-        ...(placeholder ? { backgroundImage: `url(${placeholder})` } : {}),
-      }}
+      style={placeholder ? { backgroundImage: `url(${placeholder})` } : undefined}
     />
   );
 }

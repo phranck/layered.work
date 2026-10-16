@@ -14,6 +14,11 @@ export interface MediaAsset {
   width?: number;
   height?: number;
   srcSet?: string;
+  /**
+   * The formats the same picture is offered in beside the one `srcSet` carries,
+   * best first. A browser takes the first it can read.
+   */
+  sources?: { type: string; srcSet: string }[];
   /** Caller-provided layout widths for responsive image selection. */
   sizes?: string;
   /** A small raster data URL shown before the full image finishes loading. */

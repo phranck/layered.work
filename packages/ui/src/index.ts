@@ -63,6 +63,7 @@ export { Gallery } from "./gallery.js";
 export { Grid } from "./grid.js";
 export { Logo, type LogoProps } from "./logo.js";
 export { MediaCredit, type MediaCreditProps, type MediaCreditTextProps } from "./media-credit.js";
+export { MediaImage, type MediaImageProps } from "./media-image.js";
 export { Model, type ModelProps } from "./model.js";
 export { Note } from "./note.js";
 export { Row, RowList, type RowTextProps } from "./row.js";

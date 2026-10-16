@@ -1,6 +1,6 @@
 ---
 import { rendersComponent, type RenderNode } from "@layered/content";
-import { ContentRenderer, MediaCredit, Section, imagePosition, type FormEmbedProps } from "@layered/ui";
+import { ContentRenderer, MediaCredit, MediaImage, Section, type FormEmbedProps } from "@layered/ui";
 import ModelViewer from "./ModelViewer.astro";
 import CodeCopy from "./CodeCopy.astro";
 import FormBehavior from "./FormBehavior.astro";
@@ -48,16 +48,7 @@ const entryTopics = repository.entryTopics(entry, language);
 <article>
   {project && feature ? (
     <header class="project-hero">
-      <img
-        style={`object-position:${imagePosition(feature)}`}
-        src={feature.src}
-        srcset={feature.srcSet}
-        sizes={feature.sizes}
-        width={feature.width}
-        height={feature.height}
-        alt={feature.alt ?? ""}
-        fetchpriority="high"
-      />
+      <MediaImage asset={feature} sizes={feature.sizes} fetchPriority="high" />
       <div class="project-hero__scrim"></div>
       {feature.credit && <MediaCredit credit={feature.credit} overlay />}
       <div class="project-hero__copy">
@@ -103,16 +94,7 @@ const entryTopics = repository.entryTopics(entry, language);
   <div class="article-body">
     {feature && !project && (
       <figure class="article-cover">
-        <img
-          style={`object-position:${imagePosition(feature)}`}
-          src={feature.src}
-          srcset={feature.srcSet}
-          sizes={feature.sizes}
-          width={feature.width}
-          height={feature.height}
-          alt={feature.alt ?? ""}
-          fetchpriority="high"
-        />
+        <MediaImage asset={feature} sizes={feature.sizes} fetchPriority="high" />
         {feature.credit && (
           <figcaption class="content-figure__caption">
             <MediaCredit credit={feature.credit} />

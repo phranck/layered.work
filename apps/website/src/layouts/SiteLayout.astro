@@ -30,7 +30,7 @@ interface Props {
    * read. It has to name the candidates and widths the page's `img` names, or
    * the browser fetches the picture twice.
    */
-  leadImage?: { src: string; srcSet?: string; sizes?: string };
+  leadImage?: { src: string; srcSet?: string; sizes?: string; sources?: { type: string; srcSet: string }[] };
 }
 
 const {
@@ -50,6 +50,15 @@ const {
 } = Astro.props;
 const canonical = new URL(canonicalPath, Astro.site ?? "https://layered.work");
 const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
+/**
+ * The format the page will draw the lead picture in, where it is offered in
+ * more than one. The preload carries that format's candidates and its type, so
+ * a browser that reads the type asks for the file it is about to draw, and one
+ * that does not skips the preload instead of fetching a second copy. The
+ * candidates use width descriptors, which is the case where `href` adds nothing
+ * to the set, so it is left off.
+ */
+const leadSource = leadImage?.sources?.[0];
 ---
 
 <!doctype html>
@@ -104,9 +113,10 @@ const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
       <link
         rel="preload"
         as="image"
-        href={leadImage.src}
-        imagesrcset={leadImage.srcSet}
+        href={leadSource ? undefined : leadImage.src}
+        imagesrcset={leadSource?.srcSet ?? leadImage.srcSet}
         imagesizes={leadImage.sizes}
+        type={leadSource?.type}
         fetchpriority="high"
       />
     )}

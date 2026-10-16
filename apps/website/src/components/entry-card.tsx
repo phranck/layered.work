@@ -1,4 +1,4 @@
-import { Card, imagePosition, type MediaAsset, MediaCredit } from "@layered/ui";
+import { Card, type MediaAsset, MediaCredit, MediaImage } from "@layered/ui";
 import { ArticleIcon } from "@layered/ui/icons";
 import {
   dateLabel,
@@ -42,14 +42,9 @@ export function EntryCard({
     <Card.Link href={entry.path} className="entry-card" lang={foreign ? entry.language : undefined}>
       {image && (
         <div className="card__media">
-          <img
-            src={image.src}
-            style={{ objectPosition: imagePosition(image) }}
-            srcSet={image.srcSet}
+          <MediaImage
+            asset={image}
             sizes="(max-width: 719px) 100vw, (max-width: 1039px) 50vw, 33vw"
-            width={image.width}
-            height={image.height}
-            alt={image.alt ?? ""}
             loading="lazy"
             decoding="async"
           />
