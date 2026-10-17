@@ -97,5 +97,11 @@ test("puts one sky behind the blocks the dashboard chose, and behind no other", 
     /<div class="sky-host">\s*<div class="sky sky--bands"/,
     "the layer opens the blocks' host",
   );
-  assert(body.includes(".sky--bands canvas"), "the script that starts the web is on the page");
+  // Loaded as a file rather than written into the page, which is what the
+  // site's policy allows; `inline-nonce.production.test.mjs` holds that line.
+  assert.match(
+    body,
+    /<script[^>]*\ssrc="\/_assets\/[^"]*sky[^"]*"/i,
+    "the script that starts the web is on the page",
+  );
 });
