@@ -83,8 +83,11 @@
   isolation: isolate;
 }
 
+/* The longhand, because the minifier turns the shorthand's `none` into a
+   declaration with no value at all, which a browser drops. The band then keeps
+   an ordinary band's fill and paints over the sky. */
 .section--band.section--sky {
-  border-image: none;
+  border-image-source: none;
 }
 
 /* The sky has one top, so only the first band that shows it carries clouds,
