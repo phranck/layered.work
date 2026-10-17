@@ -76,6 +76,23 @@ export default defineConfig({
     // and answer the page's request for the old bundle with 504. Bundling it
     // at start-up means there is nothing left to discover.
     optimizeDeps: { include: ["@google/model-viewer"] },
+    build: {
+      /*
+       * A page's own script is a file, whatever its size.
+       *
+       * Astro writes such a bundle into the document when it imports nothing
+       * and is smaller than this limit, and an inlined bundle carries no nonce,
+       * which the site's policy requires of every inline script. The sky's
+       * bundle crossed under the limit at 4056 bytes, the browser refused it,
+       * and the star background stopped running on the deployed site while
+       * every test stayed green: the markup was right and only the policy said
+       * no.
+       *
+       * Returning nothing for anything else leaves the usual rule in place,
+       * which is what decides whether a small file travels as a data URL.
+       */
+      assetsInlineLimit: (assetPath) => (assetPath.endsWith(".js") ? false : undefined),
+    },
   },
   build: {
     // Kept out of the way of public/, which holds the wordmark, the typefaces
